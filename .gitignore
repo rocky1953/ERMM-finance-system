@@ -1,0 +1,39 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.local
+.env.*.local
+
+# 測試 / 快取
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 臨時檔案
+*.tmp
+*.bak
+_cache/
+migrations/_*.sql
+
+# 匯入產物
+public/data/import*/
+public/data/verify_*.xlsx
+public/data/report_*.xlsx
+public/data/batch_*.xlsx
+public/data/batch_*.json
+public/data/generated_*.xlsx
+!public/data/.gitkeep
+
+# 系統產物
+*.pid
+*.seed

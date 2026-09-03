@@ -1,0 +1,134 @@
+/**
+ * 應收應付頁面（真實 DB 結構：每月一行，AR_amt + AP_amt 兩欄）
+ */
+registerPage('arap', async (c) => {
+    c.innerHTML = `
+        <div class="kpi-grid">
+            <div class="kpi-card green"><div class="kpi-label">${t('arap.ar')}</div><div class="kpi-value" id="arTotal">-</div></div>
+            <div class="kpi-card red"><div class="kpi-label">${t('arap.ap')}</div><div class="kpi-value" id="apTotal">-</div></div>
+            <div class="kpi-card"><div class="kpi-label">${t('arap.net')}</div><div class="kpi-value" id="netTotal">-</div></div>
+        </div>
+        <div class="card">
+            <div class="toolbar">
+                <button class="btn btn-primary" onclick="ARAPForm.open()">➕ 新增月份</button>
+                <button class="btn btn-warning" onclick="recalcARAP()">📊 ${t('arap.recalc')}</button>
+                <button class="btn btn-success" onclick="loadARAP()">🔄 ${t('refresh')}</button>
+            </div>
+            <div id="arapTable">${t('loading')}</div>
+        </div>
+    `;
+    loadARAP();
+});
+
+async function loadARAP() {
+    const el = document.getElementById('arapTable');
+    try {
+        const res = await API.get(`/api/arap/raw?bu_no=${State.bu_no}`);
+        const rows = res.data || [];
+
+        let arSum = 0, apSum = 0;
+        rows.forEach(r => {
+            arSum += Number(r.AR_amt || 0);
+            apSum += Number(r.AP_amt || 0);
+        });
+        document.getElementById('arTotal').textContent = UI.fmt(arSum);
+        document.getElementById('apTotal').textContent = UI.fmt(apSum);
+        const net = arSum - apSum;
+        const netEl = document.getElementById('netTotal');
+        netEl.textContent = UI.fmt(net);
+        netEl.className = 'kpi-value ' + (net >= 0 ? 'positive' : 'negative');
+
+        if (rows.length === 0) { el.innerHTML = UI.empty('📐', t('arap.no_data')); return; }
+
+        el.innerHTML = `<table class="data-table">
+            <thead><tr>
+                <th>月份</th>
+                <th>AR 應收</th><th>AR 陳齡</th>
+                <th>AP 應付</th><th>AP 陳齡</th>
+                <th>更新時間</th>
+                <th style="width:140px">操作</th>
+            </tr></thead>
+            <tbody>${rows.map(r => `
+                <tr>
+                    <td><b>${r.YYYY_MM}</b></td>
+                    <td class="num positive">${UI.fmt(r.AR_amt)}</td>
+                    <td class="num">${UI.fmt(r.AR_ageing)}</td>
+                    <td class="num negative">${UI.fmt(r.AP_amt)}</td>
+                    <td class="num">${UI.fmt(r.AP_ageing)}</td>
+                    <td>${r.update_time ? r.update_time.substring(0,16).replace('T',' ') : '-'}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" onclick='editARAP(${JSON.stringify(r)})'>✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="delARAP(${r.uid})">🗑</button>
+                    </td>
+                </tr>
+            `).join('')}</tbody>
+        </table>`;
+    } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
+}
+
+function editARAP(r) {
+    UI.modal(`✏️ 編輯 ${r.YYYY_MM}`, `
+        <div class="form-row">
+            <div class="form-group"><label>月份</label><input id="arap_ym" value="${r.YYYY_MM}" readonly></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>AR 應收</label><input type="number" id="arap_ar" value="${r.AR_amt || 0}"></div>
+            <div class="form-group"><label>AP 應付</label><input type="number" id="arap_ap" value="${r.AP_amt || 0}"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>AR 陳齡(天)</label><input type="number" id="arap_age_ar" value="${r.AR_ageing || 0}"></div>
+            <div class="form-group"><label>AP 陳齡(天)</label><input type="number" id="arap_age_ap" value="${r.AP_ageing || 0}"></div>
+        </div>
+    `, `<button class="btn" onclick="UI.closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="ARAPForm.save(${r.uid})">💾 保存</button>`);
+}
+
+const ARAPForm = {
+    open() {
+        UI.modal('➕ 新增 AR/AP 月份', `
+            <div class="form-row">
+                <div class="form-group"><label>月份 (YYYY/MM)</label><input id="arap_ym" value="${State.YYYY_MM}"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>AR 應收</label><input type="number" id="arap_ar" value="0"></div>
+                <div class="form-group"><label>AP 應付</label><input type="number" id="arap_ap" value="0"></div>
+            </div>
+        `, `<button class="btn" onclick="UI.closeModal()">取消</button>
+            <button class="btn btn-primary" onclick="ARAPForm.save()">💾 保存</button>`);
+    },
+    async save(uid) {
+        const body = {
+            bu_no: State.bu_no,
+            YYYY_MM: document.getElementById('arap_ym').value,
+            AR_amt: Number(document.getElementById('arap_ar').value) || 0,
+            AP_amt: Number(document.getElementById('arap_ap').value) || 0,
+            AR_ageing: Number(document.getElementById('arap_age_ar')?.value) || 0,
+            AP_ageing: Number(document.getElementById('arap_age_ap')?.value) || 0,
+        };
+        try {
+            if (uid) {
+                await API.put(`/api/arap/${uid}`, body);
+                UI.toast('已更新', 'success');
+            } else {
+                await API.post('/api/arap', body);
+                UI.toast('已新增', 'success');
+            }
+            UI.closeModal();
+            loadARAP();
+        } catch(e) { UI.toast(e.message, 'error'); }
+    }
+};
+
+async function delARAP(uid) {
+    if (!confirm(`確定刪除此月份的 AR/AP 資料？（uid=${uid}）`)) return;
+    try { await API.del(`/api/arap/${uid}`); UI.toast('已刪除','success'); loadARAP(); }
+    catch(e) { UI.toast(e.message,'error'); }
+}
+
+async function recalcARAP() {
+    try {
+        await API.post('/api/arap/recalc', { bu_no: State.bu_no });
+        UI.toast(t('arap.recalc_done'), 'success');
+        loadARAP();
+    } catch(e) { UI.toast(e.message,'error'); }
+}

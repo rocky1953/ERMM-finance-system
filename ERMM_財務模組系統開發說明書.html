@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERMM 財務模組系統開發說明書</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Microsoft JhengHei", "PingFang TC", "微軟正黑體", Arial, sans-serif;
+            line-height: 1.8;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 100%);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, #1e5128 0%, #0d3216 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 { margin: 0 0 10px 0; font-size: 2.4em; }
+        header .subtitle { font-size: 1.15em; opacity: 0.9; }
+        header .meta { font-size: 0.9em; opacity: 0.75; margin-top: 15px; }
+        nav {
+            background: #f0f7f0;
+            border: 1px solid #c3dfc3;
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+        }
+        nav h3 { margin-top: 0; color: #1e5128; border-bottom: 2px solid #1e5128; padding-bottom: 8px; }
+        nav ul { list-style: none; padding-left: 0; columns: 2; }
+        nav li { margin-bottom: 6px; }
+        nav a { color: #1e5128; text-decoration: none; }
+        nav a:hover { color: #e67e22; text-decoration: underline; }
+        section { margin-bottom: 50px; scroll-margin-top: 20px; }
+        h2 {
+            color: #1e5128;
+            border-left: 6px solid #1e5128;
+            padding-left: 15px;
+            margin-top: 0;
+            font-size: 1.7em;
+        }
+        h3 { color: #34495e; margin-top: 30px; font-size: 1.3em; }
+        h4 { color: #555; margin-top: 25px; }
+        p { margin: 12px 0; }
+        .mermaid {
+            background: #fafbfc;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.95em;
+        }
+        th {
+            background: linear-gradient(135deg, #1e5128 0%, #0d3216 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td { padding: 10px 15px; border-bottom: 1px solid #e1e8ed; }
+        tr:nth-child(even) { background: #f8faf8; }
+        tr:hover { background: #e8f5e8; transition: background 0.2s; }
+        code {
+            background: #eef2f5;
+            color: #c7254e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 0.9em;
+        }
+        .db-table {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .db-table h4 { color: #2ecc71; margin-top: 0; }
+        .field-line { display: block; margin: 4px 0; font-family: "Consolas", monospace; font-size: 0.9em; }
+        .pk { color: #f39c12; font-weight: bold; }
+        .fk { color: #3498db; }
+        .info-box {
+            background: #e8f5e8;
+            border: 1px solid #b8d8b8;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .warn-box {
+            background: #fff3cd;
+            border: 1px solid #ffe08a;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .feature-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8faf8 100%);
+            border-left: 4px solid #1e5128;
+            padding: 20px 25px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .feature-card strong { color: #1e5128; font-size: 1.1em; }
+        .badge {
+            display: inline-block;
+            background: #1e5128;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+        .file-path { color: #8e44ad; font-family: "Consolas", monospace; font-size: 0.85em; }
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            border-top: 2px solid #ecf0f1;
+            margin-top: 40px;
+            font-size: 0.9em;
+        }
+        ul { padding-left: 25px; }
+        li { margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>ERMM 財務模組系統開發說明書</h1>
+        <div class="subtitle">Enterprise Resource Management &amp; Manufacturing — Finance Module</div>
+        <div class="meta">
+            獨立運作文件 &nbsp;|&nbsp; 技術：Classic ASP + SQL Server &nbsp;|&nbsp; 文件版本：1.0 &nbsp;|&nbsp; 生成日期：2026-09-02
+        </div>
+    </header>
+
+    <nav>
+        <h3>目錄</h3>
+        <ul>
+            <li><a href="#sec1">一、模組概述與定位</a></li>
+            <li><a href="#sec2">二、模組整體架構</a></li>
+            <li><a href="#sec3">三、子系統功能拆解</a></li>
+            <li><a href="#sec4">四、業務流程圖</a></li>
+            <li><a href="#sec5">五、資料結構與資料表定義</a></li>
+            <li><a href="#sec6">六、模組間相互關係</a></li>
+            <li><a href="#sec7">七、檔案清單與職責</a></li>
+            <li><a href="#sec8">八、權限與安全控制</a></li>
+            <li><a href="#sec9">九、開發規範與擴展指南</a></li>
+        </ul>
+    </nav>
+
+    <!-- 一、模組概述 -->
+    <section id="sec1">
+        <h2>一、模組概述與定位</h2>
+        <p>ERMM 財務模組是整個 ERP 系統的價值終點，貫穿「接單 → 採購 → 生產 → 出貨 → 收付款 → 財務報表」完整價值鏈。本模組負責：</p>
+        <ul>
+            <li><strong>應收應付管理 (AR/AP)</strong> — 從銷售訂單與採購訂單自動彙算應收/應付帳款</li>
+            <li><strong>付款與票據管理</strong> — 應付明細登錄、付款沖帳、支票/轉帳票據管理</li>
+            <li><strong>銀行貸款管理</strong> — 銀行帳戶、貸款合約、利息計算、匯兌損益</li>
+            <li><strong>財務三大報表</strong> — 資產負債表、損益表(PL)、現金流量摘要</li>
+            <li><strong>稅務與風險控制</strong> — 稅務檢核項目、財務風險控管、匯率管理</li>
+            <li><strong>財務分析圖表</strong> — AR/AP 趨勢圖、現金日明細、多維度管道圖</li>
+        </ul>
+        <div class="info-box">
+            <strong>模組定位：</strong>財務模組既是<strong>資料消費者</strong>（接收業務模組的 SO/PO/庫存資料），也是<strong>決策輸出者</strong>（產生報表供管理層決策）。透過 <code>batch_ARAP_upd.asp</code> 批次程式實現與業務模組的資料同步。
+        </div>
+    </section>
+
+    <!-- 二、模組整體架構 -->
+    <section id="sec2">
+        <h2>二、模組整體架構</h2>
+        <div class="mermaid">
+flowchart TB
+    subgraph Input["資料來源層（外部模組）"]
+        SO["銷售訂單模組<br/>ERMM_erp_SO"]
+        PO["採購訂單模組<br/>ermm_erp_po"]
+        STOCK["倉庫/庫存模組<br/>MGM_production_details"]
+        DOC["文件管理模組<br/>ERMM_erp_documents"]
+    end
+
+    subgraph Finance["財務模組核心"]
+        subgraph ARAP["應收應付子系統"]
+            ARAP_BATCH["批次彙算<br/>batch_ARAP_upd.asp"]
+            ARAP_DETAIL["ARAP 匯總表<br/>ERMM_ARAP_detail"]
+            ARAP_CHART["ARAP 圖表<br/>STD_ARAP_chart.asp"]
+        end
+        subgraph PAY["付款/票據子系統"]
+            PAY_LIST["應付明細<br/>pay_list/pay_add/pay_mend"]
+            CHECK["支票管理<br/>check_add"]
+            AR_DETAIL["應收明細<br/>STD_SO_AR_detail_list"]
+        end
+        subgraph BANK["銀行貸款子系統"]
+            BANK_LIST["銀行帳戶<br/>bank_list"]
+            LOAN["貸款管理<br/>loan_list"]
+            FX["匯率管理<br/>exchange_rate_summary"]
+        end
+        subgraph REPORT["財務報表子系統"]
+            BS["資產負債表<br/>STD_finance_balance_sheet"]
+            PL["損益表<br/>STD_finance_PL_table"]
+            SUMM["財務摘要<br/>STD_finance_summary"]
+            CASH["現金日明細<br/>cash_daily_details"]
+        end
+        subgraph TAX["稅務/風險子系統"]
+            TAX_CHK["稅務檢核<br/>tax_check_items_mgmt"]
+            RISK["風險控制<br/>risk_control3"]
+        end
+    end
+
+    subgraph Output["輸出層"]
+        EXCEL["Excel 匯出"]
+        CHART["FusionCharts 圖表"]
+        DECISION["管理決策"]
+    end
+
+    SO --> ARAP_BATCH
+    PO --> ARAP_BATCH
+    ARAP_BATCH --> ARAP_DETAIL
+    ARAP_DETAIL --> ARAP_CHART
+    PO --> PAY_LIST
+    SO --> AR_DETAIL
+    STOCK --> SUMM
+    DOC --> BANK
+    ARAP --> REPORT
+    PAY --> REPORT
+    BANK --> REPORT
+    REPORT --> EXCEL
+    REPORT --> CHART
+    TAX --> DECISION
+    CHART --> DECISION
+        </div>
+    </section>
+
+    <!-- 三、子系統功能拆解 -->
+    <section id="sec3">
+        <h2>三、子系統功能拆解</h2>
+
+        <div class="feature-card">
+            <span class="badge">3.1</span><strong>應收應付子系統 (AR/AP)</strong><br/>
+            從銷售訂單 (SO) 彙算應收帳款 <code>AR_amt = Σ(unit_price × dn_qty)</code>，從採購訂單 (PO) 彙算應付帳款 <code>AP_amt = Σ(po_amount + vat_amt)</code>，按 <code>YYYY_MM</code> 月度匯總寫入 <code>ERMM_ARAP_detail</code> 表，並以 FusionCharts 渲染趨勢圖。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">3.2</span><strong>付款/票據子系統</strong><br/>
+            應付明細 (<code>pay_detail</code> 表) 記錄每筆應付帳款：供應商、費用類型、發票日期/號碼、金額、幣別、應付日期、付款日期。支援新增/修改/刪除/查詢/Excel 匯出。支票管理記錄現金支票/轉帳支票的開票明細。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">3.3</span><strong>銀行貸款子系統</strong><br/>
+            <code>MGM_bank_loan_details</code> 表記錄銀行帳戶與貸款合約，支援存款/貸款/還款三類。自動計算下次利息日 (<code>next_paydate = dateadd(MM, pay_terms, last_paydate)</code>) 與應計天數 (<code>pay_days = DATEDIFF(dd, GETDATE(), next_paydate)</code>)。多幣別貸款支援匯兌損益計算。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">3.4</span><strong>財務報表子系統</strong><br/>
+            <code>MGM_finance_summary</code> 為核心報表資料表，按月 (<code>YYYY_MM</code>) 儲存完整資產負債與損益科目。系統自動為當年度 12 個月預建記錄，供人工填報或批次匯入。支援當月/上月比較、Excel 匯出。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">3.5</span><strong>稅務/風險子系統</strong><br/>
+            稅務檢核項目管理 (<code>STD_finance_tax_check_items_mgmt</code>) 與三級風險控制 (<code>STD_finance_risk_control3</code>)，提供財務合規檢核與風險預警能力。
+        </div>
+    </section>
+
+    <!-- 四、業務流程圖 -->
+    <section id="sec4">
+        <h2>四、業務流程圖</h2>
+
+        <h3>4.1 應收應付批次彙算流程</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant SO as ERMM_erp_SO<br/>銷售訂單
+    participant PO as ermm_erp_po<br/>採購訂單
+    participant B as batch_ARAP_upd.asp
+    participant DB as ERMM_ARAP_detail
+    participant U as 使用者
+
+    U->>B: 觸發批次更新
+    B->>B: 取得 batch_id = GETDATE()
+    B->>SO: SELECT YYYY_MM, SUM(unit_price*dn_qty) AS AR_amt<br/>GROUP BY YYYY_MM
+    SO-->>B: 回傳各月應收金額
+    loop 每個月
+        B->>DB: 查詢是否已有該月記錄
+        alt 不存在
+            B->>DB: INSERT (bu_no, YYYY, YYYY_MM, AR_amt)
+        else 已存在
+            B->>DB: UPDATE AR_amt, update_time WHERE uid
+        end
+    end
+    B->>PO: SELECT YYYY_MM, SUM(po_amount+vat_amt) AS AP_amt<br/>WHERE po_status='審核通過' AND po_sub_status='交付完成'
+    PO-->>B: 回傳各月應付金額
+    loop 每個月
+        B->>DB: INSERT/UPDATE AP_amt
+    end
+    B->>DB: UPDATE AR_amt='0' WHERE AR_amt IS NULL
+    B->>DB: UPDATE AP_amt='0' WHERE AP_amt IS NULL
+    B-->>U: alert 應收=N筆/應付=M筆 已上傳完成
+        </div>
+
+        <h3>4.2 應付明細 CRUD 流程</h3>
+        <div class="mermaid">
+flowchart LR
+    LIST["pay_list.asp<br/>應付明細列表"] -->|新增| ADD["pay_add.asp<br/>新增表單"]
+    ADD -->|提交| ADD_SAVE["pay_add_save.asp<br/>寫入 pay_detail"]
+    LIST -->|選取修改| MEND["pay_mend.asp<br/>修改表單"]
+    MEND -->|提交| MEND_UPD["pay_mend_update.asp<br/>更新 pay_detail"]
+    LIST -->|選取刪除| DEL["pay_delete.asp<br/>刪除 pay_detail"]
+    LIST -->|匯出| RPT["pay_report.asp<br/>Excel 報表"]
+    LIST -->|查詢| LIST
+    ADD_SAVE --> LIST
+    MEND_UPD --> LIST
+        </div>
+
+        <h3>4.3 銀行貸款管理流程</h3>
+        <div class="mermaid">
+flowchart TB
+    BANK_MENU["bank_list.asp<br/>銀行帳戶貸款一覽"] -->|新增| BANK_ADD["bank_list_add.asp"]
+    BANK_MENU -->|修改帳號| BANK_CHG["bank_list_change.asp"]
+    BANK_MENU -->|刪除| BANK_DEL["bank_list_delete.asp"]
+    BANK_MENU -->|更新利息日| UPD_INT["更新 next_paydate<br/>與 pay_days"]
+    BANK_MENU -->|貸款圖表| LOAN_CHART["STD_finance_loan_detail_pipe_chart.asp"]
+    BANK_MENU -->|貸款文件| DOC_LIST["STD_finance_document_list.asp<br/>查 ERMM_erp_documents"]
+    BANK_MENU -->|匯率設定| FX["1400_global_codes.asp<br/>cams_system_codes CURRENCY"]
+
+    UPD_INT -->|計算邏輯| CALC1["next_paydate = dateadd(MM, pay_terms, last_paydate)"]
+    UPD_INT -->|計算邏輯| CALC2["pay_days = DATEDIFF(dd, GETDATE(), next_paydate)"]
+        </div>
+
+        <h3>4.4 財務報表產出流程</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant S as STD_finance_summary.asp
+    participant DB as MGM_finance_summary
+    participant BS as 資產負債表
+    participant PL as 損益表
+    participant E as Excel
+
+    S->>S: 取當年 YYYY, 迴圈 1~12 月
+    loop 每月
+        S->>DB: SELECT * WHERE YYYY_MM=當月
+        alt 不存在
+            S->>DB: INSERT (bu_no, YYYY_MM, YYYY, MM) 預建空記錄
+        end
+    end
+    S->>DB: SELECT * WHERE uid=選取記錄
+    DB-->>S: 回傳所有財務科目金額
+    S->>BS: 資產=現金+存款+應收+存貨+預付+設備...
+    S->>PL: 損益=營業利潤-管銷-財務費用=淨利
+    BS->>E: 匯出 Excel (filename=YYYY_MM月份_資產負債表.xls)
+    PL->>E: 匯出 Excel
+        </div>
+    </section>
+
+    <!-- 五、資料結構 -->
+    <section id="sec5">
+        <h2>五、資料結構與資料表定義</h2>
+
+        <h3>5.1 核心資料表 ER-D 關係圖</h3>
+        <div class="mermaid">
+erDiagram
+    ERMM_ARAP_detail ||--|| MGM_finance_summary : "YYYY_MM 關聯"
+    pay_detail }o--|| leader_supplier : "供應商關聯"
+    pay_detail }o--|| finance_type : "費用類型"
+    MGM_bank_loan_details }o--|| cams_system_codes : "幣別匯率"
+    ERMM_erp_SO ||--|| ERMM_ARAP_detail : "彙算 AR_amt"
+    ermm_erp_po ||--|| ERMM_ARAP_detail : "彙算 AP_amt"
+    ERMM_erp_documents }o--|| MGM_bank_loan_details : "貸款文件"
+
+    ERMM_ARAP_detail {
+        string uid PK
+        string bu_no FK
+        string YYYY
+        string YYYY_MM
+        decimal AR_amt
+        decimal AP_amt
+        datetime update_time
+    }
+    pay_detail {
+        string uid PK
+        string supplier_name FK
+        string finance_type FK
+        date should_date
+        date invoice_date
+        decimal amount
+        string currency_ab
+        string invoice_num
+        date pay_date
+        text expense_content
+        text remark
+        date entry_date
+        string data_year
+    }
+    MGM_finance_summary {
+        string uid PK
+        string bu_no FK
+        string YYYY_MM
+        string YYYY
+        string MM
+        decimal cash_amt
+        decimal deposite_amt
+        decimal AR_amt
+        decimal AR_bill_amt
+        decimal stock_P_amt
+        decimal WIP_M_amt
+        decimal ttl_asset_amt
+        decimal operation_profit_amt
+        decimal net_profit_amt
+        decimal finance_EXP_amt
+        string flag
+    }
+    MGM_bank_loan_details {
+        string uid PK
+        string bu_no FK
+        string acct_no
+        string type1
+        decimal acct_amt
+        string unit FK
+        string loan_id
+        string bank_id
+        string loan_type
+        int pay_terms
+        decimal terms_rate
+        date begin_date
+        date end_date
+        int pay_days
+        decimal payback_amt
+        decimal exchange_rate
+        date last_paydate
+        date next_paydate
+        string status1
+    }
+    leader_supplier {
+        string supplier_name PK
+    }
+    finance_type {
+        string finance_type PK
+    }
+    cams_system_codes {
+        string code_type
+        string code_value
+        string value_description
+        decimal value_number1
+        string inuse_flag
+    }
+    ERMM_erp_SO {
+        string bu_no FK
+        string YYYY_MM
+        decimal unit_price
+        decimal dn_qty
+    }
+    ermm_erp_po {
+        string bu_no FK
+        string YYYY_MM
+        decimal po_amount
+        decimal vat_amt
+        string po_status
+        string po_sub_status
+    }
+        </div>
+
+        <h3>5.2 資料表詳細欄位定義</h3>
+
+        <div class="db-table">
+            <h4>Table: ERMM_ARAP_detail（應收應付匯總表）</h4>
+            <span class="field-line"><span class="pk">uid</span> VARCHAR PK — 唯一識別碼</span>
+            <span class="field-line"><span class="fk">bu_no</span> VARCHAR FK — 業務單位(公司別)</span>
+            <span class="field-line">YYYY VARCHAR — 年度 (如 2026)</span>
+            <span class="field-line">YYYY_MM VARCHAR — 年月 (如 2026/09)</span>
+            <span class="field-line">AR_amt DECIMAL — 應收帳款金額 (來自 SO: Σ unit_price×dn_qty)</span>
+            <span class="field-line">AP_amt DECIMAL — 應付帳款金額 (來自 PO: Σ po_amount+vat_amt)</span>
+            <span class="field-line">update_time DATETIME — 批次更新時間 (=batch_id)</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: pay_detail（應付明細表）</h4>
+            <span class="field-line"><span class="pk">uid</span> VARCHAR PK — 唯一識別碼</span>
+            <span class="field-line"><span class="fk">supplier_name</span> VARCHAR FK — 供應商名稱 (→ leader_supplier)</span>
+            <span class="field-line"><span class="fk">finance_type</span> VARCHAR FK — 費用類型 (→ finance_type)</span>
+            <span class="field-line">should_date DATE — 應付日期</span>
+            <span class="field-line">invoice_date DATE — 發票日期</span>
+            <span class="field-line">amount DECIMAL — 金額</span>
+            <span class="field-line"><span class="fk">currency_ab</span> VARCHAR FK — 幣別 (→ leader_handbook_parameter)</span>
+            <span class="field-line">invoice_num VARCHAR — 發票號碼</span>
+            <span class="field-line">pay_date DATE — 付款日期 (NULL=未付款)</span>
+            <span class="field-line">expense_content TEXT — 費用內容</span>
+            <span class="field-line">remark TEXT — 備註</span>
+            <span class="field-line">entry_date DATE — 登錄日期</span>
+            <span class="field-line">data_year VARCHAR — 資料年度</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: MGM_finance_summary（財務摘要/報表主表）</h4>
+            <span class="field-line"><span class="pk">uid</span> VARCHAR PK — 唯一識別碼</span>
+            <span class="field-line"><span class="fk">bu_no</span> VARCHAR FK — 業務單位</span>
+            <span class="field-line">YYYY_MM VARCHAR — 年月 (如 2026/09)</span>
+            <span class="field-line">YYYY VARCHAR — 年度</span>
+            <span class="field-line">MM VARCHAR — 月份</span>
+            <span class="field-line">flag VARCHAR — 旗標 (空=正常)</span>
+            <span class="field-line">--- 資產類 ---</span>
+            <span class="field-line">cash_amt DECIMAL — 現金</span>
+            <span class="field-line">deposite_amt DECIMAL — 銀行存款</span>
+            <span class="field-line">interest_amt DECIMAL — 應收利息</span>
+            <span class="field-line">AR_bill_amt DECIMAL — 應收票據</span>
+            <span class="field-line">AR_amt DECIMAL — 應收帳款</span>
+            <span class="field-line">AR_debet_amt DECIMAL — 應收借項</span>
+            <span class="field-line">AR_temp_amt DECIMAL — 暫收款</span>
+            <span class="field-line">AR_affiliate_amt DECIMAL — 關係人應收</span>
+            <span class="field-line">AR_other_amt DECIMAL — 其他應收</span>
+            <span class="field-line">AR_dividend_amt DECIMAL — 應收股利</span>
+            <span class="field-line">stock_P_amt DECIMAL — 製成品存貨</span>
+            <span class="field-line">WIP_M_amt DECIMAL — 在製品-材料</span>
+            <span class="field-line">WIP_labor_amt DECIMAL — 在製品-人工</span>
+            <span class="field-line">WIP_EXP_amt DECIMAL — 在製品-費用</span>
+            <span class="field-line">stock_M_amt DECIMAL — 原料存貨</span>
+            <span class="field-line">stock_transit_amt DECIMAL — 在途存貨</span>
+            <span class="field-line">stock_S_amt DECIMAL — 副料存貨</span>
+            <span class="field-line">reserve_loss_amt DECIMAL — 備抵損失</span>
+            <span class="field-line">prepay_EXP_amt DECIMAL — 預付設備</span>
+            <span class="field-line">prepay_goods_amt DECIMAL — 預付貨款</span>
+            <span class="field-line">LQ_prepay_EQMT_amt DECIMAL — 流動預付設備</span>
+            <span class="field-line">VAT_amt DECIMAL — 增值稅</span>
+            <span class="field-line">ttl_asset_amt DECIMAL — 資產總額</span>
+            <span class="field-line">stock_value_amt DECIMAL — 存貨價值</span>
+            <span class="field-line">--- 損益類 ---</span>
+            <span class="field-line">operation_profit_amt DECIMAL — 營業利益</span>
+            <span class="field-line">sale_profit DECIMAL — 銷貨利潤</span>
+            <span class="field-line">operation_EXP_amt DECIMAL — 營業費用</span>
+            <span class="field-line">MGM_EXP_amt DECIMAL — 管理費用</span>
+            <span class="field-line">finance_EXP_amt DECIMAL — 財務費用</span>
+            <span class="field-line">retained_income_amt DECIMAL — 保留盈餘</span>
+            <span class="field-line">net_profit_amt DECIMAL — 淨利</span>
+            <span class="field-line">pretax_profit_amt DECIMAL — 稅前淨利</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: MGM_bank_loan_details（銀行貸款明細表）</h4>
+            <span class="field-line"><span class="pk">uid</span> VARCHAR PK — 唯一識別碼</span>
+            <span class="field-line"><span class="fk">bu_no</span> VARCHAR FK — 業務單位</span>
+            <span class="field-line">YYYY VARCHAR — 年度</span>
+            <span class="field-line">acct_no VARCHAR — 帳戶號碼</span>
+            <span class="field-line">type1 VARCHAR — 類型 (存款/貸款/還款)</span>
+            <span class="field-line">acct_amt DECIMAL — 帳戶金額</span>
+            <span class="field-line"><span class="fk">unit</span> VARCHAR FK — 幣別 (→ cams_system_codes)</span>
+            <span class="field-line">loan_id VARCHAR — 借/貸款編號</span>
+            <span class="field-line">bank_id VARCHAR — 銀行代碼</span>
+            <span class="field-line">branch_id VARCHAR — 分行代碼</span>
+            <span class="field-line">loan_type VARCHAR — 貸款類型</span>
+            <span class="field-line">pay_terms INT — 還款週期 (0=已還/1=每月/3=每季/6=半年/12=一年)</span>
+            <span class="field-line">terms_rate DECIMAL — 利率(%)</span>
+            <span class="field-line">begin_date DATE — 起借日期</span>
+            <span class="field-line">end_date DATE — 到期日期</span>
+            <span class="field-line">pay_days INT — 距離下次利息日天數 (DATEDIFF)</span>
+            <span class="field-line">payback_amt DECIMAL — 已還本金</span>
+            <span class="field-line">exchange_rate DECIMAL — 匯率</span>
+            <span class="field-line">last_paydate DATE — 上次利息日</span>
+            <span class="field-line">next_paydate DATE — 下次利息日 (dateadd 計算)</span>
+            <span class="field-line">status1 VARCHAR — 狀態 (使用中/已還清/待刪除)</span>
+            <span class="field-line">loan_desc TEXT — 借/貸款說明</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: 支票明細 (check detail)</h4>
+            <span class="field-line">check_type VARCHAR — 支票類型 (現金支票/轉帳支票)</span>
+            <span class="field-line">check_num VARCHAR — 支票號碼</span>
+            <span class="field-line">company_id VARCHAR — 公司代號</span>
+            <span class="field-line">check_date DATE — 開票日期</span>
+            <span class="field-line">amount DECIMAL — 金額</span>
+            <span class="field-line">to_company VARCHAR — 受票單位</span>
+            <span class="field-line">remark TEXT — 備註</span>
+        </div>
+
+        <h3>5.3 參考/關聯資料表</h3>
+        <table>
+            <thead>
+                <tr><th>資料表</th><th>用途</th><th>被引用位置</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>leader_supplier</code></td><td>供應商主檔</td><td>pay_add/pay_mend (下拉選單)</td></tr>
+                <tr><td><code>finance_type</code></td><td>費用類型字典</td><td>pay_add/pay_mend (下拉選單)</td></tr>
+                <tr><td><code>leader_handbook_parameter</code></td><td>海關手冊參數(含幣別)</td><td>pay_add/pay_mend (幣別下拉)</td></tr>
+                <tr><td><code>cams_system_codes</code></td><td>系統碼表(匯率/幣別)</td><td>bank_list (CURRENCY 匯率查詢)</td></tr>
+                <tr><td><code>ERMM_erp_SO</code></td><td>銷售訂單(AR來源)</td><td>batch_ARAP_upd (彙算 AR_amt)</td></tr>
+                <tr><td><code>ermm_erp_po</code></td><td>採購訂單(AP來源)</td><td>batch_ARAP_upd (彙算 AP_amt)</td></tr>
+                <tr><td><code>ERMM_erp_so_DN</code></td><td>SO交貨單</td><td>STD_SO_DN_UPD (更新 DN 數量)</td></tr>
+                <tr><td><code>MGM_production_details</code></td><td>生產明細</td><td>STD_SO_DN_UPD (來源資料)</td></tr>
+                <tr><td><code>ERMM_erp_documents</code></td><td>文件管理</td><td>bank_list (貸款合約文件)</td></tr>
+                <tr><td><code>leader_user</code></td><td>使用者權限</td><td>pay_list (檢查 account 權限)</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 六、模組間相互關係 -->
+    <section id="sec6">
+        <h2>六、模組間相互關係</h2>
+        <div class="mermaid">
+flowchart LR
+    subgraph 業務模組
+        SALES["銷售/業務<br/>產生 SO"]
+        PROC["採購<br/>產生 PO"]
+        PROD["生產<br/>產生庫存/在製品"]
+        WH["倉庫<br/>存貨價值"]
+        CUSTOM["海關報關<br/>增值稅/費用"]
+    end
+
+    subgraph 財務模組
+        ARAP["ARAP 彙算"]
+        PAY["付款管理"]
+        BANK["銀行貸款"]
+        REPORT["財務報表"]
+        TAX["稅務風險"]
+    end
+
+    SALES -->|"SO: unit_price×dn_qty"| ARAP
+    PROC -->|"PO: po_amount+vat_amt"| ARAP
+    PROC -->|"供應商→應付"| PAY
+    SALES -->|"客戶→應收"| PAY
+    PROD -->|"在製品價值"| REPORT
+    WH -->|"存貨金額"| REPORT
+    CUSTOM -->|"VAT/報關費用"| REPORT
+    ARAP -->|"AR_amt/AP_amt"| REPORT
+    PAY -->|"現金流出"| REPORT
+    BANK -->|"財務費用/匯兌損益"| REPORT
+    REPORT -->|"稅前淨利"| TAX
+        </div>
+
+        <h3>資料流向說明</h3>
+        <table>
+            <thead>
+                <tr><th>來源模組</th><th>資料表</th><th>傳遞欄位</th><th>目的</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>銷售訂單</td><td><code>ERMM_erp_SO</code></td><td>YYYY_MM, unit_price, dn_qty</td><td>彙算 AR_amt → <code>ERMM_ARAP_detail</code></td></tr>
+                <tr><td>採購訂單</td><td><code>ermm_erp_po</code></td><td>YYYY_MM, po_amount, vat_amt, po_status</td><td>彙算 AP_amt → <code>ERMM_ARAP_detail</code></td></tr>
+                <tr><td>生產</td><td><code>MGM_production_details</code></td><td>生產數量/工序</td><td>→ <code>ERMM_erp_so_DN</code> (DN 更新)</td></tr>
+                <tr><td>倉庫</td><td>存貨系統</td><td>stock_P/M/S_amt, WIP_*</td><td>→ <code>MGM_finance_summary</code> 存貨科目</td></tr>
+                <tr><td>海關報關</td><td>報關單</td><td>VAT_amt, 報關費用</td><td>→ <code>MGM_finance_summary</code> 增值稅科目</td></tr>
+                <tr><td>銀行</td><td><code>MGM_bank_loan_details</code></td><td>利息、匯兌損益</td><td>→ <code>MGM_finance_summary</code> finance_EXP_amt</td></tr>
+            </tbody>
+        </table>
+
+        <h3>6.1 完整資料交互管線總覽</h3>
+        <div class="mermaid">
+flowchart TB
+    subgraph ERP["外部 ERP 系統"]
+        ERP_SO["ERP 銷售訂單"]
+        ERP_PO["ERP 採購訂單"]
+        ERP_MO["ERP 製令"]
+    end
+
+    subgraph Sync["批次同步層 batch/"]
+        SYNC_PO["erp2ermm_po.asp<br/>寫入 ERMM_temp_po"]
+        SYNC_MO["erp2eism_mo.asp<br/>同步製令"]
+        PROC_PO["proc_po.asp<br/>PO 加工計算"]
+        PROC_SUP["proc_supplier.asp<br/>供應商彙算"]
+        CALC_STOCK["cal_daily_xitems_stock_balance.asp<br/>每日庫存結算"]
+        PROC_LAW["proc_xitems_link_lawbook.asp<br/>物料報關法規"]
+    end
+
+    subgraph Biz["業務資料層"]
+        SO["ERMM_erp_SO<br/>銷售訂單"]
+        PO["ermm_erp_po<br/>採購訂單"]
+        PROD["MGM_production_details<br/>生產明細"]
+        SODN["ERMM_erp_so_DN<br/>交貨單 DN"]
+        INVENTORY["e2_xitems_daily_status<br/>每日庫存"]
+        INV_IO["cams_erp_inventory_io<br/>庫存進出"]
+        SUP_PRICE["ERMM_supplier_xitems_price<br/>供應商價格"]
+    end
+
+    subgraph Finance["財務資料層"]
+        ARAP["ERMM_ARAP_detail<br/>應收應付匯總"]
+        PAY["pay_detail<br/>應付明細"]
+        INVOICE["MGM_invoice_details<br/>發票明細"]
+        CASH["MGM_casher_details<br/>現金日記"]
+        ACCT["MGM_account_details<br/>帳戶明細"]
+        FX["cams_system_codes<br/>匯率 CURRENCY"]
+        FIN_SUMM["MGM_finance_summary<br/>財務摘要"]
+        BANK["MGM_bank_loan_details<br/>銀行貸款"]
+        DOC["ERMM_erp_documents<br/>貸款文件"]
+    end
+
+    ERP_SO --> SO
+    ERP_PO --> SYNC_PO
+    ERP_MO --> SYNC_MO
+    SYNC_PO --> PO
+    PROC_PO --> PO
+    PROC_SUP --> SUP_PRICE
+    PROC_PO --> INVENTORY
+    INV_IO --> INVENTORY
+    CALC_STOCK --> INVENTORY
+    INVENTORY --> FIN_SUMM
+    PROD -->|"STD_SO_DN_UPD"| SODN
+    SODN --> SO
+    SO -->|"batch_ARAP_upd"| ARAP
+    PO -->|"batch_ARAP_upd"| ARAP
+    SO --> INVOICE
+    PO --> INVOICE
+    INVOICE --> ARAP
+    ARAP --> FIN_SUMM
+    PAY --> FIN_SUMM
+    CASH --> ACCT
+    FX -->|"匯率"| PO
+    FX -->|"匯率"| INVENTORY
+    FX -->|"匯率"| BANK
+    BANK --> FIN_SUMM
+    DOC --> BANK
+    PROC_LAW --> PO
+        </div>
+
+        <h3>6.2 銷售訂單 → 財務 (AR 應收) 詳細流程</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant ERP as 外部 ERP
+    participant SO as ERMM_erp_SO
+    participant PROD as MGM_production_details
+    participant DN as ERMM_erp_so_DN
+    participant B as batch_ARAP_upd.asp
+    participant ARAP as ERMM_ARAP_detail
+    participant INV as MGM_invoice_details
+
+    ERP->>SO: 同步銷售訂單 (unit_price, so_qty)
+    PROD->>DN: STD_SO_DN_UPD.asp<br/>SELECT bu_no,wk_date,xitems,customer_name,<br/>(batch_qty-df_qty) AS qty<br/>FROM MGM_production_details<br/>WHERE qc_type LIKE '%包裝%'
+    DN->>SO: 更新 DN_qty/so_qty
+    Note over SO: DN_qty = 實際交貨數量
+    SO->>B: SELECT YYYY_MM,<br/>SUM(unit_price*dn_qty) AS AR_amt<br/>FROM ERMM_erp_SO<br/>GROUP BY YYYY_MM
+    B->>ARAP: INSERT/UPDATE AR_amt
+    SO->>INV: STD_account_receive_list.asp<br/>關聯 BH_MGM_TX_detail<br/>寫入 MGM_invoice_details (AR 發票)
+    INV->>ARAP: 補充 AR 明細 (client_id, sub_amt)
+        </div>
+
+        <div class="db-table">
+            <h4>欄位對映：銷售 → 財務 AR</h4>
+            <span class="field-line"><span class="fk">ERMM_erp_SO.unit_price</span> × <span class="fk">ERMM_erp_SO.dn_qty</span> → <span class="pk">ERMM_ARAP_detail.AR_amt</span></span>
+            <span class="field-line"><span class="fk">ERMM_erp_SO.YYYY_MM</span> → <span class="pk">ERMM_ARAP_detail.YYYY_MM</span> (分組鍵)</span>
+            <span class="field-line"><span class="fk">ERMM_erp_SO.bu_no</span> → <span class="pk">ERMM_ARAP_detail.bu_no</span></span>
+            <span class="field-line"><span class="fk">MGM_production_details.batch_qty - df_qty</span> → <span class="pk">ERMM_erp_so_DN.so_qty</span> (生產→交貨)</span>
+            <span class="field-line"><span class="fk">MGM_production_details.wk_date</span> → <span class="pk">ERMM_erp_so_DN.DN_date</span></span>
+            <span class="field-line"><span class="fk">MGM_production_details.customer_name</span> → <span class="pk">ERMM_erp_so_DN.client_name</span></span>
+            <span class="field-line"><span class="fk">ERMM_erp_so_DN.DN_qty</span> → 回寫 <span class="pk">ERMM_erp_SO.dn_qty</span> → 影響 AR_amt 計算</span>
+        </div>
+
+        <h3>6.3 採購訂單 → 財務 (AP 應付) 詳細流程</h3>
+        <div class="mermaid">
+sequenceDiagram
+    participant ERP as 外部 ERP
+    participant T as ERMM_temp_po
+    participant PP as proc_po.asp
+    participant PO as ermm_erp_po
+    participant INV_IO as cams_erp_inventory_io
+    participant B as batch_ARAP_upd.asp
+    participant ARAP as ERMM_ARAP_detail
+    participant SUP as ERMM_supplier_xitems_price
+
+    ERP->>T: erp2ermm_po.asp 寫入暫存
+    T->>PO: 轉入正式 PO 表
+    PP->>PO: unit_price_local = unit_price * exchange_rate
+    PP->>PO: po_amount_local = po_amount * exchange_rate
+    PP->>PO: supplier_type JOIN ermm_erp_supplier
+    PP->>PO: year/month_approved = datediff(month,'2013-01-01',date_po_approve)
+    PP->>PO: inventory_qty += io_qty (FROM cams_erp_inventory_io)
+    PP->>PO: qty_balance_approved (FROM e2_xitems_daily_status)
+    PP->>SUP: times_po = COUNT(*) GROUP BY supplier,xitems,unit_price
+    PO->>B: SELECT YYYY_MM,<br/>SUM(po_amount+vat_amt) AS AP_amt<br/>WHERE po_status='審核通過'<br/>AND po_sub_status='交付完成'
+    B->>ARAP: INSERT/UPDATE AP_amt
+        </div>
+
+        <div class="db-table">
+            <h4>採購 PO 加工計算 (proc_po.asp) — 影響財務的欄位</h4>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">unit_price_local</span> = round(unit_price * exchange_rate, 5)</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">po_amount_local</span> = po_amount * exchange_rate</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">supplier_type</span> = b.supplier_type (JOIN ermm_erp_supplier)</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">inventory_qty</span> = inventory_qty + io_qty (FROM cams_erp_inventory_io)</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">qty_balance_approved</span> = b.qty_balance (FROM e2_xitems_daily_status)</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">close_batch_id</span> = batch_id (WHERE po_status IN ('closed','canceled'))</span>
+            <span class="field-line">UPDATE ermm_erp_po SET <span class="pk">deliver_ontime</span> = '-1' (WHERE date_last_deliver > date_deliver_expect)</span>
+        </div>
+
+        <div class="warn-box">
+            <strong>AP 計算條件：</strong>只有 <code>po_status='審核通過'</code> 且 <code>po_sub_status='交付完成'</code> 的採購單才計入應付帳款。<br/>
+            AP_amt = Σ(po_amount + vat_amt)，包含增值稅。本地幣別金額 = po_amount × exchange_rate。
+        </div>
+
+        <h3>6.4 庫存/倉庫 → 財務 (存貨價值) 詳細流程</h3>
+        <div class="mermaid">
+flowchart TB
+    subgraph 庫存計算["cal_daily_xitems_stock_balance.asp"]
+        TRUNC["TRUNCATE e2_xitems_daily_status"]
+        CALC_QTY["計算 qty_balance<br/>(進出加減)"]
+        CALC_FX["更新 exchange_rate<br/>FROM cams_system_codes<br/>WHERE code_type='currency'"]
+        CALC_SV["計算 stock_value<br/>= unit_price × qty_balance × exchange_rate"]
+        CALC_AGE["計算 ageing_category<br/> ageing_days"]
+        CALC_RP["計算 reduce_percentage<br/>FROM cams_system_codes<br/>WHERE code_type='AGEING_STOCK'"]
+        CALC_CV["計算 current_value<br/>= stock_value × (1 - reduce_percentage/100)"]
+        CALC_CL["計算 current_lose<br/>= stock_value × reduce_percentage/100"]
+        CHART["INSERT e2_xitems_daily_status_chart<br/>SUM(stock_value), SUM(current_lose)<br/>SUM(current_value), reduce_percentage"]
+    end
+
+    TRUNC --> CALC_QTY --> CALC_FX --> CALC_SV --> CALC_AGE --> CALC_RP --> CALC_CV --> CALC_CL --> CHART
+    CHART -->|"stock_value_total"| FIN["MGM_finance_summary<br/>stock_P_amt / stock_M_amt<br/>stock_S_amt / stock_transit_amt<br/>reserve_loss_amt"]
+        </div>
+
+        <div class="db-table">
+            <h4>庫存價值計算公式 (本地幣 RMB)</h4>
+            <span class="field-line"><span class="pk">stock_value</span> = unit_price × qty_balance × exchange_rate</span>
+            <span class="field-line"><span class="pk">current_value</span> = stock_value × (1 - reduce_percentage / 100)</span>
+            <span class="field-line"><span class="pk">current_lose</span> = stock_value × reduce_percentage / 100  <span style="color:#e74c3c;">(備抵損失)</span></span>
+            <span class="field-line"><span class="pk">stock_value_total</span> = SUM(stock_value)  <span style="color:#3498db;">(→ MGM_finance_summary.stock_*_amt)</span></span>
+            <span class="field-line"><span class="pk">current_lose_total</span> = SUM(current_lose)  <span style="color:#3498db;">(→ MGM_finance_summary.reserve_loss_amt)</span></span>
+        </div>
+
+        <h3>6.5 銀行/匯率 → 財務 詳細流程</h3>
+        <div class="mermaid">
+flowchart LR
+    FX["cams_system_codes<br/>code_type='CURRENCY'<br/>value_number1=匯率"] --> PO["ermm_erp_po.exchange_rate"]
+    FX --> STOCK["e2_xitems_daily_status.exchange_rate"]
+    FX --> BANK["MGM_bank_loan_details.exchange_rate"]
+    BANK -->|"多幣別貸款"| CALC_FX["匯兌損益計算"]
+    CALC_FX --> LOSS["loss_flag 判定<br/>amt1 = loan_amt × exchange_rate<br/>amt2 = loan_amt × new_rate<br/>diff_amt = amt2 - amt1"]
+    LOSS -->|"diff_amt < 0"| FIN["MGM_finance_summary<br/>finance_EXP_amt"]
+    BANK -->|"利息"| INTEREST["next_paydate = dateadd(MM, pay_terms, last_paydate)<br/>pay_days = DATEDIFF(dd, GETDATE(), next_paydate)"]
+    DOC["ERMM_erp_documents<br/>doc_type='銀行貸款'<br/>xitems=loan_id"] --> BANK
+        </div>
+
+        <div class="db-table">
+            <h4>匯兌損益計算邏輯 (bank_list.asp)</h4>
+            <span class="field-line">來源匯率：<span class="fk">cams_system_codes.value_number1</span> (WHERE code_type='CURRENCY' AND inuse_flag='USE')</span>
+            <span class="field-line">原始金額：<span class="pk">amt1</span> = loan_amt × exchange_rate (貸款時匯率)</span>
+            <span class="field-line">當前金額：<span class="pk">amt2</span> = loan_amt × new_rate (當前匯率)</span>
+            <span class="field-line">匯兌差額：<span class="pk">diff_amt</span> = amt2 - amt1</span>
+            <span class="field-line">if diff_amt &lt; 0 → <span style="color:#e74c3c;">loss_flag='Y'</span> (匯兌損失，紅色標記)</span>
+            <span class="field-line">if diff_amt ≥ 0 → 正常顯示 (匯兌收益)</span>
+        </div>
+
+        <h3>6.6 現金/發票 → 財務 詳細流程</h3>
+        <div class="mermaid">
+flowchart TB
+    SO["ERMM_erp_SO<br/>銷售訂單"] -->|"unit_price×dn_qty"| INV_AR["MGM_invoice_details<br/>AR 發票 (client_id, sub_amt)"]
+    PO["ermm_erp_po<br/>採購訂單"] -->|"po_amount+vat_amt"| INV_AP["MGM_invoice_details<br/>AP 發票 (po_id, sub_amt)"]
+    TX["BH_MGM_TX_detail<br/>交易明細"] --> INV_AR
+    INV_AR --> ARAP["ERMM_ARAP_detail<br/>AR_amt/AP_amt"]
+    INV_AP --> ARAP
+
+    CASH_IN["收款/付款"] --> CASH["MGM_casher_details<br/>現金日記帳<br/>(client_id, sub_amt, wk_date)"]
+    CASH --> ACCT["MGM_account_details<br/>帳戶明細查詢"]
+    ACCT --> FIN["MGM_finance_summary<br/>cash_amt, deposite_amt"]
+        </div>
+
+        <h3>6.7 批次管線順序控制</h3>
+        <div class="mermaid">
+flowchart LR
+    BC["cams_batch_control<br/>(seq_SQL 排序)"] --> S1["erp2ermm_po.asp<br/>seq=1: ERP→PO 同步"]
+    S1 --> S2["proc_po.asp<br/>seq=2: PO 加工計算"]
+    S2 --> S3["proc_supplier.asp<br/>seq=3: 供應商彙算"]
+    S3 --> S4["proc_xitems_link_lawbook.asp<br/>seq=4: 物料報關法規"]
+    S4 --> S5["cal_daily_xitems_stock_balance.asp<br/>seq=5: 每日庫存結算"]
+    S5 --> S6["batch_ARAP_upd.asp<br/>seq=6: AR/AP 彙算"]
+    S6 --> S7["更新 MGM_finance_summary<br/>seq=7: 財務摘要"]
+        </div>
+
+        <div class="info-box">
+            <strong>批次控制機制：</strong>
+            <code>cams_batch_control</code> 表以 <code>seq_SQL</code> 欄位控制執行順序。每一步驟啟動時先查 <code>process_status='00'</code> 確認前一步驟完成。
+            <code>break_point='Y'</code> 標記中斷點，<code>start_log</code>/<code>end_log</code> 記錄執行歷程。
+            <code>batch_id</code> 連貫整條管線，用於追溯資料版本。
+        </div>
+
+        <h3>6.8 跨模組資料交互總表</h3>
+        <table>
+            <thead>
+                <tr><th>來源模組</th><th>來源資料表</th><th>中介程式</th><th>目標資料表</th><th>關鍵欄位轉換</th><th>觸發時機</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>外部 ERP</td><td>ERP 原始資料</td><td><code>erp2ermm_po.asp</code></td><td><code>ERMM_temp_po → ermm_erp_po</code></td><td>PO 原始欄位</td><td>批次啟動</td></tr>
+                <tr><td>採購</td><td><code>ermm_erp_po</code></td><td><code>proc_po.asp</code></td><td><code>ermm_erp_po</code> (回寫)</td><td>unit_price_local=unit_price×FX, po_amount_local</td><td>批次 seq=2</td></tr>
+                <tr><td>採購</td><td><code>ermm_erp_po</code></td><td><code>proc_supplier.asp</code></td><td><code>ERMM_supplier_xitems_price</code></td><td>times_po=COUNT(*)</td><td>批次 seq=3</td></tr>
+                <tr><td>採購</td><td><code>ermm_erp_po</code></td><td><code>proc_xitems_link_lawbook.asp</code></td><td><code>ermm_erp_po</code></td><td>物料綁定海關法規 (影響 VAT)</td><td>批次 seq=4</td></tr>
+                <tr><td>倉庫</td><td><code>cams_erp_inventory_io</code></td><td><code>proc_po.asp</code></td><td><code>ermm_erp_po.inventory_qty</code></td><td>inventory_qty += SUM(io_qty)</td><td>批次 seq=2</td></tr>
+                <tr><td>倉庫</td><td><code>e2_xitems_daily_status</code></td><td><code>proc_po.asp</code></td><td><code>ermm_erp_po.qty_balance_*</code></td><td>qty_balance_approved/closed</td><td>批次 seq=2</td></tr>
+                <tr><td>倉庫</td><td>庫存進出</td><td><code>cal_daily_xitems_stock_balance.asp</code></td><td><code>e2_xitems_daily_status</code></td><td>stock_value=price×qty×FX</td><td>批次 seq=5</td></tr>
+                <tr><td>倉庫</td><td><code>e2_xitems_daily_status</code></td><td>—</td><td><code>MGM_finance_summary</code></td><td>stock_P/M/S_amt, WIP_*, reserve_loss_amt</td><td>報表填報</td></tr>
+                <tr><td>生產</td><td><code>MGM_production_details</code></td><td><code>STD_SO_DN_UPD.asp</code></td><td><code>ERMM_erp_so_DN</code></td><td>DN_qty, so_qty (batch_qty-df_qty)</td><td>手動觸發</td></tr>
+                <tr><td>生產→銷售</td><td><code>ERMM_erp_so_DN</code></td><td>—</td><td><code>ERMM_erp_SO</code> (dn_qty)</td><td>DN_qty → SO.dn_qty (影響 AR)</td><td>批次彙算</td></tr>
+                <tr><td>銷售</td><td><code>ERMM_erp_SO</code></td><td><code>batch_ARAP_upd.asp</code></td><td><code>ERMM_ARAP_detail</code></td><td>AR_amt=Σ(unit_price×dn_qty)</td><td>批次 seq=6</td></tr>
+                <tr><td>採購</td><td><code>ermm_erp_po</code></td><td><code>batch_ARAP_upd.asp</code></td><td><code>ERMM_ARAP_detail</code></td><td>AP_amt=Σ(po_amount+vat_amt)</td><td>批次 seq=6</td></tr>
+                <tr><td>銷售/採購</td><td><code>SO + BH_MGM_TX_detail</code></td><td><code>STD_account_receive_list.asp</code></td><td><code>MGM_invoice_details</code></td><td>AR 發票 (client_id, sub_amt)</td><td>手動查詢</td></tr>
+                <tr><td>採購</td><td><code>ermm_erp_po</code></td><td><code>STD_supplier_payment_details.asp</code></td><td><code>MGM_invoice_details</code></td><td>AP 發票 (po_id, tax_rate)</td><td>手動查詢</td></tr>
+                <tr><td>現金</td><td>收款/付款</td><td><code>STD_finance_cash_daily_details.asp</code></td><td><code>MGM_casher_details</code></td><td>client_id, sub_amt, wk_date</td><td>手動登錄</td></tr>
+                <tr><td>銀行</td><td>—</td><td><code>bank_list.asp</code></td><td><code>MGM_bank_loan_details</code></td><td>next_paydate, pay_days, 匯兌損益</td><td>手動/自動更新</td></tr>
+                <tr><td>銀行</td><td><code>ERMM_erp_documents</code></td><td><code>bank_list.asp</code></td><td>—(關聯查詢)</td><td>doc_type='銀行貸款', xitems=loan_id</td><td>查詢時</td></tr>
+                <tr><td>匯率</td><td><code>cams_system_codes</code></td><td>多處引用</td><td>PO/庫存/銀行.exchange_rate</td><td>value_number1 (WHERE code_type='CURRENCY')</td><td>全域</td></tr>
+            </tbody>
+        </table>
+
+        <h3>6.9 資料依賴鏈（最終彙入財務報表）</h3>
+        <div class="mermaid">
+flowchart TB
+    L1["ERP 原始資料"] --> L2["batch/ 同步+加工<br/>(7 個批次程式)"]
+    L2 --> L3["業務資料表<br/>ERMM_erp_SO / ermm_erp_po<br/>e2_xitems_daily_status / ERMM_erp_so_DN"]
+    L3 --> L4["財務彙算表<br/>ERMM_ARAP_detail (AR/AP)<br/>MGM_invoice_details (發票)<br/>MGM_casher_details (現金)<br/>MGM_bank_loan_details (銀行)"]
+    L4 --> L5["MGM_finance_summary<br/>(資產負債+損益 40+ 科目)"]
+    L5 --> L6["三大報表輸出<br/>資產負債表 / 損益表 / 現金流量"]
+    L6 --> L7["管理決策"]
+        </div>
+
+        <div class="info-box">
+            <strong>資料依賴鏈說明：</strong>資料從 ERP 原始同步，經過 7 個批次程式加工計算，形成業務資料表，再彙算為 4 類財務彙算表 (ARAP/發票/現金/銀行)，最終匯入 <code>MGM_finance_summary</code> 的 40+ 個會計科目，產出三大報表供管理決策。任何一環的資料異常都會影響最終報表準確性。
+        </div>
+
+        <h3>6.10 應收/應付發票明細 (MGM_invoice_details) 實際 SQL</h3>
+        <p><code>STD_supplier_payment_details.asp</code> 依 <code>TX_type</code> 分流計算 AR/AP 金額：</p>
+        <div class="db-table">
+            <h4>AR/AP 來源金額計算 (STD_supplier_payment_details.asp)</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- AR 應收 (來自銷售訂單)</span></span>
+            <span class="field-line">SELECT SUM(unit_price * dn_qty) AS ttl_amt</span>
+            <span class="field-line">FROM ERMM_erp_so</span>
+            <span class="field-line">WHERE bu_no='...' AND so_nbr='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- AP 應付 (來自採購訂單)</span></span>
+            <span class="field-line">SELECT SUM(unit_price * po_qty) AS ttl_amt</span>
+            <span class="field-line">FROM ermm_erp_po</span>
+            <span class="field-line">WHERE bu_no='...' AND po_id='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#3498db;">→ 寫入 MGM_invoice_details (invoice_no, sub_amt, tax_type, tax_rate, wk_date, pay_date)</span></span>
+        </div>
+
+        <p><code>STD_account_receive_list.asp</code> 聯結 SO 與交易明細表：</p>
+        <div class="db-table">
+            <h4>應收帳款列表查詢 (STD_account_receive_list.asp)</h4>
+            <span class="field-line">SELECT uid, so_date, client_id, client_name,</span>
+            <span class="field-line">       a.so_nbr, a.xitems, (a.unit_price * dn_qty) AS po_amount,</span>
+            <span class="field-line">       b.wk_date, b.qty, b.unit_price, b.amt</span>
+            <span class="field-line">FROM ERMM_erp_so a,</span>
+            <span class="field-line">  (SELECT xitems, so_nbr, unit_price,</span>
+            <span class="field-line">          (0 - qty) AS qty,</span>
+            <span class="field-line">          (0 - unit_price * qty) AS amt,</span>
+            <span class="field-line">          wk_date</span>
+            <span class="field-line">   FROM BH_MGM_TX_detail</span>
+            <span class="field-line">   WHERE bu_no='...' AND event_type='銷售出庫'</span>
+            <span class="field-line">   AND wk_date BETWEEN start_date AND end_date) b</span>
+            <span class="field-line">WHERE a.bu_no = b.bu_no</span>
+            <span class="field-line">  AND a.xitems = b.xitems AND a.so_nbr = b.so_nbr</span>
+            <span class="field-line">  AND payment = 'R'(已收款) / 'C'(已結案) / NULL(未收款)</span>
+        </div>
+
+        <h3>6.11 現金日記帳 (MGM_casher_details) CRUD 實際 SQL</h3>
+        <div class="db-table">
+            <h4>STD_finance_cash_daily_details.asp — 三種操作</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 新增 (add)</span></span>
+            <span class="field-line">INSERT INTO MGM_casher_details</span>
+            <span class="field-line">  (bu_no, amt_type, client_id, xitems, num_vman, sub_amt,</span>
+            <span class="field-line">   remark, wk_date, create_user, create_time,</span>
+            <span class="field-line">   YYYY, YYYY_MM, MM, sub_type, inv_no, DB_CR, id_for_amt)</span>
+            <span class="field-line">VALUES (...)</span>
+            <span class="field-line"><span style="color:#3498db;">-- 檢查不重複：WHERE num_vman='...' (發票/收據號)</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#f39c12;">-- 修改 (chg)</span></span>
+            <span class="field-line">UPDATE MGM_casher_details SET</span>
+            <span class="field-line">  sub_amt, create_time, create_user, wk_date, remark,</span>
+            <span class="field-line">  YYYY, YYYY_MM, MM, num_vman, client_id, xitems,</span>
+            <span class="field-line">  amt_type, sub_type, inv_no, DB_CR, id_for_amt</span>
+            <span class="field-line">WHERE uid='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#e74c3c;">-- 刪除 (del)</span></span>
+            <span class="field-line">DELETE FROM MGM_casher_details WHERE uid='...'</span>
+        </div>
+
+        <div class="db-table">
+            <h4>MGM_casher_details 欄位結構</h4>
+            <span class="field-line"><span class="pk">uid</span> PK — 唯一識別碼</span>
+            <span class="field-line"><span class="fk">bu_no</span> FK — 業務單位</span>
+            <span class="field-line">amt_type — 帳務類型 (收款/付款)</span>
+            <span class="field-line">client_id — 客戶/供應商代號</span>
+            <span class="field-line">xitems — 物料代號</span>
+            <span class="field-line">num_vman — 發票/收據號碼 (唯一鍵)</span>
+            <span class="field-line">sub_amt — 金額</span>
+            <span class="field-line">DB_CR — 借貸別 (借方/貸方)</span>
+            <span class="field-line">sub_type — 子類型</span>
+            <span class="field-line">inv_no — 發票號</span>
+            <span class="field-line">id_for_amt — 關聯 ID</span>
+            <span class="field-line">YYYY / YYYY_MM / MM — 年/年月/月</span>
+            <span class="field-line">wk_date — 帳務日期</span>
+            <span class="field-line">create_user / create_time — 建立者/時間</span>
+        </div>
+
+        <h3>6.12 帳戶明細 (MGM_account_details) 與文件關聯</h3>
+        <p><code>STD_finance_account_details_query.asp</code> 是帳戶明細查詢主頁，按 <code>sub_group</code> 分類顯示：</p>
+        <div class="db-table">
+            <h4>MGM_account_details 結構與分類</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK, YYYY_MM</span>
+            <span class="field-line">acct_type — 會計科目類型</span>
+            <span class="field-line">group_id — 科目群組 ID</span>
+            <span class="field-line">sub_group — 子群組分類：</span>
+            <span class="field-line">  應收帳款 / 應付帳款 / 銀行貸款</span>
+            <span class="field-line">  原料成本 / 直接人工 / ...</span>
+            <span class="field-line">acct_name — 科目名稱</span>
+            <span class="field-line">sub_amt — 金額</span>
+            <span class="field-line">client_id — 客戶/供應商</span>
+            <span class="field-line">type1 — 類型</span>
+            <span class="field-line">remark — 備註</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#3498db;">-- 關聯文件 (ERMM_erp_documents)</span></span>
+            <span class="field-line">SELECT count(*) AS cnt FROM ERMM_erp_documents</span>
+            <span class="field-line">WHERE bu_no='...' AND doc_type=sub_group</span>
+            <span class="field-line">  AND xitems=acct_name AND doc_desc&lt;&gt;'附件照片'</span>
+        </div>
+
+        <h3>6.13 財務摘要批次計算 (batch_finance_summary_reset_null.asp)</h3>
+        <p>這是最關鍵的財務計算批次，做兩件事：</p>
+
+        <h4>① NULL 值歸零（200+ 欄位）</h4>
+        <div class="db-table">
+            <span class="field-line">UPDATE MGM_finance_summary SET [欄位]='0' WHERE [欄位] IS NULL</span>
+            <span class="field-line"><span style="color:#7f8c8d;">-- 涵蓋 200+ 個會計科目與比率欄位，包括：</span></span>
+            <span class="field-line">資產：cash_amt, deposite_amt, AR_amt, stock_P/M/S_amt, WIP_*, ttl_asset_amt</span>
+            <span class="field-line">負債：AP_amt, AP_bill_amt, LT_loan_amt, LT_debet_amt, AP_tax_amt</span>
+            <span class="field-line">權益：captial_stock_amt, captial_reserve_amt, legal_reserve_amt, accumulated_amt</span>
+            <span class="field-line">損益：sale_amt, sale_cost_amt, operation_profit_amt, net_profit_amt</span>
+            <span class="field-line">現金流：cash_begin/end_amt, cash_in/out_amt, cash_in_invest/loan_amt</span>
+            <span class="field-line">比率：liquidity_ratio, speed_ratio, net_profit_ratio, AR_rate, cash_ratio</span>
+            <span class="field-line">週轉天：CNY_tover_day, AR_tover_day, stock_tover_day, LQ_tover_day</span>
+            <span class="field-line">成長率：sale_inc_rate, AR_inc_rate, CNY_inc_rate, stock_inc_rate</span>
+            <span class="field-line">稅務：VAT_rate, VAT_amt, Tax_amt, free_tax_sale_amt, on_tax_goods_amt</span>
+            <span class="field-line">風險：Z_model, F_model, Z3_mode, Z2_mode, wall_mode</span>
+        </div>
+
+        <h4>② 衍生財務指標計算</h4>
+        <div class="db-table">
+            <h4>損益計算鏈 (batch_finance_summary_reset_null.asp)</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業毛利 = 銷貨收入 - 銷貨成本 - 增值稅</span></span>
+            <span class="field-line">UPDATE MGM_finance_summary SET</span>
+            <span class="field-line">  <span class="pk">BIZ_major_margin_amt</span> = sale_amt - sale_cost_amt - VAT_amt</span>
+            <span class="field-line">WHERE bu_no='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業利益 = 毛利 + 其他收益 - 銷管財費用</span></span>
+            <span class="field-line">UPDATE MGM_finance_summary SET</span>
+            <span class="field-line">  <span class="pk">BIZ_margin_amt</span> = BIZ_major_margin_amt + BIZ_other_INC_amt</span>
+            <span class="field-line">    - sale_exp_amt - MGM_EXP_amt - finance_EXP_amt</span>
+            <span class="field-line">WHERE bu_no='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業利潤 = 營業利益 + 投資收益 + 補貼 + 其他收入 - 其他成本</span></span>
+            <span class="field-line">UPDATE MGM_finance_summary SET</span>
+            <span class="field-line">  <span class="pk">operation_profit_amt</span> = BIZ_margin_amt + INVEST_profit_amt</span>
+            <span class="field-line">    + AR_subsidy_amt + others_INC_amt - others_cost_amt</span>
+            <span class="field-line">WHERE bu_no='...'</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 淨利 = 營業利潤 - 增值稅</span></span>
+            <span class="field-line">UPDATE MGM_finance_summary SET</span>
+            <span class="field-line">  <span class="pk">net_profit_amt</span> = operation_profit_amt - VAT_amt</span>
+            <span class="field-line">WHERE bu_no='...'</span>
+        </div>
+
+        <h4>③ 增值稅率自動取得</h4>
+        <div class="db-table">
+            <span class="field-line"><span style="color:#3498db;">-- 從系統碼表取得各公司別增值稅率</span></span>
+            <span class="field-line">SELECT value_number3 AS vat_rate</span>
+            <span class="field-line">FROM cams_system_codes</span>
+            <span class="field-line">WHERE code_type='BUSINESS_ID' AND code_value=bu_no AND inuse_flag='USE'</span>
+            <span class="field-line"></span>
+            <span class="field-line">UPDATE MGM_finance_summary SET VAT_rate='...' WHERE VAT_rate IS NULL OR vat_rate='0'</span>
+        </div>
+
+        <h3>6.14 帳戶明細彙入財務摘要 (STD_finance_summary_addon.asp)</h3>
+        <div class="mermaid">
+flowchart TB
+    ACCT["MGM_account_details<br/>(逐筆帳戶明細)"] -->|"SELECT DISTINCT YYYY_MM"| LOOP["迴圈每月"]
+    LOOP --> CHECK{"MGM_finance_summary<br/>該月已存在?"}
+    CHECK -->|不存在| INSERT["INSERT 預建記錄<br/>(40+ 科目預設 0)"]
+    CHECK -->|已存在| SKIP["跳過"]
+    INSERT --> RESET["batch_finance_summary_reset_null.asp<br/>① NULL 歸零<br/>② 計算損益鏈<br/>③ 取 VAT_rate"]
+    SKIP --> RESET
+    RESET --> FIN["MGM_finance_summary<br/>(完整財務報表資料)"]
+        </div>
+
+        <div class="info-box">
+            <strong>彙入邏輯：</strong><code>STD_finance_summary_addon.asp</code> 從 <code>MGM_account_details</code> 取得所有月份，
+            為每個月在 <code>MGM_finance_summary</code> 預建記錄（所有科目預設為 0）。
+            隨後 <code>batch_finance_summary_reset_null.asp</code> 執行 NULL 歸零 + 損益鏈計算 + VAT 率更新。
+            這構成了「帳戶明細 → 財務摘要 → 報表產出」的最後一哩路。
+        </div>
+
+        <h3>6.15 完整資料交互流（含實際 SQL 對映）</h3>
+        <div class="mermaid">
+flowchart TB
+    subgraph S1["Step 1: ERP 同步"]
+        A1["erp2ermm_po.asp<br/>INSERT ERMM_temp_po"]
+        A2["erp2eism_mo.asp<br/>同步製令"]
+    end
+    subgraph S2["Step 2: PO 加工"]
+        B1["proc_po.asp<br/>UPDATE ermm_erp_po<br/>SET unit_price_local=price×FX<br/>SET po_amount_local=amt×FX<br/>SET inventory_qty+=io_qty<br/>SET qty_balance_approved"]
+        B2["proc_supplier.asp<br/>UPDATE supplier_xitems_price<br/>SET times_po=COUNT"]
+        B3["proc_xitems_link_lawbook<br/>物料綁定海關法規"]
+    end
+    subgraph S3["Step 3: 庫存結算"]
+        C1["cal_daily_xitems_stock_balance<br/>TRUNCATE + 重算<br/>stock_value=price×qty×FX<br/>current_lose=stock_value×reduce%<br/>INSERT daily_status_chart"]
+    end
+    subgraph S4["Step 4: 生產→DN"]
+        D1["STD_SO_DN_UPD.asp<br/>SELECT MGM_production_details<br/>INSERT/UPDATE ERMM_erp_so_DN<br/>(DN_qty, so_qty)"]
+        D2["STD_SO_upd_QC.asp<br/>UPDATE ERMM_erp_so_DN<br/>SET qc_status"]
+    end
+    subgraph S5["Step 5: ARAP 彙算"]
+        E1["batch_ARAP_upd.asp<br/>SELECT SUM(price×qty) FROM SO/PO<br/>INSERT/UPDATE ERMM_ARAP_detail"]
+    end
+    subgraph S6["Step 6: 發票/現金"]
+        F1["STD_supplier_payment_details<br/>AR: SUM(price×dn_qty) FROM SO<br/>AP: SUM(price×po_qty) FROM PO<br/>→ INSERT MGM_invoice_details"]
+        F2["STD_finance_cash_daily_details<br/>INSERT/UPDATE/DELETE<br/>MGM_casher_details"]
+    end
+    subgraph S7["Step 7: 帳戶彙總"]
+        G1["STD_finance_summary_addon<br/>SELECT DISTINCT YYYY_MM<br/>FROM MGM_account_details<br/>INSERT MGM_finance_summary 預建"]
+    end
+    subgraph S8["Step 8: 財務計算"]
+        H1["batch_finance_summary_reset_null<br/>① 200+ NULL→0<br/>② BIZ_major=sale-cost-VAT<br/>③ BIZ_margin= major+INC-EXP<br/>④ operation=BIZ+INVEST+subsidy<br/>⑤ net_profit=operation-VAT<br/>⑥ VAT_rate FROM cams_system_codes"]
+    end
+    subgraph S9["Step 9: 報表產出"]
+        I1["STD_finance_balance_sheet<br/>資產負債表"]
+        I2["STD_finance_PL_table<br/>損益表"]
+        I3["STD_finance_summary<br/>摘要+Excel"]
+    end
+
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
+        </div>
+
+        <h3>6.16 新增資料表結構（依實際程式碼發現）</h3>
+
+        <div class="db-table">
+            <h4>Table: MGM_invoice_details（發票明細表）</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK</span>
+            <span class="field-line">TX_type — 交易類型 (AR 應收 / AP 應付)</span>
+            <span class="field-line">order_id — 訂單號 (SO: so_nbr / PO: po_id)</span>
+            <span class="field-line">invoice_no — 發票號碼</span>
+            <span class="field-line">seq_no — 序號</span>
+            <span class="field-line">sub_amt — 金額</span>
+            <span class="field-line">tax_type — 稅別 (普通/增值稅)</span>
+            <span class="field-line">tax_rate — 稅率(%)</span>
+            <span class="field-line">wk_date — 帳務日期</span>
+            <span class="field-line">pay_date — 付款日期</span>
+            <span class="field-line">client_id — 客戶代號 (AR)</span>
+            <span class="field-line">supplier_id — 供應商代號 (AP)</span>
+            <span class="field-line">sales_id — 業務員</span>
+            <span class="field-line">AR_type — AR 類型</span>
+            <span class="field-line">close_flag — 結案旗標</span>
+            <span class="field-line">payment — 收款狀態 (R=已收/C=結案/NULL=未收)</span>
+            <span class="field-line">ageing_days — 帳齡天數</span>
+            <span class="field-line">YYYY / YYYY_MM — 年/年月</span>
+            <span class="field-line">remark — 備註</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: MGM_account_details（帳戶明細表）</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK</span>
+            <span class="field-line">YYYY_MM — 年月</span>
+            <span class="field-line">acct_type — 會計科目類型</span>
+            <span class="field-line">group_id — 科目群組 ID</span>
+            <span class="field-line">sub_group — 子群組 (應收帳款/應付帳款/銀行貸款/原料成本/直接人工)</span>
+            <span class="field-line">acct_name — 科目名稱</span>
+            <span class="field-line">sub_amt — 金額</span>
+            <span class="field-line">client_id — 客戶/供應商</span>
+            <span class="field-line">type1 — 類型</span>
+            <span class="field-line">remark — 備註</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: BH_MGM_TX_detail（交易明細表 — 銷售出庫）</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK</span>
+            <span class="field-line">xitems — 物料代號</span>
+            <span class="field-line">so_nbr — 銷售訂單號</span>
+            <span class="field-line">unit_price — 單價</span>
+            <span class="field-line">qty — 數量 (出庫為負值: 0-qty)</span>
+            <span class="field-line">amt — 金額 (0 - unit_price × qty)</span>
+            <span class="field-line">wk_date — 交易日期</span>
+            <span class="field-line">event_type — 事件類型 ('銷售出庫')</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: e2_xitems_daily_status（每日物料庫存狀態）</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK</span>
+            <span class="field-line">xitems — 物料代號</span>
+            <span class="field-line">date_cal — 計算日期</span>
+            <span class="field-line">qty_balance — 結存數量</span>
+            <span class="field-line">unit_price — 單價</span>
+            <span class="field-line">currency_code — 幣別</span>
+            <span class="field-line">exchange_rate — 匯率</span>
+            <span class="field-line">stock_value — 庫存價值 (unit_price × qty_balance × exchange_rate)</span>
+            <span class="field-line">ageing_category — 帳齡分類</span>
+            <span class="field-line">ageing_days — 帳齡天數</span>
+            <span class="field-line">reduce_percentage — 減值百分比</span>
+            <span class="field-line">current_value — 當前價值 (stock_value × (1 - reduce%/100))</span>
+            <span class="field-line">current_lose — 當前損失 (stock_value × reduce%/100)</span>
+        </div>
+
+        <div class="db-table">
+            <h4>Table: e2_xitems_daily_status_chart（每日庫存匯總圖表）</h4>
+            <span class="field-line">date_cal — 計算日期</span>
+            <span class="field-line">stock_value_total — 總庫存價值 (SUM)</span>
+            <span class="field-line">current_lose_total — 總損失 (SUM)</span>
+            <span class="field-line">current_value_total — 總當前價值 (SUM)</span>
+            <span class="field-line">reduce_percentage — 總減值率 (lose×100/stock_value)</span>
+        </div>
+
+        <div class="info-box">
+            <strong>MGM_finance_summary 完整規模：</strong>根據 <code>batch_finance_summary_reset_null.asp</code> 程式碼，
+            此表實際包含 <strong>200+ 個欄位</strong>，涵蓋：資產(流動/非流動)、負債(流動/非流動)、權益(股本/資本公積/保留盈餘)、
+            損益(收入/成本/費用/利潤)、現金流量、比率分析(流動/速動/淨利率/周轉率)、成長率、帳齡分析、風險模型(Z/F/wall)、
+            稅務(增值稅/免稅/簡易徵收)、人事(員工人數/薪資比)、每股盈餘(EPS) 等，是整個財務系統的核心樞紐表。
+        </div>
+
+        <h3>6.17 財務風險預警模型（Altman Z-Score 系列）</h3>
+        <p><code>STD_finance_risk_model.asp</code> 實作 4 套破產預測模型，全部從 <code>MGM_finance_summary</code> 表讀取欄位計算：</p>
+
+        <div class="mermaid">
+flowchart TB
+    subgraph Source["MGM_finance_summary 欄位"]
+        LQ_A["LQ_asset_amt<br/>流動資產"]
+        LQ_D["LQ_debet_amt<br/>流動負債"]
+        TTL_A["ttl_asset_amt<br/>總資產"]
+        TTL_D["ttl_debet_amt<br/>總負債"]
+        RI["retained_income_amt<br/>保留盈餘"]
+        PP["pretax_profit_amt<br/>稅前淨利"]
+        INT["interest_amt<br/>利息"]
+        DEP["depreciation_amt<br/>折舊"]
+        SH["stockholder_amt<br/>股東權益"]
+        ACC["accumulated_amt<br/>累積盈餘"]
+        SALE["sale_amt<br/>銷貨"]
+        FX_A["FX_asset_amt<br/>固定資產"]
+        STOCK["stock_all_amt<br/>總存貨"]
+        DEBET["debet_amt<br/>總負債"]
+    end
+
+    subgraph Z["Z 模型 (上市公司)"]
+        ZX1["ZX1=(LQ_A-LQ_D)/TTL_A"]
+        ZX2["ZX2=RI/TTL_A"]
+        ZX3["ZX3=(PP+INT)/TTL_A"]
+        ZX4["ZX4=SH/TTL_D"]
+        ZX5["ZX5=SALE/TTL_A"]
+        ZF["Z = 1.2×ZX1 + 1.4×ZX2 + 3.3×ZX3 + 0.6×ZX4 + 0.999×ZX5"]
+    end
+
+    subgraph Z2M["Z2 模型 (私人公司)"]
+        Z2F["Z2 = 0.717×ZX1 + 0.847×Z2X2 + 3.107×ZX3 + 0.420×ZX4 + 0.998×ZX5"]
+    end
+
+    subgraph Z3M["Z3 模型 (非製造業)"]
+        Z3F["Z3 = 6.56×ZX1 + 3.26×Z3X2 + 6.72×Z3X3 + 1.05×ZX4"]
+    end
+
+    subgraph BZM["BZ 破產概率模型"]
+        BZF["BZ = BZ_X1 + BZ_X2 + BZ_X3 + BZ_X4 + BZ_X5"]
+    end
+
+    subgraph JZM["JZ 營運能力模型"]
+        JZF["JZ = ZA + ZB - ZC - ZD"]
+    end
+
+    Source --> Z --> ZF
+    Z --> Z2M --> Z2F
+    Z --> Z3M --> Z3F
+    Source --> BZM --> BZF
+    Source --> JZM --> JZF
+
+    ZF -->|"Z<1.23 破產<br/>1.23≤Z<2.9 灰色<br/>Z≥2.9 安全"| THRESHOLD["風險判定"]
+    BZF --> THRESHOLD
+    JZF --> THRESHOLD
+        </div>
+
+        <div class="db-table">
+            <h4>模型 1：Z-Score (Altman 1968, 上市公司)</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 5 個變數</span></span>
+            <span class="field-line">ZX1 = (LQ_asset_amt - LQ_debet_amt) / ttl_asset_amt  <span style="color:#7f8c8d;">流動淨值/總資產</span></span>
+            <span class="field-line">ZX2 = retained_income_amt / ttl_asset_amt  <span style="color:#7f8c8d;">保留盈餘/總資產</span></span>
+            <span class="field-line">ZX3 = (pretax_profit_amt + interest_amt) / ttl_asset_amt  <span style="color:#7f8c8d;">(稅前淨利+利息)/總資產</span></span>
+            <span class="field-line">ZX4 = stockholder_amt / ttl_debet_amt  <span style="color:#7f8c8d;">股東權益/總負債</span></span>
+            <span class="field-line">ZX5 = sale_amt / ttl_asset_amt  <span style="color:#7f8c8d;">銷貨/總資產</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span class="pk">Z = 1.2×ZX1 + 1.4×ZX2 + 3.3×ZX3 + 0.6×ZX4 + 0.999×ZX5</span></span>
+        </div>
+
+        <div class="db-table">
+            <h4>模型 2：Z2-Score (Altman Z', 私人公司)</h4>
+            <span class="field-line">Z2_X2 = accumulated_amt / ttl_asset_amt  <span style="color:#7f8c8d;">累積盈餘/總資產</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span class="pk">Z2 = 0.717×ZX1 + 0.847×Z2_X2 + 3.107×ZX3 + 0.420×ZX4 + 0.998×ZX5</span></span>
+        </div>
+
+        <div class="db-table">
+            <h4>模型 3：Z3-Score (Altman Z'', 非製造業)</h4>
+            <span class="field-line">Z3_X3 = (pretax_profit_amt + depreciation_amt) / ttl_asset_amt  <span style="color:#7f8c8d;">(稅前淨利+折舊)/總資產</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span class="pk">Z3 = 6.56×ZX1 + 3.26×Z3_X2 + 6.72×Z3_X3 + 1.05×ZX4</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#e74c3c;">判定標準：</span></span>
+            <span class="field-line">Z &lt; 1.23 → 破產區 (紅燈)</span>
+            <span class="field-line">1.23 ≤ Z &lt; 2.9 → 灰色地帶 (黃燈)</span>
+            <span class="field-line">Z ≥ 2.9 → 安全區 (綠燈)</span>
+        </div>
+
+        <div class="db-table">
+            <h4>模型 4：BZ 破產概率模型</h4>
+            <span class="field-line">BZ_X1 = (pretax_profit_amt + depreciation_amt) / LQ_debet_amt</span>
+            <span class="field-line">BZ_X2 = pretax_profit_amt / (LQ_asset_amt - LQ_debet_amt)</span>
+            <span class="field-line">BZ_X3 = stockholder_amt / ttl_debet_amt</span>
+            <span class="field-line">BZ_X4 = FX_asset_amt / ttl_debet_amt</span>
+            <span class="field-line">BZ_X5 = (LQ_asset_amt - LQ_debet_amt) / ttl_asset_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span class="pk">BZ = BZ_X1 + BZ_X2 + BZ_X3 + BZ_X4 + BZ_X5</span></span>
+        </div>
+
+        <div class="db-table">
+            <h4>模型 5：JZ 營運能力模型</h4>
+            <span class="field-line">ZA = LQ_asset_amt / LQ_debet_amt  <span style="color:#7f8c8d;">流動比率</span></span>
+            <span class="field-line">ZB = (LQ_asset_amt - stock_all_amt) / LQ_debet_amt  <span style="color:#7f8c8d;">速動比率</span></span>
+            <span class="field-line">ZC = LQ_debet_amt / (ttl_asset_amt - debet_amt)  <span style="color:#7f8c8d;">流動負債/股東權益</span></span>
+            <span class="field-line">ZD = debet_amt / (ttl_asset_amt - debet_amt)  <span style="color:#7f8c8d;">總負債/股東權益</span></span>
+            <span class="field-line"></span>
+            <span class="field-line"><span class="pk">JZ = ZA + ZB - ZC - ZD</span>  <span style="color:#7f8c8d;">值越大營運能力越強</span></span>
+        </div>
+
+        <h4>KPI 燈號預警機制</h4>
+        <div class="db-table">
+            <h4>MGM_KPI_desc 表 — KPI 门槛定義</h4>
+            <span class="field-line"><span class="pk">uid</span> PK, <span class="fk">bu_no</span> FK</span>
+            <span class="field-line">KPI_id — KPI 識別碼 (如 asset_netprofit_rate, liquidity_ratio)</span>
+            <span class="field-line">KPI1 — 下限值 (Green/Red 分界)</span>
+            <span class="field-line">KPI2 — 上限值 (Yellow/Red 分界)</span>
+            <span class="field-line">unit — 單位 (千=×1000)</span>
+            <span class="field-line">pct_type — 百分比旗標 (Y=÷100)</span>
+        </div>
+
+        <table>
+            <thead><tr><th>排序方向</th><th>條件</th><th>燈號</th></tr></thead>
+            <tbody>
+                <tr><td>asc (越大越好)</td><td>real_value &lt; KPI1</td><td style="color:#27ae60;">綠燈 (正常)</td></tr>
+                <tr><td>asc</td><td>KPI1 ≤ real_value ≤ KPI2</td><td style="color:#f39c12;">黃燈 (警示)</td></tr>
+                <tr><td>asc</td><td>real_value &gt; KPI2</td><td style="color:#e74c3c;">紅燈 (危險)</td></tr>
+                <tr><td>desc (越小越好)</td><td>real_value &gt; KPI2</td><td style="color:#27ae60;">綠燈</td></tr>
+                <tr><td>desc</td><td>KPI1 ≤ real_value ≤ KPI2</td><td style="color:#f39c12;">黃燈</td></tr>
+                <tr><td>desc</td><td>real_value &lt; KPI1</td><td style="color:#e74c3c;">紅燈</td></tr>
+            </tbody>
+        </table>
+        <p>燈號圖示：<code>&lt;img src="../images/rlight.gif"&gt;</code> (紅) / <code>ylight.gif</code> (黃) / <code>glight.gif</code> (綠)</p>
+
+        <h3>6.18 資產負債表 SQL 逐行拆解</h3>
+        <div class="db-table">
+            <h4>STD_finance_balance_sheet.asp — SQL 查詢</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 當月資料</span></span>
+            <span class="field-line">SELECT * FROM MGM_finance_summary</span>
+            <span class="field-line">WHERE bu_no='...' AND YYYY_MM='...' AND flag=''</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#3498db;">-- 上月資料 (比較用)</span></span>
+            <span class="field-line">SELECT * FROM MGM_finance_summary</span>
+            <span class="field-line">WHERE bu_no='...' AND YYYY='...' AND MM='上月' AND flag=''</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#f39c12;">-- Excel 匯出</span></span>
+            <span class="field-line">response.ContentType = "application/vnd.ms-excel"</span>
+            <span class="field-line">Response.AddHeader "content-disposition",</span>
+            <span class="field-line">  "inline; filename=" & YYYY_MM & "月份_資產負債表.xls"</span>
+        </div>
+
+        <h4>資產負債表科目組裝（VBScript 變數對映）</h4>
+        <table>
+            <thead><tr><th>報表科目</th><th>MGM_finance_summary 欄位</th><th>計算公式</th></tr></thead>
+            <tbody>
+                <tr><td>貨幣資金</td><td>cash_amt + deposite_amt + interest_amt</td><td>現金+存款+利息</td></tr>
+                <tr><td>應收票據</td><td>AR_bill_amt</td><td>—</td></tr>
+                <tr><td>應收帳款</td><td>AR_amt + AR_debet_amt</td><td>應收+借項</td></tr>
+                <tr><td>暫收款</td><td>AR_temp_amt</td><td>—</td></tr>
+                <tr><td>關係人應收</td><td>AR_affiliate_amt + AR_affil_temp_amt</td><td>—</td></tr>
+                <tr><td>其他應收</td><td>AR_other_amt</td><td>—</td></tr>
+                <tr><td>應收股利</td><td>AR_dividend_amt</td><td>—</td></tr>
+                <tr><td>製成品存貨</td><td>stock_P_amt</td><td>—</td></tr>
+                <tr><td>在製品-材料</td><td>WIP_M_amt</td><td>—</td></tr>
+                <tr><td>在製品-人工</td><td>WIP_labor_amt</td><td>—</td></tr>
+                <tr><td>在製品-費用</td><td>WIP_EXP_amt</td><td>—</td></tr>
+                <tr><td>原料存貨</td><td>stock_M_amt</td><td>—</td></tr>
+                <tr><td>在途存貨</td><td>stock_transit_amt</td><td>—</td></tr>
+                <tr><td>副料存貨</td><td>stock_S_amt</td><td>—</td></tr>
+                <tr><td>備抵損失</td><td>reserve_loss_amt</td><td>(減項)</td></tr>
+                <tr><td>預付設備</td><td>prepay_EXP_amt + prepay_EXP_other_amt</td><td>—</td></tr>
+                <tr><td>預付貨款</td><td>prepay_goods_amt</td><td>—</td></tr>
+                <tr><td>流動預付設備</td><td>LQ_prepay_EQMT_amt</td><td>—</td></tr>
+                <tr><td>增值稅</td><td>VAT_amt</td><td>—</td></tr>
+                <tr><td>固定資產-房屋</td><td>building_amt - acc_de_building_amt</td><td>房屋-累折</td></tr>
+                <tr><td>固定資產-設備</td><td>equipment_amt - acc_de_EQMT_amt</td><td>設備-累折</td></tr>
+                <tr><td>固定資產-車輛</td><td>vehicle_amt - acc_de_vehicle_amt</td><td>車輛-累折</td></tr>
+                <tr><td>固定資產-辦公</td><td>office_EQMT_amt - acc_de_office_EQMT_amt</td><td>—</td></tr>
+                <tr><td>流動資產合計</td><td>LQ_asset_amt</td><td>系統計算</td></tr>
+                <tr><td>固定資產合計</td><td>FX_asset_amt</td><td>系統計算</td></tr>
+                <tr><td>其他資產合計</td><td>ttl_other_asset_amt</td><td>—</td></tr>
+                <tr><td><strong>資產總額</strong></td><td><strong>ttl_asset_amt</strong></td><td>LQ+FX+其他</td></tr>
+                <tr><td>短期借款</td><td>loan_amt</td><td>—</td></tr>
+                <tr><td>應付帳款</td><td>AP_amt</td><td>—</td></tr>
+                <tr><td>暫收款(負債)</td><td>AP_temp_amt</td><td>—</td></tr>
+                <tr><td>關係人應付</td><td>AP_affiliate_amt + AP_affil_temp_amt</td><td>—</td></tr>
+                <tr><td>應付稅費</td><td>AP_tax_amt + sale_tax_amt</td><td>—</td></tr>
+                <tr><td>應付費用</td><td>AP_exp_amt</td><td>—</td></tr>
+                <tr><td>應付設備</td><td>AP_equipment_amt</td><td>—</td></tr>
+                <tr><td>其他應付</td><td>AP_other_amt</td><td>—</td></tr>
+                <tr><td>預收帳款</td><td>pre_AR_amt + pre_AR_other_amt</td><td>—</td></tr>
+                <tr><td>應收票據(應付)</td><td>AP_bill_amt</td><td>—</td></tr>
+                <tr><td>流動負債合計</td><td>LQ_debet_amt</td><td>系統計算</td></tr>
+                <tr><td>長期借款</td><td>LT_loan_amt + LT_debet_amt</td><td>—</td></tr>
+                <tr><td><strong>負債總額</strong></td><td><strong>debet_amt</strong></td><td>LQ_debet + LT_debet</td></tr>
+                <tr><td>股本</td><td>captial_stock_amt + captial_pending_amt</td><td>實收+待收</td></tr>
+                <tr><td>資本公積</td><td>captial_reserve_amt</td><td>—</td></tr>
+                <tr><td>法定盈餘公積</td><td>legal_reserve_amt</td><td>—</td></tr>
+                <tr><td>累積盈餘</td><td>accumulated_amt</td><td>—</td></tr>
+                <tr><td>本期損益</td><td>current_PL_amt</td><td>—</td></tr>
+                <tr><td>公積盈餘合計</td><td>captial_reserve + legal_reserve + accumulated + current_PL</td><td>VBScript 計算</td></tr>
+                <tr><td>股東權益合計</td><td>stockholder_amt</td><td>股本+公積盈餘</td></tr>
+                <tr><td><strong>負債及權益總額</strong></td><td><strong>ttl_debet_amt</strong></td><td>debet + stockholder</td></tr>
+            </tbody>
+        </table>
+
+        <h3>6.19 損益表 SQL 逐行拆解</h3>
+        <div class="db-table">
+            <h4>STD_finance_PL_table.asp — SQL 查詢</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 當月</span></span>
+            <span class="field-line">SELECT * FROM MGM_finance_summary</span>
+            <span class="field-line">WHERE bu_no='...' AND YYYY_MM='...' AND flag=''</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#3498db;">-- 年初首月 (累計比較基準)</span></span>
+            <span class="field-line">SELECT * FROM MGM_finance_summary</span>
+            <span class="field-line">WHERE bu_no='...' AND YYYY='...' AND MM='1' AND flag=''</span>
+        </div>
+
+        <div class="db-table">
+            <h4>損益表科目組裝（計算鏈）</h4>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業毛利</span></span>
+            <span class="field-line">BIZ_major_margin_amt = sale_amt - sale_cost_amt - VAT_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業利益</span></span>
+            <span class="field-line">BIZ_margin_amt = BIZ_major_margin_amt + BIZ_other_INC_amt</span>
+            <span class="field-line">  - sale_exp_amt - MGM_EXP_amt - finance_EXP_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 營業利潤</span></span>
+            <span class="field-line">operation_profit_amt = BIZ_margin_amt + INVEST_profit_amt</span>
+            <span class="field-line">  + AR_subsidy_amt + others_INC_amt - others_cost_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 稅前淨利</span></span>
+            <span class="field-line">pretax_profit_amt = operation_profit_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#2ecc71;">-- 淨利</span></span>
+            <span class="field-line">net_profit_amt = operation_profit_amt - VAT_amt</span>
+            <span class="field-line"></span>
+            <span class="field-line"><span style="color:#7f8c8d;">-- 其他損益科目</span></span>
+            <span class="field-line">sale_amt — 銷貨收入</span>
+            <span class="field-line">sale_cost_amt — 銷貨成本 (material_cost + process_cost + packing_fee + freight + ...)</span>
+            <span class="field-line">sale_exp_amt — 銷售費用</span>
+            <span class="field-line">MGM_EXP_amt — 管理費用</span>
+            <span class="field-line">finance_EXP_amt — 財務費用 (利息+匯兌損益)</span>
+            <span class="field-line">INVEST_profit_amt — 投資收益</span>
+            <span class="field-line">AR_subsidy_amt — 補貼收入</span>
+            <span class="field-line">BIZ_other_INC_amt — 營業外收入</span>
+            <span class="field-line">others_INC_amt — 其他收入</span>
+            <span class="field-line">others_cost_amt — 其他成本</span>
+        </div>
+
+        <h3>6.20 MP 管理入口財務儀表板</h3>
+        <p><code>MP/</code> 目錄為管理入口 (Management Portal)，提供精簡版財務視覺化儀表板：</p>
+        <table>
+            <thead><tr><th>MP 檔案</th><th>功能</th><th>資料來源</th><th>圖表類型</th></tr></thead>
+            <tbody>
+                <tr><td><code>MP/STD_finance_PL_detail_chart_MP.asp</code></td><td>損益明細圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_cash_chart_MP.asp</code></td><td>現金流圖</td><td>MGM_finance_summary + cash_details</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_cash_chart_year_MP.asp</code></td><td>年度現金流圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_chart_MP.asp</code></td><td>風險指標圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_chart2_MP.asp</code></td><td>風險指標圖 2</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_model_MP.asp</code></td><td>風險模型(Z/BZ/JZ)</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_wolf_chart_MP.asp</code></td><td>Wolf 風險圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_wolf_MP.asp</code></td><td>Wolf 模型計算</td><td>MGM_finance_summary</td><td>—</td></tr>
+                <tr><td><code>MP/STD_finance_risk_control3_MP.asp</code></td><td>三級風險控制</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_control2_MP.asp</code></td><td>二級風險控制</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_control_MP.asp</code></td><td>風險控制</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_AR_day_chart_MP.asp</code></td><td>應收帳款日圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_PL_detail_pipe_chart_MP.asp</code></td><td>損益明細管道圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_PL_margin_chart_MP.asp</code></td><td>損益 margin 圖</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+                <tr><td><code>MP/STD_finance_risk_model_MP.asp</code></td><td>風險模型 MP 版</td><td>MGM_finance_summary</td><td>FusionCharts</td></tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <strong>MP 與 LT 差異：</strong>MP/ 為管理入口精簡版，每頁只顯示一個圖表/指標，適合高階主管快速瀏覽；LT/ 為完整版，包含完整表格+圖表+查詢條件+Excel 匯出。兩者共用 <code>MGM_finance_summary</code> 同一資料來源。
+        </div>
+
+        <h3>6.21 稅務、現金流與匯率子系統</h3>
+
+        <h4>稅務檢核項目管理</h4>
+        <div class="db-table">
+            <h4>STD_finance_tax_check_items_mgmt.asp</h4>
+            <span class="field-line">資料表：MGM_finance_summary + 稅務檢核明細表</span>
+            <span class="field-line">功能：管理增值稅/免稅銷售/簡易徵收等稅務檢核項目</span>
+            <span class="field-line">MGM_finance_summary 稅務欄位：</span>
+            <span class="field-line">  VAT_rate, VAT_amt — 增值稅率/稅額</span>
+            <span class="field-line">  free_tax_sale_amt — 免稅銷售額</span>
+            <span class="field-line">  on_tax_sale_amt, on_tax_goods_amt, on_tax_service_amt — 應稅銷售/貨物/服務</span>
+            <span class="field-line">  free_tax_goods_amt — 免稅貨物</span>
+            <span class="field-line">  po_tax_out_amt — 進項稅額轉出</span>
+            <span class="field-line">  po_tax_amt — 進項稅額</span>
+            <span class="field-line">  AP_tax_deduct_amt — 應付稅抵扣</span>
+            <span class="field-line">  addon_tax_amt, addon_tax_simple_amt — 附加稅</span>
+            <span class="field-line">  ttl_tax_simple_amt — 簡易徵收總稅</span>
+            <span class="field-line">  tax_reserve_amt — 稅務準備</span>
+        </div>
+
+        <h4>現金流因子分析</h4>
+        <div class="db-table">
+            <h4>STD_finance_cash_factor.asp</h4>
+            <span class="field-line">資料表：MGM_finance_summary (現金流欄位) + MGM_casher_details</span>
+            <span class="field-line">MGM_finance_summary 現金流欄位：</span>
+            <span class="field-line">  cash_begin_amt — 期初現金</span>
+            <span class="field-line">  cash_end_amt — 期末現金</span>
+            <span class="field-line">  cash_in_amt — 現金流入</span>
+            <span class="field-line">  cash_out_amt — 現金流出</span>
+            <span class="field-line">  cash_in_invest_amt — 投資現金流入</span>
+            <span class="field-line">  cash_out_invest_amt — 投資現金流出</span>
+            <span class="field-line">  cash_in_loan_amt — 借款現金流入</span>
+            <span class="field-line">  cash_in_others_amt — 其他現金流入</span>
+            <span class="field-line">  cash_out_others_amt — 其他現金流出</span>
+            <span class="field-line">  CNY_begin_amt, CNY_end_amt, CNY_inc_amt — 人民幣期初/期末/增減</span>
+            <span class="field-line">  CNY_tover_day — 人民幣週轉天數</span>
+        </div>
+
+        <h4>匯率管理</h4>
+        <div class="db-table">
+            <h4>STD_finance_exchange_rate_summary.asp</h4>
+            <span class="field-line">資料表：cams_system_codes (code_type='CURRENCY')</span>
+            <span class="field-line">欄位：</span>
+            <span class="field-line">  code_value — 幣別代碼 (如 USD, EUR, RMB)</span>
+            <span class="field-line">  value_number1 — 匯率</span>
+            <span class="field-line">  value_description — 幣別名稱</span>
+            <span class="field-line">  inuse_flag — 使用狀態 (USE)</span>
+            <span class="field-line"></span>
+            <span class="field-line">匯率被以下模組引用：</span>
+            <span class="field-line">  → ermm_erp_po.exchange_rate (採購本地幣計算)</span>
+            <span class="field-line">  → e2_xitems_daily_status.exchange_rate (庫存價值)</span>
+            <span class="field-line">  → MGM_bank_loan_details.exchange_rate (匯兌損益)</span>
+            <span class="field-line">  → MGM_finance_summary.exchange_INC_amt (匯兌收益)</span>
+        </div>
+
+        <h3>6.22 完整資料交互拓撲圖（最終版）</h3>
+        <div class="mermaid">
+flowchart TB
+    subgraph External["外部"]
+        ERP["ERP 系統"]
+        FX_MKT["匯率市場"]
+    end
+
+    subgraph Batch["批次層 (7+步驟)"]
+        B1["erp2ermm_po"]
+        B2["proc_po (×FX)"]
+        B3["proc_supplier"]
+        B4["proc_xitems_link_lawbook"]
+        B5["cal_daily_stock_balance<br/>stock_value=price×qty×FX"]
+        B6["batch_ARAP_upd<br/>AR=Σ(price×dn_qty)<br/>AP=Σ(amt+VAT)"]
+        B7["STD_SO_DN_UPD<br/>生產→DN→SO"]
+    end
+
+    subgraph Transaction["交易層"]
+        SO["ERMM_erp_SO"]
+        PO["ermm_erp_po"]
+        PROD["MGM_production_details"]
+        SODN["ERMM_erp_so_DN"]
+        INV["e2_xitems_daily_status"]
+        TX["BH_MGM_TX_detail"]
+    end
+
+    subgraph Finance["財務交易層"]
+        ARAP["ERMM_ARAP_detail"]
+        INV_D["MGM_invoice_details"]
+        CASH["MGM_casher_details"]
+        ACCT["MGM_account_details"]
+        BANK["MGM_bank_loan_details"]
+    end
+
+    subgraph Summary["摘要層"]
+        SUMM_ADDON["STD_finance_summary_addon<br/>預建月份記錄"]
+        RESET["batch_finance_summary_reset_null<br/>200+ NULL→0 + 損益鏈"]
+        FIN["MGM_finance_summary<br/>(200+ 欄位)"]
+    end
+
+    subgraph Risk["風險模型層"]
+        ZM["Z/Z2/Z3 Score<br/>Altman 模型"]
+        BZM["BZ 破產概率"]
+        JZM["JZ 營運能力"]
+        KPI["KPI 燈號<br/>MGM_KPI_desc"]
+    end
+
+    subgraph Report["報表層"]
+        BS["資產負債表"]
+        PL["損益表"]
+        CF["現金流量"]
+        RISK["風險預警"]
+        MP["MP 管理入口<br/>15個儀表板"]
+    end
+
+    ERP --> B1 --> PO
+    ERP --> B7 --> PROD --> SODN --> SO
+    FX_MKT -->|"cams_system_codes<br/>CURRENCY"| B2
+    B2 --> PO
+    B5 --> INV
+    B6 --> ARAP
+    SO --> B6
+    PO --> B6
+    SO --> TX --> INV_D
+    PO --> INV_D
+    CASH --> ACCT
+    ACCT --> SUMM_ADDON
+    ARAP --> FIN
+    INV_D --> FIN
+    BANK --> FIN
+    SUMM_ADDON --> RESET --> FIN
+    FIN --> ZM & BZM & JZM
+    KPI --> RISK
+    ZM & BZM & JZM --> RISK
+    FIN --> BS & PL & CF
+    FIN --> MP
+    RISK --> MP
+        </div>
+
+        <div class="info-box">
+            <strong>最終總結：</strong>資料從 ERP 同步開始，經過 7 步批次加工（含匯率換算），形成交易層資料（SO/PO/生產/庫存/交易明細），
+            再彙算為 5 類財務交易（ARAP/發票/現金/帳戶/銀行），透過 addon+reset_null 批次寫入 MGM_finance_summary（200+ 欄位），
+            最終驅動 5 套風險模型（Z/Z2/Z3/BZ/JZ）+ KPI 燈號預警，產出資產負債表/損益表/現金流量/風險預警，
+            並在 MP 管理入口以 15 個 FusionCharts 儀表板呈現。
+        </div>
+    </section>
+
+    <!-- 七、檔案清單 -->
+    <section id="sec7">
+        <h2>七、檔案清單與職責</h2>
+
+        <h3>7.1 finance/ 目錄 — 應付/票據管理</h3>
+        <table>
+            <thead><tr><th>檔案</th><th>功能</th><th>操作資料表</th></tr></thead>
+            <tbody>
+                <tr><td><code>finance/pay_list.asp</code></td><td>應付明細列表+查詢+分頁+匯總</td><td>pay_detail, leader_user</td></tr>
+                <tr><td><code>finance/pay_add.asp</code></td><td>新增應付明細表單</td><td>leader_supplier, finance_type, leader_handbook_parameter</td></tr>
+                <tr><td><code>finance/pay_add_save.asp</code></td><td>寫入應付明細</td><td>pay_detail (INSERT)</td></tr>
+                <tr><td><code>finance/pay_mend.asp</code></td><td>修改應付明細表單</td><td>pay_detail (SELECT), leader_supplier, finance_type</td></tr>
+                <tr><td><code>finance/pay_mend_update.asp</code></td><td>更新應付明細</td><td>pay_detail (UPDATE)</td></tr>
+                <tr><td><code>finance/pay_delete.asp</code></td><td>刪除應付明細</td><td>pay_detail (DELETE)</td></tr>
+                <tr><td><code>finance/pay_report.asp</code></td><td>Excel 匯出應付報表</td><td>pay_detail</td></tr>
+                <tr><td><code>finance/check_add.asp</code></td><td>新增支票明細表單</td><td>check_detail (INSERT)</td></tr>
+                <tr><td><code>finance/check_add_save.asp</code></td><td>寫入支票明細</td><td>check_detail (INSERT)</td></tr>
+                <tr><td><code>finance/main.asp</code></td><td>財務主頁(空殼框架)</td><td>—</td></tr>
+            </tbody>
+        </table>
+
+        <h3>7.2 HM/ 目錄 — AR/AP 圖表與批次</h3>
+        <table>
+            <thead><tr><th>檔案</th><th>功能</th><th>操作資料表</th></tr></thead>
+            <tbody>
+                <tr><td><code>HM/batch_ARAP_upd.asp</code></td><td>批次彙算 AR/AP</td><td>ERMM_erp_SO, ermm_erp_po, ERMM_ARAP_detail</td></tr>
+                <tr><td><code>HM/STD_ARAP_chart.asp</code></td><td>AR/AP 月度趨勢圖 (FusionCharts)</td><td>ERMM_ARAP_detail</td></tr>
+                <tr><td><code>HM/STD_SO_DN_UPD.asp</code></td><td>更新 SO/DN 交貨數量</td><td>MGM_production_details, ERMM_erp_so_DN</td></tr>
+                <tr><td><code>HM/STD_SO_upd_QC.asp</code></td><td>更新 SO 品檢狀態</td><td>ERMM_erp_so_DN (qc_status)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>7.3 LT/ 目錄 — 財務報表與銀行貸款</h3>
+        <table>
+            <thead><tr><th>檔案</th><th>功能</th></tr></thead>
+            <tbody>
+                <tr><td><code>LT/STD_finance_summary.asp</code></td><td>財務摘要主頁(預建12個月記錄)</td></tr>
+                <tr><td><code>LT/STD_finance_balance_sheet.asp</code></td><td>資產負債表查詢(含Excel匯出)</td></tr>
+                <tr><td><code>LT/STD_finance_PL_table.asp</code></td><td>損益表查詢(含Excel匯出)</td></tr>
+                <tr><td><code>LT/STD_finance_PL_multi_all_pipe_chart.asp</code></td><td>損益多維度管道圖</td></tr>
+                <tr><td><code>LT/STD_finance_AR_day_chart.asp</code></td><td>應收帳款日趨勢圖</td></tr>
+                <tr><td><code>LT/STD_finance_AR_detail_pipe_chart.asp</code></td><td>應收帳款明細管道圖</td></tr>
+                <tr><td><code>LT/STD_SO_AR_detail_list.asp</code></td><td>銷售訂單應收明細列表</td></tr>
+                <tr><td><code>LT/STD_finance_cash_daily_details.asp</code></td><td>現金日明細</td></tr>
+                <tr><td><code>LT/STD_finance_account_details_query.asp</code></td><td>帳戶明細查詢</td></tr>
+                <tr><td><code>LT/STD_finance_exchange_rate_summary.asp</code></td><td>匯率匯總</td></tr>
+                <tr><td><code>LT/STD_finance_items_details_mgmt.asp</code></td><td>財務項目明細管理</td></tr>
+                <tr><td><code>LT/STD_finance_tax_check_items_mgmt.asp</code></td><td>稅務檢核項目管理</td></tr>
+                <tr><td><code>LT/STD_finance_tax_cash_items_upd.asp</code></td><td>稅務現金項目更新</td></tr>
+                <tr><td><code>LT/STD_finance_risk_control3.asp</code></td><td>財務風險控制(三級)</td></tr>
+                <tr><td><code>LT/STD_finance_document_list.asp</code></td><td>貸款文件清單</td></tr>
+                <tr><td><code>LT/STD_finance_loan_detail_pipe_chart.asp</code></td><td>貸款明細管道圖</td></tr>
+                <tr><td><code>LT/bank_list.asp</code></td><td>銀行帳戶貸款一覽(主操作頁)</td></tr>
+                <tr><td><code>LT/bank_list_add.asp</code></td><td>新增銀行帳戶/貸款</td></tr>
+                <tr><td><code>LT/bank_list_change.asp</code></td><td>修改銀行帳戶/貸款</td></tr>
+                <tr><td><code>LT/bank_list_delete.asp</code></td><td>刪除銀行帳戶/貸款</td></tr>
+                <tr><td><code>LT/loan_list.asp</code></td><td>貸款列表</td></tr>
+                <tr><td><code>LT/loan_list_add.asp</code></td><td>新增貸款</td></tr>
+            </tbody>
+        </table>
+
+        <h3>7.4 parameter/ 目錄 — 參數設定</h3>
+        <table>
+            <thead><tr><th>檔案</th><th>功能</th></tr></thead>
+            <tbody>
+                <tr><td><code>parameter/invoice.asp</code></td><td>發票參數設定</td></tr>
+                <tr><td><code>parameter/fee_add.asp</code></td><td>費用項目新增</td></tr>
+                <tr><td><code>parameter/use_add.asp</code></td><td>使用費用新增</td></tr>
+                <tr><td><code>parameter/CIQ_add.asp</code></td><td>海關檢驗檢疫費用</td></tr>
+            </tbody>
+        </table>
+
+        <h3>7.5 procument/ 目錄 — 採購財務關聯</h3>
+        <table>
+            <thead><tr><th>檔案</th><th>功能</th></tr></thead>
+            <tbody>
+                <tr><td><code>procument/STD_supplier_payment_details.asp</code></td><td>供應商付款明細</td></tr>
+                <tr><td><code>procument/STD_account_receive_list.asp</code></td><td>應收帳款列表</td></tr>
+                <tr><td><code>procument/STD_account_payment_To_Excel_summary.asp</code></td><td>應付帳款 Excel 匯總</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 八、權限與安全 -->
+    <section id="sec8">
+        <h2>八、權限與安全控制</h2>
+
+        <h3>8.1 登入權限檢查</h3>
+        <p>所有財務頁面透過 <code>&lt;!--#include file="../public/config.asp"--&gt;</code> 進入時檢查 Session：</p>
+        <div class="db-table">
+            <span class="field-line">if session("user_name")="" then → 跳轉 login.asp (登入逾時)</span>
+            <span class="field-line">if session("finance")<>"Y" → 無財務模組權限</span>
+            <span class="field-line">leader_user.system="Y" → 系統管理者 (全部權限)</span>
+            <span class="field-line">leader_user.account="E" → 帳務專員 (可匯出 Excel)</span>
+        </div>
+
+        <h3>8.2 操作權限分級</h3>
+        <table>
+            <thead><tr><th>權限等級</th><th>判斷條件</th><th>可執行操作</th></tr></thead>
+            <tbody>
+                <tr><td>系統管理者</td><td><code>leader_user.system="Y"</code></td><td>新增/修改/刪除/匯出 全部</td></tr>
+                <tr><td>帳務專員</td><td><code>leader_user.account="E"</code></td><td>新增/修改/刪除/匯出</td></tr>
+                <tr><td>一般使用者</td><td>其他</td><td>僅查詢 (匯出按鈕 disabled)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>8.3 輸入驗證</h3>
+        <p><code>pay_add.asp</code> 前端 JavaScript 驗證必填欄位：</p>
+        <ul>
+            <li>供應商名稱 (supplier_name) 不可為空</li>
+            <li>應付日期 (should_date) 不可為空</li>
+            <li>發票日期 (invoice_date) 不可為空</li>
+            <li>金額 (amount) 不可為空</li>
+            <li>幣別 (currency_ab) 不可為空</li>
+            <li>發票號碼 (invoice_num) 不可為空</li>
+            <li>費用內容 (expense_content) 不可為空</li>
+        </ul>
+
+        <h3>8.4 SQL 安全</h3>
+        <div class="warn-box">
+            <strong>注意：</strong>現有程式使用字串拼接方式組裝 SQL (<code>sql = "select * from pay_detail where uid='"&request("radio")&"'"</code>)，存在 SQL Injection 風險。建議開發新功能時改用參數化查詢 (ADODB.Command + Parameters)。
+        </div>
+    </section>
+
+    <!-- 九、開發規範 -->
+    <section id="sec9">
+        <h2>九、開發規範與擴展指南</h2>
+
+        <h3>9.1 新增財務頁面標準結構</h3>
+        <pre><code>&lt;!--#include file="../public/config.asp"--&gt;  &lt;!-- 權限檢查 --&gt;
+&lt;!--#include file="../public/conn.asp"--&gt;      &lt;!-- 資料庫連線 --&gt;
+&lt;!--#include file="../public/color.asp"--&gt;     &lt;!-- 表格顏色 --&gt;
+&lt;!--#include file="../public/page_manage.asp"--&gt; &lt;!-- 分頁元件 --&gt;
+&lt;!--#include file="../public/format_number.asp"--&gt; &lt;!-- 數字格式化 --&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=gb2312"&gt;
+&lt;link href="../style_css/color1.css" rel="stylesheet" type="text/css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;form name="thisform" method="post"&gt;
+&lt;%
+  bu_no = xuser_bu   &lt;!-- 自 conn.asp 取得當前公司別 --&gt;
+  '... 業務邏輯 ...
+%&gt;
+&lt;/form&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+
+        <h3>9.2 關鍵開發約定</h3>
+        <table>
+            <thead><tr><th>項目</th><th>規範</th></tr></thead>
+            <tbody>
+                <tr><td>字元編碼</td><td>CodePage=936 (GB2312)，所有頁面須宣告 <code>&lt;%@ Language=VBScript CodePage=936%&gt;</code></td></tr>
+                <tr><td>公司別過濾</td><td>所有查詢必須加 <code>WHERE bu_no='"&xuser_bu&"'"</code> 確保多租戶資料隔離</td></tr>
+                <tr><td>分頁</td><td>使用 <code>rs.PageSize</code> + <code>rs.AbsolutePage</code>，呼叫 <code>page_manage()</code> 函數</td></tr>
+                <tr><td>數字格式</td><td>金額使用 <code>format_num(round(rs("amount"),2))</code> 格式化</td></tr>
+                <tr><td>日期選擇</td><td>使用 calendar.js 元件：<code>showCalendar('sel_id', 'y-mm-dd')</code></td></tr>
+                <tr><td>Excel 匯出</td><td><code>response.ContentType="application/vnd.ms-excel"</code> + <code>Response.AddHeader</code></td></tr>
+                <tr><td>圖表</td><td>FusionCharts：組裝 strXML 後呼叫 <code>renderChartHTML()</code></td></tr>
+                <tr><td>Session 查詢條件</td><td>查詢條件存入 Session 以跨頁保留 (如 <code>session("supplier_name")</code>)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>9.3 擴展新財務報表的步驟</h3>
+        <ol>
+            <li>在 <code>MGM_finance_summary</code> 表新增科目欄位 (ALTER TABLE ADD)</li>
+            <li>在 <code>STD_finance_summary.asp</code> 讀取新欄位並顯示表單</li>
+            <li>在 <code>STD_finance_balance_sheet.asp</code> 或 <code>STD_finance_PL_table.asp</code> 加入計算邏輯</li>
+            <li>在 <code>cams_xwebpage</code> 註冊新頁面 (seq_system 跨號 8500 系列)</li>
+            <li>透過 <code>cams_xusers_webpage</code> 授權給使用者</li>
+        </ol>
+
+        <h3>9.4 批次作業擴展</h3>
+        <p>新增財務批次計算時，遵循 <code>batch_ARAP_upd.asp</code> 模式：</p>
+        <ul>
+            <li>以 <code>GETDATE()</code> 產生 batch_id 作為時間戳</li>
+            <li>先 SELECT 檢查記錄是否存在，再決定 INSERT 或 UPDATE</li>
+            <li>處理 NULL 值：<code>UPDATE ... SET amt='0' WHERE amt IS NULL</code></li>
+            <li>完成後 <code>alert</code> 顯示處理筆數</li>
+            <li>在 <code>cams_global_codes</code> 設定對應截止日期 (CUTOFF)</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>ERMM 財務模組系統開發說明書 &nbsp;|&nbsp; 文件版本 1.0</p>
+        <p>生成日期：2026-09-02 &nbsp;|&nbsp; Classic ASP + SQL Server + Mermaid.js</p>
+        <p>本文件為獨立運作之開發說明書，涵蓋架構、流程、資料結構、關係與開發規範</p>
+    </footer>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        themeVariables: {
+            primaryColor: '#1e5128',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#0d3216',
+            lineColor: '#34495e',
+            secondaryColor: '#e8f5e8',
+            tertiaryColor: '#f8faf8'
+        },
+        flowchart: { curve: 'basis', padding: 20 },
+        erDiagram: { entityPadding: 15 }
+    });
+</script>
+
+</body>
+</html>

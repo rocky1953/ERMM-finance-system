@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERMM 系統架構與流程圖說明</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Microsoft JhengHei", "PingFang TC", "微軟正黑體", Arial, sans-serif;
+            line-height: 1.7;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8edf2 100%);
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            min-height: 100vh;
+        }
+        header {
+            background: linear-gradient(135deg, #2c5f8d 0%, #1a3a5c 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 { margin: 0 0 10px 0; font-size: 2.2em; }
+        header .subtitle { font-size: 1.1em; opacity: 0.9; }
+        header .meta { font-size: 0.9em; opacity: 0.75; margin-top: 15px; }
+        nav {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+        }
+        nav h3 { margin-top: 0; color: #2c5f8d; border-bottom: 2px solid #2c5f8d; padding-bottom: 8px; }
+        nav ul { list-style: none; padding-left: 0; columns: 2; }
+        nav li { margin-bottom: 6px; }
+        nav a { color: #2c5f8d; text-decoration: none; transition: color 0.2s; }
+        nav a:hover { color: #e67e22; text-decoration: underline; }
+        section {
+            margin-bottom: 50px;
+            scroll-margin-top: 20px;
+        }
+        h2 {
+            color: #2c5f8d;
+            border-left: 6px solid #2c5f8d;
+            padding-left: 15px;
+            margin-top: 0;
+            font-size: 1.7em;
+        }
+        h3 {
+            color: #34495e;
+            margin-top: 30px;
+            font-size: 1.3em;
+        }
+        h4 {
+            color: #555;
+            margin-top: 25px;
+        }
+        p { margin: 12px 0; }
+        .mermaid {
+            background: #fafbfc;
+            border: 1px solid #e1e8ed;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            text-align: center;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th {
+            background: linear-gradient(135deg, #2c5f8d 0%, #1a3a5c 100%);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 11px 15px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        tr:nth-child(even) { background: #f8f9fa; }
+        tr:hover { background: #e8f4fc; transition: background 0.2s; }
+        code {
+            background: #eef2f5;
+            color: #c7254e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "Consolas", "Courier New", monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background: transparent; color: inherit; padding: 0; }
+        .feature-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-left: 4px solid #2c5f8d;
+            padding: 20px 25px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .feature-card strong { color: #2c5f8d; font-size: 1.1em; }
+        .badge {
+            display: inline-block;
+            background: #2c5f8d;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+        .info-box {
+            background: #e8f4fc;
+            border: 1px solid #b8d8e8;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+        .info-box::before {
+            content: "📌 ";
+            font-size: 1.2em;
+        }
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #7f8c8d;
+            border-top: 2px solid #ecf0f1;
+            margin-top: 40px;
+            font-size: 0.9em;
+        }
+        ul { padding-left: 25px; }
+        li { margin-bottom: 6px; }
+        .highlight { background: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>ERMM 系統架構與流程圖說明</h1>
+        <div class="subtitle">企業資源管理與製造系統 (Enterprise Resource Management &amp; Manufacturing)</div>
+        <div class="meta">
+            技術堆疊：Classic ASP (VBScript) + IIS + SQL Server + MySQL &nbsp;|&nbsp;
+            跨碼：CodePage=936 (GB2312) &nbsp;|&nbsp; 文件版本：1.0 &nbsp;|&nbsp; 生成日期：2026-09-02
+        </div>
+    </header>
+
+    <nav>
+        <h3>目錄</h3>
+        <ul>
+            <li><a href="#sec1">一、系統總體架構</a></li>
+            <li><a href="#sec2">二、技術堆疊</a></li>
+            <li><a href="#sec3">三、登入與權限流程</a></li>
+            <li><a href="#sec4">四、資料庫架構與多租戶切換</a></li>
+            <li><a href="#sec5">五、核心業務模組關係</a></li>
+            <li><a href="#sec6">六、ERP 整合與批次作業流程</a></li>
+            <li><a href="#sec7">七、頁面編碼體系</a></li>
+            <li><a href="#sec8">八、日誌與稽核機制</a></li>
+            <li><a href="#sec9">九、整體關係總結</a></li>
+            <li><a href="#sec10">附錄：關鍵檔案索引</a></li>
+        </ul>
+    </nav>
+
+    <!-- 一、系統總體架構 -->
+    <section id="sec1">
+        <h2>一、系統總體架構</h2>
+        <div class="mermaid">
+flowchart TB
+    subgraph Client["客戶端 / 瀏覽器"]
+        UI["ASP + HTML + CSS + JS<br/>BootStrap 3.4.1<br/>ichartjs 圖表"]
+    end
+
+    subgraph IIS["IIS Web Server (Windows)"]
+        LOGIN["login.asp<br/>登入頁"]
+        CHECK["check.asp<br/>驗證 + 授權"]
+        MAIN["main.asp<br/>框架頁 frameset"]
+        INDEX["index.asp<br/>頂部 header"]
+        LEFT["left_new.asp<br/>左側選單"]
+        BODY["body.asp<br/>主內容 iframe"]
+    end
+
+    subgraph Public["公共元件層 public/"]
+        CONN["conn.asp<br/>資料庫連線"]
+        ENC["encrypt.asp / Crypt.asp<br/>加密"]
+        LOG["start_log.asp / end_log.asp<br/>操作日誌"]
+        MAIL["send_email.asp<br/>JMail 郵件"]
+        UPLOAD["upload.asp<br/>檔案上傳"]
+        CONFIG["config.asp<br/>權限檢查"]
+    end
+
+    subgraph Business["業務模組層"]
+        HM["HM/<br/>主管理+品質"]
+        MO["mo/<br/>製造訂單"]
+        BATCH["batch/<br/>批次+ERP整合"]
+        CLEAR["clearance/<br/>海關報關"]
+        FIN["finance/<br/>財務"]
+        EISM["EISMII/<br/>EIS庫存"]
+        SMS["SMS/<br/>簡訊驗證"]
+    end
+
+    subgraph DB["資料庫層"]
+        SQL[("SQL Server<br/>ERMM_HM / ERMM_LD<br/>ERMM_MQ / ERMM_JS 等")]
+        MYSQL[("MySQL<br/>talent_db")]
+    end
+
+    subgraph Ext["外部系統"]
+        ERP["外部 ERP<br/>(採購單PO/製令MO)"]
+        SMTP["SMTP 郵件伺服器"]
+        SMSGW["簡訊閘道 API"]
+    end
+
+    UI --> LOGIN
+    LOGIN --> CHECK
+    CHECK --> MAIN
+    MAIN --> INDEX
+    MAIN --> LEFT
+    MAIN --> BODY
+    BODY --> Business
+    LEFT --> Business
+    Business --> Public
+    Public --> SQL
+    Public --> MYSQL
+    BATCH --> ERP
+    MAIL --> SMTP
+    SMS --> SMSGW
+        </div>
+
+        <h3>架構分層說明</h3>
+        <table>
+            <thead>
+                <tr><th>層級</th><th>元件</th><th>職責</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>客戶端</td><td>瀏覽器</td><td>渲染 ASP 輸出的 HTML/CSS/JS</td></tr>
+                <tr><td>Web 層</td><td>IIS + ASP</td><td>請求處理、VBScript 業務邏輯、frameset 框架頁</td></tr>
+                <tr><td>公共元件層</td><td><code>public/</code> 目錄</td><td>資料庫連線、加密、日誌、郵件、上傳、權限檢查</td></tr>
+                <tr><td>業務模組層</td><td>HM/mo/batch/clearance/finance/EISMII/SMS</td><td>各業務功能實現</td></tr>
+                <tr><td>資料庫層</td><td>SQL Server (主) + MySQL (輔)</td><td>資料持久化</td></tr>
+                <tr><td>外部系統</td><td>ERP / SMTP / 簡訊閘道</td><td>資料同步與通知</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 二、技術堆疊 -->
+    <section id="sec2">
+        <h2>二、技術堆疊</h2>
+        <table>
+            <thead>
+                <tr><th>層級</th><th>技術 / 元件</th><th>說明</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>前端</td><td>Classic ASP (VBScript)、HTML、CSS、JavaScript</td><td>CodePage=936 (GB2312 簡體中文)</td></tr>
+                <tr><td>UI 框架</td><td>BootStrap 3.4.1</td><td>響應式樣式</td></tr>
+                <tr><td>圖表</td><td>ichartjs</td><td>品質/效率圖表</td></tr>
+                <tr><td>Web 伺服器</td><td>IIS + <code>web.config</code></td><td>frameset 多框架頁結構</td></tr>
+                <tr><td>主資料庫</td><td>Microsoft SQL Server</td><td>多庫別切換，由 <code>conn.txt</code> 決定</td></tr>
+                <tr><td>輔助資料庫</td><td>MySQL (ODBC 8.0)</td><td><code>talent_db</code></td></tr>
+                <tr><td>加密</td><td>自製 <code>encrypt.asp</code> / <code>Crypt.asp</code> + <code>KeyGeN.asp</code></td><td>密碼加密、授權碼驗證</td></tr>
+                <tr><td>郵件</td><td>JMail 元件</td><td><code>send_email.asp</code> 透過 SMTP 發送通知</td></tr>
+                <tr><td>檔案處理</td><td>ADODB.Stream + FileSystemObject</td><td>Excel/BOM/PO 上傳匯入</td></tr>
+                <tr><td>字元編碼</td><td>GB2312 ↔ Big5 轉換</td><td><code>gb2312tobig5.asp</code> 兩岸相容</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 三、登入與權限流程 -->
+    <section id="sec3">
+        <h2>三、登入與權限流程</h2>
+        <div class="mermaid">
+sequenceDiagram
+    participant U as 使用者
+    participant L as login.asp
+    participant C as check.asp
+    participant DB as SQL Server
+    participant S as Session
+
+    U->>L: 輸入 帳號/密碼/資料庫別
+    L->>L: 前端驗證(密碼8位數字)
+    L->>C: 提交 check.asp
+    C->>DB: 讀 conn.txt 取 DB 名稱
+    C->>DB: 連線 conn.Open
+    C->>DB: 查 cams_system_codes (setup 授權碼+到期日)
+    C->>C: 驗證授權未過期/未被竄改
+    C->>DB: 查 cams_xuser 比對加密密碼
+    C->>DB: 查 leader_user 取權限
+    C->>S: 寫入 13 項權限 Session
+    C->>DB: 寫 login_user_record (登入記錄)
+    C->>U: 跳轉 main.asp
+        </div>
+
+        <h3>驗證流程說明</h3>
+        <ol>
+            <li><strong>前端正規檢查</strong> (<code>login.asp</code>)：密碼必須 8 位純數字；帳號密碼禁止 <code>' % &lt; &gt; &amp; |</code> 等特殊字元。</li>
+            <li><strong>授權碼驗證</strong> (<code>check.asp</code>)：查詢 <code>cams_system_codes</code> 中 <code>code_type='setup'</code>：
+                <ul>
+                    <li><code>value_date1</code> / <code>value_alpha1</code>：初始使用授權碼 + 加密校驗</li>
+                    <li><code>value_date2</code> / <code>value_alpha2</code>：終止使用授權碼 + 加密校驗</li>
+                    <li>任何授權碼被竄改 → 立即中止登入</li>
+                </ul>
+            </li>
+            <li><strong>密碼比對</strong>：<code>encrypt(password) &lt;&gt; cams_xuser.xuser_password</code></li>
+            <li><strong>首次密碼強制變更</strong>：密碼為 <code>12345678</code> 時跳轉 <code>modify_password.asp</code>。</li>
+            <li><strong>權限載入</strong>：從 <code>leader_user</code> 表讀取 13 項功能權限寫入 Session。</li>
+        </ol>
+
+        <h3>權限模組（Session 變數）</h3>
+        <table>
+            <thead>
+                <tr><th>Session 變數</th><th>業務功能</th><th>說明</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>procurement</code></td><td>採購</td><td>採購單、供應商</td></tr>
+                <tr><td><code>sales</code></td><td>業務</td><td>客戶訂單、報價</td></tr>
+                <tr><td><code>production</code></td><td>生產</td><td>製造訂單、生產日報</td></tr>
+                <tr><td><code>engineer</code></td><td>工程</td><td>BOM、工序、模具</td></tr>
+                <tr><td><code>handbook</code></td><td>手冊</td><td>海關手冊</td></tr>
+                <tr><td><code>wk_plan</code></td><td>生管</td><td>生產排程</td></tr>
+                <tr><td><code>quality</code></td><td>品質</td><td>QRQC、IQC/OQC</td></tr>
+                <tr><td><code>document</code></td><td>文件</td><td>文件管理</td></tr>
+                <tr><td><code>price</code></td><td>價格</td><td>產品報價</td></tr>
+                <tr><td><code>stock</code></td><td>倉庫</td><td>物料進出、庫存</td></tr>
+                <tr><td><code>finance</code></td><td>財務</td><td>AR/AP、付款</td></tr>
+                <tr><td><code>imex</code></td><td>進出口</td><td>報關、進出口</td></tr>
+                <tr><td><code>others</code></td><td>其他</td><td>其他功能</td></tr>
+                <tr><td><code>class</code></td><td>管理等級</td><td>決定管理者身份</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 四、資料庫架構與多租戶切換 -->
+    <section id="sec4">
+        <h2>四、資料庫架構與多租戶切換</h2>
+        <div class="mermaid">
+flowchart LR
+    CONNTXT["conn.txt<br/>資料庫清單"] --> CONN["conn.asp"]
+    CONN --> |session DB 決定| SELECT{"選擇資料庫"}
+    SELECT --> ERMM_HM["ERMM_HM 鉑漢"]
+    SELECT --> ERMM_LD["ERMM_LD 利騰"]
+    SELECT --> ERMM_MQ["ERMM_MQ"]
+    SELECT --> ERMM_JS["ERMM_JS"]
+    SELECT --> ERMM_VENTEC["ERMM_Ventec"]
+    SELECT --> ERMM_GY["ERMM_GY"]
+    SELECT --> ERMM_ICHIA["ERMM_Ichia_2nd"]
+
+    ERMM_HM --> TABLES["共用資料表群"]
+    TABLES --> CAMS["cams_* 系統碼表"]
+    TABLES --> LEADER["leader_user 權限"]
+    TABLES --> LOGIN_REC["login_user_record 日誌"]
+    TABLES --> XUSER["cams_xuser 使用者"]
+    TABLES --> XWEBPAGE["cams_xwebpage 頁面選單"]
+    TABLES --> XBATCH["cams_batch_control 批次"]
+    TABLES --> E2["e2_notes_management 待辦"]
+        </div>
+
+        <h3>多租戶設計</h3>
+        <ul>
+            <li>同一套程式碼，登入時選擇不同資料庫別（對應不同公司/廠區）</li>
+            <li><code>conn.txt</code> 列出 9 個資料庫別，實現「一套程式多公司部署」</li>
+            <li>各資料庫結構相同，資料獨立隔離</li>
+        </ul>
+
+        <h3>主要資料表群</h3>
+        <table>
+            <thead>
+                <tr><th>資料表前綴/名稱</th><th>用途</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>cams_xuser</code></td><td>使用者帳號、密碼(加密)、姓名、部門、客戶別</td></tr>
+                <tr><td><code>cams_xuser_xbu</code></td><td>使用者與業務單位(BU)關聯</td></tr>
+                <tr><td><code>cams_xusers_webpage</code></td><td>使用者與頁面授權關聯</td></tr>
+                <tr><td><code>cams_xwebpage</code></td><td>系統頁面註冊表(seq_system 跨號、URL、發布旗標)</td></tr>
+                <tr><td><code>cams_system_codes</code></td><td>系統授權碼、郵件清單、批次控制</td></tr>
+                <tr><td><code>cams_global_codes</code></td><td>全域代碼(client_id、截止日期、批次控制)</td></tr>
+                <tr><td><code>cams_batch_control</code></td><td>批次作業記錄(batch_id)</td></tr>
+                <tr><td><code>leader_user</code></td><td>權限管理(12 項功能權限 + 管理旗標)</td></tr>
+                <tr><td><code>login_user_record</code></td><td>登入日誌(登入/登出/使用次數/頁面記錄)</td></tr>
+                <tr><td><code>e2_notes_management</code></td><td>品質異常待辦追蹤</td></tr>
+                <tr><td><code>MGM_QC_wkteam_details</code></td><td>品質小組任務分派</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- 五、核心業務模組關係 -->
+    <section id="sec5">
+        <h2>五、核心業務模組關係</h2>
+        <div class="mermaid">
+flowchart TB
+    subgraph 業務["業務接單 Order-to-Cash"]
+        SO["客戶訂單<br/>STD_order_add"]
+        PRICE["產品報價<br/>價格模組"]
+    end
+
+    subgraph 採購["採購 Procure-to-Pay"]
+        PO["採購單 PO<br/>STD_po_print/STD_upload_PO"]
+        SUP["供應商管理"]
+        IQC["進料檢驗 IQC<br/>LP_QC_menu_IQC"]
+    end
+
+    subgraph 生產["生產製造"]
+        BOM["BOM 物料清單<br/>STD_bom_*"]
+        MO["製造訂單 MO<br/>mo/1100, 1300"]
+        STD_CAP["標準產能<br/>工序"]
+        PLAN["生產排程<br/>生管 wk_plan"]
+        OQC["出貨檢驗 OQC<br/>LP_QC_menu_OQC"]
+        PSI["PSI 檢驗"]
+    end
+
+    subgraph 品質["品質管理 QRQC"]
+        QRQC["QRQC 快速回應<br/>STD_QRQC_*"]
+        CAR["CAR 矯正措施"]
+        DEFECT["缺陷追蹤<br/>e2_notes_management"]
+    end
+
+    subgraph 倉庫["倉庫/物控"]
+        STOCK["物料進出<br/>庫存平衡"]
+        MATERIAL["物料批次"]
+    end
+
+    subgraph 報關["海關報關"]
+        CUSTOM["報關單<br/>clearance/8000,8100"]
+        HANDBOOK["海關手冊<br/>handbook"]
+        IMEX["進出口 imex"]
+    end
+
+    subgraph 財務["財務管理"]
+        ARAP["應收應付 AR/AP"]
+        PAY["付款 pay_list"]
+        CHECK_F["票據 check_*"]
+        FIN_RPT["財務報表分析"]
+    end
+
+    SO --> BOM
+    SO --> MO
+    BOM --> MO
+    PO --> SUP
+    SUP --> IQC
+    IQC --> STOCK
+    MO --> PLAN
+    MO --> QRQC
+    PLAN --> OQC
+    OQC --> PSI
+    QRQC --> CAR
+    QRQC --> DEFECT
+    MO --> STOCK
+    STOCK --> CUSTOM
+    CUSTOM --> IMEX
+    SO --> ARAP
+    PO --> ARAP
+    ARAP --> PAY
+    ARAP --> CHECK_F
+    ARAP --> FIN_RPT
+        </div>
+
+        <h3>業務流程說明</h3>
+
+        <div class="feature-card">
+            <strong>1. 接單到收款 (Order-to-Cash)</strong><br/>
+            客戶訂單 → BOM 展開 → 製令生產 → 出貨檢驗 → 應收帳款 → 收款/票據 → 財務分析
+        </div>
+
+        <div class="feature-card">
+            <strong>2. 採購到付款 (Procure-to-Pay)</strong><br/>
+            採購單 PO → 供應商管理 → 進料檢驗 IQC → 入庫 → 應付帳款 → 付款 → 票據管理
+        </div>
+
+        <div class="feature-card">
+            <strong>3. 生產製造流程</strong><br/>
+            BOM 物料清單 → 製造訂單 MO → 標準產能/工序 → 生產排程 → 生產日報 → 出貨檢驗 OQC/PSI
+        </div>
+
+        <div class="feature-card">
+            <strong>4. 品質閉環</strong><br/>
+            QRQC 快速回應 → CAR 矯正措施 → e2_notes_management 待辦追蹤 → header_message.asp 跑馬燈提醒 → 結案
+        </div>
+
+        <div class="feature-card">
+            <strong>5. 報關與進出口</strong><br/>
+            物料進出 → 海關手冊 → 報關單 → 進出口管理 → 財務入帳
+        </div>
+    </section>
+
+    <!-- 六、ERP 整合與批次作業流程 -->
+    <section id="sec6">
+        <h2>六、ERP 整合與批次作業流程</h2>
+        <div class="mermaid">
+sequenceDiagram
+    participant ERP as 外部 ERP
+    participant B as batch/ 批次
+    participant DB as SQL Server
+    participant M as mo/ 製令模組
+    participant E as EISMII/ 庫存
+    participant MAIL as 郵件通知
+
+    ERP->>B: erp2eism_mo.asp 同步製造訂單(MO)
+    ERP->>B: erp2ermm_po.asp 同步採購訂單(PO)
+    B->>B: proc_po.asp 處理PO
+    B->>B: proc_mo_online.asp 處理MO
+    B->>B: proc_supplier.asp 供應商
+    B->>B: proc_bom_convert.asp BOM轉換
+    B->>B: cal_daily_xitems_stock_balance.asp 每日庫存結算
+    B->>B: cal_mo_category.asp 訂單分類
+    B->>B: proc_xitems_link_lawbook.asp 物料綁定海關法規
+    B->>DB: 寫入對應資料表
+    B->>MAIL: send_email.asp 異常通知
+    Note over B: start_batch.asp 啟動 / end_batch.asp 結束 / batch_id 全程追蹤
+        </div>
+
+        <h3>批次作業模組 (batch/ 目錄)</h3>
+        <table>
+            <thead>
+                <tr><th>檔案</th><th>功能</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>start_batch.asp</code></td><td>批次啟動，產生 batch_id</td></tr>
+                <tr><td><code>end_batch.asp</code></td><td>批次結束</td></tr>
+                <tr><td><code>erp2eism_mo.asp</code></td><td>從 ERP 同步製造訂單 (MO)</td></tr>
+                <tr><td><code>erp2ermm_po.asp</code></td><td>從 ERP 同步採購訂單 (PO)</td></tr>
+                <tr><td><code>proc_po.asp</code></td><td>採購單處理</td></tr>
+                <tr><td><code>proc_mo_online.asp</code></td><td>線上製令處理</td></tr>
+                <tr><td><code>proc_supplier.asp</code></td><td>供應商資料處理</td></tr>
+                <tr><td><code>proc_bom_convert.asp</code></td><td>BOM 產品結構轉換</td></tr>
+                <tr><td><code>cal_daily_xitems_stock_balance.asp</code></td><td>每日物料庫存平衡計算</td></tr>
+                <tr><td><code>cal_mo_category.asp</code></td><td>製令分類計算</td></tr>
+                <tr><td><code>proc_xitems_link_lawbook.asp</code></td><td>物料綁定海關法規</td></tr>
+                <tr><td><code>send_email.asp</code></td><td>批次異常郵件通知</td></tr>
+            </tbody>
+        </table>
+
+        <div class="info-box">
+            <strong>批次控制機制：</strong>
+            <code>cams_batch_control</code> 記錄 batch_id 全程追蹤。
+            <code>cams_global_codes</code> 中關鍵截止代碼：<code>BATCH_CONTROL</code>（批次控制日期）、<code>CUSTOM_CUTOFF</code>（報關截止日）、<code>MO_CUTOFF</code>（製令截止日）、<code>INV_CUTOFF</code>（庫存截止日）。
+        </div>
+    </section>
+
+    <!-- 七、頁面編碼體系 -->
+    <section id="sec7">
+        <h2>七、頁面編碼體系</h2>
+        <p>系統所有功能頁面由 <code>cams_xwebpage</code> 資料表統一註冊，以 <code>seq_system</code> 跨號分類：</p>
+
+        <table>
+            <thead>
+                <tr><th>跨號區段</th><th>業務領域</th><th>對應 document/ PDF</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>1000 系列</td><td>系統設定/首頁</td><td>1000~1050.pdf</td></tr>
+                <tr><td>2000 系列</td><td>業務接單/報價</td><td>2000~2130.pdf</td></tr>
+                <tr><td>3000 系列</td><td>採購/物料</td><td>3000~3072.pdf</td></tr>
+                <tr><td>5000 系列</td><td>生產製造/庫存</td><td>5000~5030.pdf</td></tr>
+                <tr><td>8000 系列</td><td>海關報關/進出口</td><td>8000~8070.pdf</td></tr>
+                <tr><td>8500 系列</td><td>財務管理</td><td>8500~8530.pdf</td></tr>
+            </tbody>
+        </table>
+
+        <h3>動態選單機制 (left_new.asp)</h3>
+        <div class="mermaid">
+flowchart LR
+    USER["使用者登入"] --> CHECK_ID{"管理者?"}
+    CHECK_ID -->|george/rocky.tai| ALL["顯示所有頁面<br/>seq_system not like 99%"]
+    CHECK_ID -->|一般使用者| AUTH["查 cams_xusers_webpage<br/>只顯示授權頁面"]
+    ALL --> RENDER["分頁渲染<br/>18 頁/頁"]
+    AUTH --> RENDER
+    RENDER --> FLAG{"release_flag?"}
+    FLAG -->|NO| GRAY["灰色樣式 color"]
+    FLAG -->|YES| NORMAL["正常樣式"]
+        </div>
+
+        <ul>
+            <li>管理者：顯示所有 <code>seq_system not like '99%'</code> 且 <code>test_only='F'</code> 頁面</li>
+            <li>一般使用者：透過 <code>cams_xusers_webpage</code> 關聯表只顯示授權頁面</li>
+            <li><code>release_flag=NO</code> 標記未正式發布頁面（灰色顯示）</li>
+            <li>分頁顯示，每頁 18 個功能按鈕</li>
+        </ul>
+    </section>
+
+    <!-- 八、日誌與稽核機制 -->
+    <section id="sec8">
+        <h2>八、日誌與稽核機制</h2>
+        <div class="mermaid">
+flowchart LR
+    LOGIN["登入 check.asp"] -->|insert| LUR["login_user_record<br/>登入/登出/使用次數"]
+    BROWSE["瀏覽頁面 conn.asp"] -->|update use_cnt| LUR
+    BROWSE -->|update xwebpage_id| LUR
+    EXIT["登出 exit.asp"] -->|update logoff_time| LUR
+    OP["操作"] --> START["start_log.asp<br/>記錄開始"]
+    OP --> END_LOG["end_log.asp<br/>記錄結束"]
+    LEADER["leader_user"] -->|login=Y/N| ONLINE["線上人員追蹤<br/>header_message.asp 跑馬燈"]
+    BATCH["批次作業"] --> BC["cams_batch_control<br/>batch_id 追蹤"]
+        </div>
+
+        <h3>稽核機制說明</h3>
+        <ol>
+            <li><strong>登入日誌</strong> (<code>login_user_record</code>)：記錄每次登入時間、使用次數、當前瀏覽頁面、登出時間</li>
+            <li><strong>線上人員追蹤</strong>：<code>leader_user.login='Y'</code> 標記線上狀態，<code>header_message.asp</code> 跑馬燈顯示線上人員清單</li>
+            <li><strong>自動登出</strong>：跨日登入狀態自動清除（<code>header_message.asp</code> 檢查 <code>diff_time &gt; 0</code>）</li>
+            <li><strong>操作記錄</strong>：<code>start_log.asp</code> / <code>end_log.asp</code> 記錄各操作開始與結束時間</li>
+            <li><strong>批次追蹤</strong>：<code>cams_batch_control</code> 的 batch_id 貫穿整個批次作業流程</li>
+        </ol>
+    </section>
+
+    <!-- 九、整體關係總結 -->
+    <section id="sec9">
+        <h2>九、整體關係總結</h2>
+        <div class="mermaid">
+mindmap
+  root((ERMM 系統))
+    技術架構
+      Classic ASP + VBScript
+      IIS Web Server
+      SQL Server 多租戶
+      MySQL 輔助
+      GB2312 中文編碼
+    認證授權
+      帳號密碼加密
+      授權碼到期驗證
+      13 項功能權限
+      頁面級授權
+    業務價值鏈
+      接單 Order-to-Cash
+      採購 Procure-to-Pay
+      生產製造
+      品質閉環 QRQC
+      倉儲物控
+      海關報關
+      財務管理
+    整合能力
+      ERP 雙向同步
+      批次作業 batch_id
+      JMail 郵件通知
+      簡訊驗證 SMS
+    稽核追蹤
+      登入日誌
+      線上人員追蹤
+      操作記錄
+      批次追蹤
+        </div>
+
+        <h3>七大核心特徵</h3>
+
+        <div class="feature-card">
+            <span class="badge">1</span><strong>單一入口框架</strong><br/>
+            <code>login.asp → check.asp → main.asp(frameset)</code> 統一入口，頂部 <code>index.asp</code> 顯示公司/時間/登出，左側 <code>left_new.asp</code> 動態選單，主內容 <code>body.asp</code> iframe。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">2</span><strong>權限雙層控制</strong><br/>
+            <code>cams_xuser</code>(帳號密碼) + <code>leader_user</code>(13 項功能權限) + <code>cams_xusers_webpage</code>(頁面級授權)，形成三層權限體系。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">3</span><strong>多租戶架構</strong><br/>
+            一套程式碼，登入時選 DB 切換公司，<code>conn.txt</code> 列出 9 個資料庫別（鉑漢/利騰/Ventec/Ichia 等），各廠區資料獨立隔離。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">4</span><strong>ERP 雙向整合</strong><br/>
+            <code>batch/</code> 目錄從 ERP 同步 PO/MO/BOM/供應商，並計算庫存平衡、訂單分類、物料報關法規綁定，以 <code>batch_id</code> 全程追蹤。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">5</span><strong>品質閉環</strong><br/>
+            QRQC 快速回應 → CAR 矯正 → <code>e2_notes_management</code> 待辦追蹤 → <code>header_message.asp</code> 跑馬燈提醒，形成品質異常追蹤閉環。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">6</span><strong>報關財務一體</strong><br/>
+            物料進出 → 海關手冊/報關單 → 應收應付(AR/AP) → 付款/票據 → 財務分析，整合進出口(imex)與財務(finance)模組。
+        </div>
+
+        <div class="feature-card">
+            <span class="badge">7</span><strong>稽核完整</strong><br/>
+            <code>login_user_record</code> 記錄每次登入/使用/登出，<code>cams_batch_control</code> 追蹤批次作業，<code>start_log/end_log</code> 記錄操作歷程，<code>leader_user</code> 追蹤線上人員。
+        </div>
+    </section>
+
+    <!-- 附錄 -->
+    <section id="sec10">
+        <h2>附錄：關鍵檔案索引</h2>
+        <table>
+            <thead>
+                <tr><th>檔案路徑</th><th>功能</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>login.asp</code></td><td>登入頁</td></tr>
+                <tr><td><code>check.asp</code></td><td>登入驗證 + 授權碼檢查 + 權限載入</td></tr>
+                <tr><td><code>main.asp</code></td><td>frameset 主框架 (頂部+左側+主內容)</td></tr>
+                <tr><td><code>index.asp</code></td><td>頂部 header (公司/時間/登出)</td></tr>
+                <tr><td><code>left_new.asp</code></td><td>左側動態選單 (依權限渲染)</td></tr>
+                <tr><td><code>body.asp</code></td><td>主內容 iframe 容器</td></tr>
+                <tr><td><code>exit.asp</code></td><td>登出 (清除 login 狀態 + 記錄 logoff)</td></tr>
+                <tr><td><code>public/conn.asp</code></td><td>主資料庫連線 (依 session DB)</td></tr>
+                <tr><td><code>public/encrypt.asp</code></td><td>密碼加密函式</td></tr>
+                <tr><td><code>public/send_email.asp</code></td><td>JMail 郵件發送</td></tr>
+                <tr><td><code>public/start_log.asp</code></td><td>操作開始日誌</td></tr>
+                <tr><td><code>public/end_log.asp</code></td><td>操作結束日誌</td></tr>
+                <tr><td><code>public/upload.asp</code></td><td>檔案上傳</td></tr>
+                <tr><td><code>conn.txt</code></td><td>資料庫別清單 (9 個)</td></tr>
+                <tr><td><code>web.config</code></td><td>IIS 設定</td></tr>
+                <tr><td><code>setup/setup.asp</code></td><td>系統初始化設定</td></tr>
+                <tr><td><code>HM/</code></td><td>主管理 + 品質控制模組</td></tr>
+                <tr><td><code>mo/</code></td><td>製造訂單模組 (1100/1300 系列)</td></tr>
+                <tr><td><code>batch/</code></td><td>批次作業 + ERP 整合</td></tr>
+                <tr><td><code>clearance/</code></td><td>海關報關模組 (8000/8100)</td></tr>
+                <tr><td><code>finance/</code></td><td>財務管理模組</td></tr>
+                <tr><td><code>EISMII/</code></td><td>EIS 庫存管理模組</td></tr>
+                <tr><td><code>SMS/</code></td><td>簡訊驗證模組</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer>
+        <p>文件版本：1.0 &nbsp;|&nbsp; 生成日期：2026-09-02</p>
+        <p>系統：ERMM (Enterprise Resource Management &amp; Manufacturing)</p>
+        <p>Classic ASP + IIS + SQL Server + MySQL &nbsp;|&nbsp; Mermaid.js 圖表渲染</p>
+    </footer>
+
+</div>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        themeVariables: {
+            primaryColor: '#2c5f8d',
+            primaryTextColor: '#ffffff',
+            primaryBorderColor: '#1a3a5c',
+            lineColor: '#34495e',
+            secondaryColor: '#e8f4fc',
+            tertiaryColor: '#f8f9fa'
+        },
+        flowchart: {
+            curve: 'basis',
+            padding: 20
+        },
+        sequence: {
+            boxMargin: 10,
+            boxTextMargin: 5,
+            noteMargin: 8
+        }
+    });
+</script>
+
+</body>
+</html>

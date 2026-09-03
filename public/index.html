@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組管理系統</title>
+<link rel="stylesheet" href="/css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<aside id="sidebar">
+    <div class="logo">
+        <h2>🏢 ERMM</h2>
+        <p data-i18n="app.subtitle">財務模組管理系統</p>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.dashboard">儀表板</div>
+        <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+            <span class="nav-icon">📊</span><span data-i18n="nav.dashboard.item">財務儀表板</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">ERP 原始單據</div>
+        <div class="nav-item" data-page="po" onclick="navigate('po')">
+            <span class="nav-icon">🛒</span><span>採購單 PO</span>
+        </div>
+        <div class="nav-item" data-page="so" onclick="navigate('so')">
+            <span class="nav-icon">📦</span><span>銷售訂單 SO</span>
+        </div>
+        <div class="nav-item" data-page="dn" onclick="navigate('dn')">
+            <span class="nav-icon">🚚</span><span>SO 交貨單</span>
+        </div>
+        <div class="nav-item" data-page="tempPo" onclick="navigate('tempPo')">
+            <span class="nav-icon">📥</span><span>PO 暫存</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.daily">日常作業</div>
+        <div class="nav-item" data-page="cash" onclick="navigate('cash')">
+            <span class="nav-icon">💵</span><span data-i18n="nav.cash">現金日記帳</span>
+        </div>
+        <div class="nav-item" data-page="invoice" onclick="navigate('invoice')">
+            <span class="nav-icon">🧾</span><span data-i18n="nav.invoice">發票管理</span>
+        </div>
+        <div class="nav-item" data-page="pay" onclick="navigate('pay')">
+            <span class="nav-icon">💳</span><span data-i18n="nav.pay">付款明細</span>
+        </div>
+        <div class="nav-item" data-page="check" onclick="navigate('check')">
+            <span class="nav-icon">📝</span><span data-i18n="nav.check">票據管理</span>
+        </div>
+        <div class="nav-item" data-page="bank" onclick="navigate('bank')">
+            <span class="nav-icon">🏦</span><span data-i18n="nav.bank">銀行貸款</span>
+        </div>
+        <div class="nav-item" data-page="arap" onclick="navigate('arap')">
+            <span class="nav-icon">📐</span><span data-i18n="nav.arap">應收應付</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.analysis">財務分析</div>
+        <div class="nav-item" data-page="summary" onclick="navigate('summary')">
+            <span class="nav-icon">📋</span><span data-i18n="nav.summary">財務摘要</span>
+        </div>
+        <div class="nav-item" data-page="report" onclick="navigate('report')">
+            <span class="nav-icon">📈</span><span data-i18n="nav.report">三大報表</span>
+        </div>
+        <div class="nav-item" data-page="risk" onclick="navigate('risk')">
+            <span class="nav-icon">⚠️</span><span data-i18n="nav.risk">風險預警</span>
+        </div>
+        <div class="nav-item" data-page="forecast" onclick="navigate('forecast')">
+            <span class="nav-icon">🔮</span><span data-i18n="nav.forecast">財務預測</span>
+        </div>
+        <div class="nav-item" data-page="trend" onclick="navigate('trend')">
+            <span class="nav-icon">📉</span><span data-i18n="nav.trend">年度趨勢</span>
+        </div>
+        <div class="nav-item" data-page="monthly" onclick="navigate('monthly')">
+            <span class="nav-icon">📅</span><span>月度項目</span>
+        </div>
+        <div class="nav-item" data-page="account" onclick="navigate('account')">
+            <span class="nav-icon">💰</span><span>帳戶明細</span>
+        </div>
+        <div class="nav-item" data-page="xitems" onclick="navigate('xitems')">
+            <span class="nav-icon">📦</span><span>庫存減值</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">財務預警 / KPI 查詢</div>
+        <div class="nav-item" data-page="yg001" onclick="navigate('yg001')">
+            <span class="nav-icon">📊</span><span>YG001 KPI 預警指標</span>
+        </div>
+        <div class="nav-item" data-page="yg002" onclick="navigate('yg002')">
+            <span class="nav-icon">📈</span><span>YG002 KPI 指標管理</span>
+        </div>
+        <div class="nav-item" data-page="yg003" onclick="navigate('yg003')">
+            <span class="nav-icon">⚠️</span><span>YG003 報表異常甄別</span>
+        </div>
+        <div class="nav-item" data-page="yg004" onclick="navigate('yg004')">
+            <span class="nav-icon">🎯</span><span>YG004 預測模型分析</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">主檔管理</div>
+        <div class="nav-item" data-page="kpi" onclick="navigate('kpi')">
+            <span class="nav-icon">🎯</span><span>KPI 門檻</span>
+        </div>
+        <div class="nav-item" data-page="branch" onclick="navigate('branch')">
+            <span class="nav-icon">🏢</span><span>分公司</span>
+        </div>
+        <div class="nav-item" data-page="relation" onclick="navigate('relation')">
+            <span class="nav-icon">👥</span><span>往來對象</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.system">系統</div>
+        <div class="nav-item" data-page="batch" onclick="navigate('batch')">
+            <span class="nav-icon">⚙️</span><span data-i18n="nav.batch">批次管線</span>
+        </div>
+        <div class="nav-item" data-page="system" onclick="navigate('system')">
+            <span class="nav-icon">🔧</span><span data-i18n="nav.system">系統設定</span>
+        </div>
+        <div class="nav-item" data-page="user" onclick="navigate('user')">
+            <span class="nav-icon">👤</span><span>使用者管理</span>
+        </div>
+    </div>
+</aside>
+
+<!-- 主内容 -->
+<div id="main">
+    <div class="topbar">
+        <h1 id="pageTitle">財務儀表板</h1>
+        <div class="actions">
+            <label id="buLabel" style="font-size:0.85em;color:#7f8c8d;">公司別</label>
+            <select id="globalBU" onchange="State.bu_no=this.value;navigate(currentPage)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">
+                <option value="HM">HM</option>
+                <option value="SZ">SZ</option>
+                <option value="HN">HN</option>
+            </select>
+            <label id="monthLabel" style="font-size:0.85em;color:#7f8c8d;margin-left:10px;">月份</label>
+            <input type="month" id="globalMonth" onchange="State.YYYY_MM=this.value.replace('-','/');navigate(currentPage)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">
+            <label id="langLabel" style="font-size:0.85em;color:#7f8c8d;margin-left:10px;">語言</label>
+            <select id="globalLang" onchange="I18N.setLang(this.value)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">
+                <option value="zh-TW">繁體中文</option>
+                <option value="zh-CN">简体中文</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </div>
+    <div id="pageContent"></div>
+</div>
+
+<!-- 模态框 -->
+<div class="modal-overlay" id="modalOverlay"></div>
+<!-- Toast -->
+<div id="toast"></div>
+
+<script src="/js/i18n.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/pages/dashboard.js"></script>
+<script src="/js/pages/po.js"></script>
+<script src="/js/pages/so.js"></script>
+<script src="/js/pages/cash.js"></script>
+<script src="/js/pages/invoice.js"></script>
+<script src="/js/pages/pay.js"></script>
+<script src="/js/pages/check.js"></script>
+<script src="/js/pages/bank.js"></script>
+<script src="/js/pages/arap.js"></script>
+<script src="/js/pages/summary.js"></script>
+<script src="/js/pages/report.js"></script>
+<script src="/js/pages/risk.js"></script>
+<script src="/js/pages/forecast.js"></script>
+<script src="/js/pages/trend.js"></script>
+<script src="/js/pages/batch.js"></script>
+<script src="/js/pages/system.js"></script>
+<script src="/js/pages/kpi.js"></script>
+<script src="/js/pages/branch.js"></script>
+<script src="/js/pages/relation.js"></script>
+<script src="/js/pages/monthly.js"></script>
+<script src="/js/pages/account.js"></script>
+<script src="/js/pages/dn.js"></script>
+<script src="/js/pages/user.js"></script>
+<script src="/js/pages/tempPo.js"></script>
+<script src="/js/pages/xitems.js"></script>
+<script src="/js/pages/kpiQuery.js"></script>
+<script>
+let currentPage = 'dashboard';
+const origNav = navigate;
+navigate = async function(pageId, params) {
+    currentPage = pageId;
+    document.getElementById('pageTitle').textContent = t('page.' + pageId);
+    await origNav(pageId, params);
+};
+
+// 初始化全局月份
+document.getElementById('globalMonth').value = State.YYYY_MM.replace('/', '-');
+document.getElementById('globalBU').value = State.bu_no;
+document.getElementById('globalLang').value = I18N.lang;
+
+// 应用语言到侧边栏
+I18N.applyUI();
+
+// 启动
+navigate('dashboard');
+</script>
+</body>
+</html>

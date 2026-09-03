@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8">
+<title>批次管線驗證報告 — 2025/01</title>
+<style>
+  :root{--p:#1e40af;--ok:#059669;--warn:#d97706;--err:#dc2626;--bg:#f8fafc}
+  body{margin:0;font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:#1e293b;line-height:1.7}
+  .page{max-width:1100px;margin:0 auto;padding:40px 48px 80px;background:#fff;box-shadow:0 0 30px rgba(0,0,0,.08);min-height:100vh}
+  .cover{background:linear-gradient(135deg,#1e40af,#0ea5e9);color:#fff;margin:-40px -48px 32px;padding:40px 48px;border-bottom:3px solid var(--p)}
+  .cover h1{margin:0 0 8px;font-size:28px}
+  .cover .sub{opacity:.92;font-size:14px}
+  .cover .meta{margin-top:12px;font-size:12px;opacity:.8}
+  .tag{display:inline-block;background:rgba(255,255,255,.2);padding:2px 10px;border-radius:12px;margin-right:6px;font-size:12px}
+  h2{font-size:20px;color:var(--p);margin:36px 0 14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0}
+  h3{font-size:15px;color:#334155;margin:24px 0 10px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid #e2e8f0}
+  th{background:linear-gradient(to bottom,#eff6ff,#dbeafe);color:var(--p);font-weight:700;border-bottom:2px solid var(--p);white-space:nowrap}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:hover td{background:#f8fafc}
+  code{background:#f1f5f9;border:1px solid #cbd5e1;padding:1px 6px;border-radius:3px;font-size:12.5px;color:var(--p);font-family:"SF Mono","Consolas",monospace}
+  pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;font-size:12.5px;font-family:"SF Mono","Consolas",monospace;border:1px solid #334155}
+  pre .cm{color:#94a3b8;font-style:italic}pre .kw{color:#60a5fa}pre .str{color:#86efac}pre .num{color:#fbbf24}
+  .call.info{background:#eff6ff;border-left:4px solid var(--p);color:#1e3a8a;padding:12px 16px;border-radius:8px;font-size:13px}
+  @media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:20px}.cover{margin:0;padding:20px}.page-break{page-break-before:always}}
+</style></head><body><div class="page">
+<div class="cover">
+  <h1>📊 批次管線 7 步導入驗證報告</h1>
+  <div class="sub">資料期間：<b>2025/01</b> ・ BU：HM / HN / SZ ・ 批次管線：7 步</div>
+  <div class="meta"><span class="tag">生成時間 2026/9/3 下午12:26:25</span><span class="tag">DB ERMM_db</span><span class="tag">MySQL 8.3</span><span class="tag">Node 18</span></div>
+</div>
+
+    <h2 class="sec">一、資料來源彙總</h2>
+    <p>匯入後各表在 <b>2025/01</b> 期間的資料量（紅色 0 表示缺失，需要補）：</p>
+    <table>
+      <thead><tr><th>表名</th><th>HM</th><th>HN</th><th>SZ</th><th style="text-align:right">合計</th></tr></thead>
+      <tbody><tr><td style="font-weight:600">01_ERP_temp_po</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">02_ERP_erp_po</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">03_ERP_erp_SO</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">04_庫存明細</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">05_發票明細</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">06_現金日記</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="color:#dc2626;text-align:center">0</td><td style="font-weight:700;text-align:right">0</td></tr><tr><td style="font-weight:600">07_ARAP_detail</td><td style="text-align:center">1</td><td style="text-align:center">1</td><td style="text-align:center">1</td><td style="font-weight:700;text-align:right">3</td></tr><tr><td style="font-weight:600">08_財務摘要(目標)</td><td style="text-align:center">1</td><td style="text-align:center">1</td><td style="text-align:center">1</td><td style="font-weight:700;text-align:right">3</td></tr></tbody>
+    </table>
+
+    <h2 class="sec">二、YYYY_MM 回填檢查</h2>
+    <p>批次管線 Step 6/7 依賴 <code>YYYY_MM</code> 欄位查詢。以下檢查確保所有新灌資料都有正確回填：</p>
+    <table>
+      <thead><tr><th>表名</th><th>總筆數</th><th>有 YYYY_MM</th><th>完整率</th><th>結果</th></tr></thead>
+      <tbody><tr>
+          <td><code>ERMM_erp_SO</code></td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0%</td>
+          <td><span style="color:#dc2626;font-weight:700">⚠️ 有缺漏</span></td>
+        </tr><tr>
+          <td><code>MGM_invoice_details</code></td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0%</td>
+          <td><span style="color:#dc2626;font-weight:700">⚠️ 有缺漏</span></td>
+        </tr><tr>
+          <td><code>MGM_casher_details</code></td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0</td>
+          <td style="text-align:center">0%</td>
+          <td><span style="color:#dc2626;font-weight:700">⚠️ 有缺漏</span></td>
+        </tr></tbody>
+    </table>
+
+    <h2 class="sec">三、3 BU 核心財務欄位</h2>
+    <table>
+      <thead><tr>
+        <th>BU</th><th>AR 應收</th><th>AP 應付</th><th>現金淨額</th>
+        <th>存貨</th><th>跌價損失</th><th>VAT 應繳</th>
+        <th>AR 發票</th><th>AP 發票</th><th>資產總額</th><th>平衡</th>
+      </tr></thead>
+      <tbody>
+        <tr style="background:#f0fdf4">
+          <td style="font-weight:700">HM (鴻明)</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">4,698,670</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">1,550,561</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">913,433</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">22,642,826</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">863,420</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">8,540,954</span> ✅</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">14,677,618</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">6,136,664</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">43,635,350</span></td>
+          <td><span style="color:#059669;font-weight:700">平衡 ✅</span></td>
+        </tr>
+        <tr style="background:#f0fdf4">
+          <td style="font-weight:700">HN (鴻南)</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">1,957,779</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">646,067</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">405,954</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">8,752,836</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">417,919</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">5,163,499</span> ✅</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">6,697,665</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">1,534,166</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">18,048,908</span></td>
+          <td><span style="color:#059669;font-weight:700">平衡 ✅</span></td>
+        </tr>
+        <tr style="background:#f0fdf4">
+          <td style="font-weight:700">SZ (深圳廠)</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">3,132,446</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">1,033,707</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">566,439</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">15,587,044</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">630,591</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">6,617,522</span> ✅</td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">10,223,957</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">3,606,435</span></td>
+          <td><span style="color:#0f172a;font-variant-numeric:tabular-nums">29,923,444</span></td>
+          <td><span style="color:#059669;font-weight:700">平衡 ✅</span></td>
+        </tr></tbody>
+    </table>
+    <div class="call info" style="margin-top:12px">
+      💡 資產平衡公式：<code>ttl_asset = cash + deposite + AR + AR_bill + stock_P + stock_M + stock_S − reserve_loss</code><br>
+      VAT 應繳公式：<code>VAT_payable = AR_bill（銷項稅） − AP_tax（進項稅）</code>
+    </div>
+
+    <h2 class="sec">四、計算明細（以 HM 為範例）</h2>
+    
+    <h3>4.1 Step 5 庫存減值計算明細（HM）</h3>
+    <table>
+      <thead><tr><th>物料</th><th>數量</th><th>單價</th><th>陳齡(天)</th><th>減值率</th><th>原價值</th><th>減值後</th><th>跌價損失</th></tr></thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>4.2 Step 6 ARAP 彙算驗證（HM）</h3>
+    <table>
+      <thead><tr><th>驗證項目</th><th>SO 銷售→AR</th><th>PO 採購→AP</th><th>發票 AR/AP 備援</th></tr></thead>
+      <tbody>
+        <tr><td style="font-weight:600">來源彙總</td>
+            <td style="text-align:right"><span style="color:#dc2626">NULL</span></td>
+            <td style="text-align:right"><span style="color:#dc2626">NULL</span></td>
+            <td style="text-align:right"><span style="color:#dc2626">NULL</span> / <span style="color:#dc2626">NULL</span></td></tr>
+        <tr><td style="font-weight:600">寫入 ERMM_ARAP_detail</td>
+            <td style="text-align:right;color:#059669"><span style="color:#64748b;font-variant-numeric:tabular-nums">0</span></td>
+            <td style="text-align:right;color:#059669"><span style="color:#64748b;font-variant-numeric:tabular-nums">0</span></td>
+            <td style="text-align:right">—</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.3 Step 7 發票 / 現金彙總（HM）</h3>
+    <table>
+      <thead><tr><th>來源</th><th>方向</th><th>筆數</th><th>未稅金額</th><th>稅額</th></tr></thead>
+      <tbody>
+        <tr><td>發票明細</td><td style="color:#059669;font-weight:700">AR（銷項）</td>
+            <td>0</td>
+            <td style="text-align:right">14,677,618</td>
+            <td style="text-align:right">1,688,575</td></tr>
+        <tr><td>發票明細</td><td style="color:#dc2626;font-weight:700">AP（進項）</td>
+            <td>0</td>
+            <td style="text-align:right">6,136,664</td>
+            <td style="text-align:right">705,989</td></tr>
+        <tr><td>現金日記</td><td style="color:#059669;font-weight:700">DR（收入）</td>
+            <td>4</td>
+            <td style="text-align:right">2,776,340</td>
+            <td>—</td></tr>
+        <tr><td>現金日記</td><td style="color:#dc2626;font-weight:700">CR（支出）</td>
+            <td>6</td>
+            <td style="text-align:right">1,862,907</td>
+            <td>—</td></tr>
+        <tr style="background:#f0f9ff"><td colspan="3" style="text-align:right;font-weight:700">現金淨額 = DR − CR</td>
+            <td colspan="2" style="text-align:right;font-weight:700"><span style="color:#dc2626">NULL</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 class="sec">五、資料品質檢查（QC）</h2>
+    <table>
+      <thead><tr><th>檢查項目</th><th>HM (鴻明)</th><th>HN (鴻南)</th><th>SZ (深圳廠)</th></tr></thead>
+      <tbody><tr><td>Step 2 PO 未加工（unit_price_local=0）</td>
+      <td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td></tr><tr><td>Step 5 庫存未算減值（stock_value=0）</td>
+      <td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td></tr><tr><td>Step 7 summary AR 為 NULL</td>
+      <td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td></tr><tr><td>Step 7 summary cash 為 NULL</td>
+      <td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td></tr><tr><td>ERMM_ARAP_detail 重複月份+BU</td>
+      <td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td><td><span style="color:#059669;font-weight:700">0</span></td></tr><tr><td>資產平衡（asset = 公式）</td>
+      <td><span style="color:#059669;font-weight:700">✅ 平衡</span></td><td><span style="color:#059669;font-weight:700">✅ 平衡</span></td><td><span style="color:#059669;font-weight:700">✅ 平衡</span></td></tr><tr><td>VAT 應繳 = 銷項 − 進項</td>
+      <td><span style="color:#059669;font-weight:700">✅ 一致</span></td><td><span style="color:#059669;font-weight:700">✅ 一致</span></td><td><span style="color:#059669;font-weight:700">✅ 一致</span></td></tr></tbody>
+    </table>
+
+    <h2 class="sec">六、執行指令回顧</h2>
+    <pre><span class="cm"># 1. 生成測試 Excel (gen_batch_test_excel.js)</span>
+<span class="kw">node</span> database/gen_batch_test_excel.js
+
+<span class="cm"># 2. 灌進 DB + 自動回填 YYYY_MM (load_batch_test.js)</span>
+<span class="kw">node</span> database/load_batch_test.js
+
+<span class="cm"># 3. 前端批次管線頁，或 curl 測試</span>
+<span class="kw">for</span> i <span class="kw">in</span> 1..7; <span class="kw">do</span>
+  curl -X POST http://localhost:3008/api/batch/step$i \
+       -H "Content-Type: application/json" -d '{"bu_no":"HM"}'
+<span class="kw">done</span>
+
+<span class="cm"># 4. 生成本報告</span>
+<span class="kw">node</span> database/gen_verify_report.js 2025/01</pre>
+<div style="margin-top:40px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;color:#94a3b8;font-size:12px">
+  ERMM Batch Pipeline Verification Report · 自動生成
+</div>
+</div></body></html>

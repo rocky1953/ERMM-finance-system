@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERMM 財務模組開發實施計畫書</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 40px 50px; border-radius: 8px; box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+        h1 { color: #1a3c5e; font-size: 28px; text-align: center; margin-bottom: 5px; padding-bottom: 15px; border-bottom: 3px solid #1a3c5e; }
+        h1 + p { text-align: center; color: #666; font-size: 14px; margin-bottom: 30px; }
+        h2 { color: #1a3c5e; font-size: 22px; margin: 35px 0 15px; padding-left: 12px; border-left: 5px solid #3498db; }
+        h3 { color: #2c5f8d; font-size: 18px; margin: 25px 0 12px; }
+        h4 { color: #34495e; font-size: 16px; margin: 18px 0 8px; }
+        p { margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+        th { background: #2c5f8d; color: #fff; padding: 10px 12px; text-align: left; }
+        td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+        tbody tr:nth-child(even) { background: #f8f9fa; }
+        tbody tr:hover { background: #e8f4f8; }
+        code { background: #eef4f8; padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace; color: #c0392b; font-size: 13px; }
+        .mermaid { margin: 20px 0; text-align: center; }
+        .info-box { background: #e8f6f3; border-left: 4px solid #1abc9c; padding: 12px 18px; margin: 15px 0; border-radius: 4px; }
+        .warn-box { background: #fef9e7; border-left: 4px solid #f39c12; padding: 12px 18px; margin: 15px 0; border-radius: 4px; }
+        .danger-box { background: #fdedec; border-left: 4px solid #e74c3c; padding: 12px 18px; margin: 15px 0; border-radius: 4px; }
+        .phase-card { background: linear-gradient(135deg, #f8f9fa 0%, #e8f4f8 100%); border: 1px solid #d5dbdb; border-radius: 8px; padding: 20px; margin: 15px 0; }
+        .phase-header { font-size: 20px; color: #1a3c5e; font-weight: bold; margin-bottom: 10px; }
+        .task-list { list-style: none; padding-left: 0; }
+        .task-list li { padding: 6px 0 6px 25px; position: relative; }
+        .task-list li:before { content: "☐"; position: absolute; left: 0; color: #3498db; font-size: 16px; }
+        .task-list li.done:before { content: "☑"; color: #27ae60; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; color: #fff; }
+        .tag-p1 { background: #e74c3c; }
+        .tag-p2 { background: #f39c12; }
+        .tag-p3 { background: #3498db; }
+        .tag-p4 { background: #9b59b6; }
+        .tag-done { background: #27ae60; }
+        .tag-wip { background: #f39c12; }
+        .tag-todo { background: #95a5a6; }
+        .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; text-align: center; }
+        .stat-number { font-size: 32px; color: #2c5f8d; font-weight: bold; }
+        .stat-label { font-size: 13px; color: #666; margin-top: 5px; }
+        .toc { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px 25px; margin: 20px 0; }
+        .toc ul { list-style: none; }
+        .toc li { padding: 4px 0; }
+        .toc a { color: #2c5f8d; text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        .checklist { list-style: none; padding-left: 0; }
+        .checklist li { padding: 6px 0 6px 25px; position: relative; }
+        .checklist li:before { content: "□"; position: absolute; left: 0; font-size: 16px; color: #3498db; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>ERMM 財務模組開發實施計畫書</h1>
+<p>版本：1.0 &nbsp;|&nbsp; 日期：2026-09-02 &nbsp;|&nbsp; 狀態：規劃中 &nbsp;|&nbsp; 關聯文件：<a href="ERMM_財務模組系統開發說明書.html">ERMM_財務模組系統開發說明書.html</a></p>
+
+<div class="stat-grid">
+    <div class="stat-card"><div class="stat-number">8</div><div class="stat-label">開發階段</div></div>
+    <div class="stat-card"><div class="stat-number">230+</div><div class="stat-label">ASP 檔案數</div></div>
+    <div class="stat-card"><div class="stat-number">200+</div><div class="stat-label">資料表欄位</div></div>
+    <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">風險模型</div></div>
+</div>
+
+<div class="toc">
+    <strong>目錄</strong>
+    <ul>
+        <li><a href="#sec1">一、專案概述與目標</a></li>
+        <li><a href="#sec2">二、系統現況分析</a></li>
+        <li><a href="#sec3">三、整體開發階段規劃</a></li>
+        <li><a href="#sec4">四、各階段實施細節</a></li>
+        <li><a href="#sec5">五、資料庫設計與遷移計畫</a></li>
+        <li><a href="#sec6">六、開發規範與程式碼標準</a></li>
+        <li><a href="#sec7">七、測試計畫</a></li>
+        <li><a href="#sec8">八、部署與上線計畫</a></li>
+        <li><a href="#sec9">九、風險管理</a></li>
+        <li><a href="#sec10">十、資源與分工</a></li>
+        <li><a href="#sec11">十一、驗收標準</a></li>
+    </ul>
+</div>
+
+<!-- ==================== 一、專案概述 ==================== -->
+<section id="sec1">
+<h2>一、專案概述與目標</h2>
+
+<h3>1.1 專案背景</h3>
+<p>ERMM 系統為 Classic ASP + SQL Server 製造業 ERP/MES 整合平台，財務模組是系統最終資料匯流樞紐，承接銷售、採購、生產、倉庫、報關等模組的業務資料，彙算為財務報表與風險預警指標。目前系統已有約 230+ 個 ASP 頁面分散於 <code>finance/</code>、<code>LT/</code>、<code>MP/</code>、<code>procument/</code> 四個目錄，需要進行系統性整合與現代化改造。</p>
+
+<h3>1.2 專案目標</h3>
+<table>
+    <thead><tr><th>目標</th><th>說明</th><th>成功指標</th></tr></thead>
+    <tbody>
+        <tr><td>資料一致性</td><td>確保 7 步批次管線正確彙算 AR/AP/庫存/損益</td><td>批次成功率 ≥ 99%</td></tr>
+        <tr><td>報表準確性</td><td>資產負債表、損益表、現金流量表數據正確</td><td>與 ERP 對帳差異 &lt; 0.1%</td></tr>
+        <tr><td>風險預警</td><td>Z/Z2/Z3/BZ/JZ 五套模型 + KPI 燈號即時運作</td><td>預警準確率 ≥ 95%</td></tr>
+        <tr><td>多租戶支援</td><td>9 個公司別（鉑漢/利騰/Ventec/Ichia 等）獨立運作</td><td>各公司報表獨立產出</td></tr>
+        <tr><td>效能優化</td><td>三大報表查詢回應時間 &lt; 3 秒</td><td>P95 回應 ≤ 3s</td></tr>
+        <tr><td>安全加固</td><td>SQL 注入防護 + 權限分級 + 操作日誌</td><td>0 注入漏洞</td></tr>
+    </tbody>
+</table>
+
+<h3>1.3 範圍邊界</h3>
+<div class="info-box">
+    <strong>包含：</strong>財務模組所有頁面（AR/AP、付款票據、銀行貸款、三大報表、風險模型、MP 管理入口）<br/>
+    <strong>不包含：</strong>ERP 端的資料生成邏輯、報關模組的報關單計算、生產模組的 MES 排程<br/>
+    <strong>介面：</strong>與 ERP 的批次同步介面、與報關模組的 VAT 資料介面、與倉庫模組的庫存價值介面
+</div>
+</section>
+
+<!-- ==================== 二、系統現況分析 ==================== -->
+<section id="sec2">
+<h2>二、系統現況分析</h2>
+
+<h3>2.1 現有檔案盤點</h3>
+<table>
+    <thead><tr><th>目錄</th><th>檔案數</th><th>主要功能</th><th>技術狀態</th></tr></thead>
+    <tbody>
+        <tr><td><code>finance/</code></td><td>~115</td><td>AR/AP/付款/票據/分公司/往來/預測/在途</td><td>Classic ASP + VBScript</td></tr>
+        <tr><td><code>LT/</code> (STD_finance_*)</td><td>~100</td><td>三大報表+風險模型+圖表+帳戶+稅務</td><td>Classic ASP + FusionCharts</td></tr>
+        <tr><td><code>MP/</code> (STD_finance_*_MP)</td><td>18</td><td>管理入口精簡儀表板</td><td>Classic ASP + FusionCharts</td></tr>
+        <tr><td><code>procument/</code></td><td>~10</td><td>供應商付款/應收清單/Excel 匯出</td><td>Classic ASP</td></tr>
+        <tr><td><code>HM/batch_ARAP_upd.asp</code></td><td>1</td><td>AR/AP 批次彙算</td><td>Classic ASP</td></tr>
+        <tr><td><code>LT/batch_finance_summary*</code></td><td>3</td><td>財務摘要批次計算</td><td>Classic ASP</td></tr>
+        <tr><td><strong>合計</strong></td><td><strong>~230+</strong></td><td colspan="2"></td></tr>
+    </tbody>
+</table>
+
+<h3>2.2 核心資料表</h3>
+<div class="mermaid">
+erDiagram
+    MGM_finance_summary ||--o{ ERMM_ARAP_detail : "彙算來源"
+    MGM_finance_summary ||--o{ MGM_invoice_details : "發票來源"
+    MGM_finance_summary ||--o{ MGM_casher_details : "現金來源"
+    MGM_finance_summary ||--o{ MGM_account_details : "帳戶來源"
+    MGM_finance_summary ||--o{ MGM_bank_loan_details : "銀行來源"
+    MGM_finance_summary ||--o{ MGM_KPI_desc : "KPI 门槛"
+    MGM_finance_summary {
+        int uid PK
+        string bu_no FK
+        string YYYY_MM
+        text cash_amt
+        text AR_amt
+        text stock_P_amt
+        text ttl_asset_amt
+        text sale_amt
+        text net_profit_amt
+        text Z_model
+        text BZ_model
+        text wall_mode
+    }
+    ERMM_ARAP_detail {
+        int uid PK
+        string bu_no FK
+        string YYYY_MM
+        text AR_amt
+        text AP_amt
+    }
+    MGM_invoice_details {
+        int uid PK
+        string bu_no FK
+        string TX_type
+        string invoice_no
+        text sub_amt
+        string tax_rate
+    }
+    MGM_casher_details {
+        int uid PK
+        string bu_no FK
+        string num_vman
+        text sub_amt
+        string DB_CR
+    }
+    MGM_account_details {
+        int uid PK
+        string bu_no FK
+        string YYYY_MM
+        string sub_group
+        text sub_amt
+    }
+    MGM_bank_loan_details {
+        int uid PK
+        string bu_no FK
+        string loan_id
+        text loan_amt
+        text exchange_rate
+    }
+    MGM_KPI_desc {
+        int uid PK
+        string bu_no FK
+        string KPI_id
+        text KPI1
+        text KPI2
+    }
+</div>
+
+<h3>2.3 技術債</h3>
+<table>
+    <thead><tr><th>問題</th><th>影響</th><th>優先級</th></tr></thead>
+    <tbody>
+        <tr><td>SQL 字串拼接（未參數化）</td><td>SQL 注入風險</td><td><span class="tag tag-p1">P1 高</span></td></tr>
+        <tr><td>200+ 欄位 NULL 值未預設</td><td>計算異常、報表空白</td><td><span class="tag tag-p1">P1 高</span></td></tr>
+        <tr><td>舊版檔案未清理（*_old, *_20201202 等）</td><td>維護困難、版本混淆</td><td><span class="tag tag-p2">P2 中</span></td></tr>
+        <tr><td>無自動化測試</td><td>回歸風險高</td><td><span class="tag tag-p2">P2 中</span></td></tr>
+        <tr><td>GB2312 編碼限制</td><td>國際化困難</td><td><span class="tag tag-p3">P3 低</span></td></tr>
+        <tr><td>FusionCharts 版本老舊</td><td>圖表渲染效能低</td><td><span class="tag tag-p3">P3 低</span></td></tr>
+    </tbody>
+</table>
+</section>
+
+<!-- ==================== 三、整體開發階段規劃 ==================== -->
+<section id="sec3">
+<h2>三、整體開發階段規劃</h2>
+
+<div class="mermaid">
+gantt
+    title ERMM 財務模組開發實施甘特圖
+    dateFormat  YYYY-MM-DD
+    axisFormat  %m/%d
+
+    section 第一階段：基礎建設
+    資料庫設計與建表           :p1a, 2026-09-15, 10d
+    連線層與權限框架           :p1b, 2026-09-15, 7d
+    系統碼表初始化             :p1c, 2026-09-22, 5d
+
+    section 第二階段：資料匯入
+    ERP 同步批次(PO/MO)        :p2a, 2026-09-25, 10d
+    PO 加工計算(proc_po)       :p2b, after p2a, 7d
+    庫存結算批次               :p2c, after p2b, 5d
+    生產→DN→SO 鏈             :p2d, 2026-09-25, 7d
+
+    section 第三階段：核心交易
+    AR/AP 批次彙算             :p3a, after p2b, 5d
+    發票管理(MGM_invoice)      :p3b, after p3a, 7d
+    現金日記帳 CRUD            :p3c, after p3a, 5d
+    供應商付款管理             :p3d, after p3b, 5d
+
+    section 第四階段：摘要計算
+    帳戶明細管理               :p4a, after p3b, 7d
+    財務摘要預建(addon)        :p4b, after p4a, 5d
+    損益計算鏈(reset_null)     :p4c, after p4b, 5d
+    200+ 欄位 NULL 歸零        :p4d, after p4c, 3d
+
+    section 第五階段：風險模型
+    Z/Z2/Z3 模型               :p5a, after p4d, 5d
+    BZ 破產概率模型            :p5b, after p5a, 3d
+    JZ 營運能力模型            :p5c, after p5a, 3d
+    KPI 燈號預警系統           :p5d, after p5b, 5d
+
+    section 第六階段：報表產出
+    資產負債表                 :p6a, after p4d, 7d
+    損益表                     :p6b, after p4d, 5d
+    現金流量表                 :p6c, after p6a, 5d
+    Excel 匯出功能             :p6d, after p6a, 5d
+
+    section 第七階段：管理入口
+    MP 儀表板(15個)            :p7a, after p5d, 10d
+    FusionCharts 圖表          :p7b, after p6c, 7d
+    銀行貸款管理               :p7c, after p3d, 7d
+
+    section 第八階段：測試上線
+    整合測試                   :p8a, after p7a, 10d
+    多租戶驗證                 :p8b, after p8a, 5d
+    效能調優                   :p8c, after p8a, 5d
+    正式上線                   :p8d, after p8b, 3d
+</div>
+
+<h3>3.1 階段依賴關係圖</h3>
+<div class="mermaid">
+flowchart LR
+    P1["Phase 1<br/>基礎建設"] --> P2["Phase 2<br/>資料匯入"]
+    P2 --> P3["Phase 3<br/>核心交易"]
+    P3 --> P4["Phase 4<br/>摘要計算"]
+    P4 --> P5["Phase 5<br/>風險模型"]
+    P4 --> P6["Phase 6<br/>報表產出"]
+    P5 --> P7["Phase 7<br/>管理入口"]
+    P6 --> P7
+    P7 --> P8["Phase 8<br/>測試上線"]
+</div>
+</section>
+
+<!-- ==================== 四、各階段實施細節 ==================== -->
+<section id="sec4">
+<h2>四、各階段實施細節</h2>
+
+<!-- Phase 1 -->
+<div class="phase-card">
+<div class="phase-header">Phase 1：基礎建設 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>建立財務模組的資料庫基礎、連線框架和權限體系。</p>
+
+<h4>任務清單</h4>
+<ul class="task-list">
+    <li>建立/驗證 7 張核心資料表（MGM_finance_summary, ERMM_ARAP_detail, MGM_invoice_details, MGM_casher_details, MGM_account_details, MGM_bank_loan_details, MGM_KPI_desc）</li>
+    <li>建立 MGM_finance_summary 表的 200+ 欄位（含資產/負債/權益/損益/現金流/比率/風險/稅務/人事）</li>
+    <li>建立 ERMM_ARAP_detail 表（uid, bu_no, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, ...）</li>
+    <li>建立 MGM_invoice_details 表（uid, bu_no, TX_type, order_id, invoice_no, sub_amt, tax_type, tax_rate, wk_date, pay_date, payment, ageing_days, ...）</li>
+    <li>建立 MGM_casher_details 表（uid, bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR, YYYY_MM, wk_date, ...）</li>
+    <li>建立 MGM_account_details 表（uid, bu_no, YYYY_MM, acct_type, group_id, sub_group, acct_name, sub_amt, ...）</li>
+    <li>建立 MGM_bank_loan_details 表（uid, bu_no, loan_id, loan_amt, exchange_rate, interest_rate, pay_terms, next_paydate, ...）</li>
+    <li>建立 MGM_KPI_desc 表（uid, bu_no, KPI_id, KPI1, KPI2, unit, pct_type, ...）</li>
+    <li>初始化 cams_system_codes（CURRENCY 匯率, BUSINESS_ID 稅率, AGEING_STOCK 老化率, BATCH_CONTROL 批次控制, KPI 门槛）</li>
+    <li>建立 conn.asp 財務模組專用連線（支援 9 個公司別切換）</li>
+    <li>建立 check.asp 財務模組權限檢查（finance Session 變數）</li>
+    <li>建立 start_log.asp / end_log.asp 操作日誌框架</li>
+</ul>
+
+<h4>交付物</h4>
+<table>
+    <thead><tr><th>交付物</th><th>格式</th><th>負責人</th></tr></thead>
+    <tbody>
+        <tr><td>資料庫 DDL 腳本</td><td>.sql</td><td>DBA</td></tr>
+        <tr><td>conn_fin.asp 連線模組</td><td>.asp</td><td>後端開發</td></tr>
+        <tr><td>check_fin.asp 權限模組</td><td>.asp</td><td>後端開發</td></tr>
+        <tr><td>系統碼表初始化資料</td><td>.sql</td><td>DBA</td></tr>
+    </tbody>
+</table>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>7 張資料表可正常 CREATE 並 INSERT 測試資料</li>
+    <li>conn_fin.asp 可連接 9 個公司別資料庫</li>
+    <li>check_fin.asp 正確驗證 finance Session 權限</li>
+    <li>操作日誌正確記錄到 login_user_record</li>
+</ul>
+</div>
+
+<!-- Phase 2 -->
+<div class="phase-card">
+<div class="phase-header">Phase 2：資料匯入與批次管線 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>建立從 ERP 同步資料到 ERMM 的 7 步批次管線，確保業務資料正確流入。</p>
+
+<h4>7 步批次管線</h4>
+<div class="mermaid">
+flowchart LR
+    S1["Step 1<br/>erp2ermm_po.asp<br/>ERP→PO 同步"] --> S2["Step 2<br/>proc_po.asp<br/>PO 加工(×FX)"]
+    S2 --> S3["Step 3<br/>proc_supplier.asp<br/>供應商彙算"]
+    S3 --> S4["Step 4<br/>proc_xitems_link_lawbook<br/>物料報關法規"]
+    S4 --> S5["Step 5<br/>cal_daily_stock_balance<br/>庫存結算"]
+    S5 --> S6["Step 6<br/>batch_ARAP_upd.asp<br/>AR/AP 彙算"]
+    S6 --> S7["Step 7<br/>batch_finance_summary<br/>財務摘要"]
+</div>
+
+<h4>任務清單</h4>
+<ul class="task-list">
+    <li><strong>Step 1</strong> erp2ermm_po.asp — 從 ERP 讀取 PO 寫入 ERMM_temp_po 暫存表</li>
+    <li><strong>Step 1</strong> erp2eism_mo.asp — 同步製造訂單(MO)到 MGM_production_details</li>
+    <li><strong>Step 2</strong> proc_po.asp — PO 加工：unit_price_local=unit_price×FX, po_amount_local, supplier_type JOIN, inventory_qty+=io_qty, qty_balance_approved</li>
+    <li><strong>Step 3</strong> proc_supplier.asp — 供應商彙算：times_po=COUNT(*), 總採購金額</li>
+    <li><strong>Step 4</strong> proc_xitems_link_lawbook.asp — 物料綁定海關法規（影響 VAT 計算）</li>
+    <li><strong>Step 5</strong> cal_daily_xitems_stock_balance.asp — 庫存結算：stock_value=price×qty×FX, current_lose=stock_value×reduce%, ageing_category</li>
+    <li><strong>Step 6</strong> batch_ARAP_upd.asp — AR=Σ(unit_price×dn_qty) FROM SO, AP=Σ(po_amount+vat_amt) FROM PO WHERE status='審核通過' AND sub_status='交付完成'</li>
+    <li><strong>Step 7</strong> STD_SO_DN_UPD.asp — 生產明細→交貨單(DN)→SO.dn_qty 更新</li>
+    <li>建立 cams_batch_control 批次控制表（seq_SQL 排序, process_status, break_point, batch_id）</li>
+    <li>建立批次啟動/結束日誌（start_batch.asp / end_batch.asp）</li>
+    <li>建立匯率取得邏輯（cams_system_codes WHERE code_type='CURRENCY' → value_number1）</li>
+</ul>
+
+<h4>關鍵 SQL 實作</h4>
+<table>
+    <thead><tr><th>步驟</th><th>SQL</th></tr></thead>
+    <tbody>
+        <tr><td>Step 2</td><td><code>UPDATE ermm_erp_po SET unit_price_local = round(unit_price * exchange_rate, 5)</code></td></tr>
+        <tr><td>Step 5</td><td><code>stock_value = unit_price × qty_balance × exchange_rate</code></td></tr>
+        <tr><td>Step 6 AR</td><td><code>SELECT YYYY_MM, SUM(unit_price * dn_qty) AS AR_amt FROM ERMM_erp_SO GROUP BY YYYY_MM</code></td></tr>
+        <tr><td>Step 6 AP</td><td><code>SELECT YYYY_MM, SUM(po_amount + vat_amt) AS AP_amt FROM ermm_erp_po WHERE po_status='審核通過' AND po_sub_status='交付完成' GROUP BY YYYY_MM</code></td></tr>
+    </tbody>
+</table>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>7 步批次按 seq_SQL 順序執行，每步驗證前步 process_status='00'</li>
+    <li>AR_amt = Σ(unit_price × dn_qty) 與 SO 明細一致</li>
+    <li>AP_amt = Σ(po_amount + vat_amt) 與 PO 明細一致</li>
+    <li>stock_value 與 e2_xitems_daily_status_chart 匯總一致</li>
+    <li>batch_id 全程追蹤可查</li>
+</ul>
+</div>
+
+<!-- Phase 3 -->
+<div class="phase-card">
+<div class="phase-header">Phase 3：核心交易管理 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>建立 AR/AP 明細、發票管理、現金日記帳、供應商付款的 CRUD 操作頁面。</p>
+
+<h4>任務清單</h4>
+<table>
+    <thead><tr><th>子系統</th><th>頁面</th><th>功能</th><th>資料表</th></tr></thead>
+    <tbody>
+        <tr><td>AR 應收</td><td>STD_account_receive_list.asp</td><td>SO JOIN BH_MGM_TX_detail → MGM_invoice_details</td><td>MGM_invoice_details</td></tr>
+        <tr><td>AP 應付</td><td>STD_supplier_payment_details.asp</td><td>PO → MGM_invoice_details (AP)</td><td>MGM_invoice_details</td></tr>
+        <tr><td>現金日記</td><td>STD_finance_cash_daily_details.asp</td><td>INSERT/UPDATE/DELETE</td><td>MGM_casher_details</td></tr>
+        <tr><td>付款管理</td><td>finance/pay_list.asp, pay_add.asp, pay_mend.asp</td><td>付款 CRUD</td><td>pay_detail</td></tr>
+        <tr><td>票據管理</td><td>finance/check_list.asp, check_add.asp, check_mend.asp</td><td>票據 CRUD</td><td>check_detail</td></tr>
+        <tr><td>分公司管理</td><td>finance/branch_list.asp, branch_add.asp</td><td>分公司 CRUD</td><td>branch_detail</td></tr>
+        <tr><td>往來管理</td><td>finance/relation_list.asp, relation_add.asp</td><td>往來 CRUD</td><td>relation_detail</td></tr>
+        <tr><td>在途價格</td><td>finance/transit_price_list.asp</td><td>在途價格 CRUD</td><td>transit_price</td></tr>
+        <tr><td>月度項目</td><td>finance/STD_monthly_items_detail.asp</td><td>月度財務項目</td><td>monthly_items</td></tr>
+        <tr><td>預測管理</td><td>finance/forecast_mend1~12.asp</td><td>12 個月預測</td><td>forecast_detail</td></tr>
+    </tbody>
+</table>
+
+<h4>現金日記帳 CRUD 要點</h4>
+<div class="warn-box">
+    <strong>防重複：</strong>INSERT 前需檢查 <code>num_vman</code>（發票/收據號）是否已存在。<br/>
+    <strong>借貸別：</strong><code>DB_CR</code> 欄位區分借方/貸方。<br/>
+    <strong>年月自動：</strong>從 <code>wk_date</code> 自動拆分 YYYY / YYYY_MM / MM 欄位。
+</div>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>AR 發票：SO 的 unit_price × dn_qty 正確寫入 MGM_invoice_details.sub_amt</li>
+    <li>AP 發票：PO 的 po_amount + vat_amt 正確寫入</li>
+    <li>現金日記帳 CRUD 正確，num_vman 唯一性檢查有效</li>
+    <li>付款/票據/分公司/往來 CRUD 全部正常</li>
+    <li>12 個月預測頁面可正確錄入和更新</li>
+</ul>
+</div>
+
+<!-- Phase 4 -->
+<div class="phase-card">
+<div class="phase-header">Phase 4：財務摘要計算 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>將交易層資料彙算為 MGM_finance_summary 的 200+ 欄位，並執行損益計算鏈。</p>
+
+<h4>損益計算鏈</h4>
+<div class="mermaid">
+flowchart TB
+    A["sale_amt<br/>銷貨收入"] --> B["BIZ_major_margin<br/>= sale - cost - VAT<br/>營業毛利"]
+    B --> C["BIZ_margin<br/>= major + other_INC<br/>- sale_exp - MGM_EXP - fin_EXP<br/>營業利益"]
+    C --> D["operation_profit<br/>= BIZ_margin + INVEST<br/>+ subsidy + others_INC - others_cost<br/>營業利潤"]
+    D --> E["net_profit<br/>= operation - VAT<br/>淨利"]
+</div>
+
+<h4>任務清單</h4>
+<ul class="task-list">
+    <li><strong>帳戶明細管理</strong> STD_finance_account_details_query.asp — 按 sub_group 分類顯示（應收/應付/銀行貸款/原料成本/直接人工）</li>
+    <li><strong>帳戶明細 CRUD</strong> STD_finance_account_items_mgmt.asp / STD_finance_account_items_upd.asp</li>
+    <li><strong>摘要預建</strong> STD_finance_summary_addon.asp — 從 MGM_account_details 取 DISTINCT YYYY_MM，為每月在 MGM_finance_summary 預建記錄</li>
+    <li><strong>NULL 歸零</strong> batch_finance_summary_reset_null.asp — 200+ 欄位 NULL → '0'</li>
+    <li><strong>營業毛利計算</strong> BIZ_major_margin_amt = sale_amt - sale_cost_amt - VAT_amt</li>
+    <li><strong>營業利益計算</strong> BIZ_margin_amt = BIZ_major_margin + BIZ_other_INC - sale_exp - MGM_EXP - finance_EXP</li>
+    <li><strong>營業利潤計算</strong> operation_profit = BIZ_margin + INVEST_profit + AR_subsidy + others_INC - others_cost</li>
+    <li><strong>淨利計算</strong> net_profit = operation_profit - VAT_amt</li>
+    <li><strong>VAT 稅率取得</strong> 從 cams_system_codes WHERE code_type='BUSINESS_ID' 的 value_number3</li>
+    <li><strong>摘要批次更新</strong> STD_finance_summary_batch_upd.asp / STD_finance_summary_upd.asp</li>
+    <li><strong>匯兌損益計算</strong> bank_list.asp — diff_amt = amt2 - amt1, loss_flag='Y' when diff &lt; 0</li>
+</ul>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>每月 MGM_finance_summary 記錄自動預建</li>
+    <li>200+ 欄位無 NULL 值（全部為 '0' 或實際值）</li>
+    <li>損益計算鏈 4 步正確：毛利→利益→利潤→淨利</li>
+    <li>VAT_rate 正確從 cams_system_codes 取得</li>
+    <li>匯兌損益 loss_flag 正確判定</li>
+</ul>
+</div>
+
+<!-- Phase 5 -->
+<div class="phase-card">
+<div class="phase-header">Phase 5：風險預警模型 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>實作 5 套破產預測模型 + KPI 燈號預警系統。</p>
+
+<h4>5 套風險模型</h4>
+<table>
+    <thead><tr><th>模型</th><th>公式</th><th>用途</th></tr></thead>
+    <tbody>
+        <tr><td>Z-Score</td><td>1.2×X1 + 1.4×X2 + 3.3×X3 + 0.6×X4 + 0.999×X5</td><td>上市公司破產預測</td></tr>
+        <tr><td>Z2-Score</td><td>0.717×X1 + 0.847×X2' + 3.107×X3 + 0.420×X4 + 0.998×X5</td><td>私人公司</td></tr>
+        <tr><td>Z3-Score</td><td>6.56×X1 + 3.26×X2' + 6.72×X3' + 1.05×X4</td><td>非製造業</td></tr>
+        <tr><td>BZ 模型</td><td>BZ_X1 + BZ_X2 + BZ_X3 + BZ_X4 + BZ_X5</td><td>破產概率</td></tr>
+        <tr><td>JZ 模型</td><td>ZA + ZB - ZC - ZD</td><td>營運能力</td></tr>
+    </tbody>
+</table>
+
+<h4>任務清單</h4>
+<ul class="task-list">
+    <li><strong>Z/Z2/Z3 模型</strong> STD_finance_risk_model.asp — 5 個變數計算 + 3 套公式</li>
+    <li><strong>BZ 破產概率</strong> STD_finance_risk_model.asp — 5 個 BZ 變數</li>
+    <li><strong>JZ 營運能力</strong> STD_finance_risk_model.asp — ZA/ZB/ZC/ZD</li>
+    <li><strong>判定標準</strong> Z&lt;1.23 破產(紅), 1.23≤Z&lt;2.9 灰色(黃), Z≥2.9 安全(綠)</li>
+    <li><strong>KPI 门槛表</strong> MGM_KPI_desc — KPI_id, KPI1(下限), KPI2(上限), unit, pct_type</li>
+    <li><strong>燈號顯示</strong> show_color() / show_KPI() — asc/desc 排序, 紅/黃/綠燈</li>
+    <li><strong>Wolf 模型</strong> STD_finance_risk_wolf.asp — wall_mode 計算</li>
+    <li><strong>風險控制</strong> STD_finance_risk_control.asp / control2 / control3 — 三級控制</li>
+    <li><strong>債務分析</strong> STD_finance_risk_debt.asp — IRR, ROE 等財務比率</li>
+    <li><strong>信用風險</strong> STD_finance_risk_credit.asp — 信用評分</li>
+    <li><strong>ESG 模型</strong> STD_finance_ESG_model.asp — ESG 評分</li>
+    <li><strong>槓桿分析</strong> STD_finance_leverage.asp — 財務槓桿</li>
+</ul>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>5 套模型公式與原始碼一致，計算結果正確</li>
+    <li>Z-Score 判定標準正確（&lt;1.23 紅 / 1.23~2.9 黃 / ≥2.9 綠）</li>
+    <li>KPI 燈號依 asc/desc 正確顯示紅/黃/綠</li>
+    <li>MGM_KPI_desc 门槛值可依公司別設定</li>
+</ul>
+</div>
+
+<!-- Phase 6 -->
+<div class="phase-card">
+<div class="phase-header">Phase 6：三大報表產出 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>產出資產負債表、損益表、現金流量表，支援 Excel 匯出和月份比較。</p>
+
+<h4>任務清單</h4>
+<table>
+    <thead><tr><th>報表</th><th>頁面</th><th>SQL 來源</th><th>科目數</th></tr></thead>
+    <tbody>
+        <tr><td>資產負債表</td><td>STD_finance_balance_sheet.asp</td><td>SELECT * FROM MGM_finance_summary WHERE YYYY_MM</td><td>48 科目</td></tr>
+        <tr><td>損益表</td><td>STD_finance_PL_table.asp</td><td>SELECT * FROM MGM_finance_summary WHERE YYYY_MM + MM='1'</td><td>15+ 科目</td></tr>
+        <tr><td>現金流量表</td><td>STD_finance_cash_flow.asp</td><td>MGM_finance_summary 現金流欄位</td><td>12 欄位</td></tr>
+        <tr><td>收入明細表</td><td>STD_finance_income_statment.asp</td><td>MGM_finance_summary</td><td>—</td></tr>
+        <tr><td>財務摘要</td><td>STD_finance_summary.asp</td><td>MGM_finance_summary ORDER BY YYYY_MM</td><td>200+ 欄位</td></tr>
+        <tr><td>資產全覽</td><td>STD_finance_asset_full_summary.asp</td><td>MGM_finance_summary</td><td>—</td></tr>
+    </tbody>
+</table>
+
+<h4>Excel 匯出實作</h4>
+<div class="info-box">
+    <code>response.ContentType = "application/vnd.ms-excel"</code><br/>
+    <code>Response.AddHeader "content-disposition", "inline; filename=" & YYYY_MM & "月份_資產負債表.xls"</code>
+</div>
+
+<h4>月份比較邏輯</h4>
+<ul>
+    <li>當月：YYYY_MM 查詢</li>
+    <li>上月：MM-1（1月時取去年12月）</li>
+    <li>年初基準：MM='1'（累計比較）</li>
+    <li>VBScript 變數對映：cash_amt ↔ cash_amt1（上月）</li>
+</ul>
+
+<h4>資產負債表科目組裝（48 科目）</h4>
+<table>
+    <thead><tr><th>類別</th><th>科目</th><th>MGM_finance_summary 欄位</th></tr></thead>
+    <tbody>
+        <tr><td>流動資產</td><td>貨幣資金</td><td>cash_amt + deposite_amt + interest_amt</td></tr>
+        <tr><td>流動資產</td><td>應收帳款</td><td>AR_amt + AR_debet_amt</td></tr>
+        <tr><td>流動資產</td><td>存貨(製成品/在製品/原料/副料/在途)</td><td>stock_P/M/S_amt, WIP_M/labor/EXP_amt, stock_transit_amt</td></tr>
+        <tr><td>流動資產</td><td>備抵損失(減項)</td><td>reserve_loss_amt</td></tr>
+        <tr><td>非流動資產</td><td>固定資產(房屋/設備/車輛/辦公)</td><td>building - acc_de_building, equipment - acc_de_EQMT, ...</td></tr>
+        <tr><td>資產總額</td><td>—</td><td>ttl_asset_amt = LQ + FX + other</td></tr>
+        <tr><td>流動負債</td><td>短期借款/應付帳款/應付稅費</td><td>loan_amt, AP_amt, AP_tax_amt + sale_tax_amt</td></tr>
+        <tr><td>負債總額</td><td>—</td><td>debet_amt = LQ_debet + LT_debet</td></tr>
+        <tr><td>股東權益</td><td>股本/資本公積/法定盈餘/累積盈餘/本期損益</td><td>captial_stock + captial_reserve + legal_reserve + accumulated + current_PL</td></tr>
+        <tr><td>負債及權益總額</td><td>—</td><td>ttl_debet_amt = debet + stockholder</td></tr>
+    </tbody>
+</table>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>資產總額 = 負債及權益總額（資產負債表平衡）</li>
+    <li>損益計算鏈：毛利→利益→利潤→淨利 正確</li>
+    <li>現金流量表：期初+流入-流出 = 期末</li>
+    <li>Excel 匯出正確開啟，格式正確</li>
+    <li>月份比較：當月 vs 上月 vs 年初基準</li>
+</ul>
+</div>
+
+<!-- Phase 7 -->
+<div class="phase-card">
+<div class="phase-header">Phase 7：MP 管理入口與儀表板 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>建立 18 個 MP 管理入口儀表板 + FusionCharts 圖表 + 銀行貸款管理。</p>
+
+<h4>任務清單</h4>
+
+<h4>7.1 MP 管理入口（18 個儀表板）</h4>
+<table>
+    <thead><tr><th>MP 檔案</th><th>功能</th></tr></thead>
+    <tbody>
+        <tr><td>STD_finance_PL_detail_chart_MP.asp</td><td>損益明細圖</td></tr>
+        <tr><td>STD_finance_cash_chart_MP.asp</td><td>現金流圖</td></tr>
+        <tr><td>STD_finance_cash_chart_year_MP.asp</td><td>年度現金流圖</td></tr>
+        <tr><td>STD_finance_risk_chart_MP.asp / chart2_MP</td><td>風險指標圖 ×2</td></tr>
+        <tr><td>STD_finance_risk_model_MP.asp</td><td>風險模型(Z/BZ/JZ)</td></tr>
+        <tr><td>STD_finance_risk_wolf_chart_MP / wolf_MP</td><td>Wolf 風險圖 + 計算</td></tr>
+        <tr><td>STD_finance_risk_control_MP / control2 / control3</td><td>三級風險控制</td></tr>
+        <tr><td>STD_finance_AR_day_chart_MP / AR_detail_pipe_chart_MP</td><td>應收帳款日圖</td></tr>
+        <tr><td>STD_finance_PL_detail_pipe_chart_MP / PL_margin_chart_MP</td><td>損益管道/margin 圖</td></tr>
+        <tr><td>STD_finance_PL_compare_pipe_chart_MP</td><td>損益比較管道圖</td></tr>
+        <tr><td>STD_finance_cash_acct_name_chart_MP</td><td>現金科目圖</td></tr>
+        <tr><td>STD_finance_AP_detail_pipe_chart_MP</td><td>應付管道圖</td></tr>
+    </tbody>
+</table>
+
+<h4>7.2 LT 完整版圖表（~30 個）</h4>
+<table>
+    <thead><tr><th>分類</th><th>檔案</th></tr></thead>
+    <tbody>
+        <tr><td>損益圖表</td><td>STD_finance_PL_detail_chart, PL_detail_pipe_chart, PL_compare_chart, PL_margin_chart, PL_multi_all_chart, PL_multi_groupID_chart, PL_multi_subgroup_chart, PL_multi_detail_chart</td></tr>
+        <tr><td>現金圖表</td><td>STD_finance_cash_chart, cash_chart_year, cash_acct_name_chart</td></tr>
+        <tr><td>AR/AP 圖表</td><td>STD_finance_AR_day_chart, AR_detail_pipe_chart, AP_detail_pipe_chart, ARAP_chart, ARAP_month_pipe_chart, ARAP_chart_year_summary</td></tr>
+        <tr><td>風險圖表</td><td>STD_finance_risk_chart, risk_wolf_chart, loan_detail_pipe_chart</td></tr>
+        <tr><td>資產圖表</td><td>STD_finance_asset_detail_pipe_chart, waterfall_chart</td></tr>
+        <tr><td>三年彙總</td><td>STD_finance_chart_month_summary_3year.asp</td></tr>
+    </tbody>
+</table>
+
+<h4>7.3 銀行貸款管理</h4>
+<ul class="task-list">
+    <li>bank_list.asp — 銀行貸款列表（loan_amt, exchange_rate, interest_rate, pay_terms, next_paydate, pay_days）</li>
+    <li>匯兌損益計算：amt1 = loan_amt × exchange_rate, amt2 = loan_amt × new_rate, diff = amt2 - amt1</li>
+    <li>利息日期計算：next_paydate = dateadd(MM, pay_terms, last_paydate), pay_days = DATEDIFF(dd, GETDATE(), next_paydate)</li>
+    <li>loss_flag 判定：diff_amt &lt; 0 → 'Y' (匯兌損失，紅色標記)</li>
+    <li>ERMM_erp_documents 關聯：doc_type='銀行貸款', xitems=loan_id</li>
+</ul>
+
+<h4>7.4 稅務子系統</h4>
+<ul class="task-list">
+    <li>STD_finance_tax_check_items_mgmt.asp — 稅務檢核項目管理</li>
+    <li>STD_finance_tax_items_upd.asp / tax_cash_items_upd.asp — 稅務項目更新</li>
+    <li>STD_finance_tax_form.asp — 稅務申報表</li>
+    <li>稅務欄位：VAT_rate, VAT_amt, free_tax_sale_amt, on_tax_sale/goods/service_amt, po_tax_out_amt, AP_tax_deduct_amt, addon_tax_amt, ttl_tax_simple_amt</li>
+</ul>
+
+<h4>7.5 其他子系統</h4>
+<ul class="task-list">
+    <li>STD_finance_cash_factor.asp — 現金流因子分析</li>
+    <li>STD_finance_owner_factor.asp — 業主因子分析</li>
+    <li>STD_finance_break_even_factor.asp — 損益平衡分析</li>
+    <li>STD_finance_mult_factory_cost.asp / mult_factory_plan.asp — 多廠成本/計畫</li>
+    <li>STD_finance_process_price.asp — 加工報價</li>
+    <li>STD_finance_station_list.asp — 工站清單</li>
+    <li>STD_finance_document_list.asp / upfile_document.asp — 文件管理</li>
+    <li>STD_finance_PL_acct_name_list.asp / acct_name_upd.asp — 科目名稱管理</li>
+    <li>STD_finance_items_balance_sheet.asp / items_query.asp — 項目資產負債/查詢</li>
+</ul>
+
+<h4>驗收標準</h4>
+<ul class="checklist">
+    <li>18 個 MP 儀表板全部正常渲染 FusionCharts</li>
+    <li>30+ 個 LT 圖表正常顯示</li>
+    <li>銀行貸款匯兌損益正確計算</li>
+    <li>稅務檢核項目可正確管理</li>
+    <li>現金流/業主/損益平衡因子分析正確</li>
+</ul>
+</div>
+
+<!-- Phase 8 -->
+<div class="phase-card">
+<div class="phase-header">Phase 8：測試與上線 <span class="tag tag-todo">待開始</span></div>
+
+<h4>目標</h4>
+<p>完成整合測試、多租戶驗證、效能調優，正式上線。</p>
+
+<h4>任務清單</h4>
+<ul class="task-list">
+    <li><strong>整合測試</strong> — 7 步批次管線 + 損益計算鏈 + 報表產出端到端測試</li>
+    <li><strong>多租戶驗證</strong> — 9 個公司別（鉑漢/利騰/Ventec/Ichia 等）獨立產出報表</li>
+    <li><strong>對帳測試</strong> — 與 ERP 端資料對帳，差異 &lt; 0.1%</li>
+    <li><strong>效能調優</strong> — 三大報表 P95 回應 ≤ 3 秒，批次執行 ≤ 30 分鐘</li>
+    <li><strong>安全測試</strong> — SQL 注入掃描、權限邊界測試</li>
+    <li><strong>舊檔清理</strong> — 移除 *_old, *_20201202 等過期檔案</li>
+    <li><strong>文件更新</strong> — 更新操作手冊和開發說明書</li>
+    <li><strong>正式上線</strong> — 切換至正式環境，啟用批次排程</li>
+    <li><strong>上線後監控</strong> — 監控批次成功率、報表回應時間、預警觸發</li>
+</ul>
+</div>
+</section>
+
+<!-- ==================== 五、資料庫設計 ==================== -->
+<section id="sec5">
+<h2>五、資料庫設計與遷移計畫</h2>
+
+<h3>5.1 新增資料表清單</h3>
+<table>
+    <thead><tr><th>資料表</th><th>用途</th><th>預估欄位數</th><th>索引</th></tr></thead>
+    <tbody>
+        <tr><td>MGM_finance_summary</td><td>財務摘要（核心樞紐）</td><td>200+</td><td>(bu_no, YYYY_MM), (bu_no, type1)</td></tr>
+        <tr><td>ERMM_ARAP_detail</td><td>應收應付彙算</td><td>~20</td><td>(bu_no, YYYY_MM)</td></tr>
+        <tr><td>MGM_invoice_details</td><td>發票明細</td><td>~25</td><td>(bu_no, TX_type, invoice_no), (bu_no, order_id)</td></tr>
+        <tr><td>MGM_casher_details</td><td>現金日記帳</td><td>~20</td><td>(bu_no, num_vman UNIQUE), (bu_no, YYYY_MM)</td></tr>
+        <tr><td>MGM_account_details</td><td>帳戶明細</td><td>~15</td><td>(bu_no, YYYY_MM, sub_group)</td></tr>
+        <tr><td>MGM_bank_loan_details</td><td>銀行貸款</td><td>~20</td><td>(bu_no, loan_id)</td></tr>
+        <tr><td>MGM_KPI_desc</td><td>KPI 门槛定義</td><td>~10</td><td>(bu_no, KPI_id)</td></tr>
+        <tr><td>pay_detail</td><td>付款明細</td><td>~15</td><td>(bu_no, pay_id)</td></tr>
+        <tr><td>check_detail</td><td>票據明細</td><td>~15</td><td>(bu_no, check_no)</td></tr>
+        <tr><td>branch_detail</td><td>分公司</td><td>~10</td><td>(bu_no, branch_id)</td></tr>
+        <tr><td>relation_detail</td><td>往來對象</td><td>~10</td><td>(bu_no, relation_id)</td></tr>
+        <tr><td>transit_price</td><td>在途價格</td><td>~10</td><td>(bu_no, xitems)</td></tr>
+        <tr><td>forecast_detail</td><td>預測明細</td><td>~15</td><td>(bu_no, YYYY_MM, forecast_type)</td></tr>
+        <tr><td>monthly_items</td><td>月度項目</td><td>~10</td><td>(bu_no, YYYY_MM)</td></tr>
+    </tbody>
+</table>
+
+<h3>5.2 系統碼表初始化</h3>
+<table>
+    <thead><tr><th>code_type</th><th>用途</th><th>關鍵欄位</th></tr></thead>
+    <tbody>
+        <tr><td>CURRENCY</td><td>匯率</td><td>code_value=幣別, value_number1=匯率</td></tr>
+        <tr><td>BUSINESS_ID</td><td>公司別+增值稅率</td><td>code_value=bu_no, value_number3=VAT_rate</td></tr>
+        <tr><td>AGEING_STOCK</td><td>庫存老化減值率</td><td>code_value=分類, value_number1=reduce%</td></tr>
+        <tr><td>BATCH_CONTROL</td><td>批次控制</td><td>code_value=步驟, value_number1=截止日</td></tr>
+        <tr><td>MO_CUTOFF</td><td>製令截止</td><td>value_number1=截止日</td></tr>
+        <tr><td>CUSTOM_CUTOFF</td><td>報關截止</td><td>value_number1=截止日</td></tr>
+        <tr><td>INV_CUTOFF</td><td>庫存截止</td><td>value_number1=截止日</td></tr>
+    </tbody>
+</table>
+
+<h3>5.3 遷移計畫</h3>
+<div class="mermaid">
+flowchart LR
+    A["現有資料庫"] --> B["1. 建立 14 張新表"]
+    B --> C["2. 初始化系統碼表"]
+    C --> D["3. 遷移歷史資料"]
+    D --> E["4. 執行批次管線"]
+    E --> F["5. 驗證報表平衡"]
+    F --> G["6. 正式切換"]
+</div>
+</section>
+
+<!-- ==================== 六、開發規範 ==================== -->
+<section id="sec6">
+<h2>六、開發規範與程式碼標準</h2>
+
+<h3>6.1 ASP 頁面標準結構</h3>
+<div class="info-box">
+<strong>每個財務頁面必須包含：</strong><br/>
+1. <code>&lt;!--#include file="../public/conn.asp"--&gt;</code> — 連線<br/>
+2. <code>&lt;!--#include file="../public/config.asp"--&gt;</code> — 權限檢查<br/>
+3. <code>&lt;!--#include file="../public/start_log.asp"--&gt;</code> — 操作日誌<br/>
+4. <code>bu_no = Session("bu_no")</code> — 多租戶隔離<br/>
+5. <code>finance = Session("finance")</code> — 權限驗證<br/>
+6. SQL 參數化（禁止字串拼接）<br/>
+7. <code>&lt;!--#include file="../public/end_log.asp"--&gt;</code> — 日誌結束
+</div>
+
+<h3>6.2 SQL 安全規範</h3>
+<div class="danger-box">
+<strong>禁止：</strong><code>sql = "SELECT * FROM table WHERE bu_no='" & request("bu_no") & "'"</code><br/>
+<strong>改用：</code>參數化查詢或 <code>replace(request("bu_no"), "'", "''")</code><br/>
+<strong>所有用戶輸入必須：</strong>類型檢查 + 長度限制 + 單引號轉義
+</div>
+
+<h3>6.3 命名規範</h3>
+<table>
+    <thead><tr><th>類型</th><th>規範</th><th>範例</th></tr></thead>
+    <tbody>
+        <tr><td>資料表</td><td>MGM_ 前綴（財務專用）</td><td>MGM_finance_summary</td></tr>
+        <tr><td>ASP 頁面</td><td>STD_finance_ 前綴</td><td>STD_finance_balance_sheet.asp</td></tr>
+        <tr><td>MP 頁面</td><td>STD_finance_*_MP.asp</td><td>STD_finance_cash_chart_MP.asp</td></tr>
+        <tr><td>批次頁面</td><td>batch_ 前綴</td><td>batch_finance_summary_reset_null.asp</td></tr>
+        <tr><td>金額欄位</td><td>_amt 後綴</td><td>AR_amt, sale_amt</td></tr>
+        <tr><td>比率欄位</td><td>_rate 後綴</td><td>VAT_rate, exchange_rate</td></tr>
+        <tr><td>天數欄位</td><td>_day 後綴</td><td>ageing_days, pay_days</td></tr>
+        <tr><td>日期欄位</td><td>_date 後綴</td><td>wk_date, pay_date</td></tr>
+    </tbody>
+</table>
+
+<h3>6.4 編碼規範</h3>
+<ul>
+    <li>頁面編碼：CodePage=936（GB2312 簡體中文）</li>
+    <li>Response.CodePage = 936</li>
+    <li>Session.CodePage = 936</li>
+    <li>資料庫連線字串：Use Unicode=True（未來 UTF-8 遷移準備）</li>
+</ul>
+</section>
+
+<!-- ==================== 七、測試計畫 ==================== -->
+<section id="sec7">
+<h2>七、測試計畫</h2>
+
+<h3>7.1 測試層級</h3>
+<table>
+    <thead><tr><th>層級</th><th>範圍</th><th>方法</th><th>通過標準</th></tr></thead>
+    <tbody>
+        <tr><td>單元測試</td><td>每個 ASP 頁面功能</td><td>手動/腳本</td><td>功能正常無錯誤</td></tr>
+        <tr><td>整合測試</td><td>7 步批次管線端到端</td><td>批次執行+驗證</td><td>所有步驟成功</td></tr>
+        <tr><td>計算驗證</td><td>損益鏈+風險模型</td><td>Excel 對照</td><td>計算結果一致</td></tr>
+        <tr><td>報表測試</td><td>三大報表+48 科目</td><td>人工核對</td><td>資產=負債+權益</td></tr>
+        <tr><td>多租戶測試</td><td>9 個公司別</td><td>逐一執行</td><td>各自獨立正確</td></tr>
+        <tr><td>效能測試</td><td>報表查詢+批次</td><td>壓力測試</td><td>P95 ≤ 3s</td></tr>
+        <tr><td>安全測試</td><td>SQL 注入+權限</td><td>自動掃描</td><td>0 漏洞</td></tr>
+    </tbody>
+</table>
+
+<h3>7.2 關鍵測試案例</h3>
+<table>
+    <thead><tr><th>測試案例</th><th>輸入</th><th>預期結果</th></tr></thead>
+    <tbody>
+        <tr><td>資產負債表平衡</td><td>任一月份</td><td>ttl_asset_amt = ttl_debet_amt</td></tr>
+        <tr><td>AR 計算</td><td>SO 的 unit_price × dn_qty</td><td>AR_amt = Σ(計算值)</td></tr>
+        <tr><td>AP 計算</td><td>PO 的 po_amount + vat_amt</td><td>AP_amt = Σ(計算值)</td></tr>
+        <tr><td>庫存價值</td><td>unit_price × qty × FX</td><td>stock_value 正確</td></tr>
+        <tr><td>備抵損失</td><td>stock_value × reduce%</td><td>current_lose 正確</td></tr>
+        <tr><td>Z-Score 判定</td><td>Z &lt; 1.23</td><td>紅燈(破產區)</td></tr>
+        <tr><td>匯兌損益</td><td>diff_amt &lt; 0</td><td>loss_flag='Y'</td></tr>
+        <tr><td>VAT 稅率</td><td>cams_system_codes BUSINESS_ID</td><td>value_number3 正確取得</td></tr>
+        <tr><td>批次順序</td><td>seq_SQL 排序</td><td>每步等前步 process_status='00'</td></tr>
+        <tr><td>多租戶隔離</td><td>切換 bu_no</td><td>各自報表獨立</td></tr>
+    </tbody>
+</table>
+</section>
+
+<!-- ==================== 八、部署計畫 ==================== -->
+<section id="sec8">
+<h2>八、部署與上線計畫</h2>
+
+<h3>8.1 部署架構</h3>
+<div class="mermaid">
+flowchart TB
+    DEV["開發環境<br/>DEV DB"] --> TEST["測試環境<br/>TEST DB + 測試資料"]
+    TEST --> UAT["UAT 環境<br/>UAT DB + 正式資料副本"]
+    UAT --> PROD["正式環境<br/>9 個公司別 DB"]
+    PROD --> MON["監控<br/>批次成功率<br/>報表回應時間<br/>預警觸發"]
+</div>
+
+<h3>8.2 部署步驟</h3>
+<ol>
+    <li>在 DEV 環境完成開發與單元測試</li>
+    <li>部署至 TEST 環境，執行整合測試</li>
+    <li>複製正式資料至 UAT，執行對帳測試</li>
+    <li>使用者 UAT 驗收（財務部門）</li>
+    <li>正式環境部署：先建立資料表 → 遷移資料 → 部署 ASP 檔案 → 設定批次排程</li>
+    <li>灰度上線：先 1 個公司別試運行 → 確認無誤 → 全部切換</li>
+    <li>上線後監控 1 週</li>
+</ol>
+
+<h3>8.3 批次排程設定</h3>
+<table>
+    <thead><tr><th>批次</th><th>排程</th><th>預估耗時</th></tr></thead>
+    <tbody>
+        <tr><td>erp2ermm_po (PO 同步)</td><td>每日 06:00</td><td>5 分鐘</td></tr>
+        <tr><td>proc_po (PO 加工)</td><td>每日 06:10</td><td>10 分鐘</td></tr>
+        <tr><td>cal_daily_stock_balance</td><td>每日 06:30</td><td>15 分鐘</td></tr>
+        <tr><td>batch_ARAP_upd</td><td>每日 07:00</td><td>5 分鐘</td></tr>
+        <tr><td>STD_SO_DN_UPD</td><td>每日 07:10</td><td>5 分鐘</td></tr>
+        <tr><td>batch_finance_summary_addon</td><td>每月 1 日 08:00</td><td>10 分鐘</td></tr>
+        <tr><td>batch_finance_summary_reset_null</td><td>每月 1 日 08:15</td><td>15 分鐘</td></tr>
+    </tbody>
+</table>
+
+<h3>8.4 回滾計畫</h3>
+<div class="warn-box">
+<strong>回滾條件：</strong>報表不平衡 / 損益計算錯誤 / 批次失敗率 &gt; 5%<br/>
+<strong>回滾步驟：</strong>1. 停止批次排程 → 2. 還原 ASP 檔案 → 3. 還原資料表結構 → 4. 通知使用者
+</div>
+</section>
+
+<!-- ==================== 九、風險管理 ==================== -->
+<section id="sec9">
+<h2>九、風險管理</h2>
+
+<table>
+    <thead><tr><th>風險</th><th>機率</th><th>影響</th><th>緩解措施</th></tr></thead>
+    <tbody>
+        <tr><td>200+ 欄位定義不完整</td><td>中</td><td>高</td><td>從 batch_finance_summary_reset_null.asp 逐欄提取完整清單</td></tr>
+        <tr><td>ERP 同步介面變更</td><td>低</td><td>高</td><td>與 ERP 團隊確認介面規格，建立 ERMM_temp_po 緩衝層</td></tr>
+        <tr><td>匯率來源不穩定</td><td>中</td><td>中</td><td>cams_system_codes 手動維護 + 定期更新排程</td></tr>
+        <tr><td>多租戶資料交叉污染</td><td>低</td><td>高</td><td>每個查詢強制 bu_no 條件 + 單元測試驗證</td></tr>
+        <tr><td>批次順序依賴錯誤</td><td>中</td><td>高</td><td>cams_batch_control seq_SQL 嚴格排序 + process_status 驗證</td></tr>
+        <tr><td>舊檔清理遺漏</td><td>中</td><td>低</td><td>逐一比對 *_old / *_日期 版本檔案</td></tr>
+        <tr><td>GB2312 編碼問題</td><td>低</td><td>中</td><td>維持 CodePage=936，未來規劃 UTF-8 遷移</td></tr>
+        <tr><td>FusionCharts 授權</td><td>低</td><td>低</td><td>確認現有授權範圍</td></tr>
+    </tbody>
+</table>
+</section>
+
+<!-- ==================== 十、資源與分工 ==================== -->
+<section id="sec10">
+<h2>十、資源與分工</h2>
+
+<h3>10.1 角色分工</h3>
+<table>
+    <thead><tr><th>角色</th><th>職責</th><th>負責階段</th></tr></thead>
+    <tbody>
+        <tr><td>專案經理</td><td>進度管控、風險協調、使用者溝通</td><td>全程</td></tr>
+        <tr><td>DBA</td><td>資料庫設計、DDL 腳本、效能調優</td><td>Phase 1, 5, 8</td></tr>
+        <tr><td>後端開發 A</td><td>批次管線、AR/AP 彙算</td><td>Phase 2, 3</td></tr>
+        <tr><td>後端開發 B</td><td>摘要計算、損益鏈、報表</td><td>Phase 4, 6</td></tr>
+        <tr><td>後端開發 C</td><td>風險模型、MP 儀表板</td><td>Phase 5, 7</td></tr>
+        <tr><td>前端/圖表</td><td>FusionCharts 圖表、Excel 匯出</td><td>Phase 6, 7</td></tr>
+        <tr><td>測試工程師</td><td>整合測試、對帳測試、效能測試</td><td>Phase 8</td></tr>
+        <tr><td>財務部門使用者</td><td>UAT 驗收、報表核對</td><td>Phase 8</td></tr>
+    </tbody>
+</table>
+
+<h3>10.2 工作量估算</h3>
+<table>
+    <thead><tr><th>階段</th><th>頁面數</th><th>預估工作量</th></tr></thead>
+    <tbody>
+        <tr><td>Phase 1 基礎建設</td><td>~5</td><td>—</td></tr>
+        <tr><td>Phase 2 資料匯入</td><td>~10</td><td>—</td></tr>
+        <tr><td>Phase 3 核心交易</td><td>~115 (finance/)</td><td>—</td></tr>
+        <tr><td>Phase 4 摘要計算</td><td>~10</td><td>—</td></tr>
+        <tr><td>Phase 5 風險模型</td><td>~15</td><td>—</td></tr>
+        <tr><td>Phase 6 報表產出</td><td>~20</td><td>—</td></tr>
+        <tr><td>Phase 7 管理入口</td><td>~50 (MP+LT 圖表)</td><td>—</td></tr>
+        <tr><td>Phase 8 測試上線</td><td>—</td><td>—</td></tr>
+        <tr><td><strong>合計</strong></td><td><strong>~230+</strong></td><td>—</td></tr>
+    </tbody>
+</table>
+</section>
+
+<!-- ==================== 十一、驗收標準 ==================== -->
+<section id="sec11">
+<h2>十一、驗收標準</h2>
+
+<h3>11.1 功能驗收</h3>
+<ul class="checklist">
+    <li>7 張核心資料表建立完成，200+ 欄位齊全</li>
+    <li>7 步批次管線按順序執行，batch_id 全程追蹤</li>
+    <li>AR_amt = Σ(unit_price × dn_qty) 與 SO 明細一致</li>
+    <li>AP_amt = Σ(po_amount + vat_amt) 與 PO 明細一致</li>
+    <li>庫存 stock_value = unit_price × qty × FX 正確</li>
+    <li>備抵損失 current_lose = stock_value × reduce% 正確</li>
+    <li>損益鏈 4 步計算正確（毛利→利益→利潤→淨利）</li>
+    <li>VAT_rate 正確從 cams_system_codes 取得</li>
+    <li>匯兌損益 loss_flag 正確判定</li>
+    <li>資產負債表平衡：ttl_asset_amt = ttl_debet_amt</li>
+    <li>5 套風險模型公式正確（Z/Z2/Z3/BZ/JZ）</li>
+    <li>KPI 燈號依 asc/desc 正確顯示紅/黃/綠</li>
+    <li>18 個 MP 儀表板正常渲染</li>
+    <li>Excel 匯出功能正常</li>
+    <li>9 個公司別多租戶隔離正確</li>
+    <li>SQL 注入掃描 0 漏洞</li>
+</ul>
+
+<h3>11.2 非功能驗收</h3>
+<table>
+    <thead><tr><th>指標</th><th>標準</th></tr></thead>
+    <tbody>
+        <tr><td>三大報表查詢 P95 回應</td><td>≤ 3 秒</td></tr>
+        <tr><td>批次執行總耗時</td><td>≤ 30 分鐘</td></tr>
+        <tr><td>批次成功率</td><td>≥ 99%</td></tr>
+        <tr><td>與 ERP 對帳差異</td><td>&lt; 0.1%</td></tr>
+        <tr><td>預警準確率</td><td>≥ 95%</td></tr>
+        <tr><td>SQL 注入漏洞</td><td>0</td></tr>
+        <tr><td>頁面編碼</td><td>GB2312 (CodePage=936)</td></tr>
+        <tr><td>操作日誌覆蓋率</td><td>100%</td></tr>
+    </tbody>
+</table>
+
+<div class="info-box" style="margin-top: 30px; text-align: center;">
+    <strong>ERMM 財務模組開發實施計畫書</strong><br/>
+    版本 1.0 | 2026-09-02<br/>
+    關聯文件：<a href="ERMM_財務模組系統開發說明書.html">系統開發說明書</a> | <a href="ERMM_系統架構與流程圖.html">系統架構與流程圖</a>
+</div>
+
+</section>
+
+</div>
+<script>mermaid.initialize({startOnLoad:true, theme:'default', flowchart:{useMaxWidth:true}});</script>
+</body>
+</html>
