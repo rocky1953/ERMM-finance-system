@@ -212,6 +212,19 @@
             + '</div>'
             + '</div></div>'
 
+            // === 項目歷史趨勢子彈窗 (z-index 更高) ===
+            + '<div id="bep_item_modal" class="bep-modal-overlay" style="z-index:10000;" onclick="bepCloseItemDetail(event)">'
+            + '<div class="bep-modal-card" onclick="event.stopPropagation()">'
+            + '<div class="bep-modal-header" id="bep_item_modal_header">'
+            + '<span class="bep-modal-title" id="bep_item_modal_title">📈 項目趨勢</span>'
+            + '<button class="bep-modal-close" onclick="bepCloseItemDetail()">✕</button>'
+            + '</div>'
+            + '<div class="bep-modal-body" id="bep_item_modal_body"></div>'
+            + '<div class="bep-modal-footer">'
+            + '<button class="bep-btn-close" onclick="bepCloseItemDetail()">關閉</button>'
+            + '</div>'
+            + '</div></div>'
+
             + '<style>'
             + '.bep-wrap{font-family:"Microsoft JhengHei",sans-serif;}'
             + '.bep-toolbar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border-radius:8px;margin-bottom:18px;flex-wrap:wrap;}'
@@ -282,6 +295,33 @@
             + '.bep-detail-table .label-cell{display:flex;align-items:center;gap:6px;}'
             + '.bep-detail-table .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}'
 
+            // 可點擊 row
+            + '.bep-row-clickable{cursor:pointer;transition:background .15s;}'
+            + '.bep-row-clickable:hover{background:#f0f4f8 !important;}'
+
+            // 趨勢柱狀圖
+            + '.bep-trend-wrap{margin-top:14px;}'
+            + '.bep-trend-title{font-weight:700;color:#2c3e50;margin-bottom:8px;}'
+            + '.bep-bar-chart{display:flex;align-items:flex-end;gap:4px;height:140px;padding:0 6px;border-bottom:2px solid #bdc3c7;border-left:2px solid #bdc3c7;margin-bottom:6px;}'
+            + '.bep-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;min-width:20px;}'
+            + '.bep-bar{width:100%;border-radius:3px 3px 0 0;transition:height .3s;background:#3498db;}'
+            + '.bep-bar-val{font-size:.72em;color:#555;margin-bottom:2px;font-weight:600;}'
+            + '.bep-bar-label{font-size:.68em;color:#7f8c8d;margin-top:4px;}'
+            + '.bep-trend-table{width:100%;border-collapse:collapse;font-size:.88em;margin-top:12px;}'
+            + '.bep-trend-table th,.bep-trend-table td{padding:6px 10px;text-align:right;border-bottom:1px solid #ecf0f1;}'
+            + '.bep-trend-table th:first-child,.bep-trend-table td:first-child{text-align:left;}'
+            + '.bep-trend-table thead th{background:#f8f9fa;color:#2c3e50;font-weight:700;}'
+            + '.bep-mom-up{color:#27ae60;}'
+            + '.bep-mom-down{color:#c0392b;}'
+            + '.bep-stats-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}'
+            + '.bep-stat-card{flex:1;min-width:130px;padding:10px 14px;border-radius:8px;text-align:center;}'
+            + '.bep-stat-card .lbl{font-size:.78em;color:#555;margin-bottom:4px;}'
+            + '.bep-stat-card .val{font-size:1.1em;font-weight:700;}'
+            + '.bep-stat-card.blue{background:#d4e6f1;}'
+            + '.bep-stat-card.green{background:#d5f5e3;}'
+            + '.bep-stat-card.orange{background:#fef9e7;}'
+            + '.bep-stat-card.red{background:#fadbd8;}'
+
             + '</style>';
     }
 
@@ -342,11 +382,11 @@
              + '<th class="pct">佔銷售額%</th>'
              + '</tr></thead><tbody>';
 
-        // 材料明細
+        // 材料明細（每行可點擊看趨勢）
         for (let i = 0; i < materialItems.length; i++) {
             const it = materialItems[i];
             const amt = vals[it.key];
-            html += '<tr>'
+            html += '<tr class="bep-row-clickable" onclick="bepShowItemDetail(\'' + it.key + '\',\'' + it.name + '\',\'' + it.color + '\')">'
                   + '<td><span class="label-cell"><span class="dot" style="background:' + it.color + ';"></span>' + it.name + '</span></td>'
                   + '<td>' + fmt(amt) + '</td>'
                   + '<td class="pct">' + pctOf(amt, grandTotal) + '</td>'
@@ -362,8 +402,8 @@
               + '<td class="pct">' + pctOf(matTotal, sale) + '</td>'
               + '</tr>';
 
-        // 變動費用 row
-        html += '<tr>'
+        // 變動費用 row（可點擊）
+        html += '<tr class="bep-row-clickable" onclick="bepShowItemDetail(\'variable_expense\',\'變動費用\',\'#f1c40f\')">'
               + '<td><span class="label-cell"><span class="dot" style="background:#f1c40f;"></span>變動費用</span></td>'
               + '<td>' + fmt(vb) + '</td>'
               + '<td class="pct">' + pctOf(vb, grandTotal) + '</td>'
@@ -408,12 +448,133 @@
     window.bepShowVarCostDetail = showVarCostDetail;
     window.bepCloseVarCostDetail = closeVarCostDetail;
 
-    // ESC 鍵關閉彈窗
+    // === 項目歷史趨勢子彈窗 ===
+    function showItemDetail(key, itemName, color) {
+        const bu = document.getElementById('bepBU').value || 'HM';
+        const ym = document.getElementById('bepYM').value || '';
+        const year = ym.substring(0, 4) || '2025';
+
+        // 設定子彈窗 header 顏色 + 標題
+        var header = document.getElementById('bep_item_modal_header');
+        if (header) header.style.background = 'linear-gradient(135deg,' + color + ',' + color + 'cc)';
+        var title = document.getElementById('bep_item_modal_title');
+        if (title) title.textContent = '📈 ' + itemName + ' — 歷史趨勢';
+
+        // 先顯示 loading
+        document.getElementById('bep_item_modal_body').innerHTML = '<div style="text-align:center;padding:40px;color:#7f8c8d;">載入中...</div>';
+        document.getElementById('bep_item_modal').classList.add('show');
+
+        fetch('/api/bep/history?bu_no=' + bu + '&year=' + year)
+            .then(function(r) { return r.json(); })
+            .then(function(j) {
+                if (!j.success) { UI.toast(j.message, 'error'); return; }
+                renderItemTrend(key, itemName, color, j.data, ym);
+            })
+            .catch(function(e) {
+                document.getElementById('bep_item_modal_body').innerHTML =
+                    '<div style="text-align:center;padding:40px;color:#c0392b;">載入失敗: ' + e.message + '</div>';
+            });
+    }
+
+    function closeItemDetail() {
+        document.getElementById('bep_item_modal').classList.remove('show');
+    }
+
+    // 渲染趨勢圖 + 表格
+    function renderItemTrend(key, itemName, color, data, currentYM) {
+        var months = data.months || [];
+        if (months.length === 0) {
+            document.getElementById('bep_item_modal_body').innerHTML =
+                '<div style="text-align:center;padding:40px;color:#7f8c8d;">無 ' + data.year + ' 年歷史資料</div>';
+            return;
+        }
+
+        // 取 key 對應的值，對材料合計用 material，對變動成本用 variable_cost
+        function itemVal(m) {
+            if (key === 'material_sum') return m.material;
+            if (key === 'variable_cost') return m.variable_cost;
+            return m[key] || 0;
+        }
+
+        var values = months.map(itemVal);
+        var maxV = Math.max.apply(null, values);
+        var minV = Math.min.apply(null, values);
+        var sumV = values.reduce(function(a, b) { return a + b; }, 0);
+        var avgV = sumV / values.length;
+        var curIdx = months.findIndex(function(m) { return m.YYYY_MM === currentYM; });
+        var curVal = curIdx >= 0 ? values[curIdx] : (values[values.length - 1] || 0);
+        var firstVal = values[0] || 0;
+        var lastVal = values[values.length - 1] || 0;
+        var yoyChange = firstVal > 0 ? ((lastVal - firstVal) / firstVal * 100) : 0;
+        var isFlat = values.every(function(v) { return Math.abs(v - values[0]) < 0.01; });
+
+        var html = '';
+
+        // 若全部相同（如 HM CW397 基準），顯示提示
+        if (isFlat) {
+            html += '<div style="padding:10px 14px;background:#fef9e7;border-radius:6px;margin-bottom:12px;border-left:4px solid #f1c40f;">'
+                  + '💡 <strong>' + itemName + '</strong> 本年度各月金額相同（固定基準值），無月度波動趨勢。</div>';
+        }
+
+        // 統計卡片
+        html += '<div class="bep-stats-row">'
+              + '<div class="bep-stat-card blue"><div class="lbl">當月 (' + months[curIdx >= 0 ? curIdx : months.length - 1].YYYY_MM + ')</div><div class="val">' + fmt(curVal) + '</div></div>'
+              + '<div class="bep-stat-card green"><div class="lbl">全年合計</div><div class="val">' + fmt(sumV) + '</div></div>'
+              + '<div class="bep-stat-card orange"><div class="lbl">月平均</div><div class="val">' + fmt(avgV) + '</div></div>'
+              + '<div class="bep-stat-card red"><div class="lbl">年度變化</div><div class="val ' + (yoyChange >= 0 ? 'bep-mom-up' : 'bep-mom-down') + '">' + (yoyChange >= 0 ? '+' : '') + yoyChange.toFixed(1) + '%</div></div>'
+              + '</div>';
+
+        // Bar Chart
+        html += '<div class="bep-trend-wrap">'
+              + '<div class="bep-trend-title">📊 ' + itemName + ' 月度趨勢 (' + data.year + ')</div>'
+              + '<div class="bep-bar-chart">';
+        for (var i = 0; i < months.length; i++) {
+            var v = values[i];
+            var h = maxV > 0 ? (v / maxV * 100) : 0;
+            var mm = months[i].YYYY_MM.substring(5);
+            var isCur = months[i].YYYY_MM === currentYM;
+            var barColor = isCur ? '#e74c3c' : color;
+            html += '<div class="bep-bar-col">'
+                  + '<div class="bep-bar-val">' + fmt(Math.round(v / 1000)) + 'K</div>'
+                  + '<div class="bep-bar" style="height:' + h + '%;background:' + barColor + ';"></div>'
+                  + '<div class="bep-bar-label">' + mm + '</div>'
+                  + '</div>';
+        }
+        html += '</div></div>';
+
+        // 月度明細表格
+        html += '<table class="bep-trend-table">'
+              + '<thead><tr><th>年月</th><th>金額</th><th>佔銷售額%</th><th>月增減</th></tr></thead><tbody>';
+        for (var j = 0; j < months.length; j++) {
+            var vv = values[j];
+            var sale = months[j].sale_amt || 0;
+            var pctSale = sale > 0 ? (vv / sale * 100).toFixed(2) + '%' : '-';
+            var mom = j === 0 ? '-' : (values[j-1] > 0 ? ((vv - values[j-1]) / values[j-1] * 100).toFixed(2) + '%' : '-');
+            var momClass = mom !== '-' && !isNaN(parseFloat(mom)) ? (parseFloat(mom) >= 0 ? 'bep-mom-up' : 'bep-mom-down') : '';
+            html += '<tr>'
+                  + '<td>' + months[j].YYYY_MM + (months[j].YYYY_MM === currentYM ? ' <span style="color:#e74c3c;">◀</span>' : '') + '</td>'
+                  + '<td>' + fmt(vv) + '</td>'
+                  + '<td>' + pctSale + '</td>'
+                  + '<td class="' + momClass + '">' + mom + '</td>'
+                  + '</tr>';
+        }
+        html += '</tbody></table>';
+
+        document.getElementById('bep_item_modal_body').innerHTML = html;
+    }
+
+    window.bepShowItemDetail = showItemDetail;
+    window.bepCloseItemDetail = closeItemDetail;
+
+    // ESC 鍵關閉 — 優先級：先子彈窗，再父彈窗
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            var m = document.getElementById('bep_modal');
-            if (m && m.classList.contains('show')) {
-                m.classList.remove('show');
+            var itemModal = document.getElementById('bep_item_modal');
+            var mainModal = document.getElementById('bep_modal');
+            if (itemModal && itemModal.classList.contains('show')) {
+                itemModal.classList.remove('show');
+            } else if (mainModal && mainModal.classList.contains('show')) {
+                mainModal.classList.remove('show');
             }
         }
     });

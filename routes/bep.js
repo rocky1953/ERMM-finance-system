@@ -153,4 +153,66 @@ router.post('/save', async (req, res) => {
   } catch (err) { fail500(res, err); }
 });
 
+// 歷史趨勢（供子彈窗顯示 12 個月趨勢圖）
+// GET /api/bep/history?bu_no=HM&year=2025
+router.get('/history', async (req, res) => {
+  try {
+    const { bu_no, year } = req.query;
+    if (!bu_no) return fail(res, '需要 bu_no');
+
+    // 若沒指定年份，取該公司最新年份
+    let targetYear = year;
+    if (!targetYear) {
+      const [latest] = await pool.execute(
+        'SELECT YYYY_MM FROM MGM_BEP_threshold WHERE bu_no=? ORDER BY YYYY_MM DESC LIMIT 1',
+        [bu_no]
+      );
+      if (latest.length === 0) return ok(res, { months: [] });
+      targetYear = latest[0].YYYY_MM.substring(0, 4);
+    }
+
+    // 取該公司指定年份所有月份（BEP threshold JOIN finance_summary）
+    const [rows] = await pool.execute(
+      `SELECT t.YYYY_MM, t.consumable, t.packaging, t.processing, t.misc_purchase,
+              t.freight, t.customs, t.service_part_comp,
+              t.variable_expense, t.fixed_cost,
+              s.sale_amt
+       FROM MGM_BEP_threshold t
+       LEFT JOIN MGM_finance_summary s
+         ON t.bu_no=s.bu_no AND t.YYYY_MM=s.YYYY_MM
+       WHERE t.bu_no=? AND t.YYYY_MM LIKE ?
+       ORDER BY t.YYYY_MM`,
+      [bu_no, targetYear + '%']
+    );
+
+    const months = rows.map(r => {
+      const consumable = toNum(r.consumable);
+      const packaging = toNum(r.packaging);
+      const processing = toNum(r.processing);
+      const misc_purchase = toNum(r.misc_purchase);
+      const freight = toNum(r.freight);
+      const customs = toNum(r.customs);
+      const service_part_comp = toNum(r.service_part_comp);
+      const material = consumable + packaging + processing + misc_purchase
+                     + freight + customs + service_part_comp;
+      const variable_expense = toNum(r.variable_expense);
+      const variable_cost = material + variable_expense;
+      const fixed_cost = toNum(r.fixed_cost);
+      const sale_amt = toNum(r.sale_amt);
+      const cm = sale_amt - variable_cost;
+      const cm_rate = sale_amt > 0 ? (cm / sale_amt) * 100 : 0;
+      const bep = cm_rate > 0 ? fixed_cost / (cm_rate / 100) : 0;
+      return {
+        YYYY_MM: r.YYYY_MM,
+        sale_amt, consumable, packaging, processing, misc_purchase,
+        freight, customs, service_part_comp, material,
+        variable_expense, variable_cost, fixed_cost,
+        contribution_margin: cm, cm_rate, bep, gap: sale_amt - bep
+      };
+    });
+
+    ok(res, { bu_no, year: targetYear, months });
+  } catch (err) { fail500(res, err); }
+});
+
 module.exports = router;
