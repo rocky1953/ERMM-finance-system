@@ -659,6 +659,11 @@
         return html;
     }
 
+    function closeItemDetail() {
+        var m = document.getElementById('bep_item_modal');
+        if (m) m.classList.remove('show');
+    }
+
     window.bepShowItemDetail = showItemDetail;
     window.bepCloseItemDetail = closeItemDetail;
     window.bepSwitchItemTab = switchItemTab;
