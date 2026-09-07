@@ -322,6 +322,12 @@
             + '.bep-stat-card.orange{background:#fef9e7;}'
             + '.bep-stat-card.red{background:#fadbd8;}'
 
+            // Tab 切換
+            + '.bep-tab-bar{display:flex;gap:0;border-bottom:2px solid #bdc3c7;margin-bottom:14px;}'
+            + '.bep-tab-btn{flex:1;padding:8px 16px;background:none;border:none;font-weight:600;cursor:pointer;color:#7f8c8d;font-size:.95em;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}'
+            + '.bep-tab-btn:hover{color:#2c3e50;background:#f8f9fa;}'
+            + '.bep-tab-btn.active{color:#2980b9;border-bottom-color:#2980b9;background:#eaf2f8;}'
+
             + '</style>';
     }
 
@@ -394,8 +400,8 @@
                   + '</tr>';
         }
 
-        // 材料合計 row
-        html += '<tr class="subtotal">'
+        // 材料合計 row（可點擊）
+        html += '<tr class="subtotal bep-row-clickable" onclick="bepShowItemDetail(\'material_sum\',\'材料合計\',\'#7f8c8d\')">'
               + '<td>材料合計</td>'
               + '<td>' + fmt(matTotal) + '</td>'
               + '<td class="pct">' + pctOf(matTotal, grandTotal) + '</td>'
@@ -413,8 +419,8 @@
         // 分隔
         html += '<tr style="height:6px;"><td colspan="4" style="border:none;"></td></tr>';
 
-        // 變動成本總計
-        html += '<tr class="total">'
+        // 變動成本總計（可點擊）
+        html += '<tr class="total bep-row-clickable" onclick="bepShowItemDetail(\'variable_cost\',\'變動成本總計\',\'#c0392b\')">'
               + '<td>變動成本總計 (材料 + 變動費用)</td>'
               + '<td>' + fmt(grandTotal) + '</td>'
               + '<td class="pct">100.00%</td>'
@@ -448,7 +454,9 @@
     window.bepShowVarCostDetail = showVarCostDetail;
     window.bepCloseVarCostDetail = closeVarCostDetail;
 
-    // === 項目歷史趨勢子彈窗 ===
+    // === 項目明細子彈窗（交易明細 + 歷史趨勢 tab） ===
+    let _itemDetailCache = {};
+
     function showItemDetail(key, itemName, color) {
         const bu = document.getElementById('bepBU').value || 'HM';
         const ym = document.getElementById('bepYM').value || '';
@@ -458,76 +466,174 @@
         var header = document.getElementById('bep_item_modal_header');
         if (header) header.style.background = 'linear-gradient(135deg,' + color + ',' + color + 'cc)';
         var title = document.getElementById('bep_item_modal_title');
-        if (title) title.textContent = '📈 ' + itemName + ' — 歷史趨勢';
+        if (title) title.textContent = itemName + ' — 明細資料';
 
-        // 先顯示 loading
-        document.getElementById('bep_item_modal_body').innerHTML = '<div style="text-align:center;padding:40px;color:#7f8c8d;">載入中...</div>';
+        // loading + tab 結構
+        document.getElementById('bep_item_modal_body').innerHTML =
+            '<div style="text-align:center;padding:40px;color:#7f8c8d;">載入中...</div>';
         document.getElementById('bep_item_modal').classList.add('show');
 
-        fetch('/api/bep/history?bu_no=' + bu + '&year=' + year)
-            .then(function(r) { return r.json(); })
-            .then(function(j) {
-                if (!j.success) { UI.toast(j.message, 'error'); return; }
-                renderItemTrend(key, itemName, color, j.data, ym);
-            })
-            .catch(function(e) {
-                document.getElementById('bep_item_modal_body').innerHTML =
-                    '<div style="text-align:center;padding:40px;color:#c0392b;">載入失敗: ' + e.message + '</div>';
-            });
-    }
+        // 同時 fetch 兩個 API
+        Promise.all([
+            fetch('/api/bep/detail?bu_no=' + bu + '&YYYY_MM=' + ym + '&item_key=' + encodeURIComponent(key))
+                .then(function(r) { return r.json(); }),
+            fetch('/api/bep/history?bu_no=' + bu + '&year=' + year)
+                .then(function(r) { return r.json(); })
+        ]).then(function(results) {
+            var detail = results[0];
+            var history = results[1];
+            _itemDetailCache = { key: key, itemName: itemName, color: color, ym: ym, bu: bu };
 
-    function closeItemDetail() {
-        document.getElementById('bep_item_modal').classList.remove('show');
-    }
+            if (!detail.success) { UI.toast(detail.message, 'error'); return; }
+            if (!history.success) { history = { data: { months: [] } }; }
 
-    // 渲染趨勢圖 + 表格
-    function renderItemTrend(key, itemName, color, data, currentYM) {
-        var months = data.months || [];
-        if (months.length === 0) {
+            renderItemModalWithTabs(key, itemName, color, detail.data, history.data, ym);
+        }).catch(function(e) {
             document.getElementById('bep_item_modal_body').innerHTML =
-                '<div style="text-align:center;padding:40px;color:#7f8c8d;">無 ' + data.year + ' 年歷史資料</div>';
-            return;
+                '<div style="text-align:center;padding:40px;color:#c0392b;">載入失敗: ' + e.message + '</div>';
+        });
+    }
+
+    function switchItemTab(tabName) {
+        var c = _itemDetailCache;
+        if (!c) return;
+        // 重新 fetch（快取已在 render 時存好，這裡直接重叫 showItemDetail 的 render 部分不太方便，
+        // 簡化做法：保存 state 後重觸發渲染）
+        var itemKey = c.key;
+        var itemName = c.itemName;
+        var color = c.color;
+        var bu = document.getElementById('bepBU').value || 'HM';
+        var ym = document.getElementById('bepYM').value || '';
+        var year = ym.substring(0, 4) || '2025';
+
+        Promise.all([
+            fetch('/api/bep/detail?bu_no=' + bu + '&YYYY_MM=' + ym + '&item_key=' + encodeURIComponent(itemKey))
+                .then(function(r) { return r.json(); }),
+            fetch('/api/bep/history?bu_no=' + bu + '&year=' + year)
+                .then(function(r) { return r.json(); })
+        ]).then(function(results) {
+            renderItemModalWithTabs(itemKey, itemName, color, results[0].data, results[1].data, ym, tabName);
+        });
+    }
+
+    // 主渲染：tab + 交易明細 + 趨勢圖
+    function renderItemModalWithTabs(key, itemName, color, detailData, historyData, currentYM, activeTab) {
+        activeTab = activeTab || 'detail';
+
+        // Tab header
+        var html = '<div class="bep-tab-bar">'
+                 + '<button class="bep-tab-btn ' + (activeTab === 'detail' ? 'active' : '') + '" onclick="bepSwitchItemTab(\'detail\')">📋 交易明細</button>'
+                 + '<button class="bep-tab-btn ' + (activeTab === 'trend' ? 'active' : '') + '" onclick="bepSwitchItemTab(\'trend\')">📈 歷史趨勢</button>'
+                 + '</div>';
+
+        if (activeTab === 'detail') {
+            html += renderDetailTable(detailData, itemName, color);
+        } else {
+            html += renderTrendInline(key, itemName, color, historyData, currentYM);
         }
 
-        // 取 key 對應的值，對材料合計用 material，對變動成本用 variable_cost
+        document.getElementById('bep_item_modal_body').innerHTML = html;
+    }
+
+    // === 交易明細表（跟用戶圖片一致的格式） ===
+    function renderDetailTable(data, itemName, color) {
+        var html = '';
+
+        // 映射說明 header
+        if (data.no_mapping) {
+            html += '<div style="padding:12px 16px;background:#fef9e7;border-radius:6px;border-left:4px solid #f1c40f;margin-bottom:12px;">'
+                  + '💡 <strong>' + itemName + '</strong><br>'
+                  + '<span style="font-size:.88em;color:#7d6608;">' + data.reason + '</span><br>'
+                  + '<span style="font-size:.85em;color:#888;">可用「歷史趨勢」tab 查看年度數值變化</span>'
+                  + '</div>';
+            return html;
+        }
+
+        // 摘要 header
+        html += '<div style="padding:12px 16px;background:#f8f9fa;border-radius:6px;margin-bottom:12px;font-size:.9em;">'
+              + '<strong>📋 ' + itemName + ' 交易明細</strong>'
+              + '<span style="color:#7f8c8d;margin-left:12px;">映射: ' + data.label + '</span><br>'
+              + '<span style="font-size:.85em;color:#888;">共 ' + data.summary.count + ' 筆 | '
+              + '收入 DR: ' + fmt(data.summary.total_debit) + ' | '
+              + '支出 CR: ' + fmt(data.summary.total_credit) + ' | '
+              + '累計餘額: ' + fmt(data.summary.final_balance) + '</span>'
+              + '</div>';
+
+        if (data.records.length === 0) {
+            html += '<div style="text-align:center;padding:30px;color:#7f8c8d;">本月份無相關交易記錄</div>';
+            return html;
+        }
+
+        // 表格（跟用戶圖片一樣的格式：日期 | 憑證號 | 摘要 | 收入 | 支出 | 餘額）
+        html += '<table class="bep-trend-table">'
+             + '<thead><tr>'
+             + '<th style="width:12%;">日期</th>'
+             + '<th style="width:18%;">憑證號</th>'
+             + '<th>摘要</th>'
+             + '<th style="width:14%;">收入 (DR)</th>'
+             + '<th style="width:14%;">支出 (CR)</th>'
+             + '<th style="width:14%;">累計餘額</th>'
+             + '</tr></thead><tbody>';
+
+        for (var i = 0; i < data.records.length; i++) {
+            var r = data.records[i];
+            html += '<tr>'
+                  + '<td>' + (r.wk_date || '-') + '</td>'
+                  + '<td style="font-family:monospace;">' + (r.num_vman || '-') + '</td>'
+                  + '<td>' + (r.amt_type || '-') + '</td>'
+                  + '<td style="color:#27ae60;">' + (r.debit > 0 ? fmt(r.debit) : '') + '</td>'
+                  + '<td style="color:#c0392b;">' + (r.credit > 0 ? fmt(r.credit) : '') + '</td>'
+                  + '<td style="font-weight:600;">' + fmt(r.balance) + '</td>'
+                  + '</tr>';
+        }
+
+        // 合計 row
+        html += '<tr style="background:#f8f9fa;font-weight:700;">'
+              + '<td colspan="3" style="text-align:right;">合計 (' + data.summary.count + ' 筆)</td>'
+              + '<td style="color:#27ae60;">' + fmt(data.summary.total_debit) + '</td>'
+              + '<td style="color:#c0392b;">' + fmt(data.summary.total_credit) + '</td>'
+              + '<td>' + fmt(data.summary.final_balance) + '</td>'
+              + '</tr>';
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    // 簡化版趨勢渲染（單獨 tab 用）
+    function renderTrendInline(key, itemName, color, data, currentYM) {
+        if (!data.months || data.months.length === 0) {
+            return '<div style="text-align:center;padding:30px;color:#7f8c8d;">無 ' + data.year + ' 年歷史資料</div>';
+        }
+
         function itemVal(m) {
             if (key === 'material_sum') return m.material;
             if (key === 'variable_cost') return m.variable_cost;
             return m[key] || 0;
         }
 
+        var months = data.months;
         var values = months.map(itemVal);
         var maxV = Math.max.apply(null, values);
-        var minV = Math.min.apply(null, values);
         var sumV = values.reduce(function(a, b) { return a + b; }, 0);
         var avgV = sumV / values.length;
-        var curIdx = months.findIndex(function(m) { return m.YYYY_MM === currentYM; });
-        var curVal = curIdx >= 0 ? values[curIdx] : (values[values.length - 1] || 0);
         var firstVal = values[0] || 0;
         var lastVal = values[values.length - 1] || 0;
-        var yoyChange = firstVal > 0 ? ((lastVal - firstVal) / firstVal * 100) : 0;
+        var yoy = firstVal > 0 ? ((lastVal - firstVal) / firstVal * 100) : 0;
         var isFlat = values.every(function(v) { return Math.abs(v - values[0]) < 0.01; });
 
         var html = '';
-
-        // 若全部相同（如 HM CW397 基準），顯示提示
         if (isFlat) {
             html += '<div style="padding:10px 14px;background:#fef9e7;border-radius:6px;margin-bottom:12px;border-left:4px solid #f1c40f;">'
-                  + '💡 <strong>' + itemName + '</strong> 本年度各月金額相同（固定基準值），無月度波動趨勢。</div>';
+                  + '💡 <strong>' + itemName + '</strong> 本年度各月金額相同（固定基準值），無月度波動。</div>';
         }
 
-        // 統計卡片
         html += '<div class="bep-stats-row">'
-              + '<div class="bep-stat-card blue"><div class="lbl">當月 (' + months[curIdx >= 0 ? curIdx : months.length - 1].YYYY_MM + ')</div><div class="val">' + fmt(curVal) + '</div></div>'
-              + '<div class="bep-stat-card green"><div class="lbl">全年合計</div><div class="val">' + fmt(sumV) + '</div></div>'
+              + '<div class="bep-stat-card blue"><div class="lbl">全年合計</div><div class="val">' + fmt(sumV) + '</div></div>'
               + '<div class="bep-stat-card orange"><div class="lbl">月平均</div><div class="val">' + fmt(avgV) + '</div></div>'
-              + '<div class="bep-stat-card red"><div class="lbl">年度變化</div><div class="val ' + (yoyChange >= 0 ? 'bep-mom-up' : 'bep-mom-down') + '">' + (yoyChange >= 0 ? '+' : '') + yoyChange.toFixed(1) + '%</div></div>'
+              + '<div class="bep-stat-card green"><div class="lbl">年度變化</div><div class="val ' + (yoy >= 0 ? 'bep-mom-up' : 'bep-mom-down') + '">' + (yoy >= 0 ? '+' : '') + yoy.toFixed(1) + '%</div></div>'
               + '</div>';
 
-        // Bar Chart
-        html += '<div class="bep-trend-wrap">'
-              + '<div class="bep-trend-title">📊 ' + itemName + ' 月度趨勢 (' + data.year + ')</div>'
-              + '<div class="bep-bar-chart">';
+        html += '<div class="bep-trend-wrap"><div class="bep-trend-title">📊 ' + itemName + ' 月度趨勢 (' + data.year + ')</div><div class="bep-bar-chart">';
         for (var i = 0; i < months.length; i++) {
             var v = values[i];
             var h = maxV > 0 ? (v / maxV * 100) : 0;
@@ -542,29 +648,20 @@
         }
         html += '</div></div>';
 
-        // 月度明細表格
-        html += '<table class="bep-trend-table">'
-              + '<thead><tr><th>年月</th><th>金額</th><th>佔銷售額%</th><th>月增減</th></tr></thead><tbody>';
+        html += '<table class="bep-trend-table"><thead><tr><th>年月</th><th>金額</th><th>月增減</th></tr></thead><tbody>';
         for (var j = 0; j < months.length; j++) {
             var vv = values[j];
-            var sale = months[j].sale_amt || 0;
-            var pctSale = sale > 0 ? (vv / sale * 100).toFixed(2) + '%' : '-';
             var mom = j === 0 ? '-' : (values[j-1] > 0 ? ((vv - values[j-1]) / values[j-1] * 100).toFixed(2) + '%' : '-');
             var momClass = mom !== '-' && !isNaN(parseFloat(mom)) ? (parseFloat(mom) >= 0 ? 'bep-mom-up' : 'bep-mom-down') : '';
-            html += '<tr>'
-                  + '<td>' + months[j].YYYY_MM + (months[j].YYYY_MM === currentYM ? ' <span style="color:#e74c3c;">◀</span>' : '') + '</td>'
-                  + '<td>' + fmt(vv) + '</td>'
-                  + '<td>' + pctSale + '</td>'
-                  + '<td class="' + momClass + '">' + mom + '</td>'
-                  + '</tr>';
+            html += '<tr><td>' + months[j].YYYY_MM + '</td><td>' + fmt(vv) + '</td><td class="' + momClass + '">' + mom + '</td></tr>';
         }
         html += '</tbody></table>';
-
-        document.getElementById('bep_item_modal_body').innerHTML = html;
+        return html;
     }
 
     window.bepShowItemDetail = showItemDetail;
     window.bepCloseItemDetail = closeItemDetail;
+    window.bepSwitchItemTab = switchItemTab;
 
     // ESC 鍵關閉 — 優先級：先子彈窗，再父彈窗
     document.addEventListener('keydown', function(e) {

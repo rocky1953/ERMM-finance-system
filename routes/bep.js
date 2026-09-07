@@ -215,4 +215,100 @@ router.get('/history', async (req, res) => {
   } catch (err) { fail500(res, err); }
 });
 
+// === BEP 項目 → casher_details amt_type 映射 ===
+// 說明：mgm_casher_details 只有以下 amt_type：
+//   CR(支出): 原料採購 / 工資 / 房租水電 / 廣告費 / 差旅費 / 設備維修 / 利息支出
+//   DR(收入): 銷貨收入 / 應收款收回 / 匯兌收益 / 利息收入
+// BEP 的變動成本項目與 casher_details 無法完全一對一對應，
+// 這裡是財務語義上最合理的映射。
+const BEP_ITEM_MAP = {
+  // 變動成本項（CR 支出類）
+  consumable:       { amt_types: ['原料採購'],                        label: '消耗品 → 原料採購' },
+  packaging:        { amt_types: ['廣告費'],                          label: '包裝費 → 廣告費' },
+  processing:       { amt_types: [],                                  label: '加工費（無對應交易類型，固定基準值）' },
+  misc_purchase:     { amt_types: ['設備維修'],                        label: '雜項購置 → 設備維修' },
+  freight:           { amt_types: [],                                  label: '運費（無對應交易類型，固定基準值）' },
+  customs:           { amt_types: [],                                  label: '進出口費用（無對應交易類型，固定基準值）' },
+  service_part_comp: { amt_types: [],                                  label: '服務零件與賠償（無對應交易類型，固定基準值）' },
+  variable_expense:  { amt_types: ['差旅費'],                          label: '變動費用 → 差旅費' },
+  material_sum:      { amt_types: ['原料採購','廣告費','設備維修'],    label: '材料合計 → 原料採購+廣告費+設備維修' },
+  variable_cost:     { amt_types: ['原料採購','廣告費','設備維修','差旅費'], label: '變動成本總計 → 全部變動支出' },
+  // 固定成本（CR 支出類，固定支出）
+  fixed_cost:        { amt_types: ['工資','房租水電','利息支出'],       label: '固定成本 → 工資+房租水電+利息支出' },
+  // 收入類
+  sale_amt:          { amt_types: ['銷貨收入','應收款收回','匯兌收益','利息收入'], label: '銷售金額 → 全部收入（DR）' }
+};
+
+// 交易明細
+// GET /api/bep/detail?bu_no=HM&YYYY_MM=2025/02&item_key=consumable
+router.get('/detail', async (req, res) => {
+  try {
+    const { bu_no, YYYY_MM, item_key } = req.query;
+    if (!bu_no || !YYYY_MM || !item_key) return fail(res, '需要 bu_no / YYYY_MM / item_key');
+
+    const mapping = BEP_ITEM_MAP[item_key];
+    if (!mapping) return fail(res, '未知的 item_key: ' + item_key);
+
+    const amtTypes = mapping.amt_types;
+
+    // 若沒有對應 amt_type，回傳空記錄並提示
+    if (amtTypes.length === 0) {
+      ok(res, {
+        item_key,
+        label: mapping.label,
+        mapped_amt_types: [],
+        no_mapping: true,
+        reason: mapping.label,
+        records: []
+      });
+      return;
+    }
+
+    // 查 mgm_casher_details
+    const placeholders = amtTypes.map(() => '?').join(',');
+    const [rows] = await pool.execute(
+      `SELECT uid, wk_date, num_vman, amt_type, DB_CR, sub_amt,
+              bank_acct, remark
+       FROM mgm_casher_details
+       WHERE bu_no=? AND YYYY_MM=? AND amt_type IN (${placeholders})
+       ORDER BY wk_date, num_vman`,
+      [bu_no, YYYY_MM, ...amtTypes]
+    );
+
+    // 計算累計餘額（按 DB_CR：DR 加、CR 減）
+    let balance = 0;
+    const records = rows.map(r => {
+      const amt = toNum(r.sub_amt);
+      if (r.DB_CR === 'DR') balance += amt;
+      else balance -= amt;
+      return {
+        uid: r.uid,
+        wk_date: r.wk_date ? new Date(r.wk_date).toISOString().substring(0, 10) : null,
+        num_vman: r.num_vman,
+        amt_type: r.amt_type,
+        DB_CR: r.DB_CR,
+        debit: r.DB_CR === 'DR' ? amt : 0,
+        credit: r.DB_CR === 'CR' ? amt : 0,
+        bank_acct: r.bank_acct,
+        remark: r.remark,
+        balance: Number(balance.toFixed(2))
+      };
+    });
+
+    ok(res, {
+      item_key,
+      label: mapping.label,
+      mapped_amt_types: amtTypes,
+      no_mapping: false,
+      records,
+      summary: {
+        count: records.length,
+        total_debit: records.reduce((s, r) => s + r.debit, 0),
+        total_credit: records.reduce((s, r) => s + r.credit, 0),
+        final_balance: Number(balance.toFixed(2))
+      }
+    });
+  } catch (err) { fail500(res, err); }
+});
+
 module.exports = router;
