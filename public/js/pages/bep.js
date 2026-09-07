@@ -140,19 +140,19 @@
             + '<div class="bep-formula" style="grid-template-columns:1fr 40px 1fr 40px 1fr;">'
             + '<div class="bep-box sale"><div class="lbl">銷售金額</div><div class="val" id="bep_sale_show">-</div></div>'
             + '<div class="bep-op">-</div>'
-            + '<div class="bep-box varCost"><div class="lbl">變動成本</div><div class="val" id="bep_varCost_show">-</div></div>'
+            + '<div class="bep-box varCost bep-clickable" onclick="bepShowVarCostDetail()"><div class="lbl">變動成本 <span style="font-size:.7em;color:#888;">(點擊明細)</span></div><div class="val" id="bep_varCost_show">-</div></div>'
             + '<div class="bep-op">=</div>'
             + '<div class="bep-box cm"><div class="lbl">邊際貢獻</div><div class="val" id="bep_cm_show">-</div></div>'
             + '</div>'
             + '<div class="bep-formula" style="grid-template-columns:1fr 40px 1fr 40px 1fr;margin-top:10px;">'
-            + '<div class="bep-box mat"><div class="lbl">材料</div><div class="val" id="bep_material_show">-</div></div>'
+            + '<div class="bep-box mat bep-clickable" onclick="bepShowVarCostDetail()"><div class="lbl">材料 <span style="font-size:.7em;color:#888;">(點擊明細)</span></div><div class="val" id="bep_material_show">-</div></div>'
             + '<div class="bep-op">+</div>'
             + '<div style="padding:14px;border-radius:10px;border:2px solid #f1c40f;background:#fef9e7;">'
             + '<div class="lbl" style="color:#7d6608;">變動費用</div>'
             + '<input type="number" id="bep_variable_expense" class="bep-input-yellow">'
             + '</div>'
             + '<div class="bep-op">=</div>'
-            + '<div class="bep-box varCost"><div class="lbl">變動成本</div><div class="val" id="bep_varCost_show2">-</div></div>'
+            + '<div class="bep-box varCost bep-clickable" onclick="bepShowVarCostDetail()"><div class="lbl">變動成本 <span style="font-size:.7em;color:#888;">(點擊明細)</span></div><div class="val" id="bep_varCost_show2">-</div></div>'
             + '</div>'
             + '</div>'
 
@@ -199,6 +199,19 @@
 
             + '</div></div>'
 
+            // === 變動成本明細彈窗 ===
+            + '<div id="bep_modal" class="bep-modal-overlay" onclick="bepCloseVarCostDetail(event)">'
+            + '<div class="bep-modal-card" onclick="event.stopPropagation()">'
+            + '<div class="bep-modal-header">'
+            + '<span class="bep-modal-title">📊 變動成本明細</span>'
+            + '<button class="bep-modal-close" onclick="bepCloseVarCostDetail()">✕</button>'
+            + '</div>'
+            + '<div class="bep-modal-body" id="bep_varCost_modal_body"></div>'
+            + '<div class="bep-modal-footer">'
+            + '<button class="bep-btn-close" onclick="bepCloseVarCostDetail()">關閉</button>'
+            + '</div>'
+            + '</div></div>'
+
             + '<style>'
             + '.bep-wrap{font-family:"Microsoft JhengHei",sans-serif;}'
             + '.bep-toolbar{display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border-radius:8px;margin-bottom:18px;flex-wrap:wrap;}'
@@ -239,12 +252,171 @@
             + '.bep-input-yellow{border:1px solid #f4d03f;background:#fffef9;color:#7d6608;}'
             + '.bep-gap-note{text-align:right;margin-top:10px;font-size:0.9em;}'
             + '.bep-gap-note .amt{font-size:1.2em;font-weight:700;}'
+
+            // 可點擊卡片樣式
+            + '.bep-clickable{cursor:pointer;transition:transform .15s,box-shadow .15s;}'
+            + '.bep-clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15);}'
+
+            // === Modal 彈窗樣式 ===
+            + '.bep-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:9999;align-items:center;justify-content:center;}'
+            + '.bep-modal-overlay.show{display:flex;}'
+            + '.bep-modal-card{background:#fff;border-radius:12px;width:90%;max-width:620px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}'
+            + '.bep-modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(135deg,#c0392b,#e74c3c);color:#fff;}'
+            + '.bep-modal-title{font-size:1.05em;font-weight:700;}'
+            + '.bep-modal-close{background:none;border:none;color:#fff;font-size:1.3em;cursor:pointer;padding:0 4px;line-height:1;}'
+            + '.bep-modal-close:hover{opacity:.7;}'
+            + '.bep-modal-body{padding:16px 20px;overflow-y:auto;flex:1;}'
+            + '.bep-modal-footer{padding:12px 20px;border-top:1px solid #eee;text-align:right;background:#fafafa;}'
+            + '.bep-btn-close{padding:6px 20px;background:#7f8c8d;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;}'
+            + '.bep-btn-close:hover{background:#5d6d7e;}'
+
+            // 彈窗內表格
+            + '.bep-detail-table{width:100%;border-collapse:collapse;font-size:.92em;}'
+            + '.bep-detail-table th,.bep-detail-table td{padding:8px 12px;text-align:right;border-bottom:1px solid #ecf0f1;}'
+            + '.bep-detail-table th:first-child,.bep-detail-table td:first-child{text-align:left;}'
+            + '.bep-detail-table thead th{background:#f8f9fa;color:#2c3e50;font-weight:700;}'
+            + '.bep-detail-table .subtotal td{background:#fef9e7;font-weight:700;color:#7d6608;}'
+            + '.bep-detail-table .total td{background:#d5f5e3;font-weight:800;color:#1e8449;font-size:1em;}'
+            + '.bep-detail-table .pct{color:#7f8c8d;font-size:.85em;}'
+            + '.bep-detail-table .negative{color:#c0392b;}'
+            + '.bep-detail-table .label-cell{display:flex;align-items:center;gap:6px;}'
+            + '.bep-detail-table .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}'
+
             + '</style>';
     }
 
     window.bepLoad = load;
     window.bepSave = save;
     window.bepLiveCalc = liveCalc;
+
+    // === 變動成本明細彈窗 ===
+    function showVarCostDetail() {
+        // 優先用閉包 BEP；若尚未初始化則從 DOM 顯示值解析
+        let sale = 0;
+        if (BEP && BEP.sale_amt) {
+            sale = Number(BEP.sale_amt) || 0;
+        } else {
+            var el = document.getElementById('bep_sale_show');
+            if (el && el.textContent && el.textContent !== '-') {
+                sale = Number(el.textContent.replace(/,/g, '')) || 0;
+            }
+        }
+        if (sale <= 0) { UI.toast('請先載入資料', 'warn'); return; }
+
+        const vals = getInputVals();
+        const c = compute(sale, vals);
+
+        const materialItems = [
+            { name: '消耗品',            key: 'consumable',        color: '#e74c3c' },
+            { name: '包裝費',            key: 'packaging',         color: '#3498db' },
+            { name: '加工費',            key: 'processing',        color: '#9b59b6' },
+            { name: '雜項購置',          key: 'misc_purchase',     color: '#f39c12' },
+            { name: '運費',              key: 'freight',           color: '#1abc9c' },
+            { name: '進出口費用',        key: 'customs',           color: '#e67e22' },
+            { name: '服務零件與賠償',    key: 'service_part_comp', color: '#34495e' }
+        ];
+
+        const vb = vals.variable_expense;  // 變動費用
+        const matTotal = c.material;       // 材料合計
+        const grandTotal = c.variable_cost; // 變動成本總計
+
+        function pctOf(amt, base) {
+            if (!base) return '0.00%';
+            return (Number(amt) / Number(base) * 100).toFixed(2) + '%';
+        }
+
+        // 組裝表格 HTML
+        let html = '<div style="margin-bottom:14px;padding:10px 14px;background:#f8f9fa;border-radius:6px;border-left:4px solid #2980b9;">'
+                 + '<strong>期間:</strong> ' + (document.getElementById('bepBU').value || 'HM') + ' / ' + (document.getElementById('bepYM').value || '-')
+                 + '&nbsp;&nbsp;|&nbsp;&nbsp;'
+                 + '<strong>銷售金額:</strong> ' + fmt(sale)
+                 + '&nbsp;&nbsp;|&nbsp;&nbsp;'
+                 + '<strong>邊際貢獻率:</strong> ' + fmtPct(c.cm_rate)
+                 + '</div>';
+
+        html += '<table class="bep-detail-table">'
+             + '<thead><tr>'
+             + '<th style="width:40%;">項目</th>'
+             + '<th>金額 (本幣)</th>'
+             + '<th class="pct">佔變動成本%</th>'
+             + '<th class="pct">佔銷售額%</th>'
+             + '</tr></thead><tbody>';
+
+        // 材料明細
+        for (let i = 0; i < materialItems.length; i++) {
+            const it = materialItems[i];
+            const amt = vals[it.key];
+            html += '<tr>'
+                  + '<td><span class="label-cell"><span class="dot" style="background:' + it.color + ';"></span>' + it.name + '</span></td>'
+                  + '<td>' + fmt(amt) + '</td>'
+                  + '<td class="pct">' + pctOf(amt, grandTotal) + '</td>'
+                  + '<td class="pct">' + pctOf(amt, sale) + '</td>'
+                  + '</tr>';
+        }
+
+        // 材料合計 row
+        html += '<tr class="subtotal">'
+              + '<td>材料合計</td>'
+              + '<td>' + fmt(matTotal) + '</td>'
+              + '<td class="pct">' + pctOf(matTotal, grandTotal) + '</td>'
+              + '<td class="pct">' + pctOf(matTotal, sale) + '</td>'
+              + '</tr>';
+
+        // 變動費用 row
+        html += '<tr>'
+              + '<td><span class="label-cell"><span class="dot" style="background:#f1c40f;"></span>變動費用</span></td>'
+              + '<td>' + fmt(vb) + '</td>'
+              + '<td class="pct">' + pctOf(vb, grandTotal) + '</td>'
+              + '<td class="pct">' + pctOf(vb, sale) + '</td>'
+              + '</tr>';
+
+        // 分隔
+        html += '<tr style="height:6px;"><td colspan="4" style="border:none;"></td></tr>';
+
+        // 變動成本總計
+        html += '<tr class="total">'
+              + '<td>變動成本總計 (材料 + 變動費用)</td>'
+              + '<td>' + fmt(grandTotal) + '</td>'
+              + '<td class="pct">100.00%</td>'
+              + '<td class="pct">' + pctOf(grandTotal, sale) + '</td>'
+              + '</tr>';
+
+        html += '</tbody></table>';
+
+        // 附加公式鏈小提示
+        html += '<div style="margin-top:14px;padding:10px 14px;background:#e8daef;border-radius:6px;font-size:.88em;color:#6c3483;">'
+              + '<strong>📐 公式鏈:</strong><br>'
+              + '變動成本 = 材料合計 (' + fmt(matTotal) + ') + 變動費用 (' + fmt(vb) + ') = <strong>' + fmt(grandTotal) + '</strong><br>'
+              + '邊際貢獻 = 銷售金額 (' + fmt(sale) + ') − 變動成本 = <strong>' + fmt(c.contribution_margin) + '</strong><br>'
+              + '損益平衡點 = 固定成本 (' + fmt(vals.fixed_cost) + ') ÷ (邊際貢獻率 ' + fmtPct(c.cm_rate) + ') = <strong>' + fmt(c.bep) + '</strong>'
+              + '</div>';
+
+        document.getElementById('bep_varCost_modal_body').innerHTML = html;
+        document.getElementById('bep_modal').classList.add('show');
+    }
+
+    function closeVarCostDetail(e) {
+        // 從遮罩點擊或按鈕觸發都安全，不影響 stopPropagation
+        if (e && e.target && e.target.id !== 'bep_modal' && e.type === 'click') {
+            // 只在遮罩本身觸發時關閉（card 內部用 stopPropagation 擋住了）
+            // 這裡是額外保護：遮罩 onclick 也會調用 closeVarCostDetail(event)
+            // stopPropagation 在 card onclick 上，所以冒泡到 overlay 的是遮罩本身的 click
+        }
+        document.getElementById('bep_modal').classList.remove('show');
+    }
+
+    window.bepShowVarCostDetail = showVarCostDetail;
+    window.bepCloseVarCostDetail = closeVarCostDetail;
+
+    // ESC 鍵關閉彈窗
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var m = document.getElementById('bep_modal');
+            if (m && m.classList.contains('show')) {
+                m.classList.remove('show');
+            }
+        }
+    });
 
     let _debounce;
     function onInput() {
