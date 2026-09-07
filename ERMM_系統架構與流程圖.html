@@ -197,6 +197,167 @@
 
 <!-- ========== 3. DB 表關係 ========== -->
 <h2>3️⃣ 資料庫表結構（30 張表 · ERMM_db）</h2>
+
+<h3 style="margin-top:0;">🔗 表關聯線圖（核心 10 張表）</h3>
+<div class="card" style="overflow-x:auto;">
+<svg width="1180" height="520" style="background:#fff;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f8c8d"/>
+    </marker>
+  </defs>
+
+  <!-- 表框樣式 -->
+  <style>
+    .svg-table { fill:#eaf2f8; stroke:#2980b9; stroke-width:2; rx:6; }
+    .svg-table-core { fill:#d5f5e3; stroke:#27ae60; }
+    .svg-table-erp  { fill:#fef9e7; stroke:#f1c40f; }
+    .svg-table-bep  { fill:#fadbd8; stroke:#c0392b; }
+    .svg-table-arap { fill:#e8daef; stroke:#8e44ad; }
+    .svg-title { font-family:Consolas,monospace; font-size:13px; font-weight:700; fill:#1a3a5c; }
+    .svg-pk { font-size:11px; fill:#c0392b; font-weight:700; font-family:Consolas,monospace; }
+    .svg-fk { font-size:11px; fill:#2980b9; font-family:Consolas,monospace; }
+    .svg-line { stroke:#7f8c8d; stroke-width:2; fill:none; marker-end:url(#arrow); stroke-dasharray:none; }
+    .svg-line-rel { stroke:#27ae60; stroke-width:2.2; fill:none; marker-end:url(#arrow); }
+    .svg-line-mm  { stroke:#8e44ad; stroke-width:2; fill:none; marker-end:url(#arrow); stroke-dasharray:6,4; }
+    .svg-label { font-size:10px; fill:#555; font-family:Consolas,monospace; }
+  </style>
+
+  <!-- === 第一列 === -->
+  <!-- MGM_finance_summary (左上) -->
+  <rect x="20" y="20" width="190" height="90" class="svg-table svg-table-core"/>
+  <text x="30" y="42" class="svg-title">📈 MGM_finance_summary</text>
+  <text x="30" y="62" class="svg-pk">* uid (INT)</text>
+  <text x="30" y="78" class="svg-fk">  bu_no / YYYY_MM</text>
+  <text x="30" y="93" class="svg-fk">  sale_amt, current_asset_amt...</text>
+
+  <!-- MGM_casher_details -->
+  <rect x="270" y="20" width="190" height="90" class="svg-table svg-table-core"/>
+  <text x="280" y="42" class="svg-title">💵 MGM_casher_details</text>
+  <text x="280" y="62" class="svg-pk">* uid (INT)</text>
+  <text x="280" y="78" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
+  <text x="280" y="93" class="svg-fk">  amt_type, DB_CR, sub_amt</text>
+
+  <!-- BEP_threshold -->
+  <rect x="520" y="20" width="190" height="105" class="svg-table svg-table-bep"/>
+  <text x="530" y="42" class="svg-title">⚖️ MGM_BEP_threshold</text>
+  <text x="530" y="62" class="svg-pk">* uid (INT)</text>
+  <text x="530" y="78" class="svg-fk">  bu_no / YYYY_MM (UNIQUE)</text>
+  <text x="530" y="93" class="svg-fk">  8 項門檻 (consumable...)</text>
+  <text x="530" y="108" class="svg-fk">  variable_expense, fixed_cost</text>
+
+  <!-- forecast_detail -->
+  <rect x="770" y="20" width="190" height="90" class="svg-table"/>
+  <text x="780" y="42" class="svg-title">🔮 forecast_detail</text>
+  <text x="780" y="62" class="svg-pk">* uid (INT)</text>
+  <text x="780" y="78" class="svg-fk">  bu_no / YYYY_MM / forecast_type</text>
+  <text x="780" y="93" class="svg-fk">  forecast_amt</text>
+
+  <!-- kpi_desc -->
+  <rect x="1020" y="20" width="140" height="90" class="svg-table"/>
+  <text x="1030" y="42" class="svg-title">📊 mgm_kpi_desc</text>
+  <text x="1030" y="62" class="svg-pk">* uid (INT)</text>
+  <text x="1030" y="78" class="svg-fk">  kpi_code / kpi_name</text>
+  <text x="1030" y="93" class="svg-fk">  target / risk_color</text>
+
+  <!-- === 第二列 === -->
+  <!-- ermm_erp_po -->
+  <rect x="20" y="220" width="190" height="90" class="svg-table svg-table-erp"/>
+  <text x="30" y="242" class="svg-title">📦 ermm_erp_po</text>
+  <text x="30" y="262" class="svg-pk">* uid (INT)</text>
+  <text x="30" y="278" class="svg-fk">  po_no / bu_no / client_id</text>
+  <text x="30" y="293" class="svg-fk">  item_code, qty, unit_price</text>
+
+  <!-- ermm_erp_so -->
+  <rect x="270" y="220" width="190" height="90" class="svg-table svg-table-erp"/>
+  <text x="280" y="242" class="svg-title">🛒 ermm_erp_so</text>
+  <text x="280" y="262" class="svg-pk">* uid (INT)</text>
+  <text x="280" y="278" class="svg-fk">  so_no / bu_no / client_id</text>
+  <text x="280" y="293" class="svg-fk">  item_code, qty, amount</text>
+
+  <!-- ermm_arap_detail -->
+  <rect x="520" y="220" width="190" height="90" class="svg-table svg-table-arap"/>
+  <text x="530" y="242" class="svg-title">📋 ermm_arap_detail</text>
+  <text x="530" y="262" class="svg-pk">* uid (INT)</text>
+  <text x="530" y="278" class="svg-fk">  bu_no / YYYY_MM (UNIQUE)</text>
+  <text x="530" y="293" class="svg-fk">  AR_amt, AP_amt, ageing</text>
+
+  <!-- invoice_details -->
+  <rect x="770" y="220" width="190" height="90" class="svg-table svg-table-core"/>
+  <text x="780" y="242" class="svg-title">🧾 mgm_invoice_details</text>
+  <text x="780" y="262" class="svg-pk">* uid (INT)</text>
+  <text x="780" y="278" class="svg-fk">  invoice_no / client_id</text>
+  <text x="780" y="293" class="svg-fk">  invoice_amt, VAT_rate</text>
+
+  <!-- === 第三列 === -->
+  <!-- pay_detail -->
+  <rect x="20" y="400" width="190" height="80" class="svg-table"/>
+  <text x="30" y="422" class="svg-title">💳 pay_detail</text>
+  <text x="30" y="442" class="svg-pk">* uid (INT)</text>
+  <text x="30" y="458" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
+  <text x="30" y="473" class="svg-fk">  client_id, sub_amt</text>
+
+  <!-- check_detail -->
+  <rect x="270" y="400" width="190" height="80" class="svg-table"/>
+  <text x="280" y="422" class="svg-title">✅ check_detail</text>
+  <text x="280" y="442" class="svg-pk">* uid (INT)</text>
+  <text x="280" y="458" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
+  <text x="280" y="473" class="svg-fk">  client_id, sub_amt</text>
+
+  <!-- bank_loan_details -->
+  <rect x="520" y="400" width="190" height="80" class="svg-table"/>
+  <text x="530" y="422" class="svg-title">🏦 bank_loan_details</text>
+  <text x="530" y="442" class="svg-pk">* uid (INT)</text>
+  <text x="530" y="458" class="svg-fk">  bu_no / loan_id / bank_name</text>
+  <text x="530" y="473" class="svg-fk">  loan_amt, interest_rate</text>
+
+  <!-- === 關聯線 === -->
+  <!-- finance_summary ↔ BEP_threshold (共享 bu_no + YYYY_MM) -->
+  <line x1="210" y1="65" x2="520" y2="65" class="svg-line-rel"/>
+  <text x="330" y="58" class="svg-label" text-anchor="middle">共享 bu_no + YYYY_MM</text>
+  <text x="330" y="77" class="svg-label" text-anchor="middle">sale_amt 提供給 BEP 使用</text>
+
+  <!-- BEP_threshold → casher_details (item_key 映射 amt_type) -->
+  <line x1="615" y1="125" x2="365" y2="200" class="svg-line-mm"/>
+  <text x="450" y="170" class="svg-label">BEP_ITEM_MAP: item_key → amt_type</text>
+
+  <!-- casher_details → pay_detail (共享 bu_no + YYYY_MM) -->
+  <line x1="365" y1="110" x2="115" y2="400" class="svg-line-rel"/>
+  <text x="195" y="260" class="svg-label">共享 bu_no + YYYY_MM</text>
+
+  <!-- finance_summary → arap_detail (共享 bu_no + YYYY_MM) -->
+  <path d="M 210 110 L 210 305 L 520 305" class="svg-line-rel"/>
+  <text x="330" y="300" class="svg-label">共享 bu_no + YYYY_MM → AR/AP 聚合</text>
+
+  <!-- erp_po ↔ erp_so (訂單關聯) -->
+  <line x1="210" y1="265" x2="270" y2="265" class="svg-line"/>
+  <text x="235" y="257" class="svg-label">採購 ↔ 銷售</text>
+
+  <!-- forecast → summary -->
+  <path d="M 865 110 Q 865 180 615 180 Q 615 130 520 130" class="svg-line-mm"/>
+  <text x="700" y="175" class="svg-label">預測 vs 實際比較</text>
+
+  <!-- kpi → summary -->
+  <path d="M 1090 110 Q 1090 170 615 170 Q 615 120 210 120" class="svg-line-mm"/>
+  <text x="850" y="165" class="svg-label">KPI 對比 sale_amt 等</text>
+
+  <!-- invoice → arap -->
+  <path d="M 865 310 Q 865 350 615 350 Q 615 310 710 310" class="svg-line-rel"/>
+  <text x="740" y="345" class="svg-label">發票 AR → 應收帳款聚合</text>
+
+  <!-- 圖例 -->
+  <rect x="850" y="420" width="320" height="90" fill="#f8f9fa" stroke="#bdc3c7" rx="6"/>
+  <text x="860" y="440" class="svg-title" style="font-size:11px;">圖例 Legend</text>
+  <line x1="860" y1="455" x2="900" y2="455" class="svg-line-rel"/>
+  <text x="906" y="458" class="svg-label">共享 Key / 直接關聯</text>
+  <line x1="860" y1="472" x2="900" y2="472" class="svg-line-mm"/>
+  <text x="906" y="475" class="svg-label">業務邏輯關聯（非 FK）</text>
+  <line x1="860" y1="489" x2="900" y2="489" class="svg-line"/>
+  <text x="906" y="492" class="svg-label">模組間資料流</text>
+</svg>
+<p style="font-size:12px;color:#7f8c8d;margin-top:8px;">💡 ER 圖顯示核心 10 張表的關聯：實線=共享 Key 直接關聯；虛線=業務邏輯關聯（非 DB FK）</p>
+</div>
+
 <div class="legend">
   <div class="legend-item"><div class="legend-color" style="background:#c0392b;"></div>PK 主鍵</div>
   <div class="legend-item"><div class="legend-color" style="background:#2980b9;"></div>FK 外鍵</div>
@@ -516,6 +677,107 @@
 • forecast_detail UNIQUE KEY (bu_no, YYYY_MM, forecast_type)
 • ERMM_ARAP_detail UNIQUE KEY (bu_no, YYYY_MM)
 • 匯入用 UPSERT（ON DUPLICATE KEY UPDATE）</pre>
+</div>
+
+<!-- ========== 9. 模組互動流程 ========== -->
+<h2>9️⃣ 模組互動業務流程</h2>
+<div class="card">
+
+<h3>流程 A：訂單 → 出貨 → 發票 → 應收帳款</h3>
+<div class="flow" style="gap:14px;">
+<div class="flow-row">
+  <div class="flow-node n-input">① SO 銷售單<br><small>ermm_erp_so<br>so_no + item_code</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-process">② 送貨 DN<br><small>（ERMM_erp_so_dn 空表待填充）</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-process">③ 開立發票<br><small>mgm_invoice_details<br>invoice_no + client_id</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-db">④ AR 應收帳款聚合<br><small>ermm_arap_detail<br>AR_amt + ageing</small></div>
+</div>
+<div class="flow-row">
+  <div style="color:#95a5a6;font-size:12px;">📊 最終匯入 MGM_finance_summary → 影響 sale_amt + current_asset</div>
+</div>
+</div>
+
+<h3 style="margin-top:24px;">流程 B：採購 → 付款 → 應付帳款</h3>
+<div class="flow" style="gap:14px;">
+<div class="flow-row">
+  <div class="flow-node n-input">① PO 採購單<br><small>ermm_erp_po<br>po_no + item_code</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-process">② 驗收 + 入庫<br><small>（暫無專表）</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-process">③ 付款處理<br><small>pay_detail / check_detail<br>DB_CR=CR 支出</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-db">④ AP 應付帳款聚合<br><small>ermm_arap_detail<br>AP_amt + ageing</small></div>
+</div>
+<div class="flow-row">
+  <div style="color:#95a5a6;font-size:12px;">📊 最終匯入 MGM_finance_summary → 影響 current_debet</div>
+</div>
+</div>
+
+<h3 style="margin-top:24px;">流程 C：現金日記帳 → 財務摘要 → BEP/KPI/Risk 串聯</h3>
+<div class="flow" style="gap:14px;">
+<div class="flow-row">
+  <div class="flow-node n-input">💰 mgm_casher_details<br><small>每筆交易 DR/CR</small></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-node n-db">📈 MGM_finance_summary<br><small>sale_amt / 資產 / 負債</small></div>
+</div>
+<div class="flow-row" style="gap:16px;">
+  <div class="flow-node n-api">⚖️ BEP 損益平衡<br><small>sale_amt ↔ threshold<br>→ BREAK_EVEN_POINT</small></div>
+  <div class="flow-node n-api">🎯 KPI 查詢<br><small>sale_amt → target<br>→ 達成率</small></div>
+  <div class="flow-node n-api">⚠️ 風險管理<br><small>多維度 → RED/YELLOW/GREEN</small></div>
+  <div class="flow-node n-api">🔮 預測分析<br><small>forecast_detail<br>vs 實際</small></div>
+</div>
+<div class="flow-row">
+  <div style="color:#95a5a6;font-size:12px;">📋 四個分析模組共享 finance_summary + 各自維度的額外表</div>
+</div>
+</div>
+
+<h3 style="margin-top:24px;">流程 D：Excel 批次匯入（數據上線主通道）</h3>
+<pre style="text-align:left;">前端 batch.js → POST /api/batch/import
+  ├─ ExcelJS 解析每個 Sheet
+  ├─ Row 2 field_code → DB 欄位映射（固定不可變）
+  ├─ 驗證：日期 / 金額 / 公司代碼 / DB_CR
+  ├─ UPSERT（ON DUPLICATE KEY UPDATE）
+  └─ 每 Sheet 獨立 Transaction → Rollback on fail
+
+涵蓋表：finance_summary / casher / invoice / pay / check / arap / po / so / loan / forecast / BEP_threshold</pre>
+</div>
+
+<!-- ========== 10. 頁面→API→DB 三層映射 ========== -->
+<h2>🔟 頁面 → API → DB 三層映射表</h2>
+<div class="card">
+<p style="color:#7f8c8d;font-size:13px;margin-bottom:10px;">每個前端頁面對應的後端路由模組與主要操作的 DB 表</p>
+<table class="api-table">
+<tr><th>頁面（nav id）</th><th>API 路由</th><th>主要 DB 表</th><th>CRUD</th></tr>
+<tr><td>dashboard</td><td><code>/api/summary</code> + <code>/api/risk</code></td><td>finance_summary, kpi_desc</td><td>R</td></tr>
+<tr><td>cash</td><td><code>/api/cash</code></td><td>mgm_casher_details</td><td>CRUD</td></tr>
+<tr><td>bank</td><td><code>/api/bank</code></td><td>mgm_bank_loan_details</td><td>CRUD</td></tr>
+<tr><td>pay</td><td><code>/api/pay</code></td><td>pay_detail</td><td>CRUD</td></tr>
+<tr><td>check</td><td><code>/api/check</code></td><td>check_detail</td><td>CRUD</td></tr>
+<tr><td>arap</td><td><code>/api/arap</code></td><td>ermm_arap_detail</td><td>R/Upsert</td></tr>
+<tr><td>invoice</td><td><code>/api/invoice</code></td><td>mgm_invoice_details</td><td>CRUD</td></tr>
+<tr><td>po</td><td><code>/api/po</code></td><td>ermm_erp_po</td><td>CRUD</td></tr>
+<tr><td>so</td><td><code>/api/so</code></td><td>ermm_erp_so</td><td>CRUD</td></tr>
+<tr><td>dn</td><td><code>/api/dn</code></td><td>ermm_erp_so_dn</td><td>CRUD</td></tr>
+<tr><td>summary</td><td><code>/api/summary</code></td><td>mgm_finance_summary</td><td>R</td></tr>
+<tr><td><b>bep</b></td><td><b><code>/api/bep</code></b></td><td><b>MGM_BEP_threshold + finance_summary + casher</b></td><td><b>R/Upsert</b></td></tr>
+<tr><td>kpiQuery</td><td><code>/api/kpi-query</code></td><td>mgm_kpi_desc + finance_summary</td><td>R</td></tr>
+<tr><td>kpi</td><td><code>/api/kpi</code></td><td>mgm_kpi_desc</td><td>CRUD</td></tr>
+<tr><td>risk</td><td><code>/api/risk</code></td><td>finance_summary + arap + kpi_desc</td><td>R</td></tr>
+<tr><td>forecast</td><td><code>/api/forecast</code></td><td>forecast_detail</td><td>R/Upsert</td></tr>
+<tr><td>report</td><td><code>/api/report</code></td><td>finance_summary（關聯 summary 公式）</td><td>R</td></tr>
+<tr><td>batch</td><td><code>/api/batch</code></td><td>多表 UPSERT</td><td>Upsert</td></tr>
+<tr><td>branch</td><td><code>/api/branch</code></td><td>branch_detail</td><td>CRUD</td></tr>
+<tr><td>relation</td><td><code>/api/relation</code></td><td>relation_detail</td><td>CRUD</td></tr>
+<tr><td>system</td><td><code>/api/system</code></td><td>cams_system_codes</td><td>CRUD</td></tr>
+<tr><td>monthly</td><td><code>/api/monthly</code></td><td>monthly_items</td><td>R/Upsert</td></tr>
+<tr><td>account</td><td><code>/api/account</code></td><td>mgm_bank_loan_details</td><td>CRUD</td></tr>
+<tr><td>tempPo</td><td><code>/api/temp-po</code></td><td>ermm_temp_po</td><td>R/Upsert</td></tr>
+<tr><td>trend</td><td><code>/api/summary</code></td><td>finance_summary</td><td>R</td></tr>
+<tr><td>xitems</td><td><code>/api/xitems</code></td><td>e2_xitems_daily_status</td><td>R</td></tr>
+<tr><td>user</td><td><code>/api/user</code></td><td>cams_xuser / leader_user</td><td>CRUD</td></tr>
+</table>
 </div>
 
 <div class="footer">
