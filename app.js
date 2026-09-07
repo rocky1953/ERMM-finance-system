@@ -52,6 +52,7 @@ const userRoutes = require('./routes/user');
 const tempPoRoutes = require('./routes/tempPo');
 const xitemsRoutes = require('./routes/xitems');
 const kpiQueryRoutes = require('./routes/kpiQuery');
+const bepRoutes = require('./routes/bep');
 
 // ======= 路由註冊 =======
 app.use('/api/system', systemRoutes);
@@ -79,6 +80,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/temp-po', tempPoRoutes);
 app.use('/api/xitems', xitemsRoutes);
 app.use('/api/kpi-query', kpiQueryRoutes);
+app.use('/api/bep', bepRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {

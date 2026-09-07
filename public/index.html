@@ -77,6 +77,9 @@
         <div class="nav-item" data-page="monthly" onclick="navigate('monthly')">
             <span class="nav-icon">📅</span><span>月度項目</span>
         </div>
+        <div class="nav-item" data-page="bep" onclick="navigate('bep')">
+            <span class="nav-icon">⚖️</span><span>損益平衡分析</span>
+        </div>
         <div class="nav-item" data-page="account" onclick="navigate('account')">
             <span class="nav-icon">💰</span><span>帳戶明細</span>
         </div>
@@ -182,6 +185,7 @@
 <script src="/js/pages/tempPo.js"></script>
 <script src="/js/pages/xitems.js"></script>
 <script src="/js/pages/kpiQuery.js"></script>
+<script src="/js/pages/bep.js"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;
