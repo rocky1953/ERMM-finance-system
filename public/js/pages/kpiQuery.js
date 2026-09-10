@@ -145,15 +145,33 @@ const YG_CONFIG = {
         title: 'YG004 財務【預測模型分析】指標',
         sections: [
             { title: 'Altman Z 模型', color: '#6c3483', color2: '#8e44ad', rows: [
-                { id: 'altman_z1',  cat: 'Z1模型', name: 'Z1 值(上市公司)', low:1.81, high:2.675, pct_type:'asc' },
-                { id: 'altman_z2',  cat: 'Z2模型', name: 'Z2 值(非上市)',   low:1.1,  high:2.9,   pct_type:'asc' },
-                { id: 'altman_ggr', cat: 'GGR模型',name: 'GGR 值',          low:1,    high:5,     pct_type:'asc' },
+                { id: 'altman_z1',  cat: 'Z1模型', name: 'Z1 值(上市公司)', low:1.81, high:2.675, pct_type:'desc' },
+                { id: 'altman_z2',  cat: 'Z2模型', name: 'Z2 值(非上市)',   low:1.1,  high:2.9,   pct_type:'desc' },
+                { id: 'altman_ggr', cat: 'GGR模型',name: 'GGR 值',          low:1,    high:5,     pct_type:'desc' },
             ]},
             { title: 'BZ / 巴萨利潤模型', color: '#1e8449', color2: '#27ae60', rows: [
-                { id: 'bach_bz',           cat: 'BZ模型', name: 'BZ 值(巴赫利)',        low:0.5, high:5,  pct_type:'asc' },
-                { id: 'bz_debt_ratio',     cat: '巴萨模型',name: '利潤總額/流動負債(%)', low:2,  high:8,  pct_type:'asc' },
-                { id: 'bz_receivable_turn',cat:'巴萨模型',name:'流動比率',              low:1.5,high:3,  pct_type:'asc' },
-                { id: 'bz_quick',          cat:'巴萨模型',name:'速動比率',              low:0.8,high:2,  pct_type:'asc' },
+                { id: 'bach_bz',           cat: 'BZ模型', name: 'BZ 值(巴赫利)',        low:0.5, high:5,  pct_type:'desc' },
+                { id: 'bz_debt_ratio',     cat: '巴萨模型',name: '利潤總額/流動負債(%)', low:2,  high:8,  pct_type:'desc' },
+                { id: 'bz_receivable_turn',cat:'巴萨模型',name:'流動比率',              low:1.5,high:3,  pct_type:'desc' },
+                { id: 'bz_quick',          cat:'巴萨模型',name:'速動比率',              low:0.8,high:2,  pct_type:'desc' },
+            ]},
+            { title: '營運資產模型', color: '#1f618d', color2: '#2e86c1', rows: [
+                { id: 'oa_working_asset', cat: '營運資產模型', name: '營運資產額(營運資本+長期投資)', low:0,  high:0,    pct_type:'desc' },
+                { id: 'oa_cover_cl',      cat: '營運資產模型', name: '營運資產/流動負債',           low:0.5,high:1.0, pct_type:'desc' },
+                { id: 'oa_wc_ratio',      cat: '營運資產模型', name: '營運資本比率(營運資本/流動資產)', low:0.1,high:0.3,pct_type:'desc' },
+                { id: 'oa_equity_debt',   cat: '營運資產模型', name: '淨值/負債總額',               low:0.5,high:1.0, pct_type:'desc' },
+            ]},
+            { title: '沃爾比重模型 (Alexander Wall)', color: '#b9770e', color2: '#f39c12', rows: [
+                { id: 'wall_score', cat: '沃爾比重模型', name: '沃爾綜合評分(滿分100)',          low:80,  high:100, pct_type:'desc' },
+                { id: 'wall_de',    cat: '沃爾比重模型', name: '淨值/負債(標準1.50)',           low:1.0, high:1.5, pct_type:'desc' },
+                { id: 'wall_af',    cat: '沃爾比重模型', name: '總資產/固定資產(標準2.50)',      low:1.5, high:2.5, pct_type:'desc' },
+                { id: 'wall_se',    cat: '沃爾比重模型', name: '銷售額/淨值(標準3.00)',         low:2.0, high:3.0, pct_type:'desc' },
+            ]},
+            { title: 'A值模型 (Argenti A-score)', color: '#922b21', color2: '#c0392b', rows: [
+                { id: 'a_total',      cat: 'A值模型', name: 'A值-總分(>25高風險)',    low:18, high:25, pct_type:'asc' },
+                { id: 'a_deficiency', cat: 'A值模型', name: '管理缺陷代理分(0~43)',   low:10, high:20, pct_type:'asc' },
+                { id: 'a_accounting', cat: 'A值模型', name: '會計錯誤代理分(0~15)',   low:5,  high:10, pct_type:'asc' },
+                { id: 'a_symptom',    cat: 'A值模型', name: '破產徵兆代理分(0~42)',   low:10, high:20, pct_type:'asc' },
             ]},
         ]
     },
@@ -247,9 +265,19 @@ function renderSection(kpis, sec) {
         const targetCell = item.uid
             ? `<td class="num" style="cursor:pointer;color:#2980b9;text-decoration:underline;" title="點擊調整目標門檻" onclick="openKpiThreshold(${item.uid})">${fmt(low)} ~ ${fmt(high)}</td>`
             : `<td class="num" style="color:#999;" title="尚未在 KPI 門檻頁定義，點 KPI 門檻頁新增">${fmt(low)} ~ ${fmt(high)}</td>`;
+        const catBg = {
+            '獲利能力': '#fdebd0', '獲利績效': '#fdebd0',
+            '營運能力': '#d6eaf8',
+            '模型分析': '#e8daef', 'Z模型': '#e8daef', 'Z1模型': '#e8daef', 'Z2模型': '#e8daef', 'GGR模型': '#e8daef', 'BZ模型': '#e8daef',
+            'BZ巴萨利润': '#d5f5e3', '巴萨模型': '#d5f5e3',
+            '利潤異常': '#fadbd8', '資產異常': '#fadbd8',
+            '營運資產模型': '#d6eaf8',
+            '沃爾比重模型': '#fdebd0',
+            'A值模型': '#fadbd8',
+        };
         return `
             <tr>
-                <td style="background:${row.cat === '獲利能力' || row.cat === '獲利績效' ? '#fdebd0' : row.cat === '營運能力' ? '#d6eaf8' : row.cat === '模型分析' || row.cat === 'Z模型' || row.cat === 'BZ模型' ? '#e8daef' : row.cat === '利潤異常' || row.cat === '資產異常' ? '#fadbd8' : '#eaecee'};font-weight:bold;">${row.cat || item.category || '-'}</td>
+                <td style="background:${catBg[row.cat] || '#eaecee'};font-weight:bold;">${row.cat || item.category || '-'}</td>
                 <td style="text-align:left;">${row.name || item.name || item.id}</td>
                 ${targetCell}
                 <td class="num"><b style="color:${color==='RED'?'#e74c3c':color==='YELLOW'?'#e67e22':color==='GREEN'?'#27ae60':'#333'};">${fmt(v)}</b>${item.unit?`<span style="color:#7f8c8d;font-size:11px;"> ${item.unit}</span>`:''}</td>

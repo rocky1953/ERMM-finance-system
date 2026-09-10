@@ -72,6 +72,104 @@ const FORMULAS = {
     bz_debt_ratio:   { name: '(利潤總額+折舊+攤銷+利息支出)/流動負債', cat: 'BZ巴萨利润', f: s => (s.sale_exp_amt + (s.interest_amt||0)) * 100 / Math.max(1, s.AP_amt) },
     bz_receivable_turn:{name: '流動資產/流動負債 (流動比率)', cat: 'BZ巴萨利润', f: s => s.current_asset_amt / Math.max(1, s.AP_amt) },
     bz_quick:        { name: '(流動資產-存貨)/流動負債 (速動比率)', cat: 'BZ巴萨利润', f: s => (s.current_asset_amt - s.stock_P_amt - s.stock_M_amt - s.WIP_M_amt - s.WIP_labor_amt - s.WIP_EXP_amt) / Math.max(1, s.AP_amt) },
+
+    // ---------- 營運資產模型 (YG004) ----------
+    // 營運資產 = 營運資本 + 長期投資 = (流動資產 - 流動負債) + 長期投資
+    oa_working_asset:{ name: '營運資產額',        cat: '營運資產模型', f: s =>
+                        (s.current_asset_amt - Math.max(0, s.current_debet_amt||s.AP_amt)) + (s.LQ_asset_amt||0) },
+    oa_cover_cl:     { name: '營運資產/流動負債', cat: '營運資產模型', f: s => {
+                        const oa = (s.current_asset_amt - Math.max(0, s.current_debet_amt||s.AP_amt)) + (s.LQ_asset_amt||0);
+                        return oa / Math.max(1, s.current_debet_amt||s.AP_amt);
+                      }},
+    oa_wc_ratio:     { name: '營運資本比率(營運資本/流動資產)', cat: '營運資產模型', f: s =>
+                        (s.current_asset_amt - Math.max(0, s.current_debet_amt||s.AP_amt)) / Math.max(1, s.current_asset_amt) },
+    oa_equity_debt:  { name: '淨值/負債總額',      cat: '營運資產模型', f: s => {
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        const debt = s.ttl_debet_amt || (s.loan_amt + s.AP_amt + (s.LT_loan_amt||0));
+                        return eq / Math.max(1, debt);
+                      }},
+
+    // ---------- 沃爾比重模型 (Alexander Wall, YG004) ----------
+    // 綜合評分 = Σ(實際比率/標準比率 × 權重)，滿分 100
+    wall_score:      { name: '沃爾綜合評分(滿分100)', cat: '沃爾比重模型', f: s => {
+                        const FA = s.office_amt + s.building_amt + s.equipment_amt + s.vehicle_amt;
+                        const INV = s.stock_P_amt + s.stock_M_amt + s.WIP_M_amt;
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        const debt = s.ttl_debet_amt || (s.loan_amt + s.AP_amt + (s.LT_loan_amt||0));
+                        const items = [
+                          { r: s.current_asset_amt/Math.max(1,cl),  std: 2.0, w: 25 }, // 流動比率
+                          { r: eq/Math.max(1,debt),                 std: 1.5, w: 25 }, // 淨值/負債
+                          { r: s.ttl_asset_amt/Math.max(1,FA),      std: 2.5, w: 15 }, // 資產/固定資產
+                          { r: s.sale_cost_amt/Math.max(1,INV),     std: 8.0, w: 10 }, // 銷貨成本/存貨
+                          { r: s.sale_amt/Math.max(1,s.AR_amt),     std: 6.0, w: 10 }, // 銷貨額/應收
+                          { r: s.sale_amt/Math.max(1,FA),           std: 3.0, w: 10 }, // 銷貨額/固定資產
+                          { r: s.sale_amt/Math.max(1,eq),           std: 3.0, w: 5  }, // 銷貨額/淨值
+                        ];
+                        return items.reduce((acc, it) => acc + Math.min(it.r, it.std*1.5)/it.std * it.w, 0);
+                      }},
+    wall_de:         { name: '沃爾組件-淨值/負債(標準1.50)', cat: '沃爾比重模型', f: s => {
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        const debt = s.ttl_debet_amt || (s.loan_amt + s.AP_amt + (s.LT_loan_amt||0));
+                        return eq / Math.max(1, debt);
+                      }},
+    wall_af:         { name: '沃爾組件-總資產/固定資產(標準2.50)', cat: '沃爾比重模型', f: s => {
+                        const FA = s.office_amt + s.building_amt + s.equipment_amt + s.vehicle_amt;
+                        return s.ttl_asset_amt / Math.max(1, FA);
+                      }},
+    wall_se:         { name: '沃爾組件-銷售額/淨值(標準3.00)', cat: '沃爾比重模型', f: s => {
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        return s.sale_amt / Math.max(1, eq);
+                      }},
+
+    // ---------- A值模型 (Argenti A-score, YG004) ----------
+    // 管理缺陷(0~43) + 會計錯誤(0~15) + 破產徵兆(0~42)；>25 高風險，18~25 警戒
+    a_deficiency:    { name: 'A值-管理缺陷代理分(0~43)', cat: 'A值模型', f: (s, p) => {
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        const debt = s.ttl_debet_amt || (s.loan_amt + s.AP_amt + (s.LT_loan_amt||0));
+                        let score = 0;
+                        if (eq/Math.max(1,debt) < 0.3) score += 10;                        // 槓桿過高
+                        if (s.current_asset_amt/Math.max(1,cl) < 1.2) score += 8;          // 流動比率低
+                        if ((s.interest_amt||0) > 0 && (s.sale_exp_amt + s.interest_amt)/Math.max(0.01,s.interest_amt) < 3) score += 9; // 利息保障不足
+                        if (s.sale_exp_amt*100/Math.max(1,eq) < 5) score += 8;             // ROE<5%
+                        if (p && p.sale_amt > 0 && (s.sale_amt - p.sale_amt)/p.sale_amt < -0.05) score += 8; // 銷售下滑>5%
+                        return score;
+                      }},
+    a_accounting:    { name: 'A值-會計錯誤代理分(0~15)', cat: 'A值模型', f: s => {
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        const INV = s.stock_P_amt + s.stock_M_amt + s.WIP_M_amt;
+                        let score = 0;
+                        if ((s.cash_amt + s.deposite_amt)/Math.max(1,cl)*100 < 5) score += 8;   // 現金比率<5%
+                        if (365/Math.max(0.01, s.sale_amt/Math.max(1,s.AR_amt)) > 90) score += 7; // 應收天數>90
+                        return score;
+                      }},
+    a_symptom:       { name: 'A值-破產徵兆代理分(0~42)', cat: 'A值模型', f: s => {
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        let score = 0;
+                        if ((s.operation_profit_amt || s.sale_exp_amt) < 0) score += 15;   // 營業虧損
+                        if (s.current_asset_amt < cl) score += 12;                          // 營運資金為負
+                        if ((s.Z2_score || 0) > 0 && s.Z2_score < 1.1) score += 15;        // Z2 落入破產區
+                        return score;
+                      }},
+    a_total:         { name: 'A值-總分(>25高風險)', cat: 'A值模型', f: (s, p) => {
+                        const eq = s.stockholder_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt;
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        const debt = s.ttl_debet_amt || (s.loan_amt + s.AP_amt + (s.LT_loan_amt||0));
+                        let d = 0, a = 0, y = 0;
+                        if (eq/Math.max(1,debt) < 0.3) d += 10;
+                        if (s.current_asset_amt/Math.max(1,cl) < 1.2) d += 8;
+                        if ((s.interest_amt||0) > 0 && (s.sale_exp_amt + s.interest_amt)/Math.max(0.01,s.interest_amt) < 3) d += 9;
+                        if (s.sale_exp_amt*100/Math.max(1,eq) < 5) d += 8;
+                        if (p && p.sale_amt > 0 && (s.sale_amt - p.sale_amt)/p.sale_amt < -0.05) d += 8;
+                        const INV = s.stock_P_amt + s.stock_M_amt + s.WIP_M_amt;
+                        if ((s.cash_amt + s.deposite_amt)/Math.max(1,cl)*100 < 5) a += 8;
+                        if (365/Math.max(0.01, s.sale_amt/Math.max(1,s.AR_amt)) > 90) a += 7;
+                        if ((s.operation_profit_amt || s.sale_exp_amt) < 0) y += 15;
+                        if (s.current_asset_amt < cl) y += 12;
+                        if ((s.Z2_score || 0) > 0 && s.Z2_score < 1.1) y += 15;
+                        return d + a + y;
+                      }},
 };
 
 /**
