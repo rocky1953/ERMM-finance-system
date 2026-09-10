@@ -48,7 +48,6 @@
         document.getElementById('bep_cmRate_show').textContent    = fmtPct(c.cm_rate);
         document.getElementById('bep_cmRate_show2').textContent   = fmtPct(c.cm_rate);
         document.getElementById('bep_bep_show').textContent        = fmt(c.bep);
-        document.getElementById('bep_sale_show').textContent       = fmt(sale);
         document.getElementById('bep_sale_show2').textContent      = fmt(sale);
 
         const gapEl = document.getElementById('bep_gap_show');
@@ -94,6 +93,8 @@
             if (!j.success) { UI.toast(j.message, 'error'); return; }
             BEP = j.data;
             fillInputs(BEP);
+            const saleInput = document.getElementById('bep_sale_input');
+            if (saleInput) saleInput.value = BEP.sale_amt || 0;
             showCalc(BEP.sale_amt, getInputVals());
         } catch (e) { UI.toast('載入失敗: ' + e.message, 'error'); }
     }
@@ -120,14 +121,17 @@
             if (!j.success) { UI.toast(j.message, 'error'); return; }
             BEP = j.data;
             fillInputs(BEP);
+            const saleInput = document.getElementById('bep_sale_input');
+            if (saleInput) saleInput.value = BEP.sale_amt || 0;
             showCalc(BEP.sale_amt, getInputVals());
             UI.toast('已保存', 'success');
         } catch (e) { UI.toast('保存失敗: ' + e.message, 'error'); }
     }
 
     function liveCalc() {
-        if (!BEP) return;
-        showCalc(Number(BEP.sale_amt) || 0, getInputVals());
+        const saleEl = document.getElementById('bep_sale_input');
+        const sale = saleEl ? Number(saleEl.value) || 0 : 0;
+        showCalc(sale, getInputVals());
     }
 
     function getHTML() {
@@ -148,7 +152,7 @@
 
             + '<div class="bep-card"><h3>1. 邊際貢獻 = 銷售金額 - 變動成本</h3>'
             + '<div class="bep-formula" style="grid-template-columns:1fr 40px 1fr 40px 1fr;">'
-            + '<div class="bep-box sale"><div class="lbl">銷售金額</div><div class="val" id="bep_sale_show">-</div></div>'
+            + '<div class="bep-box sale"><div class="lbl">銷售金額 <span style="font-size:.7em;color:#888;">(可輸入試算)</span></div><input type="number" step="0.01" class="bep-input-sale" id="bep_sale_input" value="-"></div>'
             + '<div class="bep-op">-</div>'
             + '<div class="bep-box varCost bep-clickable" onclick="bepShowVarCostDetail()"><div class="lbl">變動成本 <span style="font-size:.7em;color:#888;">(點擊明細)</span></div><div class="val" id="bep_varCost_show">-</div></div>'
             + '<div class="bep-op">=</div>'
@@ -272,8 +276,10 @@
             + '.bep-edit .field.blue{background:#d4e6f1;border-left-color:#2980b9;}'
             + '.bep-edit .field.blue label{color:#1a5276;}'
             + '.bep-input-purple,.bep-input-yellow{width:100%;padding:4px 6px;border-radius:4px;font-weight:700;font-size:1.05em;}'
-            + '.bep-input-purple{border:1px solid #8e44ad;background:#fff;color:#6c3483;}'
+            + '.bep-input-purple{border:1px solid #8e44ad;background:#f5eef8;color:#6c3483;}'
             + '.bep-input-yellow{border:1px solid #f4d03f;background:#fffef9;color:#7d6608;}'
+            + '.bep-input-sale{width:100%;padding:6px 8px;border-radius:6px;font-weight:700;font-size:1.25em;text-align:center;border:1.5px solid #2980b9;background:#fff;color:#1a5276;outline:none;}'
+            + '.bep-input-sale:focus{box-shadow:0 0 0 2px rgba(41,128,185,0.25);}'
             + '.bep-gap-note{text-align:right;margin-top:10px;font-size:0.9em;}'
             + '.bep-gap-note .amt{font-size:1.2em;font-weight:700;}'
 
@@ -350,13 +356,11 @@
     function showVarCostDetail() {
         // 優先用閉包 BEP；若尚未初始化則從 DOM 顯示值解析
         let sale = 0;
-        if (BEP && BEP.sale_amt) {
+        const saleInput = document.getElementById('bep_sale_input');
+        if (saleInput && saleInput.value) {
+            sale = Number(saleInput.value) || 0;
+        } else if (BEP && BEP.sale_amt) {
             sale = Number(BEP.sale_amt) || 0;
-        } else {
-            var el = document.getElementById('bep_sale_show');
-            if (el && el.textContent && el.textContent !== '-') {
-                sale = Number(el.textContent.replace(/,/g, '')) || 0;
-            }
         }
         if (sale <= 0) { UI.toast('請先載入資料', 'warn'); return; }
 
@@ -700,7 +704,7 @@
 
     registerPage('bep', async function(container) {
         container.innerHTML = getHTML();
-        var ids = ['bep_consumable','bep_packaging','bep_processing','bep_misc_purchase',
+        var ids = ['bep_sale_input','bep_consumable','bep_packaging','bep_processing','bep_misc_purchase',
                    'bep_freight','bep_customs','bep_service_part_comp',
                    'bep_variable_expense','bep_fixed_cost'];
         ids.forEach(function(id) {
