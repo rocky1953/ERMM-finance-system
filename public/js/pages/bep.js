@@ -54,10 +54,20 @@
         const gapEl = document.getElementById('bep_gap_show');
         gapEl.textContent = fmt(c.gap);
         gapEl.style.color = c.gap >= 0 ? '#27ae60' : '#c0392b';
+        const label = document.getElementById('bep_gap_label');
         const arrow = document.getElementById('bep_gap_arrow');
-        if (arrow) {
-            if (c.gap >= 0) { arrow.textContent = ' 已達平衡'; arrow.style.color = '#27ae60'; }
-            else { arrow.textContent = ' 不足訂單'; arrow.style.color = '#c0392b'; }
+        if (label && arrow) {
+            if (c.gap >= 0) {
+                label.textContent = '超額訂單金額';
+                label.style.color = '#27ae60';
+                arrow.textContent = ' 已達平衡';
+                arrow.style.color = '#27ae60';
+            } else {
+                label.textContent = '不足訂單金額';
+                label.style.color = '#c0392b';
+                arrow.textContent = ' 未達平衡';
+                arrow.style.color = '#c0392b';
+            }
         }
     }
 
@@ -168,7 +178,8 @@
             + '<div class="bep-box bep"><div class="lbl">損益平衡點</div><div class="val" id="bep_bep_show">-</div></div>'
             + '</div>'
             + '<div class="bep-gap-note">'
-            + '不足訂單金額: <span id="bep_gap_show" class="amt" style="color:#c0392b;">-</span>'
+            + '<span id="bep_gap_label" class="lbl-gap" style="color:#c0392b;">不足訂單金額</span>'
+            + ': <span id="bep_gap_show" class="amt" style="color:#c0392b;">-</span>'
             + '<span id="bep_gap_arrow"></span>'
             + '</div>'
             + '</div>'
