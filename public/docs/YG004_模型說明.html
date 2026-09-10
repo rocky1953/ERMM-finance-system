@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YG004 預測模型分析 — 數據說明文件</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Microsoft JhengHei','Segoe UI',sans-serif; background:#f5f6fa; color:#2c3e50; line-height:1.8; }
+  .container { max-width:1100px; margin:0 auto; padding:30px; }
+  h1 { font-size:1.8em; color:#1a5276; border-bottom:3px solid #2980b9; padding-bottom:10px; margin-bottom:25px; }
+  h2 { font-size:1.4em; margin-top:35px; padding:10px 15px; border-radius:6px; color:#fff; }
+  h3 { font-size:1.15em; margin-top:20px; color:#1a5276; border-left:4px solid #2980b9; padding-left:10px; }
+  p { margin:10px 0; }
+  .note { background:#fef9e7; border-left:4px solid #f1c40f; padding:12px 16px; border-radius:4px; margin:15px 0; }
+  .warn { background:#fdedec; border-left:4px solid #e74c3c; padding:12px 16px; border-radius:4px; margin:15px 0; }
+  .tip { background:#eafaf1; border-left:4px solid #27ae60; padding:12px 16px; border-radius:4px; margin:15px 0; }
+  table { width:100%; border-collapse:collapse; margin:15px 0; font-size:0.95em; }
+  th { background:#34495e; color:#fff; padding:10px 12px; text-align:left; }
+  td { padding:8px 12px; border-bottom:1px solid #ddd; }
+  tr:nth-child(even) { background:#f8f9fa; }
+  .formula { background:#f4f6f7; border:1px solid #d5d8dc; border-radius:6px; padding:15px; font-family:'Consolas','Courier New',monospace; font-size:0.95em; margin:10px 0; overflow-x:auto; }
+  .green { color:#27ae60; font-weight:bold; }
+  .red { color:#e74c3c; font-weight:bold; }
+  .yellow { color:#f39c12; font-weight:bold; }
+  .card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); padding:25px; margin-bottom:25px; }
+  .toc { background:#fff; border-radius:8px; padding:20px 25px; margin-bottom:30px; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+  .toc a { text-decoration:none; color:#2980b9; }
+  .toc a:hover { text-decoration:underline; }
+  .toc li { margin:5px 0; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:0.8em; font-weight:bold; color:#fff; }
+  .badge-blue { background:#2e86c1; }
+  .badge-orange { background:#f39c12; }
+  .badge-red { background:#c0392b; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>YG004 預測模型分析 — 數據說明文件</h1>
+
+<div class="note">
+  <b>適用頁面：</b>YG004 財務【預測模型分析】指標<br>
+  <b>資料來源：</b><code>MGM_finance_summary</code> 表（月度財務彙總）<br>
+  <b>更新頻率：</b>每月由日記帳 <code>MGM_casher_details</code> 彙算後即時計算<br>
+  <b>本文件涵蓋：</b>營運資產模型、沃爾比重模型、A值模型（共 12 項指標）
+</div>
+
+<div class="toc">
+  <b>目錄</b>
+  <ol>
+    <li><a href="#oa">營運資產模型 <span class="badge badge-blue">4 指標</span></a></li>
+    <li><a href="#wall">沃爾比重模型 (Alexander Wall) <span class="badge badge-orange">4 指標</span></a></li>
+    <li><a href="#argent">A值模型 (Argenti A-score) <span class="badge badge-red">4 指標</span></a></li>
+    <li><a href="#threshold">門檻與燈號對照表</a></li>
+    <li><a href="#fields">資料庫欄位對照</a></li>
+    <li><a href="#example">HM 2025/06 實例計算</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 營運資產模型 ==================== -->
+<div class="card" id="oa">
+<h2 style="background:linear-gradient(135deg,#1f618d,#2e86c1);">一、營運資產模型 <span class="badge badge-blue">Operating Asset Model</span></h2>
+
+<p><b>模型目的：</b>衡量企業日常營運所投入的資產規模與結構是否健康，判斷短期償債能力與資產配置效率。營運資產過低可能無法支撐營運，過高則資金閒置。</p>
+
+<h3>1.1 營運資產額</h3>
+<div class="formula">
+營運資產額 = 營運資本 + 長期投資<br>
+營運資本 = 流動資產 − 流動負債<br>
+<br>
+来源欄位：<br>
+  current_asset_amt  （流動資產）<br>
+  current_debet_amt  （流動負債，若無則取 AP_amt 應付帳款）<br>
+  LQ_asset_amt       （長期投資）
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>oa_working_asset</code></td></tr>
+  <tr><td>數值類型</td><td>金額（元）</td></tr>
+  <tr><td>門檻</td><td>無固定門檻，以同業比較為主</td></tr>
+  <tr><td>判讀</td><td>正值=營運資金充足；負值=短期償債壓力</td></tr>
+</table>
+
+<h3>1.2 營運資產 / 流動負債</h3>
+<div class="formula">
+比率 = 營運資產額 ÷ 流動負債
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>oa_cover_cl</code></td></tr>
+  <tr><td>門檻綠燈</td><td class="green">≥ 1.0（營運資產足以覆蓋流動負債）</td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">0.5 ~ 1.0（警戒區）</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">&lt; 0.5（覆蓋不足，高風險）</td></tr>
+</table>
+
+<h3>1.3 營運資本比率</h3>
+<div class="formula">
+比率 = 營運資本 ÷ 流動資產<br>
+  = (流動資產 − 流動負債) ÷ 流動資產
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>oa_wc_ratio</code></td></tr>
+  <tr><td>門檻綠燈</td><td class="green">≥ 0.3（流動資產中 30%+ 為淨營運資金）</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">&lt; 0.1（流動資產幾乎全被短期負債佔用）</td></tr>
+  <tr><td>判讀</td><td>越高表示短期財務彈性越大</td></tr>
+</table>
+
+<h3>1.4 淨值 / 負債總額</h3>
+<div class="formula">
+比率 = 股東權益淨值 ÷ 負債總額<br>
+<br>
+淨值 = stockholder_amt（優先）<br>
+     或 captial_stock + captial_reserve + accumulated_amt<br>
+負債 = ttl_debet_amt（優先）<br>
+     或 loan_amt + AP_amt + LT_loan_amt
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>oa_equity_debt</code></td></tr>
+  <tr><td>門檻綠燈</td><td class="green">≥ 1.0（淨值 ≥ 負債，財務穩健）</td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">0.5 ~ 1.0</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">&lt; 0.5（負債遠大於淨值，槓桿過高）</td></tr>
+</table>
+
+<div class="tip">
+  <b>模型解讀：</b>四項指標須合併判讀。若營運資產額為負、且淨值/負債 &lt; 0.5，表示企業短期與長期償債能力均不足，需啟動資金規劃。
+</div>
+</div>
+
+<!-- ==================== 沃爾比重模型 ==================== -->
+<div class="card" id="wall">
+<h2 style="background:linear-gradient(135deg,#b9770e,#f39c12);">二、沃爾比重模型 <span class="badge badge-orange">Alexander Wall Model</span></h2>
+
+<p><b>模型目的：</b>Alexander Wall（1928）提出的綜合信用評分法，選定 7 項關鍵比率，各自設定標準值與權重，以「實際比率 ÷ 標準比率 × 權重」加總得出綜合評分（滿分 100 分）。分數越高代表財務體質越好。</p>
+
+<h3>2.1 沃爾綜合評分（滿分 100）</h3>
+<div class="formula">
+綜合評分 = Σ ( 實際比率_i ÷ 標準比率_i × 權重_i )<br>
+<br>
+各組件明細（7項）：<br>
+┌──────────────────────────────┬────────┬────────┬──────────┐<br>
+│  比率項目                     │ 標準值 │ 權重(%) │ 計算方式                     │<br>
+├──────────────────────────────┼────────┼────────┼──────────┤<br>
+│  ① 流動比率                   │  2.0   │   25   │ 流動資產 ÷ 流動負債          │<br>
+│  ② 淨值 / 負債                │  1.5   │   25   │ 股東權益 ÷ 負債總額          │<br>
+│  ③ 總資產 / 固定資產          │  2.5   │   15   │ ttl_asset_amt ÷ 固定資產    │<br>
+│  ④ 銷貨成本 / 存貨            │  8.0   │   10   │ sale_cost_amt ÷ 存貨合計    │<br>
+│  ⑤ 銷售額 / 應收帳款          │  6.0   │   10   │ sale_amt ÷ AR_amt           │<br>
+│  ⑥ 銷售額 / 固定資產          │  3.0   │   10   │ sale_amt ÷ 固定資產          │<br>
+│  ⑦ 銷售額 / 淨值              │  3.0   │    5   │ sale_amt ÷ 股東權益         │<br>
+└──────────────────────────────┴────────┴────────┴──────────┘<br>
+<br>
+固定資產 = office_amt + building_amt + equipment_amt + vehicle_amt<br>
+存貨合計 = stock_P_amt + stock_M_amt + WIP_M_amt<br>
+<br>
+注意：單項得分上限 = 標準值 × 1.5（防止異常高分拉抬總分）
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>wall_score</code></td></tr>
+  <tr><td>門檻綠燈</td><td class="green">≥ 100（財務體質優良）</td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">80 ~ 100（可接受，需關注）</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">&lt; 80（財務體質偏弱）</td></tr>
+</table>
+
+<h3>2.2 淨值 / 負債（標準 1.50）</h3>
+<div class="formula">
+比率 = 股東權益 ÷ 負債總額<br>
+（與營運資產模型 1.4 相同公式，但在此用於 Wall 評分組件展示）
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>wall_de</code></td></tr>
+  <tr><td>標準值</td><td>1.50</td></tr>
+  <tr><td>權重</td><td>25%（7 項中最高）</td></tr>
+</table>
+
+<h3>2.3 總資產 / 固定資產（標準 2.50）</h3>
+<div class="formula">
+比率 = ttl_asset_amt ÷ (office_amt + building_amt + equipment_amt + vehicle_amt)
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>wall_af</code></td></tr>
+  <tr><td>標準值</td><td>2.50</td></tr>
+  <tr><td>權重</td><td>15%</td></tr>
+</table>
+
+<h3>2.4 銷售額 / 淨值（標準 3.00）</h3>
+<div class="formula">
+比率 = sale_amt ÷ 股東權益
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>wall_se</code></td></tr>
+  <tr><td>標準值</td><td>3.00</td></tr>
+  <tr><td>權重</td><td>5%</td></tr>
+</table>
+
+<div class="tip">
+  <b>模型解讀：</b>Wall 模型適合製造業與貿易業。綜合評分 &lt; 80 時，可逐項檢查哪項比率偏離標準最多，針對性改善。若多項同時偏低，代表整體財務結構有系統性問題。
+</div>
+</div>
+
+<!-- ==================== A值模型 ==================== -->
+<div class="card" id="argent">
+<h2 style="background:linear-gradient(135deg,#922b21,#c0392b);">三、A值模型 <span class="badge badge-red">Argenti A-score Model</span></h2>
+
+<p><b>模型目的：</b>Argenti（1976）提出的破產預測模型，以「管理缺陷 + 會計錯誤 + 破產徵兆」三維度累計分數，分數越高代表破產風險越大。本系統以財務數據代理量化各構面，非問卷調查版。</p>
+
+<div class="warn">
+  <b>注意：</b>原始 Argenti 模型部分指標為質化判斷（如管理品質、會計造假），本系統以可量化財務比率代理，分數為近似值，僅供預警參考。
+</div>
+
+<h3>3.1 管理缺陷代理分（0~43）</h3>
+<div class="formula">
+構面 A = 以下條件加總（每項觸發即加分）：<br>
+┌──────────────────────────────────────────┬────────┐<br>
+│  觸發條件                                  │ 配分   │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  淨值/負債 &lt; 0.3（槓桿過高）               │  +10   │<br>
+│  流動比率 &lt; 1.2（短期償債弱）              │  +8    │<br>
+│  利息保障倍數 &lt; 3（利潤+利息 / 利息 &lt; 3） │  +9    │<br>
+│  ROE &lt; 5%（利潤/淨值 &lt; 5%）              │  +8    │<br>
+│  銷售額年減 &gt; 5%（與前月比較）            │  +8    │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  最高合計                                  │   43   │<br>
+└──────────────────────────────────────────┴────────┘<br>
+<br>
+利息保障倍數 = (sale_exp_amt + interest_amt) ÷ interest_amt<br>
+ROE = sale_exp_amt × 100 ÷ 股東權益
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>a_deficiency</code></td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">≥ 10（管理面有瑕疵）</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">≥ 20（管理面嚴重缺陷）</td></tr>
+</table>
+
+<h3>3.2 會計錯誤代理分（0~15）</h3>
+<div class="formula">
+構面 B = 以下條件加總：<br>
+┌──────────────────────────────────────────┬────────┐<br>
+│  觸發條件                                  │ 配分   │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  現金比率 &lt; 5%（(現金+存款) / 流動負債）   │  +8    │<br>
+│  應收帳款天數 &gt; 90 天                     │  +7    │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  最高合計                                  │   15   │<br>
+└──────────────────────────────────────────┴────────┘<br>
+<br>
+現金比率 = (cash_amt + deposite_amt) ÷ 流動負債 × 100<br>
+應收天數 = 365 ÷ (銷售額 ÷ AR_amt)
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>a_accounting</code></td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">≥ 5</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">≥ 10</td></tr>
+</table>
+
+<h3>3.3 破產徵兆代理分（0~42）</h3>
+<div class="formula">
+構面 C = 以下條件加總：<br>
+┌──────────────────────────────────────────┬────────┐<br>
+│  觸發條件                                  │ 配分   │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  營業虧損（operation_profit 或 sale_exp &lt; 0）│ +15  │<br>
+│  營運資金為負（流動資產 &lt; 流動負債）       │  +12   │<br>
+│  Z2 值 &lt; 1.1（落入破產區）                │  +15   │<br>
+├──────────────────────────────────────────┼────────┤<br>
+│  最高合計                                  │   42   │<br>
+└──────────────────────────────────────────┴────────┘
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>a_symptom</code></td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">≥ 10</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">≥ 20</td></tr>
+</table>
+
+<h3>3.4 A值總分（&gt;25 高風險）</h3>
+<div class="formula">
+A 值總分 = 管理缺陷分(A) + 會計錯誤分(B) + 破產徵兆分(C)<br>
+範圍：0 ~ 100（43+15+42）
+</div>
+<table>
+  <tr><th>項目</th><th>說明</th></tr>
+  <tr><td>指標 ID</td><td><code>a_total</code></td></tr>
+  <tr><td>門檻綠燈</td><td class="green">≤ 18（安全）</td></tr>
+  <tr><td>門檻黃燈</td><td class="yellow">18 ~ 25（警戒區）</td></tr>
+  <tr><td>門檻紅燈</td><td class="red">&gt; 25（高破產風險）</td></tr>
+  <tr><td>注意</td><td>A值為<b>越高越危險</b>（與 Z / Wall 模型相反）</td></tr>
+</table>
+
+<div class="warn">
+  <b>判讀方向：</b>與 Z 模型和 Wall 模型相反，A 值<b>越高越危險</b>。總分 &gt; 25 應立即啟動財務危機應變流程；18~25 須逐項檢查哪個構面失分最多，制定改善計畫。
+</div>
+</div>
+
+<!-- ==================== 門檻對照 ==================== -->
+<div class="card" id="threshold">
+<h2 style="background:linear-gradient(135deg,#34495e,#4a627a);">四、門檻與燈號對照總表</h2>
+
+<table>
+  <tr>
+    <th>模型</th><th>指標 ID</th><th>指標名稱</th>
+    <th>紅燈</th><th>黃燈</th><th>綠燈</th><th>方向</th>
+  </tr>
+  <!-- 營運資產 -->
+  <tr><td rowspan="4">營運資產</td>
+    <td><code>oa_working_asset</code></td><td>營運資產額</td>
+    <td>—</td><td>—</td><td>正值</td><td>越高越好</td></tr>
+  <tr><td><code>oa_cover_cl</code></td><td>營運資產/流動負債</td>
+    <td class="red">&lt;0.5</td><td class="yellow">0.5~1.0</td><td class="green">≥1.0</td><td>越高越好</td></tr>
+  <tr><td><code>oa_wc_ratio</code></td><td>營運資本比率</td>
+    <td class="red">&lt;0.1</td><td class="yellow">0.1~0.3</td><td class="green">≥0.3</td><td>越高越好</td></tr>
+  <tr><td><code>oa_equity_debt</code></td><td>淨值/負債</td>
+    <td class="red">&lt;0.5</td><td class="yellow">0.5~1.0</td><td class="green">≥1.0</td><td>越高越好</td></tr>
+  <!-- 沃爾 -->
+  <tr><td rowspan="4">沃爾比重</td>
+    <td><code>wall_score</code></td><td>綜合評分</td>
+    <td class="red">&lt;80</td><td class="yellow">80~100</td><td class="green">≥100</td><td>越高越好</td></tr>
+  <tr><td><code>wall_de</code></td><td>淨值/負債</td>
+    <td class="red">&lt;1.0</td><td class="yellow">1.0~1.5</td><td class="green">≥1.5</td><td>越高越好</td></tr>
+  <tr><td><code>wall_af</code></td><td>總資產/固定資產</td>
+    <td class="red">&lt;1.5</td><td class="yellow">1.5~2.5</td><td class="green">≥2.5</td><td>越高越好</td></tr>
+  <tr><td><code>wall_se</code></td><td>銷售額/淨值</td>
+    <td class="red">&lt;2.0</td><td class="yellow">2.0~3.0</td><td class="green">≥3.0</td><td>越高越好</td></tr>
+  <!-- A值 -->
+  <tr><td rowspan="4">A值模型</td>
+    <td><code>a_total</code></td><td>總分</td>
+    <td class="red">&gt;25</td><td class="yellow">18~25</td><td class="green">≤18</td><td class="red">越高越危險</td></tr>
+  <tr><td><code>a_deficiency</code></td><td>管理缺陷分</td>
+    <td class="red">≥20</td><td class="yellow">10~20</td><td class="green">&lt;10</td><td class="red">越高越危險</td></tr>
+  <tr><td><code>a_accounting</code></td><td>會計錯誤分</td>
+    <td class="red">≥10</td><td class="yellow">5~10</td><td class="green">&lt;5</td><td class="red">越高越危險</td></tr>
+  <tr><td><code>a_symptom</code></td><td>破產徵兆分</td>
+    <td class="red">≥20</td><td class="yellow">10~20</td><td class="green">&lt;10</td><td class="red">越高越危險</td></tr>
+</table>
+</div>
+
+<!-- ==================== 欄位對照 ==================== -->
+<div class="card" id="fields">
+<h2 style="background:linear-gradient(135deg,#34495e,#4a627a);">五、資料庫欄位對照</h2>
+
+<p>以下列出三個模型所用到的 <code>MGM_finance_summary</code> 表欄位：</p>
+
+<table>
+  <tr><th>欄位名</th><th>中文意義</th><th>使用模型</th></tr>
+  <tr><td><code>current_asset_amt</code></td><td>流動資產</td><td>營運資產 / Wall / A值</td></tr>
+  <tr><td><code>current_debet_amt</code></td><td>流動負債</td><td>營運資產 / Wall / A值</td></tr>
+  <tr><td><code>AP_amt</code></td><td>應付帳款（流動負債 fallback）</td><td>營運資產 / Wall / A值</td></tr>
+  <tr><td><code>LQ_asset_amt</code></td><td>長期投資</td><td>營運資產</td></tr>
+  <tr><td><code>ttl_asset_amt</code></td><td>資產總額</td><td>Wall</td></tr>
+  <tr><td><code>ttl_debet_amt</code></td><td>負債總額</td><td>營運資產 / Wall / A值</td></tr>
+  <tr><td><code>loan_amt</code></td><td>短期借款</td><td>營運資產 / Wall（負債 fallback）</td></tr>
+  <tr><td><code>LT_loan_amt</code></td><td>長期借款</td><td>營運資產 / Wall（負債 fallback）</td></tr>
+  <tr><td><code>stockholder_amt</code></td><td>股東權益（優先）</td><td>營運資產 / Wall / A值</td></tr>
+  <tr><td><code>captial_stock</code></td><td>股本</td><td>權益 fallback</td></tr>
+  <tr><td><code>captial_reserve</code></td><td>資本公積</td><td>權益 fallback</td></tr>
+  <tr><td><code>accumulated_amt</code></td><td>保留盈餘</td><td>權益 fallback</td></tr>
+  <tr><td><code>office_amt</code></td><td>辦公設備</td><td>Wall（固定資產）</td></tr>
+  <tr><td><code>building_amt</code></td><td>房屋建築</td><td>Wall（固定資產）</td></tr>
+  <tr><td><code>equipment_amt</code></td><td>機器設備</td><td>Wall（固定資產）</td></tr>
+  <tr><td><code>vehicle_amt</code></td><td>運輸設備</td><td>Wall（固定資產）</td></tr>
+  <tr><td><code>stock_P_amt</code></td><td>成品存貨</td><td>Wall（存貨）</td></tr>
+  <tr><td><code>stock_M_amt</code></td><td>原料存貨</td><td>Wall（存貨）</td></tr>
+  <tr><td><code>WIP_M_amt</code></td><td>在製品原料</td><td>Wall（存貨）</td></tr>
+  <tr><td><code>cash_amt</code></td><td>現金</td><td>A值</td></tr>
+  <tr><td><code>deposite_amt</code></td><td>銀行存款</td><td>A值</td></tr>
+  <tr><td><code>AR_amt</code></td><td>應收帳款</td><td>Wall / A值</td></tr>
+  <tr><td><code>sale_amt</code></td><td>銷售額</td><td>Wall / A值</td></tr>
+  <tr><td><code>sale_cost_amt</code></td><td>銷貨成本</td><td>Wall</td></tr>
+  <tr><td><code>sale_exp_amt</code></td><td>稅前利潤</td><td>A值</td></tr>
+  <tr><td><code>interest_amt</code></td><td>利息支出</td><td>A值</td></tr>
+  <tr><td><code>operation_profit_amt</code></td><td>營業利潤</td><td>A值</td></tr>
+  <tr><td><code>Z2_score</code></td><td>Z2 模型分數</td><td>A值（交叉引用）</td></tr>
+</table>
+
+<div class="note">
+  <b>fallback 機制：</b>當 <code>stockholder_amt</code> 為空時，自動由 <code>captial_stock + captial_reserve + accumulated_amt</code> 組合；當 <code>ttl_debet_amt</code> 為空時，由 <code>loan_amt + AP_amt + LT_loan_amt</code> 組合；當 <code>current_debet_amt</code> 為空時取 <code>AP_amt</code>。確保所有月份都能算出值。
+</div>
+</div>
+
+<!-- ==================== 實例計算 ==================== -->
+<div class="card" id="example">
+<h2 style="background:linear-gradient(135deg,#34495e,#4a627a);">六、HM 2025/06 實例計算</h2>
+
+<p>以 HM 公司 2025 年 6 月資料為例，展示各模型計算過程與結果：</p>
+
+<h3>6.1 原始數據（HM 2025/06）</h3>
+<table>
+  <tr><th>欄位</th><th>數值</th><th>欄位</th><th>數值</th></tr>
+  <tr><td>current_asset_amt</td><td>2,651,260.14</td><td>current_debet_amt</td><td>3,631,675.83</td></tr>
+  <tr><td>ttl_asset_amt</td><td>7,850,960.00</td><td>ttl_debet_amt</td><td>3,844,780.00</td></tr>
+  <tr><td>stockholder_amt</td><td>3,458,140.00</td><td>sale_amt</td><td>32,966,679.60</td></tr>
+  <tr><td>sale_exp_amt</td><td>1,727,578.94</td><td>interest_amt</td><td>283,721.00</td></tr>
+  <tr><td>cash_amt + deposite_amt</td><td>1,497,860.00</td><td>AR_amt</td><td>8,015,760.00</td></tr>
+  <tr><td>固定資產合計</td><td>3,152,400.00</td><td>存貨合計</td><td>623,620.00</td></tr>
+</table>
+
+<h3>6.2 營運資產模型計算</h3>
+<div class="formula">
+營運資產額 = (2,651,260 − 3,631,676) + 0 = −980,416 🔴 負值<br>
+營運資產/流動負債 = −980,416 ÷ 3,631,676 = −0.27 🔴 <br>
+營運資本比率 = −980,416 ÷ 2,651,260 = −0.37 🔴 <br>
+淨值/負債 = 3,458,140 ÷ 3,844,780 = 0.90 🟡 警戒
+</div>
+
+<h3>6.3 沃爾比重模型計算</h3>
+<div class="formula">
+① 流動比率 = 2,651,260 ÷ 3,631,676 = 0.73 → 0.73/2.0×25 = 9.1<br>
+② 淨值/負債 = 3,458,140 ÷ 3,844,780 = 0.90 → 0.90/1.5×25 = 15.0<br>
+③ 總資產/固定資產 = 7,850,960 ÷ 3,152,400 = 2.49 → 2.49/2.5×15 = 14.9<br>
+④ 銷貨成本/存貨 = (sale_cost) ÷ 623,620 → 假設 24M/623K = 38.5 → cap 3.75×10 = 37.5<br>
+⑤ 銷售額/應收 = 32,966,680 ÷ 8,015,760 = 4.11 → 4.11/6.0×10 = 6.9<br>
+⑥ 銷售額/固定資產 = 32,966,680 ÷ 3,152,400 = 10.46 → cap 4.5×10 = 45.0...<br>
+⑦ 銷售額/淨值 = 32,966,680 ÷ 3,458,140 = 9.53 → cap 4.5×5 = 22.5<br>
+<br>
+綜合評分 ≈ 41.7 🔴 （&lt; 80，財務體質偏弱）
+</div>
+
+<h3>6.4 A值模型計算</h3>
+<div class="formula">
+管理缺陷：<br>
+  淨值/負債 = 0.90 ≥ 0.3 → 不觸發 (+0)<br>
+  流動比率 = 0.73 &lt; 1.2 → 觸發 (+8)<br>
+  利息保障 = (1,727,579 + 283,721) ÷ 283,721 = 7.09 ≥ 3 → 不觸發 (+0)<br>
+  ROE = 1,727,579 ÷ 3,458,140 × 100 = 50% ≥ 5% → 不觸發 (+0)<br>
+  → 缺陷分 = 8<br>
+<br>
+會計錯誤：<br>
+  現金比率 = 1,497,860 ÷ 3,631,676 × 100 = 41% ≥ 5% → 不觸發 (+0)<br>
+  應收天數 = 365 ÷ 4.11 = 89 天 ≤ 90 → 不觸發 (+0)<br>
+  → 會計錯誤分 = 0<br>
+<br>
+破產徵兆：<br>
+  sale_exp = 1,727,579 &gt; 0 → 不觸發 (+0)<br>
+  流動資產 &lt; 流動負債 → 觸發 (+12)<br>
+  Z2（由 Altman 模型算出，HM 約 1.5）≥ 1.1 → 不觸發 (+0)<br>
+  → 破產徵兆分 = 12<br>
+<br>
+A 值總分 = 8 + 0 + 12 = 20 🟡 警戒區
+</div>
+
+<div class="warn">
+  <b>結論：</b>HM 2025/06 三模型綜合判讀：<br>
+  • 營運資產模型 → 🔴 營運資金為負，短期償債壓力大<br>
+  • 沃爾比重 → 🔴 綜合評分偏低，多項比率未達標準<br>
+  • A值模型 → 🟡 總分 20 在警戒區，主因為流動比率不足<br>
+  <br>
+  建議：增加流動資產（收回應收、處分閒置資產）或降低流動負債（展延付款），改善流動比率至 1.2 以上。
+</div>
+</div>
+
+<div style="text-align:center; padding:20px; color:#95a5a6; font-size:0.85em;">
+  ERMM 財務管理系統 — YG004 預測模型分析說明文件<br>
+  Generated 2025-09-10 | 系統版本：Express + MySQL + Vanilla JS
+</div>
+
+</div>
+</body>
+</html>
