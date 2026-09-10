@@ -11,25 +11,51 @@ const { ok, fail, fail500 } = require('../utils/response');
 
 // ===== 公式庫（使用 MGM_finance_summary 現成欄位）=====
 // s = summary row, p = prev month row
+// ★ 關鍵：current_debet_amt = 流動負債總額, ttl_debet_amt = 負債總額, stockholder_amt = 股東權益
 const FORMULAS = {
     // ---------- 償債能力 (YG001) ----------
-    current_ratio:   { name: '流動比率',       cat: '償債能力', f: s => s.current_asset_amt / Math.max(1, s.AP_amt + s.AP_tax_amt + s.AP_salary_amt) },
-    quick_ratio:     { name: '速動比率',       cat: '償債能力', f: s => (s.current_asset_amt - s.stock_P_amt - s.stock_M_amt - s.WIP_M_amt - s.WIP_labor_amt - s.WIP_EXP_amt) / Math.max(1, s.AP_amt) },
-    debt_ratio:      { name: '負債比率(%)',    cat: '償債能力', f: s => (s.loan_amt + s.AP_amt + s.AP_tax_amt + s.AP_salary_amt + s.AP_other_amt) * 100 / Math.max(1, s.ttl_asset_amt) },
-    interest_cov:    { name: '利息保障倍數',   cat: '償債能力', f: s => (s.sale_exp_amt + s.interest_amt) / Math.max(0.01, s.interest_amt) },
-    cash_ratio:      { name: '現金比率(%)',    cat: '償債能力', f: s => (s.cash_amt + s.deposite_amt) * 100 / Math.max(1, s.AP_amt) },
+    current_ratio:   { name: '流動比率',       cat: '償債能力', f: s => s.current_asset_amt / Math.max(1, s.current_debet_amt || s.AP_amt) },
+    quick_ratio:     { name: '速動比率',       cat: '償債能力', f: s => {
+                        const inv = (s.stock_P_amt||0)+(s.stock_M_amt||0)+(s.WIP_M_amt||0)+(s.WIP_labor_amt||0)+(s.WIP_EXP_amt||0);
+                        return (s.current_asset_amt - inv) / Math.max(1, s.current_debet_amt || s.AP_amt);
+                      }},
+    debt_ratio:      { name: '負債比率(%)',    cat: '償債能力', f: s => {
+                        const debt = s.ttl_debet_amt !== undefined && s.ttl_debet_amt !== null ? s.ttl_debet_amt : (s.loan_amt||0) + (s.AP_amt||0) + (s.LT_loan_amt||0);
+                        return debt * 100 / Math.max(1, s.ttl_asset_amt);
+                      }},
+    interest_cov:    { name: '利息保障倍數',   cat: '償債能力', f: s => {
+                        const int = s.interest_amt || 0;
+                        if (int <= 0) return null; // 無利息費用 → 無法計算，顯示 N/A
+                        return ((s.sale_exp_amt||0) + int) / int;
+                      }},
+    cash_ratio:      { name: '現金比率(%)',    cat: '償債能力', f: s => {
+                        const cl = s.current_debet_amt || s.AP_amt;
+                        return (s.cash_amt + s.deposite_amt) * 100 / Math.max(1, cl);
+                      }},
 
     // ---------- 營運能力 ----------
-    inventory_turn:  { name: '存貨周轉率',     cat: '營運能力', f: s => s.sale_cost_amt / Math.max(1, s.stock_P_amt + s.stock_M_amt + s.WIP_M_amt + s.WIP_labor_amt + s.WIP_EXP_amt + s.stock_transit_amt + s.stock_value_amt) },
+    inventory_turn:  { name: '存貨周轉率',     cat: '營運能力', f: s => {
+                        const inv = (s.stock_P_amt||0)+(s.stock_M_amt||0)+(s.WIP_M_amt||0)+(s.WIP_labor_amt||0)+(s.WIP_EXP_amt||0)+(s.stock_transit_amt||0)+(s.stock_value_amt||0);
+                        return s.sale_cost_amt / Math.max(1, inv);
+                      }},
     ar_turn:         { name: '應收帳款周轉率', cat: '營運能力', f: s => s.sale_amt / Math.max(1, s.AR_amt) },
     ar_days:         { name: '應收帳款周轉天數', cat: '營運能力', f: s => 365 / Math.max(0.01, s.sale_amt / Math.max(1, s.AR_amt)) },
     total_asset_turn:{ name: '總資產周轉率',   cat: '營運能力', f: s => s.sale_amt / Math.max(1, s.ttl_asset_amt) },
-    fixed_asset_turn:{ name: '固定資產周轉率', cat: '營運能力', f: s => s.sale_amt / Math.max(1, s.office_amt + s.building_amt + s.equipment_amt + s.vehicle_amt + s.intangible_amt) },
-    equity_turn:     { name: '股東權益周轉率', cat: '營運能力', f: s => s.sale_amt / Math.max(1, s.equity_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt) },
+    fixed_asset_turn:{ name: '固定資產周轉率', cat: '營運能力', f: s => {
+                        const FA = (s.office_amt||0)+(s.building_amt||0)+(s.equipment_amt||0)+(s.vehicle_amt||0)+(s.intangible_amt||0);
+                        return s.sale_amt / Math.max(1, FA);
+                      }},
+    equity_turn:     { name: '股東權益周轉率', cat: '營運能力', f: s => {
+                        const eq = (s.stockholder_amt !== undefined && s.stockholder_amt !== null && s.stockholder_amt !== 0)
+                                   ? s.stockholder_amt
+                                   : (s.captial_stock||0) + (s.captial_reserve||0) + (s.accumulated_amt||0);
+                        return s.sale_amt / Math.max(1, eq);
+                      }},
     cash_conv_days:  { name: '現金周轉天數',   cat: '營運能力', f: s => {
-                        const itd = 365 / Math.max(0.01, s.sale_cost_amt / Math.max(1, s.stock_P_amt + s.stock_M_amt + s.WIP_M_amt));
+                        const inv = (s.stock_P_amt||0)+(s.stock_M_amt||0)+(s.WIP_M_amt||0);
+                        const itd = 365 / Math.max(0.01, s.sale_cost_amt / Math.max(1, inv));
                         const ard = 365 / Math.max(0.01, s.sale_amt / Math.max(1, s.AR_amt));
-                        const apd = 365 / Math.max(0.01, s.sale_cost_amt / Math.max(1, s.AP_amt));
+                        const apd = 365 / Math.max(0.01, s.sale_cost_amt / Math.max(1, s.AP_amt||1));
                         return itd + ard - apd;
                       }},
 
@@ -37,41 +63,60 @@ const FORMULAS = {
     gross_profit:    { name: '銷售毛利率(%)',   cat: '獲利能力', f: s => (s.sale_amt - s.sale_cost_amt) * 100 / Math.max(1, s.sale_amt) },
     net_profit_margin:{name: '銷售淨利率(%)',   cat: '獲利能力', f: s => s.sale_exp_amt * 100 / Math.max(1, s.sale_amt) },
     roa:             { name: '資產報酬率ROA(%)', cat: '獲利能力', f: s => s.sale_exp_amt * 100 / Math.max(1, s.ttl_asset_amt) },
-    roe:             { name: '權益報酬率ROE(%)', cat: '獲利能力', f: s => s.sale_exp_amt * 100 / Math.max(1, s.equity_amt || s.captial_stock + s.captial_reserve + s.accumulated_amt) },
+    roe:             { name: '權益報酬率ROE(%)', cat: '獲利能力', f: s => {
+                        const eq = (s.stockholder_amt !== undefined && s.stockholder_amt !== null && s.stockholder_amt !== 0)
+                                   ? s.stockholder_amt
+                                   : (s.captial_stock||0) + (s.captial_reserve||0) + (s.accumulated_amt||0);
+                        return s.sale_exp_amt * 100 / Math.max(1, eq);
+                      }},
 
     // ---------- 成長能力 (YG001 右) ----------
-    sale_growth:     { name: '銷售成長率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.sale_amt - p.sale_amt) / Math.max(1, p.sale_amt)) * 100 : 0 },
-    profit_growth:   { name: '淨利成長率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.sale_exp_amt - p.sale_exp_amt) / Math.max(1, Math.abs(p.sale_exp_amt))) * 100 : 0 },
-    capital_growth:  { name: '資本積累率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.captial_stock - p.captial_stock) / Math.max(1, p.captial_stock)) * 100 : 0 },
+    sale_growth:     { name: '銷售成長率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.sale_amt - p.sale_amt) / Math.max(1, p.sale_amt)) * 100 : null },
+    profit_growth:   { name: '淨利成長率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.sale_exp_amt - p.sale_exp_amt) / Math.max(1, Math.abs(p.sale_exp_amt))) * 100 : null },
+    capital_growth:  { name: '資本積累率(%)',   cat: '成長能力', f: (s, p) => p ? ((s.captial_stock - p.captial_stock) / Math.max(1, p.captial_stock)) * 100 : null },
 
     // ---------- Z / BZ 模型 (YG004) ----------
     altman_z1:       { name: 'Z1 值(上市公司)', cat: 'Z模型分析', f: s => {
                         const ta = s.ttl_asset_amt || 1;
-                        const wc = s.current_asset_amt - s.AP_amt;
-                        const re = s.accumulated_amt;
-                        const ebit = s.sale_exp_amt + s.interest_amt;
-                        return (1.2*wc/ta + 1.4*re/ta + 3.3*ebit/ta + 0.6*(s.equity_amt||s.captial_stock+s.captial_reserve+s.accumulated_amt)/Math.max(1,s.loan_amt) + 0.999*s.sale_amt/ta);
+                        const wc = s.current_asset_amt - (s.current_debet_amt || s.AP_amt);
+                        const re = s.accumulated_amt || 0;
+                        const ebit = (s.sale_exp_amt||0) + (s.interest_amt||0);
+                        const eq = s.stockholder_amt || (s.captial_stock||0)+(s.captial_reserve||0)+(s.accumulated_amt||0);
+                        const debt = s.ttl_debet_amt || (s.loan_amt||0)+(s.AP_amt||0)+(s.LT_loan_amt||0);
+                        return (1.2*wc/ta + 1.4*re/ta + 3.3*ebit/ta + 0.6*eq/Math.max(1,debt) + 0.999*s.sale_amt/ta);
                       }},
     altman_z2:       { name: 'Z2 值(非上市)',   cat: 'Z模型分析', f: s => {
                         const ta = s.ttl_asset_amt || 1;
-                        const wc = s.current_asset_amt - s.AP_amt;
-                        const re = s.accumulated_amt;
-                        const ebit = s.sale_exp_amt + s.interest_amt;
-                        return (6.56*wc/ta + 3.26*re/ta + 6.72*ebit/ta + 1.05*(s.equity_amt||s.captial_stock+s.captial_reserve+s.accumulated_amt)/Math.max(1,s.loan_amt));
+                        const wc = s.current_asset_amt - (s.current_debet_amt || s.AP_amt);
+                        const re = s.accumulated_amt || 0;
+                        const ebit = (s.sale_exp_amt||0) + (s.interest_amt||0);
+                        const eq = s.stockholder_amt || (s.captial_stock||0)+(s.captial_reserve||0)+(s.accumulated_amt||0);
+                        const debt = s.ttl_debet_amt || (s.loan_amt||0)+(s.AP_amt||0)+(s.LT_loan_amt||0);
+                        return (6.56*wc/ta + 3.26*re/ta + 6.72*ebit/ta + 1.05*eq/Math.max(1,debt));
                       }},
     bach_bz:         { name: 'BZ 值(巴赫利)',   cat: 'BZ模型分析', f: s => {
                         const ta = s.ttl_asset_amt || 1;
-                        return ((s.sale_exp_amt+s.interest_amt)/ta) * ((s.sale_exp_amt+s.interest_amt)/Math.max(1,s.sale_amt)) * 100;
+                        const ebit = (s.sale_exp_amt||0) + (s.interest_amt||0);
+                        return (ebit/ta) * (ebit/Math.max(1,s.sale_amt)) * 100;
                       }},
     altman_ggr:      { name: 'GGR 值',          cat: 'Z模型分析', f: s => {
                         const ta = s.ttl_asset_amt || 1;
-                        return (3.2*(s.captial_stock+s.captial_reserve)/ta + 1.1*s.current_asset_amt/Math.max(1,s.AP_amt) + 1.1*(s.sale_exp_amt||0)/ta);
+                        const cl = s.current_debet_amt || s.AP_amt || 1;
+                        return (3.2*((s.captial_stock||0)+(s.captial_reserve||0))/ta
+                              + 1.1*s.current_asset_amt/cl
+                              + 1.1*(s.sale_exp_amt||0)/ta);
                       }},
 
     // ---------- YG004 巴萨利润模型 ----------
-    bz_debt_ratio:   { name: '(利潤總額+折舊+攤銷+利息支出)/流動負債', cat: 'BZ巴萨利润', f: s => (s.sale_exp_amt + (s.interest_amt||0)) * 100 / Math.max(1, s.AP_amt) },
-    bz_receivable_turn:{name: '流動資產/流動負債 (流動比率)', cat: 'BZ巴萨利润', f: s => s.current_asset_amt / Math.max(1, s.AP_amt) },
-    bz_quick:        { name: '(流動資產-存貨)/流動負債 (速動比率)', cat: 'BZ巴萨利润', f: s => (s.current_asset_amt - s.stock_P_amt - s.stock_M_amt - s.WIP_M_amt - s.WIP_labor_amt - s.WIP_EXP_amt) / Math.max(1, s.AP_amt) },
+    bz_debt_ratio:   { name: '(利潤總額+利息支出)/流動負債', cat: 'BZ巴萨利润', f: s => {
+                        const cl = s.current_debet_amt || s.AP_amt || 1;
+                        return ((s.sale_exp_amt||0) + (s.interest_amt||0)) * 100 / cl;
+                      }},
+    bz_receivable_turn:{name: '流動資產/流動負債 (流動比率)', cat: 'BZ巴萨利润', f: s => s.current_asset_amt / Math.max(1, s.current_debet_amt || s.AP_amt) },
+    bz_quick:        { name: '(流動資產-存貨)/流動負債 (速動比率)', cat: 'BZ巴萨利润', f: s => {
+                        const inv = (s.stock_P_amt||0)+(s.stock_M_amt||0)+(s.WIP_M_amt||0)+(s.WIP_labor_amt||0)+(s.WIP_EXP_amt||0);
+                        return (s.current_asset_amt - inv) / Math.max(1, s.current_debet_amt || s.AP_amt);
+                      }},
 
     // ---------- 營運資產模型 (YG004) ----------
     // 營運資產 = 營運資本 + 長期投資 = (流動資產 - 流動負債) + 長期投資
