@@ -306,7 +306,7 @@ function buildYGRender(pageId) {
 let _currentYgPage = null;
 
 // 打開 KPI 門檻編輯視窗（複用 kpi.js 的 KpiThresholdForm）
-window.openKpiThreshold = function(uid) {
+window.openKpiThreshold = function(uid, currentValue) {
     if (typeof KpiThresholdForm === 'undefined') {
         UI.toast('KPI 門檻模組未載入，請先點「KPI 門檻」頁面','error');
         return;
@@ -315,7 +315,7 @@ window.openKpiThreshold = function(uid) {
         // KPI 存檔後，自動刷新當前 YG 頁
         if (_currentYgPage) ygLoad(_currentYgPage);
     };
-    KpiThresholdForm.open(uid);
+    KpiThresholdForm.open(uid, currentValue);
 };
 
 // ===== YG 頁面載入 =====
@@ -353,7 +353,7 @@ function renderSection(kpis, sec) {
         const high = (item.KPI2 !== undefined && item.KPI2 !== null && item.KPI2 !== 0) ? item.KPI2 : row.high;
         const color = light(v, low, high, item.pct_type || row.pct_type);
         const targetCell = item.uid
-            ? `<td class="num" style="cursor:pointer;color:#2980b9;text-decoration:underline;" title="點擊調整目標門檻" onclick="openKpiThreshold(${item.uid})">${fmt(low)} ~ ${fmt(high)}</td>`
+            ? `<td class="num" style="cursor:pointer;color:#2980b9;text-decoration:underline;" title="點擊調整目標門檻" onclick="openKpiThreshold(${item.uid}, ${v !== null && v !== undefined ? v : 0})">${fmt(low)} ~ ${fmt(high)}</td>`
             : `<td class="num" style="color:#999;" title="尚未在 KPI 門檻頁定義，點 KPI 門檻頁新增">${fmt(low)} ~ ${fmt(high)}</td>`;
         const catBg = {
             '獲利能力': '#fdebd0', '獲利績效': '#fdebd0',

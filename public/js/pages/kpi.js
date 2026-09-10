@@ -52,10 +52,14 @@ async function loadKPI() {
 }
 
 const KpiThresholdForm = {
-    open(uid) {
+    open(uid, currentValue) {
         if (uid) {
             API.get(`/api/kpi/${uid}`).then(res => {
-                this._render(res.data);
+                const data = res.data;
+                if (currentValue !== undefined && currentValue !== null) {
+                    data.KPI_value = currentValue; // 覆蓋 DB 的靜態值
+                }
+                this._render(data);
             }).catch(e => UI.toast(e.message,'error'));
         } else {
             this._render({ bu_no: State.bu_no });
@@ -78,7 +82,7 @@ const KpiThresholdForm = {
             <div class="form-row">
                 <div class="form-group"><label>判定方向</label>
                     <select id="kf_pct"><option value="asc">asc（值高=差）</option><option value="desc">desc（值低=差）</option></select></div>
-                <div class="form-group"><label>當前值</label><input type="number" step="0.0001" id="kf_val" value="${d.KPI_value||0}"></div>
+                <div class="form-group"><label>當前值 <span style="color:#888;font-size:11px;">(即時計算，僅供參考)</span></label><input type="number" step="0.0001" id="kf_val" value="${d.KPI_value||0}" readonly style="background:#f4f6f7;color:#2980b9;font-weight:bold;"></div>
                 <div class="form-group"><label>顏色</label>
                     <select id="kf_color"><option value="">(自動)</option><option value="GREEN">GREEN</option><option value="YELLOW">YELLOW</option><option value="RED">RED</option></select></div>
             </div>
