@@ -177,6 +177,89 @@ const YG_CONFIG = {
     },
 };
 
+// ====== 指標說明字典（用於點「預警類別」彈窗顯示項目目的與公式）======
+const KPI_DESC = {
+    // --- 償債能力 ---
+    current_ratio:   { purpose:'衡量企業用流動資產償還短期債務的能力', formula:'流動資產 ÷ 流動負債', interpret:'≥2 為健全；<1 表示短期償債壓力大' },
+    quick_ratio:     { purpose:'衡量企業用速動資產（現金+應收）償還短期債務的能力，排除存貨變現風險', formula:'(流動資產 − 存貨) ÷ 流動負債', interpret:'≥1 為標準；<0.5 表示速動資金不足' },
+    debt_ratio:      { purpose:'衡量總資產中仰賴負債的比例，判斷財務槓桿程度', formula:'(短期借款 + 應付帳款 + 應付稅金 + 應付薪資 + 其他應付) ÷ 資產總額 × 100%', interpret:'越低越穩健；>60% 表示槓桿過高' },
+    interest_cov:    { purpose:'衡量企業利潤支付利息費用的能力', formula:'(稅前利潤 + 利息支出) ÷ 利息支出', interpret:'≥3 為安全；<1 表示利息都付不出來' },
+    cash_ratio:      { purpose:'衡量企業用現金與存款直接償還流動負債的能力，是最保守的償債指標', formula:'(現金 + 銀行存款) ÷ 流動負債 × 100%', interpret:'≥20% 為健全；<5% 表示現金吃緊' },
+
+    // --- 營運能力 ---
+    inventory_turn:  { purpose:'衡量存貨被銷售/消耗的速度', formula:'銷貨成本 ÷ 存貨總額', interpret:'越高表示存貨週轉越快、積壓越少' },
+    ar_turn:         { purpose:'衡量應收帳款回收速度', formula:'銷售額 ÷ 應收帳款', interpret:'越高表示收帳越快' },
+    ar_days:         { purpose:'衡量應收帳款平均回收天數', formula:'365 ÷ (銷售額 ÷ 應收帳款)', interpret:'越低越好；超過 90 天表示收帳太慢' },
+    total_asset_turn:{ purpose:'衡量總資產創造營業收入的效率', formula:'銷售額 ÷ 資產總額', interpret:'越高表示資產運用效率越好' },
+    fixed_asset_turn:{ purpose:'衡量固定資產（廠房、設備）創造收入的效率', formula:'銷售額 ÷ 固定資產合計', interpret:'越高表示設備利用率越高' },
+    equity_turn:     { purpose:'衡量股東權益創造營業收入的效率', formula:'銷售額 ÷ 股東權益淨值', interpret:'越高表示股東資金運用效率越好' },
+    cash_conv_days:  { purpose:'衡量從支付供應商到收回客戶款項的現金週期', formula:'存貨週轉天數 + 應收帳款天數 − 應付帳款天數', interpret:'越低越好；負值代表無需墊款' },
+
+    // --- 獲利能力 ---
+    gross_profit:    { purpose:'衡量商品/服務的基本獲利空間', formula:'(銷售額 − 銷貨成本) ÷ 銷售額 × 100%', interpret:'越高越好；反映產品定價與成本控制' },
+    net_profit_margin:{purpose:'衡量銷售額最終轉化為淨利的比例', formula:'稅後淨利 ÷ 銷售額 × 100%', interpret:'越高越好；反映整體獲利效率' },
+    roa:             { purpose:'衡量總資產創造淨利的報酬率', formula:'稅後淨利 ÷ 資產總額 × 100%', interpret:'越高越好；反映資產運用效率' },
+    roe:             { purpose:'衡量股東權益創造淨利的報酬率（股東最關心的指標）', formula:'稅後淨利 ÷ 股東權益淨值 × 100%', interpret:'越高越好；一般 ≥15% 為優秀' },
+
+    // --- 成長能力 ---
+    sale_growth:     { purpose:'衡量銷售額較上期的成長幅度', formula:'(本期銷售額 − 前期銷售額) ÷ 前期銷售額 × 100%', interpret:'正值代表成長；連續負值代表業務萎縮' },
+    profit_growth:   { purpose:'衡量淨利較上期的成長幅度', formula:'(本期淨利 − 前期淨利) ÷ |前期淨利| × 100%', interpret:'正值代表獲利成長' },
+    capital_growth:  { purpose:'衡量資本積累速度', formula:'(本期股本 − 前期股本) ÷ 前期股本 × 100%', interpret:'正值代表增資或保留盈餘積累' },
+
+    // --- Z / BZ 模型 ---
+    altman_z1:       { purpose:'Altman Z1 模型（上市公司）— 綜合預測破產機率', formula:'1.2×(營運資本/總資產) + 1.4×(保留盈餘/總資產) + 3.3×(EBIT/總資產) + 0.6×(權益/負債市值) + 0.999×(銷售額/總資產)', interpret:'≥2.675 安全；1.81~2.675 灰色區；<1.81 破產風險高' },
+    altman_z2:       { purpose:'Altman Z2 模型（非上市公司）— 綜合預測破產機率', formula:'6.56×(營運資本/總資產) + 3.26×(保留盈餘/總資產) + 6.72×(EBIT/總資產) + 1.05×(權益/負債)', interpret:'≥2.9 安全；1.1~2.9 灰色區；<1.1 破產風險高' },
+    altman_ggr:      { purpose:'GGR 模型（日本學者提出）— 綜合財務體質評分', formula:'3.2×(股本+資本公積)/總資產 + 1.1×流動比率 + 1.1×(稅前利潤/總資產)', interpret:'≥5 優良；1~5 普通；<1 有破產風險' },
+    bach_bz:         { purpose:'Bach BZ 值（巴赫利模型）— 利潤與資產/銷售的綜合比率', formula:'(EBIT/總資產) × (EBIT/銷售額) × 100', interpret:'≥5 健康；0.5~5 普通；<0.5 虧損邊緣' },
+
+    // --- YG003 資產異常 / 利潤異常 ---
+    // (大部分已涵蓋在上述指標，補充 YG003 特有)
+
+    // --- 營運資產模型 ---
+    oa_working_asset:{ purpose:'衡量企業日常營運所投入的資產規模（絕對金額）', formula:'營運資本 + 長期投資 = (流動資產 − 流動負債) + 長期投資', interpret:'正值=營運資金充足；負值=短期償債壓力大' },
+    oa_cover_cl:     { purpose:'衡量營運資產對流動負債的覆蓋程度', formula:'營運資產額 ÷ 流動負債', interpret:'≥1.0 安全；<0.5 覆蓋不足' },
+    oa_wc_ratio:     { purpose:'衡量流動資產中淨營運資金的佔比', formula:'營運資本 ÷ 流動資產', interpret:'≥30% 彈性充足；<10% 短期負債占比過高' },
+    oa_equity_debt:  { purpose:'衡量淨值對負債的保障程度', formula:'股東權益淨值 ÷ 負債總額', interpret:'≥1.0 穩健；<0.5 槓桿過高' },
+
+    // --- 沃爾比重模型 ---
+    wall_score:      { purpose:'Alexander Wall 綜合評分（滿分 100）— 7 項比率加權', formula:'Σ(實際比率÷標準比率×權重)，7 項含流動比率(25%)、淨值/負債(25%)等', interpret:'≥100 優良；80~100 可接受；<80 財務體質偏弱' },
+    wall_de:         { purpose:'沃爾模型組件：淨值/負債（標準 1.50）', formula:'股東權益 ÷ 負債總額', interpret:'越高越好，權重 25%' },
+    wall_af:         { purpose:'沃爾模型組件：總資產/固定資產（標準 2.50）', formula:'資產總額 ÷ 固定資產合計', interpret:'越高越好，權重 15%' },
+    wall_se:         { purpose:'沃爾模型組件：銷售額/淨值（標準 3.00）', formula:'銷售額 ÷ 股東權益', interpret:'越高越好，權重 5%' },
+
+    // --- A值模型 ---
+    a_total:         { purpose:'Argenti A-score — 管理缺陷+會計錯誤+破產徵兆綜合（越高越危險）', formula:'管理缺陷分(0~43) + 會計錯誤分(0~15) + 破產徵兆分(0~42)', interpret:'≤18 安全；18~25 警戒；>25 高破產風險' },
+    a_deficiency:    { purpose:'管理缺陷代理分（槓桿過高、流動比率低、利息保障不足、ROE低、銷售下滑）', formula:'5 項條件加總，每項觸發 +8~10 分', interpret:'越高越危險；≥20 表示管理面嚴重缺陷' },
+    a_accounting:    { purpose:'會計錯誤代理分（現金比率過低、應收帳款天數過長）', formula:'2 項條件加總（現金比率<5% +8、應收天數>90 +7）', interpret:'越高越危險；≥10 表示現金/收帳有問題' },
+    a_symptom:       { purpose:'破產徵兆代理分（營業虧損、營運資金為負、Z2<1.1）', formula:'3 項條件加總（各 +12~15 分）', interpret:'越高越危險；≥20 表示已出現實質破產徵兆' },
+};
+
+// ====== 類別說明字典 ======
+const CATEGORY_DESC = {
+    '償債能力':  { purpose:'衡量企業用資產償還債務的能力，分為短期（流動/速動/現金比率）與長期（負債比/利息保障）', action:'若偏低：籌措長期資金、延緩付款、加強收帳' },
+    '營運能力':  { purpose:'衡量企業資產的運用效率（存貨賣得快不快、應收收得快不快、資產創造收入的效率）', action:'改善方向：降低存貨積壓、加強應收催收、提高設備利用率' },
+    '獲利能力':  { purpose:'衡量企業賺錢的本領 — 從毛利率（產品定價）到淨利率（整體效率）到 ROE（股東報酬）', action:'提升方向：提高售價、降低成本、控制費用、最佳化資本結構' },
+    '成長能力':  { purpose:'衡量企業擴張速度 — 銷售、淨利、資本的年增率', action:'若為負：檢查市場萎縮、競爭加劇、產品老化' },
+    'Z模型':     { purpose:'Altman Z1/Z2 模型 — 以多項財務比率加權綜合打分，預測企業破產機率', action:'Z<1.81 立即啟動危機應變；1.81~2.675 改善財務結構' },
+    'Z1模型':    { purpose:'Altman Z1（上市公司版）— 5 項比率加權，用市值計算權益負債比', action:'≥2.675 安全區' },
+    'Z2模型':    { purpose:'Altman Z2（非上市公司版）— 4 項比率加權，不需市值資料', action:'≥2.9 安全區' },
+    'GGR模型':   { purpose:'日本 GGR 模型 — 以股本、流動比率、資產報酬率綜合評分', action:'≥5 優良' },
+    'BZ模型':    { purpose:'Bach BZ 值 — 以 EBIT/資產 × EBIT/銷售額 綜合評估獲利效率', action:'≥5 健康' },
+    '巴萨模型':  { purpose:'巴薩利潤模型 — 以利潤/負債、流動比率、速動比率綜合判讀財務安全', action:'流動比率≥1.5、速動比率≥0.8 為安全' },
+    'BZ巴萨利润':{ purpose:'BZ / 巴薩利潤模型 — 多項利潤與償債比率綜合評分', action:'各項比率若同時偏低表示財務體質弱' },
+    '利潤異常':  { purpose:'YG003 利潤異常預警 — 監控毛利率、淨利率、利息保障、負債比與成長率', action:'任一紅燈需分析獲利下滑原因（售價?成本?費用?）' },
+    '資產異常':  { purpose:'YG003 資產異常預警 — 監控存貨、應收、固定資產的週轉率異常', action:'存貨週轉低→積壓；應收週轉低→收帳慢；固定資產週轉低→設備閒置' },
+    '股東權益':  { purpose:'從股東角度看獲利 — ROE（股東報酬率）與 ROA（資產報酬率）', action:'ROE<8% 代表股東報酬偏低' },
+    '獲利績效':  { purpose:'綜合獲利指標 — 毛利率、淨利率、利息保障、負債比', action:'多項同時紅燈表示獲利與槓桿均有問題' },
+    '管理指標':  { purpose:'內部管理效率指標 — 存貨/應收週轉率', action:'用於評估營運管理績效' },
+    '業務指標':  { purpose:'業務規模與成長指標 — 總資產週轉、權益週轉、現金週期、成長率', action:'用於評估業務擴張與資金效率' },
+    '營運資產模型':{ purpose:'衡量日常營運的資產規模與結構 — 營運資產額/流動負債、營運資本比率、淨值/負債', action:'若營運資產為負表示短期償債有缺口，需補充營運資金' },
+    '沃爾比重模型':{ purpose:'Alexander Wall 1928 年提出的 7 項比率加權綜合評分（滿分 100）', action:'<80 分逐項檢查哪項比率偏離標準最多，針對性改善' },
+    'A值模型':   { purpose:'Argenti A-score 破產預測 — 管理缺陷(0-43) + 會計錯誤(0-15) + 破產徵兆(0-42)', action:'總分>25 高風險；逐構面檢查失分原因並改善' },
+    '模型分析':  { purpose:'綜合預測模型分析 — Altman Z、BZ 等模型交叉驗證財務體質', action:'多模型同時紅燈 → 高風險預警' },
+    '手工':      { purpose:'手動維護的 KPI（無公式對應，由使用者直接輸入目標值與當前值）', action:'於 KPI 門檻頁面維護' },
+};
+
 // ====== 共用 render ======
 function buildYGRender(pageId) {
     const cfg = YG_CONFIG[pageId];
@@ -255,10 +338,17 @@ window.ygLoad = async function(pageId) {
 };
 
 function renderSection(kpis, sec) {
+    // 先按類別分組（讓點擊「預警類別」可一次看到同組所有項目）
+    const catMap = {};
+    sec.rows.forEach(row => {
+        const cat = row.cat || '未分類';
+        if (!catMap[cat]) catMap[cat] = [];
+        catMap[cat].push(row);
+    });
+
     const rows = sec.rows.map(row => {
         const item = kpis[row.id] || { id: row.id, name: row.name, current_value: null, KPI1: row.low, KPI2: row.high, unit: '' };
         const v = item.current_value;
-        // 優先用 DB 門檻 (KPI1/KPI2)，否則用 row.low/row.high
         const low  = (item.KPI1 !== undefined && item.KPI1 !== null && item.KPI1 !== 0) ? item.KPI1 : row.low;
         const high = (item.KPI2 !== undefined && item.KPI2 !== null && item.KPI2 !== 0) ? item.KPI2 : row.high;
         const color = light(v, low, high, item.pct_type || row.pct_type);
@@ -275,9 +365,18 @@ function renderSection(kpis, sec) {
             '沃爾比重模型': '#fdebd0',
             'A值模型': '#fadbd8',
         };
+        const catName = row.cat || item.category || '-';
+        // 序列化同類別的 rows 給 onclick 使用
+        const catRowsJson = encodeURIComponent(JSON.stringify(catMap[catName].map(r => ({
+            id: r.id, name: r.name, low: r.low, high: r.high, pct_type: r.pct_type
+        }))));
         return `
             <tr>
-                <td style="background:${catBg[row.cat] || '#eaecee'};font-weight:bold;">${row.cat || item.category || '-'}</td>
+                <td style="background:${catBg[catName] || '#eaecee'};font-weight:bold;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.1);"
+                    title="點擊查看【${catName}】的項目說明與目的"
+                    onmouseover="this.style.textDecoration='underline'"
+                    onmouseout="this.style.textDecoration='none'"
+                    onclick="showCategoryDetail('${catName}', '${catRowsJson}')">${catName}</td>
                 <td style="text-align:left;">${row.name || item.name || item.id}</td>
                 ${targetCell}
                 <td class="num"><b style="color:${color==='RED'?'#e74c3c':color==='YELLOW'?'#e67e22':color==='GREEN'?'#27ae60':'#333'};">${fmt(v)}</b>${item.unit?`<span style="color:#7f8c8d;font-size:11px;"> ${item.unit}</span>`:''}</td>
@@ -302,6 +401,42 @@ function renderSection(kpis, sec) {
             </table>
         </div>`;
 }
+
+// ====== 點「預警類別」→ 顯示該類別所有項目的說明與目的 ======
+window.showCategoryDetail = function(catName, catRowsJson) {
+    const catRows = JSON.parse(decodeURIComponent(catRowsJson));
+    const catDesc = CATEGORY_DESC[catName] || { purpose:'—', action:'—' };
+
+    const rowsHtml = catRows.map(r => {
+        const desc = KPI_DESC[r.id];
+        const pctLabel = r.pct_type === 'asc' ? '值高=差' : (r.pct_type === 'desc' ? '值低=差' : '—');
+        return `
+            <div style="border-left:3px solid #2980b9;padding:10px 14px;margin:12px 0;background:#fff;border-radius:0 6px 6px 0;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div style="font-size:1em;font-weight:bold;color:#1a5276;">📊 ${r.name || r.id}</div>
+                    <div style="font-size:0.8em;color:#7f8c8d;background:#f0f3f4;padding:2px 8px;border-radius:10px;">
+                        門檻 ${fmt(r.low)} ~ ${fmt(r.high)} · ${pctLabel}
+                    </div>
+                </div>
+                ${desc ? `
+                    <div style="margin:6px 0;"><b style="color:#2c3e50;">🎯 目的：</b><span>${desc.purpose}</span></div>
+                    <div style="margin:4px 0;"><b style="color:#2c3e50;">📐 公式：</b><code style="background:#f4f6f7;padding:2px 8px;border-radius:4px;font-size:0.92em;">${desc.formula}</code></div>
+                    <div style="margin:4px 0;color:#555;font-size:0.92em;">💡 <b>判讀：</b>${desc.interpret}</div>
+                ` : `<div style="color:#999;font-size:0.9em;">（無公式說明）</div>`}
+            </div>`;
+    }).join('');
+
+    UI.modal(`📋 預警類別說明 — ${catName}`, `
+        <div style="background:#eaf2f8;border:1px solid #85c1e9;border-radius:8px;padding:14px 18px;margin-bottom:16px;">
+            <div style="font-weight:bold;color:#1a5276;margin-bottom:6px;">📖 類別目的</div>
+            <div style="color:#2c3e50;margin-bottom:8px;">${catDesc.purpose}</div>
+            <div style="font-weight:bold;color:#1e8449;margin-bottom:4px;">⚡ 改善方向</div>
+            <div style="color:#1e8449;">${catDesc.action}</div>
+        </div>
+        <div style="font-weight:bold;color:#2c3e50;margin-bottom:6px;">🔍 本類別包含 ${catRows.length} 項指標：</div>
+        ${rowsHtml}
+    `, `<button class="btn" onclick="UI.closeModal()">關閉</button>`);
+};
 
 window.ygShift = function(pageId, delta) {
     let y = parseInt(document.getElementById('ygY').value) || 2024;
