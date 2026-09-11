@@ -66,7 +66,7 @@ const YG_CONFIG = {
             { title: '償債能力', color: '#2c3e50', color2: '#3498db', rows: [
                 { id: 'current_ratio', cat: '償債能力', name: '流動比率',       low:1.5,  high:3.0, pct_type:'asc' },
                 { id: 'quick_ratio',   cat: '償債能力', name: '速動比率',       low:0.8,  high:2.0, pct_type:'asc' },
-                { id: 'debt_ratio',    cat: '償債能力', name: '負債比率(%)',    low:20,   high:60,  pct_type:'desc' },
+                { id: 'debt_ratio',    cat: '償債能力', name: '負債比率(%)',    low:50,   high:70,  pct_type:'asc' },
                 { id: 'cash_ratio',    cat: '償債能力', name: '現金比率(%)',    low:10,   high:30,  pct_type:'asc' },
                 { id: 'interest_cov',  cat: '償債能力', name: '利息保障倍數',   low:3,    high:10,  pct_type:'asc' },
             ]},
@@ -103,7 +103,7 @@ const YG_CONFIG = {
                 { id: 'gross_profit',   cat: '獲利績效', name: '毛利率(%)',         low:15, high:45, pct_type:'asc' },
                 { id: 'net_profit_margin',cat:'獲利績效',name: '淨利率(%)',         low:5,  high:20, pct_type:'asc' },
                 { id: 'interest_cov',   cat: '獲利績效', name: '利息保障倍數',      low:3,  high:10, pct_type:'asc' },
-                { id: 'debt_ratio',     cat: '獲利績效', name: '負債比(%)',         low:20, high:60, pct_type:'desc' },
+                { id: 'debt_ratio',     cat: '獲利績效', name: '負債比(%)',         low:50, high:70, pct_type:'asc' },
             ]},
             { title: '管理 / 業務指標', color: '#16a085', color2: '#27ae60', rows: [
                 { id: 'inventory_turn', cat: '管理指標', name: '存貨周轉率', low:4, high:12, pct_type:'asc' },
@@ -134,7 +134,7 @@ const YG_CONFIG = {
                 { id: 'gross_profit',   cat: '利潤異常', name: '毛利率(%)',        low:15, high:50, pct_type:'asc' },
                 { id: 'net_profit_margin',cat:'利潤異常',name: '淨利率(%)',        low:5,  high:20, pct_type:'asc' },
                 { id: 'interest_cov',   cat: '利潤異常', name: '利息保障倍數',     low:2,  high:10, pct_type:'asc' },
-                { id: 'debt_ratio',     cat: '利潤異常', name: '負債比(%)',        low:20, high:60, pct_type:'desc' },
+                { id: 'debt_ratio',     cat: '利潤異常', name: '負債比(%)',        low:50, high:70, pct_type:'asc' },
                 { id: 'sale_growth',    cat: '利潤異常', name: '銷售成長率(%)',    low:-10,high:20, pct_type:'asc' },
                 { id: 'profit_growth',  cat: '利潤異常', name: '淨利成長率(%)',    low:-10,high:25, pct_type:'asc' },
             ]},
@@ -182,7 +182,7 @@ const KPI_DESC = {
     // --- 償債能力 ---
     current_ratio:   { purpose:'衡量企業用流動資產償還短期債務的能力', formula:'流動資產 ÷ 流動負債', interpret:'≥2 為健全；<1 表示短期償債壓力大' },
     quick_ratio:     { purpose:'衡量企業用速動資產（現金+應收）償還短期債務的能力，排除存貨變現風險', formula:'(流動資產 − 存貨) ÷ 流動負債', interpret:'≥1 為標準；<0.5 表示速動資金不足' },
-    debt_ratio:      { purpose:'衡量總資產中仰賴負債的比例，判斷財務槓桿程度', formula:'(短期借款 + 應付帳款 + 應付稅金 + 應付薪資 + 其他應付) ÷ 資產總額 × 100%', interpret:'越低越穩健；>60% 表示槓桿過高' },
+    debt_ratio:      { purpose:'衡量總資產中仰賴負債的比例，判斷財務槓桿程度', formula:'(短期借款 + 應付帳款 + 應付稅金 + 應付薪資 + 其他應付) ÷ 資產總額 × 100%', interpret:'越低越穩健；≤50% 安全，50-70% 注意，>70% 表示槓桿過高' },
     interest_cov:    { purpose:'衡量企業利潤支付利息費用的能力', formula:'(稅前利潤 + 利息支出) ÷ 利息支出', interpret:'≥3 為安全；<1 表示利息都付不出來' },
     cash_ratio:      { purpose:'衡量企業用現金與存款直接償還流動負債的能力，是最保守的償債指標', formula:'(現金 + 銀行存款) ÷ 流動負債 × 100%', interpret:'≥20% 為健全；<5% 表示現金吃緊' },
 

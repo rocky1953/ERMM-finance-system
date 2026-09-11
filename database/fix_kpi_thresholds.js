@@ -11,7 +11,7 @@ const KPI_FIXES = {
     // ===== YG001 償債能力 =====
     current_ratio:    { KPI1: 2.0,  KPI2: 3.0,  pct_type: 'asc' },  // 流動比率 ≥2 健全
     quick_ratio:      { KPI1: 1.5,  KPI2: 3.0,  pct_type: 'asc' },  // 速動比率 ≥1.5 安全
-    debt_ratio:       { KPI1: 20,   KPI2: 60,   pct_type: 'desc' }, // 負債比 <60% 好
+    debt_ratio:       { KPI1: 50,   KPI2: 70,   pct_type: 'asc' }, // 負債比 <=50% 安全, 50-70% 注意, >70% 槓桿過高
     interest_cov:     { KPI1: 3.0,  KPI2: 10,   pct_type: 'asc' },  // 利息保障 ≥3 安全
     cash_ratio:       { KPI1: 10,   KPI2: 30,   pct_type: 'asc' },  // 現金比率 ≥20% 健全
 

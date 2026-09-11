@@ -83,7 +83,7 @@ async function seed() {
             ('HM', 'Z_score', 'Z-Score 破產風險', 1.23, 2.90, 'asc', '分'),
             ('HM', 'current_ratio', '流動比率', 1.5, 3.0, 'asc', '%'),
             ('HM', 'quick_ratio', '速動比率', 1.0, 2.0, 'asc', '%'),
-            ('HM', 'debt_ratio', '負債比率', 50, 80, 'desc', '%'),
+            ('HM', 'debt_ratio', '負債比率', 50, 70, 'asc', '%'),
             ('HM', 'ROA', '資產報酬率', 2, 10, 'asc', '%'),
             ('HM', 'ROE', '股東權益報酬率', 5, 20, 'asc', '%'),
             ('HM', 'gross_margin', '毛利率', 15, 40, 'asc', '%'),

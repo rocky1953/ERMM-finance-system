@@ -371,7 +371,7 @@ async function main() {
         const kpis = [
             ['K01','流動比率', Number((currentAsset/currentDebet).toFixed(4)), 1.5, 3.0, ''],
             ['K02','速動比率', Number(((currentAsset-s.stock_value_amt)/currentDebet).toFixed(4)), 0.8, 2.0, ''],
-            ['K03','負債比', Number((s.debet_amt/totalAsset*100).toFixed(4)), 20, 60, '%'],
+            ['K03','負債比', Number((s.debet_amt/totalAsset*100).toFixed(4)), 50, 70, '%'],
             ['K04','ROE', Number((s.net_profit_amt/Math.max(s.stockholder_amt,1)*100).toFixed(4)), 5, 20, '%'],
             ['K05','ROA', Number((s.net_profit_amt/totalAsset*100).toFixed(4)), 3, 12, '%'],
             ['K06','毛利率', Number((s.BIZ_major_margin_amt/Math.max(s.sale_amt,1)*100).toFixed(4)), 15, 45, '%'],

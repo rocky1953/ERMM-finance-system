@@ -395,7 +395,7 @@ async function main() {
         const kpis = [
             { id: 'K01', name: '流動比率', v: currentRatio,  low: 1.5,   high: 3.0,  unit: '' },
             { id: 'K02', name: '速動比率', v: quickRatio,    low: 0.8,   high: 2.0,  unit: '' },
-            { id: 'K03', name: '負債比',   v: debtRatio,     low: 20,    high: 60,   unit: '%' },
+            { id: 'K03', name: '負債比',   v: debtRatio,     low: 50,    high: 70,   unit: '%' },
             { id: 'K04', name: 'ROE',     v: ROE,          low: 5,     high: 20,   unit: '%' },
             { id: 'K05', name: 'ROA',     v: ROA,          low: 3,     high: 12,   unit: '%' },
             { id: 'K06', name: '毛利率',   v: grossMargin,   low: 15,    high: 45,   unit: '%' },
