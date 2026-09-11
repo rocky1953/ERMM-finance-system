@@ -26,13 +26,15 @@ async function loadRisk() {
         const r = rows[0];
         _riskData = r;
         const zVal = Number(r.Z_score || 0);
-        const zColor = (r.risk_color || '').toLowerCase();
+        // 從 Z 值重算顏色與狀態，不依賴 DB 可能過時的 risk_color / wall_mode
+        const zColor = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
+        const zWallMode = zVal >= 2.9 ? t('dash.safe') : (zVal >= 1.23 ? t('dash.grey') : t('dash.bankrupt'));
         el.innerHTML = `
             <div class="kpi-grid">
                 <div class="kpi-card ${zColor}" style="cursor:pointer" onclick="RiskHelp.open('z')">
                     <div class="kpi-label">${t('risk.z_score')}</div>
                     <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
-                    <div class="kpi-badge ${zColor}">${r.wall_mode || '-'}</div>
+                    <div class="kpi-badge ${zColor}">${zWallMode}</div>
                     <div class="kpi-sub">${t('risk.threshold')}</div>
                 </div>
                 <div class="kpi-card ${Number(r.Z2_score)>=2.9?'green':Number(r.Z2_score)>=1.23?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('z2')">
@@ -78,9 +80,9 @@ const RiskHelp = {
         const cfg = {
             z: {
                 title: t('risk.z_score'),
-                color: (r.risk_color || '').toLowerCase(),
+                color: v('Z_score') >= 2.9 ? 'green' : (v('Z_score') >= 1.23 ? 'yellow' : 'red'),
                 value: UI.fmt(v('Z_score'), 4),
-                status: r.wall_mode || '-',
+                status: v('Z_score') >= 2.9 ? t('dash.safe') : (v('Z_score') >= 1.23 ? t('dash.grey') : t('dash.bankrupt')),
                 purpose: t('risk.desc.z.purpose'),
                 formula: 'Z = 1.2·X1 + 1.4·X2 + 3.3·X3 + 0.6·X4 + 0.999·X5',
                 vars: [
