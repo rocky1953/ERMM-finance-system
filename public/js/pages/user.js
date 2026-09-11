@@ -16,7 +16,7 @@ registerPage('user', async (c) => {
             <div id="paneUsers">
                 <div class="toolbar">
                     <label>${t('system.col.status')}：<select id="ufFlag" onchange="loadUsers()"><option value="">${t('sys.all')}</option>
-                        <option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></label>
+                        <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
                     <button class="btn btn-primary" onclick="UserForm.open()">➕ ${t('user.btn.add_user')}</button>
                     <button class="btn btn-success" onclick="loadUsers()">🔄 ${t('refresh')}</button>
                 </div>
@@ -117,7 +117,7 @@ const UserForm = {
                 <div class="form-group"><label>${isEdit?t('user.form.new_pwd'):t('user.form.password')}</label>
                     <input type="password" id="uf_pwd" placeholder="${isEdit?'• • • • • •':t('user.form.required')}"></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
-                    <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></div>
+                    <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('user.col.name')}</label><input id="uf_name" value="${u.xuser_name||''}"></div>

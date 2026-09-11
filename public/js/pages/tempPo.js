@@ -10,6 +10,7 @@ registerPage('tempPo', async (c) => {
                 <label>${t('tp.form.batch')}：<input id="tpBatch" onchange="loadTempPo()" placeholder="batch_id"></label>
                 <button class="btn btn-primary" onclick="TempPoForm.open()">➕ ${t('tp.add')}</button>
                 <button class="btn btn-warning" onclick="batchStep1()">▶ ${t('tp.run_step1')}</button>
+                <button class="btn btn-info" onclick="TempPoHelp.open()">📖 ${t('tp.help')}</button>
                 <button class="btn btn-success" onclick="loadTempPo()">🔄</button>
             </div>
             <div id="tempPoTable">${t('loading')}</div>
@@ -108,3 +109,33 @@ async function batchStep1() {
         UI.toast(`${t('tp.msg.synced')} (${res.data?.inserted||0})`, 'success'); loadTempPo();
     } catch(e) { UI.toast(e.message,'error'); }
 }
+
+// ===== Step1 同步操作說明彈窗 =====
+const TempPoHelp = {
+    open() {
+        const body = `
+            <div style="line-height:1.8;font-size:14px;color:#2c3e50;">
+                <div style="background:#eaf2f8;padding:12px 16px;border-radius:8px;margin-bottom:16px;border-left:4px solid #2980b9;">
+                    <strong>🎯 ${t('tp.help.purpose_title')}</strong>
+                    <p style="margin:8px 0 0;">${t('tp.help.purpose_body')}</p>
+                </div>
+                <div>
+                    <strong>📋 ${t('tp.help.method_title')}</strong>
+                    <ol style="margin:8px 0;padding-left:24px;">
+                        <li>${t('tp.help.step1')}</li>
+                        <li>${t('tp.help.step2')}</li>
+                        <li>${t('tp.help.step3')}</li>
+                        <li>${t('tp.help.step4')}</li>
+                    </ol>
+                </div>
+                <div style="margin-top:16px;padding:10px 14px;background:#fef9e7;border-radius:6px;border-left:4px solid #f39c12;color:#7d6608;font-size:13px;">
+                    <strong>💡 ${t('tp.help.note_title')}：</strong>${t('tp.help.note_body')}
+                </div>
+                <div style="margin-top:12px;padding:10px 14px;background:#fdedec;border-radius:6px;border-left:4px solid #e74c3c;color:#922b21;font-size:13px;">
+                    <strong>⚠️ ${t('tp.help.warn_title')}：</strong>${t('tp.help.warn_body')}
+                </div>
+            </div>`;
+        const footer = `<button class="btn" onclick="UI.closeModal()">${t('modal.close')}</button>`;
+        UI.modal(t('tp.help.title'), body, footer);
+    }
+};

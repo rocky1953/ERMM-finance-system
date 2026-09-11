@@ -348,13 +348,15 @@ registerPage('dashboard', async (c) => {
         if (risk.status === 'fulfilled' && risk.value.data && risk.value.data.length > 0) {
             const r = risk.value.data[0];
             const zVal = Number(r.Z_score || 0);
-            const zColor = r.risk_color || (zVal >= 2.9 ? 'GREEN' : (zVal >= 1.23 ? 'YELLOW' : 'RED'));
+            // 直接由 Z 值重算判定（與彈窗 openZDetail 邏輯一致），不依賴可能過時的 DB risk_color / wall_mode
+            const zZone = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
+            const zZoneLabel = zZone === 'green' ? t('dash.safe') : (zZone === 'yellow' ? t('dash.grey') : t('dash.bankrupt'));
             rp.innerHTML = `
                 <div class="kpi-grid">
-                    <div class="kpi-card ${zColor.toLowerCase()} clickable" id="zScoreCard" title="${t('dash.zmodal.hint')}">
+                    <div class="kpi-card ${zZone} clickable" id="zScoreCard" title="${t('dash.zmodal.hint')}">
                         <div class="kpi-label">${t('dash.z_score')} <span style="font-size:.75em;font-weight:400;opacity:.75;">👆 ${t('dash.zmodal.hint')}</span></div>
                         <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
-                        <div class="kpi-badge ${zColor.toLowerCase()}">${r.wall_mode || (zColor === 'GREEN' ? t('dash.safe') : zColor === 'YELLOW' ? t('dash.grey') : t('dash.bankrupt'))}</div>
+                        <div class="kpi-badge ${zZone}">${zZoneLabel}</div>
                     </div>
                     <div class="kpi-card ${Number(r.current_ratio) >= 1.5 ? 'green' : (Number(r.current_ratio) >= 1 ? 'yellow' : 'red')}">
                         <div class="kpi-label">${t('dash.current_ratio')}</div>

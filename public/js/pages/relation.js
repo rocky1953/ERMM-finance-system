@@ -10,7 +10,7 @@ registerPage('relation', async (c) => {
                 <label>${t('relation.th.type')}：<select id="relType" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
                     <option value="客戶">${t('relation.type.customer')}</option><option value="供應商">${t('relation.type.supplier')}</option><option value="關係人">${t('relation.type.related')}</option></select></label>
                 <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
-                    <option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></label>
+                    <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
                 <button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>
                 <button class="btn btn-success" onclick="loadRelation()">🔄 ${t('refresh')}</button>
             </div>
@@ -73,7 +73,7 @@ const RelationForm = {
                 <div class="form-group"><label>${t('relation.th.type')}</label>
                     <select id="rf_type"><option>客戶</option><option>供應商</option><option>關係人</option></select></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
-                    <select id="rf_flag"><option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></div>
+                    <select id="rf_flag"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('relation.th.id')}</label><input id="rf_id" value="${d.relation_id||''}"></div>

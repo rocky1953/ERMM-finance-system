@@ -105,6 +105,8 @@ table.data-table tr:hover { background: #e8f4fd; }
 .btn-warning:hover { background: #d68910; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #c0392b; }
+.btn-info { background: #16a085; color: #fff; }
+.btn-info:hover { background: #138d75; }
 .btn-sm { padding: 4px 10px; font-size: 0.8em; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 

@@ -8,7 +8,7 @@ registerPage('branch', async (c) => {
                 <label>${t('sys.business')}：<select id="brBU" onchange="loadBranch()"><option value="">${t('sys.all')}</option>
                     <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
                 <label>${t('system.col.status')}：<select id="brFlag" onchange="loadBranch()"><option value="">${t('sys.all')}</option>
-                    <option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></label>
+                    <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
                 <button class="btn btn-primary" onclick="BranchForm.open()">➕ ${t('branch.btn.add')}</button>
                 <button class="btn btn-success" onclick="loadBranch()">🔄 ${t('refresh')}</button>
             </div>
@@ -65,7 +65,7 @@ const BranchForm = {
                     <select id="bf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
                 <div class="form-group"><label>${t('branch.th.id')}</label><input id="bf_id" value="${d.branch_id||''}"></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
-                    <select id="bf_flag"><option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></div>
+                    <select id="bf_flag"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group" style="flex:1"><label>${t('branch.th.name')}</label><input id="bf_name" value="${d.branch_name||''}"></div>

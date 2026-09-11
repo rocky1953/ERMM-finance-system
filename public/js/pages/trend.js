@@ -52,7 +52,7 @@ registerPage('trend', async (c) => {
         API.get(`/api/summary?bu_no=${bu_no}&limit=200`)
     ]);
     const allRows = yearResp.status === 'fulfilled' ? (yearResp.value.data || []) : [];
-    const years = [...new Set(allRows.map(r => String(r.YYYY)))].sort((a, b) => b.localeCompare(a));
+    const years = [...new Set(allRows.map(r => r.YYYY).filter(y => y != null && String(y).trim() !== '').map(y => String(y)))].sort((a, b) => b.localeCompare(a));
 
     // 填充年份下拉
     const yearSel = document.getElementById('trendYear');
