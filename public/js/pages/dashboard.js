@@ -351,6 +351,18 @@ registerPage('dashboard', async (c) => {
             // 直接由 Z 值重算判定（與彈窗 openZDetail 邏輯一致），不依賴可能過時的 DB risk_color / wall_mode
             const zZone = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
             const zZoneLabel = zZone === 'green' ? t('dash.safe') : (zZone === 'yellow' ? t('dash.grey') : t('dash.bankrupt'));
+            // 流動比率: >=1.5 安全, >=1 灰色, <1 破產區
+            const cr = Number(r.current_ratio || 0);
+            const crZone = cr >= 1.5 ? 'green' : (cr >= 1 ? 'yellow' : 'red');
+            const crLabel = cr >= 1.5 ? t('dash.safe') : (cr >= 1 ? t('dash.grey') : t('dash.bankrupt'));
+            // 負債比: <=50 安全, <=70 灰色, >70 破產區
+            const dr = Number(r.debt_ratio || 0);
+            const drZone = dr <= 50 ? 'green' : (dr <= 70 ? 'yellow' : 'red');
+            const drLabel = dr <= 50 ? t('dash.safe') : (dr <= 70 ? t('dash.grey') : t('dash.bankrupt'));
+            // ROE: >=0 安全, <0 破產區
+            const roe = Number(r.ROE || 0);
+            const roeZone = roe >= 0 ? 'green' : 'red';
+            const roeLabel = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
             rp.innerHTML = `
                 <div class="kpi-grid">
                     <div class="kpi-card ${zZone} clickable" id="zScoreCard" title="${t('dash.zmodal.hint')}">
@@ -358,18 +370,21 @@ registerPage('dashboard', async (c) => {
                         <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
                         <div class="kpi-badge ${zZone}">${zZoneLabel}</div>
                     </div>
-                    <div class="kpi-card ${Number(r.current_ratio) >= 1.5 ? 'green' : (Number(r.current_ratio) >= 1 ? 'yellow' : 'red')}">
+                    <div class="kpi-card ${crZone}">
                         <div class="kpi-label">${t('dash.current_ratio')}</div>
                         <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
+                        <div class="kpi-badge ${crZone}">${crLabel}</div>
                         <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
                     </div>
-                    <div class="kpi-card green">
+                    <div class="kpi-card ${drZone}">
                         <div class="kpi-label">${t('dash.debt_ratio_label')}</div>
                         <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
+                        <div class="kpi-badge ${drZone}">${drLabel}</div>
                     </div>
-                    <div class="kpi-card ${Number(r.ROE) >= 0 ? 'green' : 'red'}">
+                    <div class="kpi-card ${roeZone}">
                         <div class="kpi-label">${t('dash.roe')}</div>
                         <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
+                        <div class="kpi-badge ${roeZone}">${roeLabel}</div>
                         <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}%</div>
                     </div>
                 </div>
