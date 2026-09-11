@@ -105,15 +105,42 @@ router.post('/calc', async (req, res) => {
             current_ratio, quick_ratio, debt_ratio, ROI, ROE, ROA, gross_margin, net_margin,
             r.uid]);
 
-        // 更新 KPI 當前值
+        // 更新 KPI 當前值（燈號依 MGM_KPI_desc 門檻動態計算，與 kpiQuery 邏輯一致）
+        // asc  = 值高=差 → val<=low GREEN, low<val<=high YELLOW, val>high RED
+        // desc = 值低=差 → val>=high GREEN, low<=val<high YELLOW, val<low RED
+        const kpiLight = (val, low, high, pct_type) => {
+            if (val === null || val === undefined || isNaN(val)) return null;
+            if ((!low && !high) || low === high) return null;
+            const asc = pct_type !== 'desc';
+            if (asc)  return val <= low ? 'GREEN' : (val > high ? 'RED' : 'YELLOW');
+            return val >= high ? 'GREEN' : (val < low ? 'RED' : 'YELLOW');
+        };
+        const [kpiRows] = await conn.execute(
+            "SELECT KPI_id, KPI1, KPI2, pct_type FROM MGM_KPI_desc WHERE bu_no=? AND KPI_id IN ('current_ratio','debt_ratio')",
+            [bu_no]
+        );
+        const kpiMap = {};
+        kpiRows.forEach(k => kpiMap[k.KPI_id] = k);
+
         await conn.execute(`
             INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
             VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
         `, [bu_no, 'Z_score', Z_score, risk_color]);
+
+        const crKpi = kpiMap['current_ratio'] || {};
         await conn.execute(`
             INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
             VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
-        `, [bu_no, 'current_ratio', current_ratio, current_ratio >= 1.5 ? 'GREEN' : (current_ratio >= 1 ? 'YELLOW' : 'RED')]);
+        `, [bu_no, 'current_ratio', current_ratio,
+            kpiLight(current_ratio, Number(crKpi.KPI1 || 0), Number(crKpi.KPI2 || 0), crKpi.pct_type)]);
+
+        // 負債比：KPI1=50, KPI2=70, pct_type='asc'（值越高越差）
+        const drKpi = kpiMap['debt_ratio'] || { KPI1: 50, KPI2: 70, pct_type: 'asc' };
+        await conn.execute(`
+            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
+            VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
+        `, [bu_no, 'debt_ratio', debt_ratio,
+            kpiLight(debt_ratio, Number(drKpi.KPI1 || 50), Number(drKpi.KPI2 || 70), drKpi.pct_type || 'asc')]);
 
         await conn.commit();
 
