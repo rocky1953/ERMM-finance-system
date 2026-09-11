@@ -40,3 +40,7 @@ public/data/generated_*.xlsx
 
 # 第三方資料表匯出產物（含真實資料，不入版控）
 database/ERMM_第三方資料匯出_*.xlsx
+
+# Excel 暫存鎖檔
+~$*.xlsx
+~$*.xls
