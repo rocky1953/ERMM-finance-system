@@ -14,7 +14,10 @@ const { pool } = require('../config/db');
       customs DECIMAL(18,2) DEFAULT 0 COMMENT '進出口費用',
       service_part_comp DECIMAL(18,2) DEFAULT 0 COMMENT '服務零件與賠償',
       variable_expense DECIMAL(18,2) DEFAULT 0 COMMENT '變動費用',
-      fixed_cost DECIMAL(18,2) DEFAULT 0 COMMENT '固定成本',
+      fixed_salary DECIMAL(18,2) DEFAULT 0 COMMENT '固定成本-工資',
+      fixed_rent DECIMAL(18,2) DEFAULT 0 COMMENT '固定成本-房租水電',
+      fixed_interest DECIMAL(18,2) DEFAULT 0 COMMENT '固定成本-利息支出',
+      fixed_cost DECIMAL(18,2) DEFAULT 0 COMMENT '固定成本(工資+房租水電+利息支出)',
       remark VARCHAR(500) DEFAULT NULL,
       create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
       update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -31,15 +34,19 @@ const { pool } = require('../config/db');
     await pool.execute(
       `INSERT INTO MGM_BEP_threshold
        (bu_no, YYYY_MM, consumable, packaging, processing, misc_purchase,
-        freight, customs, service_part_comp, variable_expense, fixed_cost)
+        freight, customs, service_part_comp, variable_expense,
+        fixed_salary, fixed_rent, fixed_interest, fixed_cost)
        VALUES ('HM', ?, 1296206.36, 142720.31, 500, 598049.55,
-               500, 361949.49, 1102926.29, 3581202, 14040578.64)
+               500, 361949.49, 1102926.29, 3581202,
+               9126376.12, 3088927.30, 1825275.22, 14040578.64)
        ON DUPLICATE KEY UPDATE
         consumable=VALUES(consumable), packaging=VALUES(packaging),
         processing=VALUES(processing), misc_purchase=VALUES(misc_purchase),
         freight=VALUES(freight), customs=VALUES(customs),
         service_part_comp=VALUES(service_part_comp),
         variable_expense=VALUES(variable_expense),
+        fixed_salary=VALUES(fixed_salary), fixed_rent=VALUES(fixed_rent),
+        fixed_interest=VALUES(fixed_interest),
         fixed_cost=VALUES(fixed_cost)`,
       [ym]
     );

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 資料導入總指南（Online / Offline）</title>
+<style>
+  :root{
+    --primary:#1e40af; --primary-2:#2563eb; --accent:#0ea5e9;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#1e40af,#0ea5e9); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:32px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#eff6ff,#dbeafe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f1f5f9}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.yes{color:var(--ok); font-weight:700; text-align:center}
+  td.no{color:var(--text-mute); text-align:center}
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.6; margin:14px 0;
+    border:1px solid #334155; font-family:"SF Mono","Cascadia Code","Consolas",monospace;
+    white-space:pre;
+  }
+  code.inline{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:13px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace;
+  }
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin:16px 0}
+  .feat{border:1px solid var(--border); border-radius:8px; padding:14px 16px; background:var(--surface)}
+  .feat .icon{font-size:20px; margin-bottom:6px}
+  .feat .name{font-weight:700; color:var(--primary); font-size:14px}
+  .feat .desc{font-size:13px; color:var(--text-soft); margin-top:4px}
+
+  .badge{display:inline-block;border-radius:4px;padding:1px 8px;font-size:12px;font-weight:700;white-space:nowrap}
+  .b-api{background:#dbeafe;color:#1e40af}
+  .b-pipe{background:#fef3c7;color:#92400e}
+  .b-excel{background:#dcfce7;color:#166534}
+  .b-sql{background:#f1e8ff;color:#6b21a8}
+  .b-auto{background:#e2e8f0;color:#475569}
+
+  .flow{
+    background:#0f172a; color:#e2e8f0; border-radius:8px; padding:18px 22px; margin:16px 0;
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; font-size:13px; line-height:1.9; white-space:pre; overflow-x:auto;
+  }
+  .qa{border-left:3px solid var(--accent); margin:16px 0; padding:4px 0 4px 16px}
+  .qa .q{font-weight:700; color:var(--text); margin-bottom:4px}
+  .qa .q::before{content:"Q："; color:var(--warn); font-weight:700}
+  .qa .a{color:var(--text-soft); font-size:14px}
+  .qa .a::before{content:"A："; color:var(--ok); font-weight:700}
+  .sec{scroll-margin-top:20px}
+  .foot{margin-top:48px;padding-top:18px;border-top:2px solid var(--border);color:var(--text-mute);font-size:13px;text-align:center}
+
+  @media print{
+    body{background:#fff}
+    .page{box-shadow:none; padding:0; max-width:100%}
+    .cover{margin:0 0 20px; padding:24px 32px; background:#1e40af !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .toc{page-break-inside:avoid}
+    table, pre{page-break-inside:avoid}
+    h2{page-break-after:avoid}
+  }
+  .float-nav{
+    position:fixed; right:16px; top:50%; transform:translateY(-50%);
+    background:rgba(30,64,175,.92); color:#fff; padding:10px 14px;
+    border-radius:8px; font-size:12px; display:flex; flex-direction:column; gap:4px;
+    box-shadow:0 4px 20px rgba(0,0,0,.2); backdrop-filter:blur(6px);
+    z-index:999; opacity:.9; transition:opacity .2s; max-height:90vh; overflow:auto;
+  }
+  .float-nav:hover{opacity:1}
+  .float-nav a{color:#fff; text-decoration:none; padding:2px 0}
+  .float-nav a:hover{color:#bfdbfe}
+  @media print{.float-nav{display:none}}
+</style>
+</head>
+<body>
+
+<nav class="float-nav" title="快速跳轉">
+  <a href="#sec0">⓪ 總覽</a>
+  <a href="#sec1">① 環境準備</a>
+  <a href="#sec2">② 全量清單</a>
+  <a href="#sec3">③ Online</a>
+  <a href="#sec4">④ Offline</a>
+  <a href="#sec5">⑤ SOP</a>
+  <a href="#sec6">⑥ 驗證</a>
+  <a href="#sec7">⑦ 備份</a>
+  <a href="#sec8">⑧ Q&amp;A</a>
+  <a href="#sec9">⑨ 檔案</a>
+</nav>
+
+<div class="page">
+
+  <header class="cover">
+    <h1>ERMM 財務模組 — 資料導入總指南</h1>
+    <div class="sub">第三方資料系統接入 ｜ <strong>Online 線上</strong> 與 <strong>Offline 離線</strong> 兩種環境完整操作手冊</div>
+    <div>
+      <span class="tag">Node.js + Express + MySQL 8</span>
+      <span class="tag">29 張表</span>
+      <span class="tag">3 條導入通道</span>
+      <span class="tag">7 步批次管線</span>
+    </div>
+    <div class="meta">
+      <span>版本 v1.0</span><span>更新日期 2026-09-11</span><span>配套：OFFLINE_IMPORT_GUIDE.md（8 表欄位細節）</span>
+    </div>
+  </header>
+
+  <div class="toc">
+    <h3>目錄</h3>
+    <ol>
+      <li><a href="#sec0">一句話總覽與通道選擇</a></li>
+      <li><a href="#sec1">環境準備（軟體 / .env / 啟停）</a></li>
+      <li><a href="#sec2">全量資料清單（29 張表）</a></li>
+      <li><a href="#sec3">Online：頁面 / HTTP API / 批次管線</a></li>
+      <li><a href="#sec4">Offline：Excel / 交接檔 / SQL</a></li>
+      <li><a href="#sec5">標準作業流程 SOP</a></li>
+      <li><a href="#sec6">匯入後重算與驗證</a></li>
+      <li><a href="#sec7">備份與回滾</a></li>
+      <li><a href="#sec8">常見問題 Q&amp;A</a></li>
+      <li><a href="#sec9">關鍵檔案位置</a></li>
+    </ol>
+  </div>
+
+  <!-- ============ 0 ============ -->
+  <h2 id="sec0" class="sec">⓪ 一句話總覽</h2>
+
+<div class="flow">第三方系統（ERP / 銀行 / 財務 / 稅務）
+        │
+        ├── 連線可用 ──► 【Online】瀏覽器頁面錄入 或 HTTP API 寫入 或 批次管線同步
+        │
+        └── 實體檔案交接 ──► 【Offline】Excel 模板匯入 / ERP 批次交接檔 / SQL 備份還原
+                                          │
+                                          ▼
+                         匯入後一律執行「批次管線一鍵重算」→ 勾稽核驗</div>
+
+  <h3>三條導入通道怎麼選</h3>
+  <table>
+    <thead><tr><th>通道</th><th>適用場景</th><th>需服務運行</th><th>大批量</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. 線上頁面 / API</strong></td><td>日常即時錄入、零星維護、程式對接</td><td class="yes">需要</td><td class="center">逐筆／可迴圈</td><td>瀏覽器各頁面「新增」，或對 <code>/api/*</code> 下 POST</td></tr>
+      <tr><td><strong>B. 線上批次管線</strong></td><td>第三方 ERP 每月 PO/SO/庫存整批同步</td><td class="yes">需要</td><td class="yes">大量</td><td>資料先落「暫存區」，再跑 Step1~7</td></tr>
+      <tr><td><strong>C. 離線檔案匯入</strong></td><td>初次建帳、月結批量、外網隔離、停機維護</td><td class="no">不需 Express</td><td class="yes">大量</td><td>Excel（<code>import_excel.js</code>）或 SQL，直連 MySQL</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ 1 ============ -->
+  <h2 id="sec1" class="sec">① 環境準備</h2>
+
+  <h3>1.1 軟體需求</h3>
+  <table>
+    <thead><tr><th>軟體</th><th>版本</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>Node.js</td><td>18+（建議 20 LTS）</td><td>跑服務與離線匯入腳本</td></tr>
+      <tr><td>MySQL</td><td>8.x，字集 <code>utf8mb4</code></td><td>資料庫 <code>ERMM_db</code></td></tr>
+      <tr><td>瀏覽器</td><td>Chrome / Edge 最新版</td><td>線上操作</td></tr>
+      <tr><td>Excel</td><td>可開啟 .xlsx</td><td>離線填報</td></tr>
+    </tbody>
+  </table>
+  <p>安裝依賴（僅首次）：</p>
+<pre>cd e:\finance
+npm.cmd install</pre>
+
+  <h3>1.2 環境設定檔 <code>.env</code>（位於 <code>e:\finance\.env</code>）</h3>
+  <table>
+    <thead><tr><th>鍵</th><th>說明</th><th>本機(離線)範例</th><th>線上範例</th></tr></thead>
+    <tbody>
+      <tr><td><code>PORT</code></td><td>Express 監聽埠</td><td>3008</td><td>3008（或對外 80/443 反代）</td></tr>
+      <tr><td><code>DB_HOST</code></td><td>MySQL 位址</td><td><code>127.0.0.1</code></td><td>內網/雲 DB，如 <code>10.0.0.20</code></td></tr>
+      <tr><td><code>DB_PORT</code></td><td>MySQL 埠</td><td>3306</td><td>3306</td></tr>
+      <tr><td><code>DB_USER</code></td><td>DB 帳號</td><td><code>root</code></td><td>受限帳號（只授該庫權限）</td></tr>
+      <tr><td><code>DB_PASSWORD</code></td><td>DB 密碼</td><td>見現有 .env</td><td>強密碼，勿入版控</td></tr>
+      <tr><td><code>DB_NAME</code></td><td>資料庫名</td><td><code>ERMM_db</code></td><td><code>ERMM_db</code></td></tr>
+      <tr><td><code>JWT_SECRET</code></td><td>登入簽章用</td><td>任意長隨機字串</td><td>線上務必換高強度隨機值</td></tr>
+    </tbody>
+  </table>
+  <div class="call info">維護兩套設定，切換時覆蓋 <code>.env</code> 後<strong>重啟服務</strong>即可：</div>
+<pre># 離線（本機 DB）
+Copy-Item .env.offline .env -Force
+# 線上（遠端 DB）
+Copy-Item .env.online  .env -Force</pre>
+
+  <h3>1.3 啟動 / 停止 / 驗證</h3>
+<pre># 啟動
+cd e:\finance
+node app.js
+
+# 驗證（另一個終端機）
+Invoke-RestMethod http://localhost:3008/api/health -UseBasicParsing
+# 看到 success=true 即正常</pre>
+  <p>停止：運行視窗按 <code>Ctrl+C</code>；背景任務用連接埠找 PID 終止：</p>
+<pre>netstat -ano | findstr ':3008' | findstr LISTENING
+taskkill /F /PID &lt;查到的PID&gt;</pre>
+
+  <!-- ============ 2 ============ -->
+  <h2 id="sec2" class="sec">② 全量資料清單（29 張表，按來源分類）</h2>
+  <div class="call info">
+    通道標記：<span class="badge b-api">API</span> 線上介面／HTTP　<span class="badge b-pipe">管線</span> 批次 Step1~7 產出　
+    <span class="badge b-excel">Excel</span> 離線模板　<span class="badge b-sql">SQL</span> 備份還原／直接匯入。
+    標 ✅「需重算」者，匯入後要跑批次管線，報表數字才會更新。
+  </div>
+
+  <h3>2.1 第三方 ERP 原始單據（外部 ERP／貿易／倉儲系統）</h3>
+  <table>
+    <thead><tr><th>表</th><th>中文名</th><th>頁面</th><th>進入方式</th><th>通道</th><th>需重算</th></tr></thead>
+    <tbody>
+      <tr><td><code>ermm_temp_po</code></td><td>PO 暫存（第三方 PO 落地區）</td><td>tempPo</td><td>第三方採購單</td><td><span class="badge b-api">API</span> <span class="badge b-excel">Excel</span></td><td class="center">→Step1</td></tr>
+      <tr><td><code>ermm_erp_po</code></td><td>正式採購單 PO</td><td>po</td><td>Step1 產出，勿直接灌</td><td><span class="badge b-pipe">管線</span></td><td class="yes">✅</td></tr>
+      <tr><td><code>ERMM_erp_SO</code></td><td>銷售訂單 SO</td><td>so</td><td>第三方銷售單</td><td><span class="badge b-api">API</span> <span class="badge b-excel">Excel</span></td><td class="yes">✅</td></tr>
+      <tr><td><code>ERMM_erp_so_DN</code></td><td>送貨／交貨單 DN</td><td>dn</td><td>第三方出貨單</td><td><span class="badge b-api">API</span></td><td class="no">—</td></tr>
+      <tr><td><code>ERMM_erp_documents</code></td><td>ERP 單據文件</td><td>附件</td><td>第三方單據文件</td><td><span class="badge b-api">API</span> <span class="badge b-sql">SQL</span></td><td class="no">—</td></tr>
+      <tr><td><code>e2_xitems_daily_status</code></td><td>庫存日狀態</td><td>xitems</td><td>第三方倉存</td><td><span class="badge b-api">API</span> <span class="badge b-excel">Excel</span></td><td class="yes">✅ Step5</td></tr>
+      <tr><td><code>e2_xitems_daily_status_chart</code></td><td>庫存圖表彙總</td><td>xitems</td><td>Step5 產出</td><td><span class="badge b-pipe">管線</span></td><td class="no">—</td></tr>
+      <tr><td><code>mgm_production_details</code></td><td>生產明細</td><td>生產</td><td>第三方生產報表</td><td><span class="badge b-sql">SQL</span></td><td class="no">—</td></tr>
+      <tr><td><code>transit_price</code></td><td>轉撥計價</td><td>關係人</td><td>第三方/管理</td><td><span class="badge b-api">API</span> <span class="badge b-sql">SQL</span></td><td class="no">—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 財務核心 8 表（財務／銀行／稅務，離線模板已完整支援）</h3>
+  <table>
+    <thead><tr><th>表</th><th>中文名</th><th>頁面</th><th>線上通道</th><th>離線 Excel Sheet</th><th>需重算</th></tr></thead>
+    <tbody>
+      <tr><td><code>MGM_finance_summary</code></td><td>財務摘要（核心樞紐，200+欄）</td><td>summary</td><td><span class="badge b-api">API</span></td><td><code>01_財務摘要_summary</code></td><td class="yes">✅ Step7</td></tr>
+      <tr><td><code>MGM_casher_details</code></td><td>現金日記帳</td><td>cash</td><td><span class="badge b-api">API</span></td><td><code>02_現金日記帳_cash</code></td><td class="yes">✅</td></tr>
+      <tr><td><code>MGM_invoice_details</code></td><td>發票明細（進銷項）</td><td>invoice</td><td><span class="badge b-api">API</span> genAR/genAP</td><td><code>03_發票明細_invoice</code></td><td class="yes">✅ Step6</td></tr>
+      <tr><td><code>pay_detail</code></td><td>付款明細</td><td>pay</td><td><span class="badge b-api">API</span></td><td><code>04_付款明細_pay</code></td><td class="yes">✅</td></tr>
+      <tr><td><code>ERMM_arap_detail</code></td><td>應收應付月底彙總</td><td>arap</td><td><span class="badge b-api">API</span> recalc</td><td><code>05_應收應付_arap</code></td><td class="center">可 Step6</td></tr>
+      <tr><td><code>mgm_bank_loan_details</code></td><td>銀行存貸款</td><td>bank</td><td><span class="badge b-api">API</span> recalc</td><td><code>06_銀行貸款_bank</code></td><td class="no">—</td></tr>
+      <tr><td><code>check_detail</code></td><td>票據／支票</td><td>check</td><td><span class="badge b-api">API</span> clear</td><td><code>07_票據管理_check</code></td><td class="no">—</td></tr>
+      <tr><td><code>forecast_detail</code></td><td>財務預測</td><td>forecast</td><td><span class="badge b-api">API</span></td><td><code>08_財務預測_forecast</code></td><td class="no">—</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 主資料／月結（管理帳，需先建檔）</h3>
+  <table>
+    <thead><tr><th>表</th><th>中文名</th><th>頁面</th><th>通道</th></tr></thead>
+    <tbody>
+      <tr><td><code>branch_detail</code></td><td>公司／分行主檔</td><td>branch</td><td><span class="badge b-api">頁面/API</span></td></tr>
+      <tr><td><code>relation_detail</code></td><td>往來對象／關係人</td><td>relation</td><td><span class="badge b-api">頁面/API</span></td></tr>
+      <tr><td><code>MGM_account_details</code></td><td>會計科目主檔</td><td>account</td><td><span class="badge b-api">頁面/API</span></td></tr>
+      <tr><td><code>monthly_items</code></td><td>月結項目</td><td>monthly</td><td><span class="badge b-api">頁面/API</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.4 系統設定／使用者／KPI</h3>
+  <table>
+    <thead><tr><th>表</th><th>中文名</th><th>頁面</th><th>通道</th></tr></thead>
+    <tbody>
+      <tr><td><code>cams_system_codes</code></td><td>系統碼表（庫存帳齡、狀態等）</td><td>system</td><td><span class="badge b-api">頁面/API</span> <span class="badge b-excel">Excel</span></td></tr>
+      <tr><td><code>MGM_KPI_desc</code></td><td>KPI 指標定義</td><td>system/kpi</td><td><span class="badge b-api">頁面/API</span></td></tr>
+      <tr><td><code>cams_xuser</code></td><td>系統使用者</td><td>user</td><td><span class="badge b-api">頁面/API</span></td></tr>
+      <tr><td><code>leader_user</code></td><td>主管使用者</td><td>user</td><td><span class="badge b-api">API</span> <span class="badge b-sql">SQL</span></td></tr>
+      <tr><td><code>login_user_record</code></td><td>登入記錄</td><td>系統產生</td><td><span class="badge b-auto">不需匯入</span></td></tr>
+      <tr><td><code>cams_batch_control</code></td><td>批次執行控制記錄</td><td>batch</td><td><span class="badge b-auto">管線自動寫入</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.5 加工產出／門檻（一般不由第三方匯入）</h3>
+  <table>
+    <thead><tr><th>表</th><th>中文名</th><th>產生方式</th></tr></thead>
+    <tbody>
+      <tr><td><code>BH_MGM_tx_detail</code></td><td>交易明細彙總</td><td>批次加工產出</td></tr>
+      <tr><td><code>mgm_bep_threshold</code></td><td>BEP 損益平衡門檻（CW397 基準）</td><td>BEP 頁「儲存門檻」在線維護（<code>POST /api/bep/save</code>）</td></tr>
+    </tbody>
+  </table>
+  <div class="call info">建表來源：28 張標準表見 <code>database/schema.sql</code> 與 <code>migrations/</code>；<code>mgm_bep_threshold</code> 由 <code>create_bep.js</code>／<code>extend_bep_fixed.js</code> 建立。</div>
+
+  <h3>2.6 公司別代碼（跨表共用，必須一致）</h3>
+  <table>
+    <thead><tr><th>bu_no</th><th>名稱</th></tr></thead>
+    <tbody>
+      <tr><td><code>HM</code></td><td>鴻明 Hong Ming</td></tr>
+      <tr><td><code>HN</code></td><td>鴻南 Hong Nan</td></tr>
+      <tr><td><code>SZ</code></td><td>深圳廠 Shenzhen</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ 3 ============ -->
+  <h2 id="sec3" class="sec">③ 【Online A】線上頁面 / HTTP API 導入</h2>
+  <div class="call warn">前提：服務已啟動（<code>node app.js</code>），可連到 <code>http://&lt;主機&gt;:3008</code>。目前版本 API <strong>未強制 Token</strong>（CORS 全開），僅 <code>/api/system/login</code> 為登入；線上對外部署時請於網路層（防火牆/VPN/反代）限制存取。</div>
+
+  <h3>3.1 方式一：瀏覽器頁面逐筆（最簡單，零星資料）</h3>
+  <ol class="steps">
+    <li>打開 <code>http://&lt;主機&gt;:3008</code>，右上角選公司別／年月。</li>
+    <li>由左側選單進入對應頁面（採購單、銷售訂單、現金、發票、庫存、銀行…）。</li>
+    <li>點 <strong>＋新增</strong> 填表 → <strong>存檔</strong>。寫入即時進 MySQL，<strong>不需重啟服務</strong>。</li>
+    <li>BEP 門檻：進入「損益平衡分析」，載入後改數值 → <strong>儲存門檻</strong>。</li>
+  </ol>
+
+  <h3>3.2 方式二：HTTP API 批量（程式對接／批量 JSON）</h3>
+  <p>清單資源一致風格：<code>GET /api/&lt;資源&gt;</code> 查詢、<code>POST</code> 新增、<code>PUT /api/&lt;資源&gt;/:uid</code> 更新、<code>DELETE</code> 刪除。</p>
+  <h4>PowerShell 範例（新增一筆現金日記帳）</h4>
+<pre>$body = @{
+  bu_no   = 'HM'
+  num_vman= 'CVHM202501001'
+  wk_date = '2025-01-15'
+  amt_type= '銷貨收入'
+  DB_CR   = 'DR'
+  sub_amt = 881862
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri 'http://localhost:3008/api/cash' -Method Post `
+  -ContentType 'application/json; charset=utf-8' `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($body))</pre>
+
+  <h4>批量迴圈（讀 JSON 陣列逐筆 POST）</h4>
+<pre>$rows = Get-Content 'cash_rows.json' -Raw -Encoding UTF8 | ConvertFrom-Json
+foreach ($r in $rows) {
+  Invoke-RestMethod 'http://localhost:3008/api/cash' -Method Post `
+    -ContentType 'application/json; charset=utf-8' `
+    -Body ([System.Text.Encoding]::UTF8.GetBytes(($r | ConvertTo-Json)))
+}</pre>
+  <div class="call warn">中文 Body 請一律用 <code>UTF8.GetBytes(...)</code> 傳送，避免 PowerShell 預設編碼把中文變亂碼。</div>
+
+  <h4>主要寫入端點一覽</h4>
+  <table>
+    <thead><tr><th>資源</th><th>端點前綴</th><th>特殊動作</th></tr></thead>
+    <tbody>
+      <tr><td>PO 暫存</td><td><code>/api/temp-po</code></td><td><code>DELETE /batch/:batch_id</code> 清批次</td></tr>
+      <tr><td>採購單</td><td><code>/api/po</code></td><td>—</td></tr>
+      <tr><td>銷售單</td><td><code>/api/so</code></td><td>—</td></tr>
+      <tr><td>送貨單</td><td><code>/api/dn</code></td><td>—</td></tr>
+      <tr><td>庫存</td><td><code>/api/xitems</code></td><td><code>POST /recalc</code> 重算減值</td></tr>
+      <tr><td>現金</td><td><code>/api/cash</code></td><td>—</td></tr>
+      <tr><td>發票</td><td><code>/api/invoice</code></td><td><code>POST /genAR</code>、<code>/genAP</code> 產 AR/AP</td></tr>
+      <tr><td>付款</td><td><code>/api/pay</code></td><td><code>POST /:uid/pay</code> 註記付款</td></tr>
+      <tr><td>票據</td><td><code>/api/check</code></td><td><code>POST /:uid/clear</code> 兌現</td></tr>
+      <tr><td>銀行</td><td><code>/api/bank</code></td><td><code>POST /recalc</code></td></tr>
+      <tr><td>應收應付</td><td><code>/api/arap</code></td><td><code>POST /recalc</code></td></tr>
+      <tr><td>財務摘要</td><td><code>/api/summary</code></td><td><code>POST /calcPL</code>、<code>/addon</code></td></tr>
+      <tr><td>預測</td><td><code>/api/forecast</code></td><td>—</td></tr>
+      <tr><td>主檔</td><td colspan="2"><code>/api/branch</code>　<code>/api/relation</code>　<code>/api/account</code>　<code>/api/monthly</code></td></tr>
+      <tr><td>系統碼/KPI</td><td colspan="2"><code>/api/system/codes</code>、<code>/api/system/kpi</code></td></tr>
+      <tr><td>使用者</td><td><code>/api/user</code></td><td><code>PUT /:user_id/permissions</code></td></tr>
+      <tr><td>BEP 門檻</td><td colspan="2"><code>POST /api/bep/save</code></td></tr>
+      <tr><td>風險/KPI 試算</td><td colspan="2"><code>/api/risk/calc</code>、<code>/api/kpi-query/calc</code>（計算類，不落原始資料）</td></tr>
+    </tbody>
+  </table>
+  <p>必填欄位＝第 2 節對應表欄位，欄位名與 DB 相同；完整清單見 <code>OFFLINE_IMPORT_GUIDE.md</code> 第 4 節與 <code>schema.sql</code>。</p>
+
+  <h3>3.3 方式三：第三方 ERP 批次管線（每月整批，推薦常規使用）</h3>
+  <p>管線設計為「第三方 PO 先進暫存區 → 七步加工到報表」：</p>
+<div class="flow">Step1 erp2ermm_po      暫存 PO → 正式 ermm_erp_po
+Step2 proc_po          PO 本幣金額/單價加工（×匯率）
+Step3 proc_supplier    供應商彙算
+Step4 proc_xitems_..   物料法規綁定（簡化版跳過）
+Step5 cal_daily_stock  庫存日結算、跌價
+Step6 batch_ARAP_upd   AR/AP 彙算
+Step7 finance_summary  財務摘要三大報表重算</div>
+  <p><strong>操作：</strong></p>
+  <ol class="steps">
+    <li>第三方當月 PO 放進暫存：少量用 tempPo 頁面「＋新增」或 <code>POST /api/temp-po</code>（帶 <code>batch_id</code>，如 <code>BATCH_202501</code>）；大量用第 4.2 節離線交接檔。</li>
+    <li>進入「<strong>批次管線</strong>」頁（或直接呼叫）：</li>
+  </ol>
+<pre># 一鍵跑完 7 步（服務需運行）
+Invoke-RestMethod 'http://localhost:3008/api/batch/runAll' -Method Post -UseBasicParsing
+
+# 或只跑某一步
+Invoke-RestMethod 'http://localhost:3008/api/batch/step1' -Method Post -UseBasicParsing</pre>
+  <ol class="steps" start="3" style="counter-reset:step 2">
+    <li>跑完於頁面查看每步狀態（<code>cams_batch_control</code> 記錄成功／失敗／錯誤訊息）。</li>
+  </ol>
+
+  <!-- ============ 4 ============ -->
+  <h2 id="sec4" class="sec">④ 【Offline C】離線檔案導入（不經 Express，直連 MySQL）</h2>
+  <div class="call info">前提：在<strong>能連到目標 MySQL 的主機</strong>上操作；需有本機 Node 環境或 mysql 客戶端。無外部網路亦可。</div>
+
+  <h3>4.1 財務 8 表：通用 Excel 匯入器（最常用）</h3>
+  <p>模板 <code>database/finance_data_template.xlsx</code>，腳本 <code>database/import_excel.js</code>。</p>
+  <ol class="steps">
+    <li>打開 <code>database/finance_data_template.xlsx</code></li>
+    <li>各 Sheet「第 3 行」起貼資料（嚴格保留 Row 1 標題、Row 2 欄位代碼）</li>
+    <li>另存新檔，記住路徑</li>
+    <li><code>cd e:\finance ; node database/import_excel.js "你的檔案.xlsx"</code></li>
+    <li>到「批次管線」頁點「一鍵執行全部」重算報表</li>
+  </ol>
+  <div class="grid">
+    <div class="feat"><div class="icon">🔗</div><div class="name">欄位自動對應</div><div class="desc">Row 2 代碼 → DB 欄位，未知欄跳過</div></div>
+    <div class="feat"><div class="icon">🧹</div><div class="name">日期清洗</div><div class="desc">0000-00-00 / Excel 0 日期自動轉 null</div></div>
+    <div class="feat"><div class="icon">🔁</div><div class="name">UPSERT</div><div class="desc">重複主鍵覆蓋，可重複執行</div></div>
+    <div class="feat"><div class="icon">🛡️</div><div class="name">事務安全</div><div class="desc">每表獨立事務，失敗回滾</div></div>
+  </div>
+  <div class="call info">8 個 Sheet 對應表、每欄必填與格式規範（日期 <code>YYYY-MM-DD</code>、金額無千分位、年月 <code>YYYY/MM</code>、<code>DR/CR</code>、<code>AR/AP</code> 大寫等），詳見 <strong>OFFLINE_IMPORT_GUIDE.md</strong>。</div>
+<pre># 重新生成含最新欄位的模板
+node database/gen_excel_template.js</pre>
+
+  <h3>4.2 第三方 ERP 批次交接檔（7 Sheet 全鏈資料）</h3>
+  <p>第三方若能提供整批 ERP 交接 Excel，標準 Sheet 結構（範例 <code>batch_test_202301.xlsx</code>，載入範例 <code>load_batch_test.js</code>）：</p>
+  <table>
+    <thead><tr><th>Sheet</th><th>寫入表</th><th>內容</th></tr></thead>
+    <tbody>
+      <tr><td><code>01_ERP_temp_po</code></td><td><code>ermm_temp_po</code></td><td>第三方 PO（之後跑 Step1）</td></tr>
+      <tr><td><code>02_ERP_SO</code></td><td><code>ERMM_erp_SO</code></td><td>銷售訂單</td></tr>
+      <tr><td><code>03_庫存明細_xitems</code></td><td><code>e2_xitems_daily_status</code></td><td>庫存日狀態（跑 Step5）</td></tr>
+      <tr><td><code>04_系統參數_codes</code></td><td><code>cams_system_codes</code></td><td>系統碼表</td></tr>
+      <tr><td><code>05_發票明細_invoice</code></td><td><code>MGM_invoice_details</code></td><td>進銷項發票</td></tr>
+      <tr><td><code>06_現金日記_cash</code></td><td><code>MGM_casher_details</code></td><td>現金收支</td></tr>
+      <tr><td><code>07_財務摘要_summary</code></td><td><code>MGM_finance_summary</code></td><td>財務摘要</td></tr>
+    </tbody>
+  </table>
+  <div class="call warn"><code>load_batch_test.js</code> 是為 <code>202301</code> 批次客製的一次性腳本（含該批次舊資料清除條件）。導入新批次時：① 複製並修改頂部 <code>EXCEL</code> 檔名與「清除舊資料」單號前綴（如 <code>PO2501%</code>、<code>SO2501%</code>）；或 ② 5/6/7（發票/現金/摘要）改用 4.1 通用匯入器，僅保留 1~4 的 ERP 表；③ 執行後<strong>必跑</strong> <code>/api/batch/runAll</code>。</div>
+  <div class="call info">交接檔 Sheet 名需與腳本 <code>SHEET_TABLE</code> 完全一致；建議第三方每次用同一模板輸出，避免欄位漂移。</div>
+
+  <h3>4.3 SQL 方式（整庫初始化／搬遷／備份還原）</h3>
+<pre># 初次建表（mysql 已建立 ERMM_db 之後）
+mysql -uroot -p ERMM_db -e "source e:/finance/migrations/run_all.sql"
+# 或整包 schema
+mysql -uroot -p ERMM_db &lt; e:\finance\database\schema.sql
+
+# 整庫備份（離線交接最稳）
+mysqldump -uroot -p --default-character-set=utf8mb4 ERMM_db &gt; ERMM_db_20250115.sql
+
+# 整庫還原（到目標主機）
+mysql -uroot -p --default-character-set=utf8mb4 ERMM_db &lt; ERMM_db_20250115.sql
+
+# 只清某表重匯
+mysql -uroot -p ERMM_db -e "TRUNCATE TABLE MGM_casher_details;"</pre>
+
+  <!-- ============ 5 ============ -->
+  <h2 id="sec5" class="sec">⑤ 標準作業流程（SOP）</h2>
+
+  <h3>5.1 全新環境初始化（離線建帳）</h3>
+  <ol class="steps">
+    <li>裝 Node.js / MySQL 8；建立 <code>ERMM_db</code>（utf8mb4）</li>
+    <li>設定 <code>e:\finance\.env</code>（DB_HOST=127.0.0.1…）；<code>npm.cmd install</code></li>
+    <li>建表：<code>mysql &lt; migrations/run_all.sql</code>（需要 BEP 再跑 <code>create_bep.js</code> 建門檻表）</li>
+    <li>建主檔：公司/關係人/科目/系統碼（頁面或交接檔 Sheet 04）</li>
+    <li>匯財務 8 表：<code>node database/import_excel.js &lt;模板.xlsx&gt;</code></li>
+    <li>ERP 單據：灌入 temp_po / SO / 庫存（交接檔或 API）</li>
+    <li>啟動服務 <code>node app.js</code> → 批次管線「一鍵執行全部」</li>
+    <li>勾稽核驗（第 6 節）→ 完成</li>
+  </ol>
+
+  <h3>5.2 每月例行（線上常規）</h3>
+  <ol class="steps">
+    <li>第三方產出當月交接資料（PO/SO/庫存/發票/現金）：可連線走 API／temp_po 暫存；隔離環境走 Excel 交接檔。</li>
+    <li>批次管線 <code>runAll</code>（Step1~7）。</li>
+    <li>BEP 頁檢查/維護當月門檻並儲存。</li>
+    <li>勾稽核驗 + 前端三大報表抽檢。</li>
+  </ol>
+
+  <h3>5.3 線上 ⇄ 離線 搬移</h3>
+<div class="flow">來源主機：mysqldump 整庫匯出 .sql
+目標主機：裝 Node/MySQL → 建庫 → 還原 .sql → 放程式碼 → 改 .env 的 DB_HOST → node app.js</div>
+
+  <!-- ============ 6 ============ -->
+  <h2 id="sec6" class="sec">⑥ 匯入後重算與驗證（必做）</h2>
+  <ol class="steps">
+    <li><strong>重算</strong>：<code>POST /api/batch/runAll</code>（或頁面一鍵），確認 7 步皆成功。</li>
+    <li><strong>BEP 勾稽核查</strong>（材料各項／變動費用／固定成本明細合計＝門檻值）：</li>
+  </ol>
+<pre>node database/check_bep_reconcile_all.js
+# 預期：勾稽不符 0、NULL 0、fixed_cost = 三明細合計</pre>
+  <ol class="steps" start="3" style="counter-reset:step 2">
+    <li><strong>資產負債平衡</strong>（summary 頁抽檢）：<code>資產總額 = 負債總額 + 股東權益</code>。</li>
+    <li><strong>中文狀態值不可改</strong>：<code>po_status</code>、<code>po_sub_status</code>、<code>so.status</code>、庫存帳齡等 DB 存中文（如 <code>審核通過</code>、<code>交付完成</code>），後端 WHERE 依賴，匯入時照原狀，勿改成英文代碼。</li>
+  </ol>
+
+  <!-- ============ 7 ============ -->
+  <h2 id="sec7" class="sec">⑦ 備份與回滾</h2>
+  <ul>
+    <li><strong>匯入前備份</strong>：<code>mysqldump</code> 整庫，或針對表備份（<code>CREATE TABLE x_bak LIKE t; INSERT INTO x_bak SELECT * FROM t;</code>）。</li>
+    <li><strong>UPSERT 可重跑</strong>：財務 8 表與多數頁面保存採 <code>ON DUPLICATE KEY UPDATE</code>，重複匯入不產生重複列，但會覆蓋同鍵舊值。</li>
+    <li><strong>大批量先試跑</strong>：先用測試公司或測試庫驗證，再正式匯入。</li>
+  </ul>
+
+  <!-- ============ 8 ============ -->
+  <h2 id="sec8" class="sec">⑧ 常見問題 Q&amp;A</h2>
+  <div class="qa"><div class="q">線上 API 連不上？</div><div class="a">確認服務已啟動、連接埠（預設 3008）開放；用 <code>/api/health</code> 自查。</div></div>
+  <div class="qa"><div class="q">離線腳本連到錯的庫／密碼錯？</div><div class="a"><code>.env</code> 用 <code>DB_PASSWORD</code>；<code>import_excel.js</code> 已相容 <code>DB_PASS</code>/<code>DB_PASSWORD</code>，確認 <code>.env</code> 在 <code>e:\finance</code>。</div></div>
+  <div class="qa"><div class="q">匯入後頁面全「-」？</div><div class="a">Excel 動到 Row 2 欄位代碼；須與 DB 欄位名完全一致。</div></div>
+  <div class="qa"><div class="q">日期變 1900-01-01 / 0000-00-00？</div><div class="a">日期格勿填 0；腳本已自動清洗，空日期留白。</div></div>
+  <div class="qa"><div class="q">金額欄位失敗？</div><div class="a">移除千分位與貨幣符號；百分比填純數字（13 表⽰ 13%）。</div></div>
+  <div class="qa"><div class="q">中文變亂碼？</div><div class="a">API 用 <code>UTF8.GetBytes</code>；DB/連線字集須 utf8mb4；dump 加 <code>--default-character-set=utf8mb4</code>。</div></div>
+  <div class="qa"><div class="q">資產負債不平衡？</div><div class="a">檢查 summary 輸入平衡，再跑 runAll 由 Step7 校正。</div></div>
+  <div class="qa"><div class="q">報表數字沒更新？</div><div class="a">原始表匯入後忘記跑批次管線。</div></div>
+  <div class="qa"><div class="q">重複匯入會不會髒？</div><div class="a">不會，UPSERT 覆蓋；但憑證號/發票號撞號會覆蓋舊資料，匯前先確認或備份。</div></div>
+  <div class="qa"><div class="q">改了前端沒生效？</div><div class="a">靜態檔已設 no-cache，Ctrl+F5；改後端才需重啟 <code>node app.js</code>。</div></div>
+  <div class="qa"><div class="q">連接埠 3008 被佔用？</div><div class="a"><code>netstat -ano | findstr :3008</code> 找 PID → <code>taskkill /F /PID</code>。</div></div>
+
+  <!-- ============ 9 ============ -->
+  <h2 id="sec9" class="sec">⑨ 關鍵檔案位置</h2>
+  <table>
+    <thead><tr><th>用途</th><th>路徑</th></tr></thead>
+    <tbody>
+      <tr><td>服務入口 / 路由裝配</td><td><code>app.js</code></td></tr>
+      <tr><td>DB 連線池</td><td><code>config/db.js</code></td></tr>
+      <tr><td>環境設定</td><td><code>e:\finance\.env</code></td></tr>
+      <tr><td>DB 結構</td><td><code>database/schema.sql</code>、<code>migrations/</code></td></tr>
+      <tr><td>離線財務模板 / 匯入器</td><td><code>database/finance_data_template.xlsx</code>、<code>database/import_excel.js</code></td></tr>
+      <tr><td>模板生成</td><td><code>database/gen_excel_template.js</code></td></tr>
+      <tr><td>ERP 批次交接範例</td><td><code>database/batch_test_202301.xlsx</code>、<code>database/load_batch_test.js</code></td></tr>
+      <tr><td>批次管線（7 步）</td><td><code>routes/batch.js</code>、頁面 batch</td></tr>
+      <tr><td>BEP 門檻建表 / 維護</td><td><code>database/create_bep.js</code>、<code>POST /api/bep/save</code></td></tr>
+      <tr><td>勾稽核查</td><td><code>database/check_bep_reconcile_all.js</code></td></tr>
+      <tr><td>8 表欄位細節手冊</td><td><code>database/OFFLINE_IMPORT_GUIDE.md</code>（另有同名 .html）</td></tr>
+    </tbody>
+  </table>
+
+  <div class="call ok" style="margin-top:28px"><strong>原則：</strong>原始資料不管走線上還是離線進來，最後都統一由「批次管線」重算到三大報表，並以勾稽核查收斂，確保數字一致、可重跑、可回滾。</div>
+
+  <div class="foot">ERMM 財務模組 ｜ 資料導入總指南 v1.0 ｜ 2026-09-11</div>
+</div>
+
+</body>
+</html>

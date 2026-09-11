@@ -5,13 +5,13 @@ registerPage('account', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>公司別：<select id="aBU" onchange="loadAccount()"><option value="">全部</option>
+                <label>${t('sys.business')}：<select id="aBU" onchange="loadAccount()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
-                <label>年月：<input type="month" id="aYM" onchange="loadAccount()"></label>
-                <button class="btn btn-primary" onclick="AccountForm.open()">➕ 新增</button>
-                <button class="btn btn-success" onclick="loadAccount()">🔄</button>
+                <label>${t('monthly.ym')}：<input type="month" id="aYM" onchange="loadAccount()"></label>
+                <button class="btn btn-primary" onclick="AccountForm.open()">➕ ${t('account.btn.add')}</button>
+                <button class="btn btn-success" onclick="loadAccount()">🔄 ${t('refresh')}</button>
             </div>
-            <div id="accountTable">載入中...</div>
+            <div id="accountTable">${t('loading')}</div>
         </div>
     `;
     document.getElementById('aBU').value = State.bu_no;
@@ -23,11 +23,11 @@ async function loadAccount() {
     try {
         const res = await API.get(`/api/account?bu_no=${document.getElementById('aBU').value}&YYYY_MM=${document.getElementById('aYM').value.replace('-','/')}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">💰 尚無帳戶明細</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">💰 ${t('account.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>公司別</th><th>年月</th><th>類型</th><th>大類</th><th>子科目</th>
-                <th>名稱</th><th>金額</th><th>DR/CR</th><th>備註</th><th>操作</th>
+                <th>${t('sys.business')}</th><th>${t('monthly.ym')}</th><th>${t('account.th.type')}</th><th>${t('account.th.group')}</th><th>${t('account.th.sub_group')}</th>
+                <th>${t('account.th.name')}</th><th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.remark')}</th><th>${t('system.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -50,25 +50,25 @@ const AccountForm = {
     },
     _render(d) {
         const isEdit = !!d.uid;
-        UI.modal((isEdit ? '編輯' : '新增') + '帳戶明細', `
+        UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('account.title'), `
             <div class="form-row">
-                <div class="form-group"><label>公司別</label><select id="af_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>年月</label><input type="month" id="af_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
-                <div class="form-group"><label>帳戶類型</label><input id="af_type" value="${d.acct_type||''}"></div>
+                <div class="form-group"><label>${t('sys.business')}</label><select id="af_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="af_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
+                <div class="form-group"><label>${t('account.th.type')}</label><input id="af_type" value="${d.acct_type||''}"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>科目大類</label><input id="af_grp" value="${d.group_id||''}"></div>
-                <div class="form-group"><label>子科目</label><input id="af_sub" value="${d.sub_group||''}"></div>
-                <div class="form-group"><label>DR/CR</label><select id="af_dc"><option value="DR">DR</option><option value="CR">CR</option></select></div>
+                <div class="form-group"><label>${t('account.th.group')}</label><input id="af_grp" value="${d.group_id||''}"></div>
+                <div class="form-group"><label>${t('account.th.sub_group')}</label><input id="af_sub" value="${d.sub_group||''}"></div>
+                <div class="form-group"><label>${t('monthly.th.drcr')}</label><select id="af_dc"><option value="DR">DR</option><option value="CR">CR</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-group" style="flex:1"><label>名稱</label><input id="af_name" value="${d.acct_name||''}" style="width:100%"></div>
-                <div class="form-group"><label>金額</label><input type="number" id="af_amt" value="${d.sub_amt||0}" step="0.01"></div>
+                <div class="form-group" style="flex:1"><label>${t('account.th.name')}</label><input id="af_name" value="${d.acct_name||''}" style="width:100%"></div>
+                <div class="form-group"><label>${t('monthly.th.amount')}</label><input type="number" id="af_amt" value="${d.sub_amt||0}" step="0.01"></div>
             </div>
             <div class="form-row">
-                <div class="form-group" style="flex:1"><label>備註</label><input id="af_remark" value="${d.remark||''}" style="width:100%"></div>
+                <div class="form-group" style="flex:1"><label>${t('monthly.th.remark')}</label><input id="af_remark" value="${d.remark||''}" style="width:100%"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button><button class="btn btn-primary" onclick="AccountForm.save(${d.uid||0})">存檔</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="AccountForm.save(${d.uid||0})">${t('save')}</button>`);
         if (d.bu_no) document.getElementById('af_bu').value = d.bu_no;
         if (d.DB_CR) document.getElementById('af_dc').value = d.DB_CR;
     },
@@ -86,12 +86,12 @@ const AccountForm = {
         };
         try {
             if (uid) await API.put(`/api/account/${uid}`, body); else await API.post('/api/account', body);
-            UI.toast(uid ? '已更新' : '已新增', 'success'); UI.closeModal(); loadAccount();
+            UI.toast(uid ? t('saved') : t('account.msg.added'), 'success'); UI.closeModal(); loadAccount();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
 async function delAccount(uid) {
-    if (!confirm('確定刪除？')) return;
-    try { await API.del(`/api/account/${uid}`); UI.toast('已刪除','success'); loadAccount(); }
+    if (!confirm(t('confirm_delete'))) return;
+    try { await API.del(`/api/account/${uid}`); UI.toast(t('deleted'),'success'); loadAccount(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

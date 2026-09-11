@@ -5,10 +5,10 @@ registerPage('po', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="POForm.open()">➕ 新增採購單</button>
-                <button class="btn btn-success" onclick="loadPO()">🔄 刷新</button>
+                <button class="btn btn-primary" onclick="POForm.open()">➕ ${t('po.add')}</button>
+                <button class="btn btn-success" onclick="loadPO()">🔄 ${t('po.refresh')}</button>
             </div>
-            <div id="poTable">載入中...</div>
+            <div id="poTable">${t('loading')}</div>
         </div>
     `;
     loadPO();
@@ -19,13 +19,17 @@ async function loadPO() {
     try {
         const res = await API.get(`/api/po?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = UI.empty('🛒', '尚無採購單資料'); return; }
+        if (rows.length === 0) { el.innerHTML = UI.empty('🛒', t('po.no_data')); return; }
+
+        const colTitleUnapproved = I18N.t('po.status.unapproved');
+        const colSubUnpaid = I18N.t('po.sub.unpaid');
+
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>PO 編號</th><th>日期</th><th>供應商</th><th>物料</th>
-                <th>數量</th><th>單價</th><th>總額</th><th>本地幣</th>
-                <th>狀態</th><th>交付</th>
-                <th style="width:140px">操作</th>
+                <th>${t('po.col.po_id')}</th><th>${t('po.col.date')}</th><th>${t('po.col.supplier')}</th><th>${t('po.col.xitems')}</th>
+                <th>${t('po.col.qty')}</th><th>${t('po.col.price')}</th><th>${t('po.col.amount')}</th><th>${t('po.col.local')}</th>
+                <th>${t('po.col.status')}</th><th>${t('po.col.sub_status')}</th>
+                <th style="width:140px">${t('po.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -37,8 +41,8 @@ async function loadPO() {
                     <td class="num">${UI.fmt(r.unit_price, 2)}</td>
                     <td class="num">${UI.fmt(r.po_amount)}</td>
                     <td class="num">${UI.fmt(r.po_amount_local)}</td>
-                    <td><span style="padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-size:12px">${r.po_status || '未審核'}</span></td>
-                    <td>${r.po_sub_status || '-'}</td>
+                    <td><span style="padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-size:12px">${I18N.statusLabel('po_status', r.po_status || '未審核')}</span></td>
+                    <td>${I18N.statusLabel('po_sub_status', r.po_sub_status || '未交付')}</td>
                     <td>
                         <button class="btn btn-primary btn-sm" onclick='editPO(${JSON.stringify(r)})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delPO(${r.uid})">🗑</button>
@@ -58,36 +62,44 @@ const POForm = {
     _uid: null,
     open(d) {
         d = d || {};
-        UI.modal(this._uid ? `✏️ 編輯 PO ${d.po_id || ''}` : '➕ 新增採購單', `
+        const newStatusLabel = I18N.t('po.status.unapproved');
+        const newSubLabel = I18N.t('po.sub.unpaid');
+
+        const statusOpts = I18N.statusOptions('po_status');
+        const subOpts = I18N.statusOptions('po_sub_status');
+        const curStatus = d.po_status || '未審核';
+        const curSub = d.po_sub_status || '未交付';
+
+        UI.modal(this._uid ? `✏️ ${t('po.form.title_edit')} ${d.po_id || ''}` : `➕ ${t('po.form.title_new')}`, `
             <div class="form-row">
-                <div class="form-group"><label>PO 編號</label><input id="po_fid" value="${d.po_id || ''}"></div>
-                <div class="form-group"><label>日期</label><input type="date" id="po_fdate" value="${(d.po_date || '').substring(0,10)}"></div>
-                <div class="form-group"><label>供應商</label><input id="po_fsup" value="${d.supplier_name || ''}"></div>
+                <div class="form-group"><label>${t('po.form.po_id')}</label><input id="po_fid" value="${d.po_id || ''}"></div>
+                <div class="form-group"><label>${t('po.form.date')}</label><input type="date" id="po_fdate" value="${(d.po_date || '').substring(0,10)}"></div>
+                <div class="form-group"><label>${t('po.form.supplier')}</label><input id="po_fsup" value="${d.supplier_name || ''}"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>物料</label><input id="po_fmat" value="${d.xitems || ''}"></div>
-                <div class="form-group"><label>數量</label><input type="number" id="po_fqty" value="${d.po_qty || 0}"></div>
-                <div class="form-group"><label>單價(原幣)</label><input type="number" id="po_fup" value="${d.unit_price || 0}" step="0.0001"></div>
+                <div class="form-group"><label>${t('po.form.xitems')}</label><input id="po_fmat" value="${d.xitems || ''}"></div>
+                <div class="form-group"><label>${t('po.form.qty')}</label><input type="number" id="po_fqty" value="${d.po_qty || 0}"></div>
+                <div class="form-group"><label>${t('po.form.price')}</label><input type="number" id="po_fup" value="${d.unit_price || 0}" step="0.0001"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>匯率</label><input type="number" id="po_frate" value="${d.exchange_rate || 1}" step="0.0001"></div>
-                <div class="form-group"><label>稅額</label><input type="number" id="po_fvat" value="${d.vat_amt || 0}"></div>
-                <div class="form-group"><label>狀態</label>
+                <div class="form-group"><label>${t('po.form.rate')}</label><input type="number" id="po_frate" value="${d.exchange_rate || 1}" step="0.0001"></div>
+                <div class="form-group"><label>${t('po.form.vat')}</label><input type="number" id="po_fvat" value="${d.vat_amt || 0}"></div>
+                <div class="form-group"><label>${t('po.form.status')}</label>
                     <select id="po_fstat">
-                        ${['未審核','審核通過','已取消'].map(s=>`<option ${s===(d.po_status||'未審核')?'selected':''}>${s}</option>`).join('')}
+                        ${statusOpts.map(o => `<option value="${o.value}" ${o.value === curStatus ? 'selected' : ''}>${o.label}</option>`).join('')}
                     </select>
                 </div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>交付狀態</label>
+                <div class="form-group"><label>${t('po.form.sub_status')}</label>
                     <select id="po_fsub">
-                        ${['未交付','部分交付','交付完成'].map(s=>`<option ${s===(d.po_sub_status||'未交付')?'selected':''}>${s}</option>`).join('')}
+                        ${subOpts.map(o => `<option value="${o.value}" ${o.value === curSub ? 'selected' : ''}>${o.label}</option>`).join('')}
                     </select>
                 </div>
-                <div class="form-group"><label>供應商類型</label><input id="po_fsuptype" value="${d.supplier_type || ''}"></div>
+                <div class="form-group"><label>${t('po.form.supplier_type')}</label><input id="po_fsuptype" value="${d.supplier_type || ''}"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button>
-            <button class="btn btn-primary" onclick="POForm.save()">💾 保存</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('po.btn.cancel')}</button>
+            <button class="btn btn-primary" onclick="POForm.save()">💾 ${t('po.btn.save')}</button>`);
     },
     async save() {
         const body = {
@@ -107,10 +119,10 @@ const POForm = {
         try {
             if (this._uid) {
                 await API.put(`/api/po/${this._uid}`, body);
-                UI.toast('已更新', 'success');
+                UI.toast(t('po.msg.updated'), 'success');
             } else {
                 await API.post('/api/po', body);
-                UI.toast('已新增採購單', 'success');
+                UI.toast(t('po.msg.added'), 'success');
             }
             UI.closeModal();
             this._uid = null;
@@ -120,7 +132,7 @@ const POForm = {
 };
 
 async function delPO(uid) {
-    if (!confirm('確定刪除此採購單？')) return;
-    try { await API.del(`/api/po/${uid}`); UI.toast('已刪除','success'); loadPO(); }
+    if (!confirm(t('confirm_delete'))) return;
+    try { await API.del(`/api/po/${uid}`); UI.toast(t('deleted'),'success'); loadPO(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

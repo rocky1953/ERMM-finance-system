@@ -5,15 +5,15 @@ registerPage('monthly', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>公司別：<select id="mBU" onchange="loadMonthly()"><option value="">全部</option>
+                <label>${t('sys.business')}：<select id="mBU" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
-                <label>年月：<input type="month" id="mYM" onchange="loadMonthly()"></label>
-                <label>類型：<select id="mType" onchange="loadMonthly()"><option value="">全部</option>
+                <label>${t('monthly.ym')}：<input type="month" id="mYM" onchange="loadMonthly()"></label>
+                <label>${t('relation.th.type')}：<select id="mType" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
                     <option>租金</option><option>水電</option><option>薪資</option><option>保險</option><option>其他</option></select></label>
-                <button class="btn btn-primary" onclick="MonthlyForm.open()">➕ 新增</button>
-                <button class="btn btn-success" onclick="loadMonthly()">🔄</button>
+                <button class="btn btn-primary" onclick="MonthlyForm.open()">➕ ${t('monthly.btn.add')}</button>
+                <button class="btn btn-success" onclick="loadMonthly()">🔄 ${t('refresh')}</button>
             </div>
-            <div id="monthlyTable">載入中...</div>
+            <div id="monthlyTable">${t('loading')}</div>
         </div>
     `;
     document.getElementById('mBU').value = State.bu_no;
@@ -29,11 +29,11 @@ async function loadMonthly() {
         const type = document.getElementById('mType').value;
         const res = await API.get(`/api/monthly?bu_no=${bu}&YYYY_MM=${ym}&item_type=${encodeURIComponent(type)}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">📅 尚無月度項目</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">📅 ${t('monthly.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>公司別</th><th>年月</th><th>類型</th><th>項目名稱</th>
-                <th>金額</th><th>DR/CR</th><th>付款日</th><th>備註</th><th>操作</th>
+                <th>${t('sys.business')}</th><th>${t('monthly.ym')}</th><th>${t('relation.th.type')}</th><th>${t('monthly.th.name')}</th>
+                <th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.pay_date')}</th><th>${t('monthly.th.remark')}</th><th>${t('system.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -57,24 +57,24 @@ const MonthlyForm = {
     },
     _render(d) {
         const isEdit = !!d.uid;
-        UI.modal((isEdit ? '編輯' : '新增') + '月度項目', `
+        UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('monthly.title'), `
             <div class="form-row">
-                <div class="form-group"><label>公司別</label>
+                <div class="form-group"><label>${t('sys.business')}</label>
                     <select id="mf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>年月</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
-                <div class="form-group"><label>類型</label>
+                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
+                <div class="form-group"><label>${t('relation.th.type')}</label>
                     <select id="mf_type"><option>租金</option><option>水電</option><option>薪資</option><option>保險</option><option>其他</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-group" style="flex:1"><label>項目名稱</label><input id="mf_name" value="${d.item_name||''}" style="width:100%"></div>
-                <div class="form-group"><label>金額</label><input type="number" id="mf_amt" value="${d.item_amt||0}" step="0.01"></div>
-                <div class="form-group"><label>DR/CR</label><select id="mf_dc"><option value="DR">DR 收入</option><option value="CR">CR 支出</option></select></div>
+                <div class="form-group" style="flex:1"><label>${t('monthly.th.name')}</label><input id="mf_name" value="${d.item_name||''}" style="width:100%"></div>
+                <div class="form-group"><label>${t('monthly.th.amount')}</label><input type="number" id="mf_amt" value="${d.item_amt||0}" step="0.01"></div>
+                <div class="form-group"><label>${t('monthly.th.drcr')}</label><select id="mf_dc"><option value="DR">DR ${t('monthly.form.income')}</option><option value="CR">CR ${t('monthly.form.expense')}</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>付款日</label><input type="date" id="mf_pay" value="${d.pay_date||''}"></div>
-                <div class="form-group" style="flex:1"><label>備註</label><input id="mf_remark" value="${d.remark||''}" style="width:100%"></div>
+                <div class="form-group"><label>${t('monthly.th.pay_date')}</label><input type="date" id="mf_pay" value="${d.pay_date||''}"></div>
+                <div class="form-group" style="flex:1"><label>${t('monthly.th.remark')}</label><input id="mf_remark" value="${d.remark||''}" style="width:100%"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button><button class="btn btn-primary" onclick="MonthlyForm.save(${d.uid||0})">存檔</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="MonthlyForm.save(${d.uid||0})">${t('save')}</button>`);
         if (d.bu_no) document.getElementById('mf_bu').value = d.bu_no;
         if (d.item_type) document.getElementById('mf_type').value = d.item_type;
         if (d.DB_CR) document.getElementById('mf_dc').value = d.DB_CR;
@@ -93,13 +93,13 @@ const MonthlyForm = {
         };
         try {
             if (uid) await API.put(`/api/monthly/${uid}`, body); else await API.post('/api/monthly', body);
-            UI.toast(uid ? '已更新' : '已新增', 'success');
+            UI.toast(uid ? t('saved') : t('monthly.msg.added'), 'success');
             UI.closeModal(); loadMonthly();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
 async function delMonthly(uid) {
-    if (!confirm('確定刪除？')) return;
-    try { await API.del(`/api/monthly/${uid}`); UI.toast('已刪除','success'); loadMonthly(); }
+    if (!confirm(t('confirm_delete'))) return;
+    try { await API.del(`/api/monthly/${uid}`); UI.toast(t('deleted'),'success'); loadMonthly(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

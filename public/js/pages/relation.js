@@ -5,16 +5,16 @@ registerPage('relation', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>公司別：<select id="relBU" onchange="loadRelation()"><option value="">全部</option>
+                <label>${t('sys.business')}：<select id="relBU" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
                     <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
-                <label>類型：<select id="relType" onchange="loadRelation()"><option value="">全部</option>
-                    <option value="客戶">客戶</option><option value="供應商">供應商</option><option value="關係人">關係人</option></select></label>
-                <label>狀態：<select id="relFlag" onchange="loadRelation()"><option value="">全部</option>
-                    <option value="USE">啟用</option><option value="STOP">停用</option></label>
-                <button class="btn btn-primary" onclick="RelationForm.open()">➕ 新增往來對象</button>
-                <button class="btn btn-success" onclick="loadRelation()">🔄</button>
+                <label>${t('relation.th.type')}：<select id="relType" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
+                    <option value="客戶">${t('relation.type.customer')}</option><option value="供應商">${t('relation.type.supplier')}</option><option value="關係人">${t('relation.type.related')}</option></select></label>
+                <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
+                    <option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></label>
+                <button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>
+                <button class="btn btn-success" onclick="loadRelation()">🔄 ${t('refresh')}</button>
             </div>
-            <div id="relationTable">載入中...</div>
+            <div id="relationTable">${t('loading')}</div>
         </div>
     `;
     document.getElementById('relBU').value = State.bu_no;
@@ -29,11 +29,11 @@ async function loadRelation() {
         const flag = document.getElementById('relFlag').value;
         const res = await API.get(`/api/relation?bu_no=${bu}&relation_type=${encodeURIComponent(type)}&inuse_flag=${flag}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">👥 尚無往來對象</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">👥 ${t('relation.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>公司別</th><th>類型</th><th>編號</th><th>名稱</th>
-                <th>聯絡人</th><th>電話</th><th>稅號</th><th>狀態</th><th>操作</th>
+                <th>${t('sys.business')}</th><th>${t('relation.th.type')}</th><th>${t('relation.th.id')}</th><th>${t('relation.th.name')}</th>
+                <th>${t('relation.th.contact')}</th><th>${t('relation.th.phone')}</th><th>${t('relation.th.tax')}</th><th>${t('system.col.status')}</th><th>${t('system.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -66,28 +66,28 @@ const RelationForm = {
     },
     _render(d) {
         const isEdit = !!d.uid;
-        UI.modal((isEdit ? '編輯' : '新增') + '往來對象', `
+        UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('relation.title'), `
             <div class="form-row">
-                <div class="form-group"><label>公司別</label>
+                <div class="form-group"><label>${t('sys.business')}</label>
                     <select id="rf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>類型</label>
+                <div class="form-group"><label>${t('relation.th.type')}</label>
                     <select id="rf_type"><option>客戶</option><option>供應商</option><option>關係人</option></select></div>
-                <div class="form-group"><label>狀態</label>
-                    <select id="rf_flag"><option value="USE">啟用</option><option value="STOP">停用</option></select></div>
+                <div class="form-group"><label>${t('system.col.status')}</label>
+                    <select id="rf_flag"><option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>編號</label><input id="rf_id" value="${d.relation_id||''}"></div>
-                <div class="form-group" style="flex:1"><label>名稱</label><input id="rf_name" value="${d.relation_name||''}" style="width:100%"></div>
+                <div class="form-group"><label>${t('relation.th.id')}</label><input id="rf_id" value="${d.relation_id||''}"></div>
+                <div class="form-group" style="flex:1"><label>${t('relation.th.name')}</label><input id="rf_name" value="${d.relation_name||''}" style="width:100%"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>聯絡人</label><input id="rf_ctc" value="${d.contact_person||''}"></div>
-                <div class="form-group"><label>電話</label><input id="rf_phone" value="${d.contact_phone||''}"></div>
-                <div class="form-group"><label>稅號</label><input id="rf_tax" value="${d.tax_id||''}"></div>
+                <div class="form-group"><label>${t('relation.th.contact')}</label><input id="rf_ctc" value="${d.contact_person||''}"></div>
+                <div class="form-group"><label>${t('relation.th.phone')}</label><input id="rf_phone" value="${d.contact_phone||''}"></div>
+                <div class="form-group"><label>${t('relation.th.tax')}</label><input id="rf_tax" value="${d.tax_id||''}"></div>
             </div>
             <div class="form-row">
-                <div class="form-group" style="flex:1"><label>地址</label><input id="rf_addr" value="${d.address||''}" style="width:100%"></div>
+                <div class="form-group" style="flex:1"><label>${t('relation.form.address')}</label><input id="rf_addr" value="${d.address||''}" style="width:100%"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button><button class="btn btn-primary" onclick="RelationForm.save(${d.uid||0})">存檔</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="RelationForm.save(${d.uid||0})">${t('save')}</button>`);
         if (d.bu_no) document.getElementById('rf_bu').value = d.bu_no;
         if (d.relation_type) document.getElementById('rf_type').value = d.relation_type;
         if (d.inuse_flag) document.getElementById('rf_flag').value = d.inuse_flag;
@@ -107,14 +107,14 @@ const RelationForm = {
         try {
             if (uid) await API.put(`/api/relation/${uid}`, body);
             else await API.post('/api/relation', body);
-            UI.toast(uid ? '已更新' : '已新增', 'success');
+            UI.toast(uid ? t('saved') : t('relation.msg.added'), 'success');
             UI.closeModal(); loadRelation();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
 
 async function delRelation(uid) {
-    if (!confirm('確定刪除此往來對象？')) return;
-    try { await API.del(`/api/relation/${uid}`); UI.toast('已刪除','success'); loadRelation(); }
+    if (!confirm(t('relation.msg.confirm_del'))) return;
+    try { await API.del(`/api/relation/${uid}`); UI.toast(t('deleted'),'success'); loadRelation(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

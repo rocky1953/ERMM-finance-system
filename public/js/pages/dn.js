@@ -5,13 +5,13 @@ registerPage('dn', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>公司別：<select id="dnBU" onchange="loadDN()"><option value="">全部</option>
+                <label>${t('sys.business')}：<select id="dnBU" onchange="loadDN()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
-                <label>SO 編號：<input id="dnSO" onchange="loadDN()"></label>
-                <button class="btn btn-primary" onclick="DNForm.open()">➕ 新增交貨單</button>
-                <button class="btn btn-success" onclick="loadDN()">🔄</button>
+                <label>${t('dn.so_nbr')}：<input id="dnSO" onchange="loadDN()"></label>
+                <button class="btn btn-primary" onclick="DNForm.open()">➕ ${t('dn.btn.add')}</button>
+                <button class="btn btn-success" onclick="loadDN()">🔄 ${t('refresh')}</button>
             </div>
-            <div id="dnTable">載入中...</div>
+            <div id="dnTable">${t('loading')}</div>
         </div>
     `;
     document.getElementById('dnBU').value = State.bu_no;
@@ -22,11 +22,11 @@ async function loadDN() {
     try {
         const res = await API.get(`/api/dn?bu_no=${document.getElementById('dnBU').value}&so_nbr=${document.getElementById('dnSO').value}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">🚚 尚無交貨單</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">🚚 ${t('dn.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>公司別</th><th>SO 編號</th><th>物料</th><th>客戶</th>
-                <th>交貨日</th><th>交貨數</th><th>SO 數</th><th>操作</th>
+                <th>${t('sys.business')}</th><th>${t('dn.so_nbr')}</th><th>${t('po.col.xitems')}</th><th>${t('so.col.client')}</th>
+                <th>${t('dn.th.dn_date')}</th><th>${t('dn.th.dn_qty')}</th><th>${t('dn.th.so_qty')}</th><th>${t('system.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -48,21 +48,21 @@ const DNForm = {
     },
     _render(d) {
         const isEdit = !!d.uid;
-        UI.modal((isEdit ? '編輯' : '新增') + '交貨單', `
+        UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('dn.title'), `
             <div class="form-row">
-                <div class="form-group"><label>公司別</label><select id="df_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>SO 編號</label><input id="df_so" value="${d.so_nbr||''}"></div>
-                <div class="form-group"><label>交貨日</label><input type="date" id="df_date" value="${d.DN_date||''}"></div>
+                <div class="form-group"><label>${t('sys.business')}</label><select id="df_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('dn.so_nbr')}</label><input id="df_so" value="${d.so_nbr||''}"></div>
+                <div class="form-group"><label>${t('dn.th.dn_date')}</label><input type="date" id="df_date" value="${d.DN_date||''}"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>物料</label><input id="df_x" value="${d.xitems||''}"></div>
-                <div class="form-group" style="flex:1"><label>客戶</label><input id="df_cl" value="${d.client_name||''}" style="width:100%"></div>
+                <div class="form-group"><label>${t('po.col.xitems')}</label><input id="df_x" value="${d.xitems||''}"></div>
+                <div class="form-group" style="flex:1"><label>${t('so.col.client')}</label><input id="df_cl" value="${d.client_name||''}" style="width:100%"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>交貨數</label><input type="number" id="df_dq" step="0.0001" value="${d.DN_qty||0}"></div>
-                <div class="form-group"><label>SO 數</label><input type="number" id="df_sq" step="0.0001" value="${d.so_qty||0}"></div>
+                <div class="form-group"><label>${t('dn.th.dn_qty')}</label><input type="number" id="df_dq" step="0.0001" value="${d.DN_qty||0}"></div>
+                <div class="form-group"><label>${t('dn.th.so_qty')}</label><input type="number" id="df_sq" step="0.0001" value="${d.so_qty||0}"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button><button class="btn btn-primary" onclick="DNForm.save(${d.uid||0})">存檔</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="DNForm.save(${d.uid||0})">${t('save')}</button>`);
         if (d.bu_no) document.getElementById('df_bu').value = d.bu_no;
     },
     async save(uid) {
@@ -77,12 +77,12 @@ const DNForm = {
         };
         try {
             if (uid) await API.put(`/api/dn/${uid}`, body); else await API.post('/api/dn', body);
-            UI.toast(uid ? '已更新' : '已新增', 'success'); UI.closeModal(); loadDN();
+            UI.toast(uid ? t('saved') : t('dn.msg.added'), 'success'); UI.closeModal(); loadDN();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
 async function delDN(uid) {
-    if (!confirm('確定刪除？')) return;
-    try { await API.del(`/api/dn/${uid}`); UI.toast('已刪除','success'); loadDN(); }
+    if (!confirm(t('confirm_delete'))) return;
+    try { await API.del(`/api/dn/${uid}`); UI.toast(t('deleted'),'success'); loadDN(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

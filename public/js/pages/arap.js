@@ -10,7 +10,7 @@ registerPage('arap', async (c) => {
         </div>
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="ARAPForm.open()">➕ 新增月份</button>
+                <button class="btn btn-primary" onclick="ARAPForm.open()">➕ ${t('arap.btn.add_month')}</button>
                 <button class="btn btn-warning" onclick="recalcARAP()">📊 ${t('arap.recalc')}</button>
                 <button class="btn btn-success" onclick="loadARAP()">🔄 ${t('refresh')}</button>
             </div>
@@ -42,11 +42,11 @@ async function loadARAP() {
 
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>月份</th>
-                <th>AR 應收</th><th>AR 陳齡</th>
-                <th>AP 應付</th><th>AP 陳齡</th>
-                <th>更新時間</th>
-                <th style="width:140px">操作</th>
+                <th>${t('arap.th.month')}</th>
+                <th>${t('arap.th.ar')}</th><th>${t('arap.th.ar_ageing')}</th>
+                <th>${t('arap.th.ap')}</th><th>${t('arap.th.ap_ageing')}</th>
+                <th>${t('arap.th.update_time')}</th>
+                <th style="width:140px">${t('arap.th.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -67,34 +67,34 @@ async function loadARAP() {
 }
 
 function editARAP(r) {
-    UI.modal(`✏️ 編輯 ${r.YYYY_MM}`, `
+    UI.modal(`✏️ ${t('modal.edit')} ${r.YYYY_MM}`, `
         <div class="form-row">
-            <div class="form-group"><label>月份</label><input id="arap_ym" value="${r.YYYY_MM}" readonly></div>
+            <div class="form-group"><label>${t('arap.th.month')}</label><input id="arap_ym" value="${r.YYYY_MM}" readonly></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>AR 應收</label><input type="number" id="arap_ar" value="${r.AR_amt || 0}"></div>
-            <div class="form-group"><label>AP 應付</label><input type="number" id="arap_ap" value="${r.AP_amt || 0}"></div>
+            <div class="form-group"><label>${t('arap.th.ar')}</label><input type="number" id="arap_ar" value="${r.AR_amt || 0}"></div>
+            <div class="form-group"><label>${t('arap.th.ap')}</label><input type="number" id="arap_ap" value="${r.AP_amt || 0}"></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>AR 陳齡(天)</label><input type="number" id="arap_age_ar" value="${r.AR_ageing || 0}"></div>
-            <div class="form-group"><label>AP 陳齡(天)</label><input type="number" id="arap_age_ap" value="${r.AP_ageing || 0}"></div>
+            <div class="form-group"><label>${t('arap.form.ar_ageing')}</label><input type="number" id="arap_age_ar" value="${r.AR_ageing || 0}"></div>
+            <div class="form-group"><label>${t('arap.form.ap_ageing')}</label><input type="number" id="arap_age_ap" value="${r.AP_ageing || 0}"></div>
         </div>
-    `, `<button class="btn" onclick="UI.closeModal()">取消</button>
-        <button class="btn btn-primary" onclick="ARAPForm.save(${r.uid})">💾 保存</button>`);
+    `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button>
+        <button class="btn btn-primary" onclick="ARAPForm.save(${r.uid})">💾 ${t('save')}</button>`);
 }
 
 const ARAPForm = {
     open() {
-        UI.modal('➕ 新增 AR/AP 月份', `
+        UI.modal('➕ ' + t('arap.btn.add_month'), `
             <div class="form-row">
-                <div class="form-group"><label>月份 (YYYY/MM)</label><input id="arap_ym" value="${State.YYYY_MM}"></div>
+                <div class="form-group"><label>${t('arap.form.month_fmt')}</label><input id="arap_ym" value="${State.YYYY_MM}"></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>AR 應收</label><input type="number" id="arap_ar" value="0"></div>
-                <div class="form-group"><label>AP 應付</label><input type="number" id="arap_ap" value="0"></div>
+                <div class="form-group"><label>${t('arap.th.ar')}</label><input type="number" id="arap_ar" value="0"></div>
+                <div class="form-group"><label>${t('arap.th.ap')}</label><input type="number" id="arap_ap" value="0"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button>
-            <button class="btn btn-primary" onclick="ARAPForm.save()">💾 保存</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button>
+            <button class="btn btn-primary" onclick="ARAPForm.save()">💾 ${t('save')}</button>`);
     },
     async save(uid) {
         const body = {
@@ -108,10 +108,10 @@ const ARAPForm = {
         try {
             if (uid) {
                 await API.put(`/api/arap/${uid}`, body);
-                UI.toast('已更新', 'success');
+                UI.toast(t('saved'), 'success');
             } else {
                 await API.post('/api/arap', body);
-                UI.toast('已新增', 'success');
+                UI.toast(t('arap.msg.added'), 'success');
             }
             UI.closeModal();
             loadARAP();
@@ -120,8 +120,8 @@ const ARAPForm = {
 };
 
 async function delARAP(uid) {
-    if (!confirm(`確定刪除此月份的 AR/AP 資料？（uid=${uid}）`)) return;
-    try { await API.del(`/api/arap/${uid}`); UI.toast('已刪除','success'); loadARAP(); }
+    if (!confirm(t('arap.msg.confirm_del').replace('{uid}', uid))) return;
+    try { await API.del(`/api/arap/${uid}`); UI.toast(t('deleted'),'success'); loadARAP(); }
     catch(e) { UI.toast(e.message,'error'); }
 }
 

@@ -8,36 +8,36 @@ registerPage('user', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div style="border-bottom:2px solid #ecf0f1;margin-bottom:16px;display:flex;gap:0;">
-                <button class="btn" id="tabUsers" onclick="switchTab('users')" style="border-radius:6px 6px 0 0;border-bottom:none;background:#3498db;color:white;">👤 使用者</button>
-                <button class="btn" id="tabPerms" onclick="switchTab('perms')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">🔐 權限</button>
-                <button class="btn" id="tabLogins" onclick="switchTab('logins')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">📜 登入紀錄</button>
+                <button class="btn" id="tabUsers" onclick="switchTab('users')" style="border-radius:6px 6px 0 0;border-bottom:none;background:#3498db;color:white;">👤 ${t('user.tab.users')}</button>
+                <button class="btn" id="tabPerms" onclick="switchTab('perms')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">🔐 ${t('user.tab.perms')}</button>
+                <button class="btn" id="tabLogins" onclick="switchTab('logins')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">📜 ${t('user.tab.logins')}</button>
             </div>
 
             <div id="paneUsers">
                 <div class="toolbar">
-                    <label>狀態：<select id="ufFlag" onchange="loadUsers()"><option value="">全部</option>
-                        <option value="USE">啟用</option><option value="STOP">停用</option></select></label>
-                    <button class="btn btn-primary" onclick="UserForm.open()">➕ 新增使用者</button>
-                    <button class="btn btn-success" onclick="loadUsers()">🔄</button>
+                    <label>${t('system.col.status')}：<select id="ufFlag" onchange="loadUsers()"><option value="">${t('sys.all')}</option>
+                        <option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></label>
+                    <button class="btn btn-primary" onclick="UserForm.open()">➕ ${t('user.btn.add_user')}</button>
+                    <button class="btn btn-success" onclick="loadUsers()">🔄 ${t('refresh')}</button>
                 </div>
-                <div id="userTable">載入中...</div>
+                <div id="userTable">${t('loading')}</div>
             </div>
 
             <div id="panePerms" style="display:none;">
                 <div class="toolbar">
-                    <label>使用者：<select id="puUser" onchange="loadPerms()"></select></label>
-                    <button class="btn btn-success" onclick="loadPerms()">🔄</button>
-                    <button class="btn btn-primary" onclick="savePerms()">💾 存檔權限</button>
+                    <label>${t('user.user_label')}：<select id="puUser" onchange="loadPerms()"></select></label>
+                    <button class="btn btn-success" onclick="loadPerms()">🔄 ${t('refresh')}</button>
+                    <button class="btn btn-primary" onclick="savePerms()">💾 ${t('user.btn.save_perms')}</button>
                 </div>
-                <div id="permsTable">載入中...</div>
+                <div id="permsTable">${t('loading')}</div>
             </div>
 
             <div id="paneLogins" style="display:none;">
                 <div class="toolbar">
-                    <label>使用者：<select id="luUser" onchange="loadLogins()"><option value="">全部</option></select></label>
-                    <button class="btn btn-success" onclick="loadLogins()">🔄</button>
+                    <label>${t('user.user_label')}：<select id="luUser" onchange="loadLogins()"><option value="">${t('sys.all')}</option></select></label>
+                    <button class="btn btn-success" onclick="loadLogins()">🔄 ${t('refresh')}</button>
                 </div>
-                <div id="loginTable">載入中...</div>
+                <div id="loginTable">${t('loading')}</div>
             </div>
         </div>
     `;
@@ -66,12 +66,12 @@ async function loadUsers() {
     try {
         const res = await API.get(`/api/user?inuse_flag=${document.getElementById('ufFlag').value}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">👤 尚無使用者</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">👤 ${t('user.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>帳號</th><th>姓名</th><th>部門</th><th>狀態</th><th>建立時間</th><th>操作</th></tr></thead>
+            <thead><tr><th>${t('user.col.id')}</th><th>${t('user.col.name')}</th><th>${t('user.col.dept')}</th><th>${t('system.col.status')}</th><th>${t('user.col.create_time')}</th><th>${t('system.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `
                 <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${r.xuser_dept||'-'}</td>
-                    <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● 啟用</span>' : '<span style="color:#95a5a6">○ 停用</span>'}</td>
+                    <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● '+t('system.status.active')+'</span>' : '<span style="color:#95a5a6">○ '+t('system.status.inactive')+'</span>'}</td>
                     <td>${r.create_time||'-'}</td>
                     <td>
                         <button class="btn btn-sm" onclick="UserForm.open(${r.id})">✏️</button>
@@ -85,7 +85,7 @@ async function loadUsers() {
         }
         const luSel = document.getElementById('luUser');
         if (luSel && luSel.options.length <= 1) {
-            luSel.innerHTML = '<option value="">全部</option>' + rows.map(r => `<option value="${r.xuser_id}">${r.xuser_id}</option>`).join('');
+            luSel.innerHTML = '<option value="">' + t('sys.all') + '</option>' + rows.map(r => `<option value="${r.xuser_id}">${r.xuser_id}</option>`).join('');
         }
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
@@ -110,21 +110,21 @@ const UserForm = {
             } catch(e) {}
         }
         const isEdit = !!u.id;
-        UI.modal((isEdit ? '編輯' : '新增') + '使用者', `
+        UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('user.tab.users'), `
             <div class="form-row">
-                <div class="form-group"><label>帳號${isEdit?'(不可改)':''}</label>
+                <div class="form-group"><label>${t('user.col.id')}${isEdit?'('+t('user.form.readonly')+')':''}</label>
                     <input id="uf_id" value="${u.xuser_id||''}" ${isEdit?'disabled':''}></div>
-                <div class="form-group"><label>${isEdit?'新密碼(留空不變)':'密碼'}</label>
-                    <input type="password" id="uf_pwd" placeholder="${isEdit?'• • • • • •':'必填'}"></div>
-                <div class="form-group"><label>狀態</label>
-                    <select id="uf_stat"><option value="USE">啟用</option><option value="STOP">停用</option></select></div>
+                <div class="form-group"><label>${isEdit?t('user.form.new_pwd'):t('user.form.password')}</label>
+                    <input type="password" id="uf_pwd" placeholder="${isEdit?'• • • • • •':t('user.form.required')}"></div>
+                <div class="form-group"><label>${t('system.col.status')}</label>
+                    <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="STOP">${t('system.status.inactive')}</option></select></div>
             </div>
             <div class="form-row">
-                <div class="form-group"><label>姓名</label><input id="uf_name" value="${u.xuser_name||''}"></div>
-                <div class="form-group"><label>部門</label><input id="uf_dept" value="${u.xuser_dept||''}"></div>
-                <div class="form-group"><label>客戶 ID</label><input id="uf_cid" value="${u.client_id||''}"></div>
+                <div class="form-group"><label>${t('user.col.name')}</label><input id="uf_name" value="${u.xuser_name||''}"></div>
+                <div class="form-group"><label>${t('user.col.dept')}</label><input id="uf_dept" value="${u.xuser_dept||''}"></div>
+                <div class="form-group"><label>${t('user.form.client_id')}</label><input id="uf_cid" value="${u.client_id||''}"></div>
             </div>
-        `, `<button class="btn" onclick="UI.closeModal()">取消</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">存檔</button>`);
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">${t('save')}</button>`);
         if (u.inuse_flag) document.getElementById('uf_stat').value = u.inuse_flag;
     },
     async save(id) {
@@ -143,14 +143,14 @@ const UserForm = {
             } else {
                 await API.post('/api/user', body);
             }
-            UI.toast(id ? '已更新' : '已新增', 'success'); UI.closeModal(); loadUsers();
+            UI.toast(id ? t('saved') : t('user.msg.added'), 'success'); UI.closeModal(); loadUsers();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
 
 async function delUser(id, uid) {
-    if (!confirm(`確定刪除使用者 ${uid}？（會同步刪除權限紀錄）`)) return;
-    try { await API.del(`/api/user/${id}`); UI.toast('已刪除','success'); loadUsers(); }
+    if (!confirm(t('user.msg.confirm_del').replace('{uid}', uid))) return;
+    try { await API.del(`/api/user/${id}`); UI.toast(t('deleted'),'success'); loadUsers(); }
     catch(e) { UI.toast(e.message,'error'); }
 }
 
@@ -162,17 +162,17 @@ async function loadPerms() {
         const res = await API.get('/api/user/permissions');
         const rows = res.data || [];
         const row = uid ? rows.find(r => r.user_id === uid) : rows[0];
-        if (!row) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">請先新增使用者</p>'; return; }
+        if (!row) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">${t('user.msg.please_add')}</p>`; return; }
         document.getElementById('puUser').value = row.user_id;
         const perms = [
-            ['procurement','採購'],['sales','銷售'],['production','生產'],['engineer','工程'],
-            ['handbook','法規'],['wk_plan','工單'],['quality','品質'],['document','文件'],
-            ['price','價格'],['stock','庫存'],['finance','財務'],['imex','進出口'],['others','其他']
+            ['procurement', t('user.perm.procurement')],['sales', t('user.perm.sales')],['production', t('user.perm.production')],['engineer', t('user.perm.engineer')],
+            ['handbook', t('user.perm.handbook')],['wk_plan', t('user.perm.wk_plan')],['quality', t('user.perm.quality')],['document', t('user.perm.document')],
+            ['price', t('user.perm.price')],['stock', t('user.perm.stock')],['finance', t('user.perm.finance')],['imex', t('user.perm.imex')],['others', t('user.perm.others')]
         ];
         el.innerHTML = `<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
-            <div><b>使用者:</b> ${row.xuser_id} (${row.xuser_name||''})</div>
-            <div><b>管理等級:</b> <input type="number" id="pf_class" min="1" max="5" value="${row.class||1}" style="width:60px"></div>
-            <div><label><input type="checkbox" id="pf_login" ${row.login==='Y'?'checked':''}> 允許登入</label></div>
+            <div><b>${t('user.user_label')}:</b> ${row.xuser_id} (${row.xuser_name||''})</div>
+            <div><b>${t('user.perm.mgmt_level')}:</b> <input type="number" id="pf_class" min="1" max="5" value="${row.class||1}" style="width:60px"></div>
+            <div><label><input type="checkbox" id="pf_login" ${row.login==='Y'?'checked':''}> ${t('user.perm.allow_login')}</label></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
             ${perms.map(([k,label]) => `
@@ -186,14 +186,14 @@ async function loadPerms() {
 
 async function savePerms() {
     const uid = document.getElementById('puUser').value;
-    if (!uid) { UI.toast('請選擇使用者','error'); return; }
+    if (!uid) { UI.toast(t('user.msg.select_user'),'error'); return; }
     const fields = ['procurement','sales','production','engineer','handbook','wk_plan','quality',
                     'document','price','stock','finance','imex','others'];
     const body = {};
     fields.forEach(k => body[k] = document.getElementById('pf_'+k).checked ? 'Y' : 'N');
     body.class = Number(document.getElementById('pf_class').value) || 1;
     body.login = document.getElementById('pf_login').checked ? 'Y' : 'N';
-    try { await API.put(`/api/user/${uid}/permissions`, body); UI.toast('權限已存檔','success'); }
+    try { await API.put(`/api/user/${uid}/permissions`, body); UI.toast(t('user.msg.perms_saved'),'success'); }
     catch(e) { UI.toast(e.message,'error'); }
 }
 
@@ -204,9 +204,9 @@ async function loadLogins() {
     try {
         const res = await API.get(`/api/user/logins?user_id=${uid}&limit=100`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = '<p style="color:#95a5a6;text-align:center;padding:40px;">📜 尚無登入紀錄</p>'; return; }
+        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">📜 ${t('user.no_logins')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>#</th><th>使用者</th><th>公司別</th><th>登入時間</th><th>登出</th><th>次數</th><th>頁面</th><th>操作</th></tr></thead>
+            <thead><tr><th>#</th><th>${t('user.user_label')}</th><th>${t('sys.business')}</th><th>${t('user.col.login_time')}</th><th>${t('user.col.logoff')}</th><th>${t('user.col.count')}</th><th>${t('user.col.page')}</th><th>${t('system.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `
                 <tr><td>${r.id}</td><td>${r.user_id}</td><td>${r.bu_no||'-'}</td>
                     <td>${r.login_time||'-'}</td><td>${r.logoff_time||'-'}</td>
@@ -216,7 +216,7 @@ async function loadLogins() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 async function delLogin(id) {
-    if (!confirm('確定清除此紀錄？')) return;
-    try { await API.del(`/api/user/logins/${id}`); UI.toast('已清除','success'); loadLogins(); }
+    if (!confirm(t('user.msg.confirm_clear'))) return;
+    try { await API.del(`/api/user/logins/${id}`); UI.toast(t('user.msg.cleared'),'success'); loadLogins(); }
     catch(e) { UI.toast(e.message,'error'); }
 }

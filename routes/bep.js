@@ -19,6 +19,10 @@ function toNum(v) {
   const num = Number(v);
   return isNaN(num) ? 0 : num;
 }
+// 四捨五入到 2 位小數（金額勾稽用）
+function r2num(v) {
+  return Math.round(Number(v) * 100) / 100;
+}
 
 function calcBEP(sale_amt, db) {
   const s = toNum(sale_amt);
@@ -30,7 +34,13 @@ function calcBEP(sale_amt, db) {
   const customs = toNum(db.customs);
   const service_part_comp = toNum(db.service_part_comp);
   const variable_expense = toNum(db.variable_expense);
-  const fixed_cost = toNum(db.fixed_cost);
+  // 固定成本明細：工資 + 房租水電 + 利息支出
+  const fixed_salary = toNum(db.fixed_salary);
+  const fixed_rent = toNum(db.fixed_rent);
+  const fixed_interest = toNum(db.fixed_interest);
+  const fixed_items_sum = fixed_salary + fixed_rent + fixed_interest;
+  // 有明細拆分時以明細合計為準；相容舊資料（僅有 fixed_cost 總額）
+  const fixed_cost = fixed_items_sum > 0 ? fixed_items_sum : toNum(db.fixed_cost);
 
   const material = consumable + packaging + processing + misc_purchase
                  + freight + customs + service_part_comp;
@@ -44,7 +54,8 @@ function calcBEP(sale_amt, db) {
     sale_amt: s,
     consumable, packaging, processing, misc_purchase,
     freight, customs, service_part_comp,
-    variable_expense, fixed_cost,
+    variable_expense,
+    fixed_salary, fixed_rent, fixed_interest, fixed_cost,
     material, variable_cost, contribution_margin,
     cm_rate, bep, gap
   };
@@ -93,7 +104,8 @@ router.get('/query', async (req, res) => {
     const db = bepRows[0] || {
       consumable: 0, packaging: 0, processing: 0, misc_purchase: 0,
       freight: 0, customs: 0, service_part_comp: 0,
-      variable_expense: 0, fixed_cost: 0
+      variable_expense: 0,
+      fixed_salary: 0, fixed_rent: 0, fixed_interest: 0, fixed_cost: 0
     };
 
     const result = calcBEP(sale_amt, db);
@@ -112,26 +124,40 @@ router.post('/save', async (req, res) => {
       bu_no, YYYY_MM,
       consumable, packaging, processing, misc_purchase,
       freight, customs, service_part_comp,
-      variable_expense, fixed_cost, remark
+      variable_expense,
+      fixed_salary, fixed_rent, fixed_interest, fixed_cost, remark
     } = req.body;
     if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 與 YYYY_MM');
+
+    // 固定成本：有傳明細欄位時以明細合計為準，否則相容舊版直接傳 fixed_cost
+    const hasBreakdown = fixed_salary !== undefined || fixed_rent !== undefined || fixed_interest !== undefined;
+    const fSalary = n(fixed_salary);
+    const fRent = n(fixed_rent);
+    const fInterest = n(fixed_interest);
+    const fTotal = hasBreakdown
+      ? fSalary + fRent + fInterest
+      : n(fixed_cost);
 
     await pool.execute(
       `INSERT INTO MGM_BEP_threshold
        (bu_no, YYYY_MM, consumable, packaging, processing, misc_purchase,
-        freight, customs, service_part_comp, variable_expense, fixed_cost, remark)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+        freight, customs, service_part_comp, variable_expense,
+        fixed_salary, fixed_rent, fixed_interest, fixed_cost, remark)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON DUPLICATE KEY UPDATE
          consumable=VALUES(consumable), packaging=VALUES(packaging),
          processing=VALUES(processing), misc_purchase=VALUES(misc_purchase),
          freight=VALUES(freight), customs=VALUES(customs),
          service_part_comp=VALUES(service_part_comp),
          variable_expense=VALUES(variable_expense),
+         fixed_salary=VALUES(fixed_salary), fixed_rent=VALUES(fixed_rent),
+         fixed_interest=VALUES(fixed_interest),
          fixed_cost=VALUES(fixed_cost), remark=VALUES(remark)`,
       [bu_no, YYYY_MM,
        n(consumable), n(packaging), n(processing), n(misc_purchase),
        n(freight), n(customs), n(service_part_comp),
-       n(variable_expense), n(fixed_cost), remark || null]
+       n(variable_expense),
+       fSalary, fRent, fInterest, fTotal, remark || null]
     );
 
     // 保存後重算回傳最新結果
@@ -175,7 +201,8 @@ router.get('/history', async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT t.YYYY_MM, t.consumable, t.packaging, t.processing, t.misc_purchase,
               t.freight, t.customs, t.service_part_comp,
-              t.variable_expense, t.fixed_cost,
+              t.variable_expense,
+              t.fixed_salary, t.fixed_rent, t.fixed_interest, t.fixed_cost,
               s.sale_amt
        FROM MGM_BEP_threshold t
        LEFT JOIN MGM_finance_summary s
@@ -197,7 +224,11 @@ router.get('/history', async (req, res) => {
                      + freight + customs + service_part_comp;
       const variable_expense = toNum(r.variable_expense);
       const variable_cost = material + variable_expense;
-      const fixed_cost = toNum(r.fixed_cost);
+      const fixed_salary = toNum(r.fixed_salary);
+      const fixed_rent = toNum(r.fixed_rent);
+      const fixed_interest = toNum(r.fixed_interest);
+      const fixed_items_sum = fixed_salary + fixed_rent + fixed_interest;
+      const fixed_cost = fixed_items_sum > 0 ? fixed_items_sum : toNum(r.fixed_cost);
       const sale_amt = toNum(r.sale_amt);
       const cm = sale_amt - variable_cost;
       const cm_rate = sale_amt > 0 ? (cm / sale_amt) * 100 : 0;
@@ -206,7 +237,8 @@ router.get('/history', async (req, res) => {
         YYYY_MM: r.YYYY_MM,
         sale_amt, consumable, packaging, processing, misc_purchase,
         freight, customs, service_part_comp, material,
-        variable_expense, variable_cost, fixed_cost,
+        variable_expense, variable_cost,
+        fixed_salary, fixed_rent, fixed_interest, fixed_cost,
         contribution_margin: cm, cm_rate, bep, gap: sale_amt - bep
       };
     });
@@ -230,14 +262,44 @@ const BEP_ITEM_MAP = {
   freight:           { amt_types: [],                                  label: '運費（無對應交易類型，固定基準值）' },
   customs:           { amt_types: [],                                  label: '進出口費用（無對應交易類型，固定基準值）' },
   service_part_comp: { amt_types: [],                                  label: '服務零件與賠償（無對應交易類型，固定基準值）' },
-  variable_expense:  { amt_types: ['差旅費'],                          label: '變動費用 → 差旅費' },
+  variable_expense:  { amt_types: ['差旅費','廣告費','設備維修'], label: '變動費用 → 差旅費＋廣告費＋設備維修（隨營運變動之期間費用）' },
   material_sum:      { amt_types: ['原料採購','廣告費','設備維修'],    label: '材料合計 → 原料採購+廣告費+設備維修' },
   variable_cost:     { amt_types: ['原料採購','廣告費','設備維修','差旅費'], label: '變動成本總計 → 全部變動支出' },
-  // 固定成本（CR 支出類，固定支出）
+  // 固定成本明細（CR 支出類，固定支出）
+  fixed_salary:      { amt_types: ['工資'],                            label: '工資 → 現金日記賬 工資' },
+  fixed_rent:        { amt_types: ['房租水電'],                        label: '房租水電 → 現金日記賬 房租水電' },
+  fixed_interest:    { amt_types: ['利息支出'],                        label: '利息支出 → 現金日記賬 利息支出' },
   fixed_cost:        { amt_types: ['工資','房租水電','利息支出'],       label: '固定成本 → 工資+房租水電+利息支出' },
   // 收入類
   sale_amt:          { amt_types: ['銷貨收入','應收款收回','匯兌收益','利息收入'], label: '銷售金額 → 全部收入（DR）' }
 };
+
+// === BEP 門檻目標值解析（單一真源：MGM_BEP_threshold） ===
+const MATERIAL_FIELDS = ['consumable','packaging','processing','misc_purchase',
+                         'freight','customs','service_part_comp'];
+const DIRECT_THRESHOLD_FIELD = {
+  consumable: 'consumable', packaging: 'packaging', processing: 'processing',
+  misc_purchase: 'misc_purchase', freight: 'freight', customs: 'customs',
+  service_part_comp: 'service_part_comp', variable_expense: 'variable_expense',
+  fixed_salary: 'fixed_salary', fixed_rent: 'fixed_rent', fixed_interest: 'fixed_interest'
+};
+// 回傳該 item_key 在門檻表中的目標金額；不參與門檻勾稽的項目（如 sale_amt）回傳 null
+function resolveTarget(key, db) {
+  if (!db) return null;
+  if (DIRECT_THRESHOLD_FIELD[key]) return r2num(toNum(db[DIRECT_THRESHOLD_FIELD[key]]));
+  if (key === 'material_sum') {
+    return r2num(MATERIAL_FIELDS.reduce((s, f) => s + toNum(db[f]), 0));
+  }
+  if (key === 'variable_cost') {
+    const material = MATERIAL_FIELDS.reduce((s, f) => s + toNum(db[f]), 0);
+    return r2num(material + toNum(db.variable_expense));
+  }
+  if (key === 'fixed_cost') {
+    const sum = toNum(db.fixed_salary) + toNum(db.fixed_rent) + toNum(db.fixed_interest);
+    return r2num(sum > 0 ? sum : toNum(db.fixed_cost));
+  }
+  return null;
+}
 
 // 交易明細
 // GET /api/bep/detail?bu_no=HM&YYYY_MM=2025/02&item_key=consumable
@@ -251,29 +313,19 @@ router.get('/detail', async (req, res) => {
 
     const amtTypes = mapping.amt_types;
 
-    // 若沒有對應 amt_type，回傳空記錄並提示
-    if (amtTypes.length === 0) {
-      ok(res, {
-        item_key,
-        label: mapping.label,
-        mapped_amt_types: [],
-        no_mapping: true,
-        reason: mapping.label,
-        records: []
-      });
-      return;
+    // 查 mgm_casher_details（無對應交易類型時為空，後續完全由門檻調整行呈現）
+    let rows = [];
+    if (amtTypes.length > 0) {
+      const placeholders = amtTypes.map(() => '?').join(',');
+      [rows] = await pool.execute(
+        `SELECT uid, wk_date, num_vman, amt_type, DB_CR, sub_amt,
+                bank_acct, remark
+         FROM mgm_casher_details
+         WHERE bu_no=? AND YYYY_MM=? AND amt_type IN (${placeholders})
+         ORDER BY wk_date, num_vman`,
+        [bu_no, YYYY_MM, ...amtTypes]
+      );
     }
-
-    // 查 mgm_casher_details
-    const placeholders = amtTypes.map(() => '?').join(',');
-    const [rows] = await pool.execute(
-      `SELECT uid, wk_date, num_vman, amt_type, DB_CR, sub_amt,
-              bank_acct, remark
-       FROM mgm_casher_details
-       WHERE bu_no=? AND YYYY_MM=? AND amt_type IN (${placeholders})
-       ORDER BY wk_date, num_vman`,
-      [bu_no, YYYY_MM, ...amtTypes]
-    );
 
     // 計算累計餘額（按 DB_CR：DR 加、CR 減）
     let balance = 0;
@@ -295,16 +347,60 @@ router.get('/detail', async (req, res) => {
       };
     });
 
+    const bookedCount = records.length;
+    const bookedDebit = r2num(records.reduce((s, r) => s + r.debit, 0));
+    const bookedCredit = r2num(records.reduce((s, r) => s + r.credit, 0));
+
+    // === 與 BEP 門檻值勾稽（材料各項 / 變動費用 / 固定成本各項） ===
+    // 彈窗合計必須等於 BEP 卡片上的門檻值；現金日記賬只逐筆登錄了部分費用科目，
+    // 差額屬「已認定但未逐筆登錄」者，補一筆明確標示的調整行（不造假憑證/日期）。
+    let reconcile = null;
+    const noMapping = amtTypes.length === 0;
+    const [thRows] = await pool.execute(
+      'SELECT * FROM MGM_BEP_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+      [bu_no, YYYY_MM]
+    );
+    const target = resolveTarget(item_key, thRows[0]);
+    if (target !== null) {
+      const adjustment = r2num(target - bookedCredit - bookedDebit);
+      if (Math.abs(adjustment) > 0.01) {
+        // 調整行按支出(CR)處理（若為負差額則自動變為 DR 負數）
+        balance -= adjustment;
+        records.push({
+          uid: null,
+          wk_date: null,
+          num_vman: null,
+          amt_type: null,
+          DB_CR: adjustment >= 0 ? 'CR' : 'DR',
+          debit: adjustment < 0 ? r2num(-adjustment) : 0,
+          credit: adjustment >= 0 ? adjustment : 0,
+          bank_acct: null,
+          remark: null,
+          is_adjustment: true,
+          balance: Number(balance.toFixed(2))
+        });
+        reconcile = {
+          target_amount: target,
+          booked_debit: bookedDebit,
+          booked_credit: bookedCredit,
+          adjustment_amount: adjustment
+        };
+      }
+    }
+
     ok(res, {
       item_key,
       label: mapping.label,
       mapped_amt_types: amtTypes,
-      no_mapping: false,
+      no_mapping: noMapping && reconcile === null,
+      reason: mapping.label,
       records,
+      reconcile,
       summary: {
-        count: records.length,
-        total_debit: records.reduce((s, r) => s + r.debit, 0),
-        total_credit: records.reduce((s, r) => s + r.credit, 0),
+        count: bookedCount,
+        adjustment_count: reconcile ? 1 : 0,
+        total_debit: r2num(records.reduce((s, r) => s + r.debit, 0)),
+        total_credit: r2num(records.reduce((s, r) => s + r.credit, 0)),
         final_balance: Number(balance.toFixed(2))
       }
     });

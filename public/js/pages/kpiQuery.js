@@ -267,18 +267,18 @@ function buildYGRender(pageId) {
         c.innerHTML = `
             <div class="card">
                 <div class="toolbar">
-                    <label>公司別：<select id="ygBU" onchange="ygLoad('${pageId}')">
-                        <option value="">請選擇</option>
+                    <label>${t('kpiQuery.toolbar.bu')}：<select id="ygBU" onchange="ygLoad('${pageId}')">
+                        <option value="">${t('kpiQuery.toolbar.bu_placeholder')}</option>
                         <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option>
                     </select></label>
-                    <label>年：<input type="number" id="ygY" min="2000" max="2100" style="width:80px;" onchange="ygLoad('${pageId}')"></label>
-                    <label>月：<input type="number" id="ygM" min="1" max="12" style="width:60px;" onchange="ygLoad('${pageId}')"></label>
-                    <button class="btn btn-success" onclick="ygLoad('${pageId}')">🔄 更新</button>
-                    <button class="btn" onclick="ygShift('${pageId}',-1)">◀ 上一月</button>
-                    <button class="btn" onclick="ygShift('${pageId}',+1)">下一月 ▶</button>
+                    <label>${t('kpiQuery.toolbar.year')}：<input type="number" id="ygY" min="2000" max="2100" style="width:80px;" onchange="ygLoad('${pageId}')"></label>
+                    <label>${t('kpiQuery.toolbar.month')}：<input type="number" id="ygM" min="1" max="12" style="width:60px;" onchange="ygLoad('${pageId}')"></label>
+                    <button class="btn btn-success" onclick="ygLoad('${pageId}')">${t('kpiQuery.toolbar.update')}</button>
+                    <button class="btn" onclick="ygShift('${pageId}',-1)">${t('kpiQuery.toolbar.prev_month')}</button>
+                    <button class="btn" onclick="ygShift('${pageId}',+1)">${t('kpiQuery.toolbar.next_month')}</button>
                     <span style="color:#999;margin:0 6px;">|</span>
-                    <button class="btn" onclick="ygPageShift('${pageId}',-1)">◀ KPI上一頁</button>
-                    <button class="btn btn-primary" onclick="ygPageShift('${pageId}',+1)">KPI下一頁 ▶</button>
+                    <button class="btn" onclick="ygPageShift('${pageId}',-1)">${t('kpiQuery.toolbar.prev_page')}</button>
+                    <button class="btn btn-primary" onclick="ygPageShift('${pageId}',+1)">${t('kpiQuery.toolbar.next_page')}</button>
                 </div>
                 <h2 style="text-align:center;background:linear-gradient(90deg,#2c3e50,#3498db);color:#fff;padding:10px;border-radius:6px;margin:10px 0;">
                     ${cfg.title}
@@ -308,7 +308,7 @@ let _currentYgPage = null;
 // 打開 KPI 門檻編輯視窗（複用 kpi.js 的 KpiThresholdForm）
 window.openKpiThreshold = function(uid, currentValue) {
     if (typeof KpiThresholdForm === 'undefined') {
-        UI.toast('KPI 門檻模組未載入，請先點「KPI 門檻」頁面','error');
+        UI.toast(t('kpiQuery.kpi_not_loaded'),'error');
         return;
     }
     window._onKpiSaved = function(kpiId) {
@@ -325,7 +325,7 @@ window.ygLoad = async function(pageId) {
     const y = document.getElementById('ygY').value;
     const m = document.getElementById('ygM').value;
     const body = document.getElementById(pageId + '_body');
-    if (!bu || !y || !m) { body.innerHTML = '<p style="color:#e74c3c;padding:20px;">⚠️ 請先選擇 公司別 / 年 / 月</p>'; return; }
+    if (!bu || !y || !m) { body.innerHTML = `<p style="color:#e74c3c;padding:20px;">${t('kpiQuery.no_bu_ym')}</p>`; return; }
 
     try {
         const res = await API.get(`/api/kpi-query/query?bu_no=${bu}&YYYY_MM=${y}/${String(m).padStart(2,'0')}`);
@@ -333,7 +333,7 @@ window.ygLoad = async function(pageId) {
         const cfg = YG_CONFIG[pageId];
         body.innerHTML = cfg.sections.map(s => renderSection(kpis, s)).join('');
     } catch (e) {
-        body.innerHTML = `<p style="color:#e74c3c;padding:20px;">❌ 載入失敗：${e.message}</p>`;
+        body.innerHTML = `<p style="color:#e74c3c;padding:20px;">${t('kpiQuery.load_fail')}: ${e.message}</p>`;
     }
 };
 
@@ -353,8 +353,8 @@ function renderSection(kpis, sec) {
         const high = (item.KPI2 !== undefined && item.KPI2 !== null && item.KPI2 !== 0) ? item.KPI2 : row.high;
         const color = light(v, low, high, item.pct_type || row.pct_type);
         const targetCell = item.uid
-            ? `<td class="num" style="cursor:pointer;color:#2980b9;text-decoration:underline;" title="點擊調整目標門檻" onclick="openKpiThreshold(${item.uid}, ${v !== null && v !== undefined ? v : 0})">${fmt(low)} ~ ${fmt(high)}</td>`
-            : `<td class="num" style="color:#999;" title="尚未在 KPI 門檻頁定義，點 KPI 門檻頁新增">${fmt(low)} ~ ${fmt(high)}</td>`;
+            ? `<td class="num" style="cursor:pointer;color:#2980b9;text-decoration:underline;" title="${t('kpiQuery.target.click_hint')}" onclick="openKpiThreshold(${item.uid}, ${v !== null && v !== undefined ? v : 0})">${fmt(low)} ~ ${fmt(high)}</td>`
+            : `<td class="num" style="color:#999;" title="${t('kpiQuery.target.not_defined')}">${fmt(low)} ~ ${fmt(high)}</td>`;
         const catBg = {
             '獲利能力': '#fdebd0', '獲利績效': '#fdebd0',
             '營運能力': '#d6eaf8',
@@ -373,7 +373,7 @@ function renderSection(kpis, sec) {
         return `
             <tr>
                 <td style="background:${catBg[catName] || '#eaecee'};font-weight:bold;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.1);"
-                    title="點擊查看【${catName}】的項目說明與目的"
+                    title="${t('kpiQuery.cat.title_hint')}: ${catName}"
                     onmouseover="this.style.textDecoration='underline'"
                     onmouseout="this.style.textDecoration='none'"
                     onclick="showCategoryDetail('${catName}', '${catRowsJson}')">${catName}</td>
@@ -391,11 +391,11 @@ function renderSection(kpis, sec) {
             </div>
             <table class="data-table" style="margin:0;">
                 <thead><tr>
-                    <th style="width:90px;">預警類別</th>
-                    <th style="text-align:left;">項目名稱</th>
-                    <th style="width:140px;">目標值</th>
-                    <th style="width:130px;">當前值</th>
-                    <th style="width:80px;">狀態</th>
+                    <th style="width:90px;">${t('kpiQuery.th.category')}</th>
+                    <th style="text-align:left;">${t('kpiQuery.th.name')}</th>
+                    <th style="width:140px;">${t('kpiQuery.th.target')}</th>
+                    <th style="width:130px;">${t('kpiQuery.th.current')}</th>
+                    <th style="width:80px;">${t('kpiQuery.th.status')}</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
@@ -409,33 +409,33 @@ window.showCategoryDetail = function(catName, catRowsJson) {
 
     const rowsHtml = catRows.map(r => {
         const desc = KPI_DESC[r.id];
-        const pctLabel = r.pct_type === 'asc' ? '值高=差' : (r.pct_type === 'desc' ? '值低=差' : '—');
+        const pctLabel = r.pct_type === 'asc' ? t('kpiQuery.threshold_asc') : (r.pct_type === 'desc' ? t('kpiQuery.threshold_desc') : '—');
         return `
             <div style="border-left:3px solid #2980b9;padding:10px 14px;margin:12px 0;background:#fff;border-radius:0 6px 6px 0;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                     <div style="font-size:1em;font-weight:bold;color:#1a5276;">📊 ${r.name || r.id}</div>
                     <div style="font-size:0.8em;color:#7f8c8d;background:#f0f3f4;padding:2px 8px;border-radius:10px;">
-                        門檻 ${fmt(r.low)} ~ ${fmt(r.high)} · ${pctLabel}
+                        ${t('kpiQuery.threshold_label')} ${fmt(r.low)} ~ ${fmt(r.high)} · ${pctLabel}
                     </div>
                 </div>
                 ${desc ? `
-                    <div style="margin:6px 0;"><b style="color:#2c3e50;">🎯 目的：</b><span>${desc.purpose}</span></div>
-                    <div style="margin:4px 0;"><b style="color:#2c3e50;">📐 公式：</b><code style="background:#f4f6f7;padding:2px 8px;border-radius:4px;font-size:0.92em;">${desc.formula}</code></div>
-                    <div style="margin:4px 0;color:#555;font-size:0.92em;">💡 <b>判讀：</b>${desc.interpret}</div>
-                ` : `<div style="color:#999;font-size:0.9em;">（無公式說明）</div>`}
+                    <div style="margin:6px 0;"><b style="color:#2c3e50;">${t('kpiQuery.desc.purpose')}</b><span>${desc.purpose}</span></div>
+                    <div style="margin:4px 0;"><b style="color:#2c3e50;">${t('kpiQuery.desc.formula')}</b><code style="background:#f4f6f7;padding:2px 8px;border-radius:4px;font-size:0.92em;">${desc.formula}</code></div>
+                    <div style="margin:4px 0;color:#555;font-size:0.92em;">${t('kpiQuery.desc.interpret')}${desc.interpret}</div>
+                ` : `<div style="color:#999;font-size:0.9em;">${t('kpiQuery.desc.empty')}</div>`}
             </div>`;
     }).join('');
 
-    UI.modal(`📋 預警類別說明 — ${catName}`, `
+    UI.modal(t('kpiQuery.modal.title').replace('{cat}', catName), `
         <div style="background:#eaf2f8;border:1px solid #85c1e9;border-radius:8px;padding:14px 18px;margin-bottom:16px;">
-            <div style="font-weight:bold;color:#1a5276;margin-bottom:6px;">📖 類別目的</div>
+            <div style="font-weight:bold;color:#1a5276;margin-bottom:6px;">${t('kpiQuery.modal.purpose')}</div>
             <div style="color:#2c3e50;margin-bottom:8px;">${catDesc.purpose}</div>
-            <div style="font-weight:bold;color:#1e8449;margin-bottom:4px;">⚡ 改善方向</div>
+            <div style="font-weight:bold;color:#1e8449;margin-bottom:4px;">${t('kpiQuery.modal.action')}</div>
             <div style="color:#1e8449;">${catDesc.action}</div>
         </div>
-        <div style="font-weight:bold;color:#2c3e50;margin-bottom:6px;">🔍 本類別包含 ${catRows.length} 項指標：</div>
+        <div style="font-weight:bold;color:#2c3e50;margin-bottom:6px;">${t('kpiQuery.modal.include').replace('{n}', catRows.length)}</div>
         ${rowsHtml}
-    `, `<button class="btn" onclick="UI.closeModal()">關閉</button>`);
+    `, `<button class="btn" onclick="UI.closeModal()">${t('modal.close')}</button>`);
 };
 
 window.ygShift = function(pageId, delta) {
@@ -455,7 +455,7 @@ window.ygPageShift = function(pageId, delta) {
     const idx = pages.indexOf(pageId);
     const next = Math.max(0, Math.min(pages.length - 1, idx + delta));
     if (next === idx) {
-        UI.toast(idx === 0 ? '已在第一頁' : '已在最後一頁', 'info');
+        UI.toast(idx === 0 ? t('kpiQuery.first_page') : t('kpiQuery.last_page'), 'info');
         return;
     }
     // 保留當前公司別 / 年 / 月到 State，讓下一頁預設相同

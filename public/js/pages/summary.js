@@ -24,7 +24,7 @@ async function loadSummary() {
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('📋', t('sum.no_data')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('sum.month')}</th><th>${t('sum.sale')}</th><th>${t('sum.cost')}</th><th>${t('sum.gross')}</th><th>${t('sum.op_income')}</th><th>${t('sum.net')}</th><th>${t('sum.total_asset')}</th><th>${t('sum.total_debt')}</th><th>${t('sum.equity')}</th><th>操作</th></tr></thead>
+            <thead><tr><th>${t('sum.month')}</th><th>${t('sum.sale')}</th><th>${t('sum.cost')}</th><th>${t('sum.gross')}</th><th>${t('sum.op_income')}</th><th>${t('sum.net')}</th><th>${t('sum.total_asset')}</th><th>${t('sum.total_debt')}</th><th>${t('sum.equity')}</th><th>${t('po.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `<tr>
                 <td>${r.YYYY_MM}</td>
                 <td class="num">${UI.fmt(r.sale_amt)}</td>
@@ -98,7 +98,7 @@ const SumForm = {
         try {
             if (this._uid) {
                 await API.put(`/api/summary/${this._uid}`, body);
-                UI.toast('已更新', 'success');
+                UI.toast(t('po.msg.updated'), 'success');
             } else {
                 await API.post('/api/summary', body);
                 UI.toast(t('sum.saved'),'success');
@@ -142,8 +142,8 @@ const SumForm = {
 };
 
 async function delSum(uid) {
-    if (!confirm('確定刪除此筆財務摘要？')) return;
-    try { await API.del(`/api/summary/${uid}`); UI.toast('已刪除','success'); loadSummary(); }
+    if (!confirm(t('confirm_delete'))) return;
+    try { await API.del(`/api/summary/${uid}`); UI.toast(t('po.msg.deleted'),'success'); loadSummary(); }
     catch(e) { UI.toast(e.message,'error'); }
 }
 

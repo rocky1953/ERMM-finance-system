@@ -93,7 +93,11 @@ registerPage('trend', async (c) => {
                 .filter(r => String(r.YYYY) === year)
                 .sort((a, b) => Number(a.MM) - Number(b.MM));
 
-            const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+            const monthNames = [
+                t('trend.month.1'), t('trend.month.2'), t('trend.month.3'), t('trend.month.4'),
+                t('trend.month.5'), t('trend.month.6'), t('trend.month.7'), t('trend.month.8'),
+                t('trend.month.9'), t('trend.month.10'), t('trend.month.11'), t('trend.month.12')
+            ];
             for (let m = 1; m <= 12; m++) {
                 const row = monthly.find(r => Number(r.MM) === m);
                 labels.push(monthNames[m - 1]);

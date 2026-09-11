@@ -9,8 +9,8 @@ registerPage('forecast', async (c) => {
                 <button class="btn btn-success" onclick="loadForecast();loadFcDetail();loadCompare()">🔄 ${t('refresh')}</button>
             </div>
             <div style="display:flex;gap:16px;margin-bottom:10px">
-                <button class="btn btn-sm" id="tab-wide" onclick="switchFcTab('wide')">📊 年度寬表</button>
-                <button class="btn btn-sm btn-outline" id="tab-detail" onclick="switchFcTab('detail')">📋 逐筆明細</button>
+                <button class="btn btn-sm" id="tab-wide" onclick="switchFcTab('wide')">📊 ${t('forecast.tab.wide')}</button>
+                <button class="btn btn-sm btn-outline" id="tab-detail" onclick="switchFcTab('detail')">📋 ${t('forecast.tab.detail')}</button>
             </div>
             <div id="fcTable">${t('loading')}</div>
             <div id="fcDetail" style="display:none">${t('loading')}</div>
@@ -38,10 +38,10 @@ async function loadFcDetail() {
         const year = State.YYYY_MM.split('/')[0];
         const res = await API.get(`/api/forecast/detail?bu_no=${State.bu_no}&year=${year}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = UI.empty('📋', '尚無預測明細'); return; }
+        if (rows.length === 0) { el.innerHTML = UI.empty('📋', t('forecast.no_detail')); return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
-                <th>月份</th><th>預測類型</th><th>預測金額</th><th>差異</th><th>建立時間</th><th>操作</th>
+                <th>${t('forecast.th.month')}</th><th>${t('forecast.th.type')}</th><th>${t('forecast.th.amount')}</th><th>${t('forecast.th.diff')}</th><th>${t('forecast.th.create_time')}</th><th>${t('system.col.action')}</th>
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -61,17 +61,17 @@ async function loadFcDetail() {
 }
 
 function editFc(r) {
-    UI.modal(`✏️ 編輯預測 ${r.YYYY_MM} - ${r.forecast_type}`, `
+    UI.modal(`✏️ ${t('modal.edit')} ${t('forecast.title')} ${r.YYYY_MM} - ${r.forecast_type}`, `
         <div class="form-row">
-            <div class="form-group"><label>月份</label><input id="fc_edit_ym" value="${r.YYYY_MM}" readonly></div>
-            <div class="form-group"><label>預測類型</label><input id="fc_edit_type" value="${r.forecast_type}" readonly></div>
+            <div class="form-group"><label>${t('forecast.th.month')}</label><input id="fc_edit_ym" value="${r.YYYY_MM}" readonly></div>
+            <div class="form-group"><label>${t('forecast.th.type')}</label><input id="fc_edit_type" value="${r.forecast_type}" readonly></div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label>預測金額</label><input type="number" id="fc_edit_amt" value="${r.forecast_amt || 0}"></div>
-            <div class="form-group"><label>差異</label><input type="number" id="fc_edit_diff" value="${r.diff_amt || 0}"></div>
+            <div class="form-group"><label>${t('forecast.th.amount')}</label><input type="number" id="fc_edit_amt" value="${r.forecast_amt || 0}"></div>
+            <div class="form-group"><label>${t('forecast.th.diff')}</label><input type="number" id="fc_edit_diff" value="${r.diff_amt || 0}"></div>
         </div>
-    `, `<button class="btn" onclick="UI.closeModal()">取消</button>
-        <button class="btn btn-primary" onclick="saveFc(${r.uid})">💾 保存</button>`);
+    `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button>
+        <button class="btn btn-primary" onclick="saveFc(${r.uid})">💾 ${t('save')}</button>`);
 }
 
 async function saveFc(uid) {
@@ -81,15 +81,15 @@ async function saveFc(uid) {
     };
     try {
         await API.put(`/api/forecast/${uid}`, body);
-        UI.toast('已更新', 'success');
+        UI.toast(t('saved'), 'success');
         UI.closeModal();
         loadFcDetail();
     } catch(e) { UI.toast(e.message, 'error'); }
 }
 
 async function delFc(uid) {
-    if (!confirm('確定刪除此筆預測？')) return;
-    try { await API.del(`/api/forecast/${uid}`); UI.toast('已刪除','success'); loadFcDetail(); }
+    if (!confirm(t('forecast.msg.confirm_del'))) return;
+    try { await API.del(`/api/forecast/${uid}`); UI.toast(t('deleted'),'success'); loadFcDetail(); }
     catch(e) { UI.toast(e.message,'error'); }
 }
 
