@@ -153,7 +153,7 @@ router.post('/calc', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
-        let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM MGM_finance_summary WHERE 1=1';
+        let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, BZ_X1, BZ_X2, BZ_X3, BZ_X4, BZ_X5, JZ_ZA, JZ_ZB, JZ_ZC, JZ_ZD, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM MGM_finance_summary WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
