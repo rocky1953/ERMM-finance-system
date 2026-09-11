@@ -7,12 +7,15 @@ registerPage('risk', async (c) => {
             <div class="toolbar">
                 <button class="btn btn-warning" onclick="calcRisk()">⚠️ ${t('risk.calc')}</button>
                 <button class="btn btn-success" onclick="loadRisk()">🔄 ${t('refresh')}</button>
+                <span style="color:#7f8c8d;font-size:0.85em;margin-left:8px">💡 ${t('risk.click_hint')}</span>
             </div>
             <div id="riskContent">${t('loading')}</div>
         </div>
     `;
     loadRisk();
 });
+
+let _riskData = null;
 
 async function loadRisk() {
     const el = document.getElementById('riskContent');
@@ -21,42 +24,43 @@ async function loadRisk() {
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('⚠️', t('risk.no_data')); return; }
         const r = rows[0];
+        _riskData = r;
         const zVal = Number(r.Z_score || 0);
         const zColor = (r.risk_color || '').toLowerCase();
         el.innerHTML = `
             <div class="kpi-grid">
-                <div class="kpi-card ${zColor}">
+                <div class="kpi-card ${zColor}" style="cursor:pointer" onclick="RiskHelp.open('z')">
                     <div class="kpi-label">${t('risk.z_score')}</div>
                     <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
                     <div class="kpi-badge ${zColor}">${r.wall_mode || '-'}</div>
                     <div class="kpi-sub">${t('risk.threshold')}</div>
                 </div>
-                <div class="kpi-card ${Number(r.Z2_score)>=2.9?'green':Number(r.Z2_score)>=1.23?'yellow':'red'}">
+                <div class="kpi-card ${Number(r.Z2_score)>=2.9?'green':Number(r.Z2_score)>=1.23?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('z2')">
                     <div class="kpi-label">${t('risk.z2')}</div>
                     <div class="kpi-value">${UI.fmt(r.Z2_score, 4)}</div>
                 </div>
-                <div class="kpi-card ${Number(r.Z3_score)>=2.6?'green':Number(r.Z3_score)>=1.1?'yellow':'red'}">
+                <div class="kpi-card ${Number(r.Z3_score)>=2.6?'green':Number(r.Z3_score)>=1.1?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('z3')">
                     <div class="kpi-label">${t('risk.z3')}</div>
                     <div class="kpi-value">${UI.fmt(r.Z3_score, 4)}</div>
                 </div>
-                <div class="kpi-card ${Number(r.BZ_model)>=0?'green':'red'}">
+                <div class="kpi-card ${Number(r.BZ_model)>=0?'green':'red'}" style="cursor:pointer" onclick="RiskHelp.open('bz')">
                     <div class="kpi-label">${t('risk.bz')}</div>
                     <div class="kpi-value">${UI.fmt(r.BZ_model, 4)}</div>
                 </div>
-                <div class="kpi-card green">
+                <div class="kpi-card green" style="cursor:pointer" onclick="RiskHelp.open('jz')">
                     <div class="kpi-label">${t('risk.jz')}</div>
                     <div class="kpi-value">${UI.fmt(r.JZ_model, 4)}</div>
                 </div>
-                <div class="kpi-card ${Number(r.current_ratio)>=1.5?'green':Number(r.current_ratio)>=1?'yellow':'red'}">
+                <div class="kpi-card ${Number(r.current_ratio)>=1.5?'green':Number(r.current_ratio)>=1?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('cr')">
                     <div class="kpi-label">${t('risk.current_ratio')}</div>
                     <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
                     <div class="kpi-sub">${t('risk.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
                 </div>
-                <div class="kpi-card ${Number(r.debt_ratio)<=50?'green':Number(r.debt_ratio)<=70?'yellow':'red'}">
+                <div class="kpi-card ${Number(r.debt_ratio)<=50?'green':Number(r.debt_ratio)<=70?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('dr')">
                     <div class="kpi-label">${t('risk.debt_ratio')}</div>
                     <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
                 </div>
-                <div class="kpi-card ${Number(r.ROE)>=0?'green':'red'}">
+                <div class="kpi-card ${Number(r.ROE)>=0?'green':'red'}" style="cursor:pointer" onclick="RiskHelp.open('roe')">
                     <div class="kpi-label">${t('risk.roe')}</div>
                     <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
                     <div class="kpi-sub">${t('risk.roa')} ${UI.fmt(r.ROA, 2)}%</div>
@@ -65,6 +69,202 @@ async function loadRisk() {
         `;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
+
+// ===== 風險指標說明彈窗 =====
+const RiskHelp = {
+    open(key) {
+        const r = _riskData || {};
+        const v = (k) => Number(r[k] || 0);
+        const cfg = {
+            z: {
+                title: t('risk.z_score'),
+                color: (r.risk_color || '').toLowerCase(),
+                value: UI.fmt(v('Z_score'), 4),
+                status: r.wall_mode || '-',
+                purpose: t('risk.desc.z.purpose'),
+                formula: 'Z = 1.2·X1 + 1.4·X2 + 3.3·X3 + 0.6·X4 + 0.999·X5',
+                vars: [
+                    { name: 'X1', desc: t('risk.desc.z.x1'), val: UI.fmt(v('Z_X1'), 4) },
+                    { name: 'X2', desc: t('risk.desc.z.x2'), val: UI.fmt(v('Z_X2'), 4) },
+                    { name: 'X3', desc: t('risk.desc.z.x3'), val: UI.fmt(v('Z_X3'), 4) },
+                    { name: 'X4', desc: t('risk.desc.z.x4'), val: UI.fmt(v('Z_X4'), 4) },
+                    { name: 'X5', desc: t('risk.desc.z.x5'), val: UI.fmt(v('Z_X5'), 4) },
+                ],
+                zones: [
+                    { range: 'Z ≥ 2.9', label: t('dash.safe'), color: 'green' },
+                    { range: '1.23 ≤ Z < 2.9', label: t('dash.grey'), color: 'yellow' },
+                    { range: 'Z < 1.23', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            z2: {
+                title: t('risk.z2'),
+                color: v('Z2_score') >= 2.9 ? 'green' : (v('Z2_score') >= 1.23 ? 'yellow' : 'red'),
+                value: UI.fmt(v('Z2_score'), 4),
+                status: v('Z2_score') >= 2.9 ? t('dash.safe') : (v('Z2_score') >= 1.23 ? t('dash.grey') : t('dash.bankrupt')),
+                purpose: t('risk.desc.z2.purpose'),
+                formula: 'Z2 = 0.717·X1 + 0.847·X2 + 3.107·X3 + 0.420·X4 + 0.998·X5',
+                vars: [
+                    { name: 'X1', desc: t('risk.desc.z.x1'), val: UI.fmt(v('Z_X1'), 4) },
+                    { name: 'X2', desc: t('risk.desc.z.x2'), val: UI.fmt(v('Z_X2'), 4) },
+                    { name: 'X3', desc: t('risk.desc.z.x3'), val: UI.fmt(v('Z_X3'), 4) },
+                    { name: 'X4', desc: t('risk.desc.z.x4'), val: UI.fmt(v('Z_X4'), 4) },
+                    { name: 'X5', desc: t('risk.desc.z.x5'), val: UI.fmt(v('Z_X5'), 4) },
+                ],
+                zones: [
+                    { range: 'Z2 ≥ 2.9', label: t('dash.safe'), color: 'green' },
+                    { range: '1.23 ≤ Z2 < 2.9', label: t('dash.grey'), color: 'yellow' },
+                    { range: 'Z2 < 1.23', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            z3: {
+                title: t('risk.z3'),
+                color: v('Z3_score') >= 2.6 ? 'green' : (v('Z3_score') >= 1.1 ? 'yellow' : 'red'),
+                value: UI.fmt(v('Z3_score'), 4),
+                status: v('Z3_score') >= 2.6 ? t('dash.safe') : (v('Z3_score') >= 1.1 ? t('dash.grey') : t('dash.bankrupt')),
+                purpose: t('risk.desc.z3.purpose'),
+                formula: 'Z3 = 6.56·X1 + 3.26·X2 + 6.72·X3 + 1.05·X4',
+                vars: [
+                    { name: 'X1', desc: t('risk.desc.z.x1'), val: UI.fmt(v('Z_X1'), 4) },
+                    { name: 'X2', desc: t('risk.desc.z.x2'), val: UI.fmt(v('Z_X2'), 4) },
+                    { name: 'X3', desc: t('risk.desc.z.x3'), val: UI.fmt(v('Z_X3'), 4) },
+                    { name: 'X4', desc: t('risk.desc.z.x4'), val: UI.fmt(v('Z_X4'), 4) },
+                ],
+                zones: [
+                    { range: 'Z3 ≥ 2.6', label: t('dash.safe'), color: 'green' },
+                    { range: '1.1 ≤ Z3 < 2.6', label: t('dash.grey'), color: 'yellow' },
+                    { range: 'Z3 < 1.1', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            bz: {
+                title: t('risk.bz'),
+                color: v('BZ_model') >= 0 ? 'green' : 'red',
+                value: UI.fmt(v('BZ_model'), 4),
+                status: v('BZ_model') >= 0 ? t('dash.safe') : t('dash.bankrupt'),
+                purpose: t('risk.desc.bz.purpose'),
+                formula: 'BZ = X1 + X2 + X3 + X4 + X5',
+                vars: [
+                    { name: 'X1', desc: t('risk.desc.z.x1'), val: UI.fmt(v('BZ_X1') || v('Z_X1'), 4) },
+                    { name: 'X2', desc: t('risk.desc.z.x2'), val: UI.fmt(v('BZ_X2') || v('Z_X2'), 4) },
+                    { name: 'X3', desc: t('risk.desc.z.x3'), val: UI.fmt(v('BZ_X3') || v('Z_X3'), 4) },
+                    { name: 'X4', desc: t('risk.desc.z.x4'), val: UI.fmt(v('BZ_X4') || v('Z_X4'), 4) },
+                    { name: 'X5', desc: t('risk.desc.z.x5'), val: UI.fmt(v('BZ_X5') || v('Z_X5'), 4) },
+                ],
+                zones: [
+                    { range: 'BZ ≥ 0', label: t('dash.safe'), color: 'green' },
+                    { range: 'BZ < 0', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            jz: {
+                title: t('risk.jz'),
+                color: 'green',
+                value: UI.fmt(v('JZ_model'), 4),
+                status: v('JZ_model') >= 0 ? t('dash.safe') : t('dash.bankrupt'),
+                purpose: t('risk.desc.jz.purpose'),
+                formula: 'JZ = ZA + ZB − ZC − ZD',
+                vars: [
+                    { name: 'ZA', desc: t('risk.desc.jz.za'), val: UI.fmt(v('JZ_ZA'), 4) },
+                    { name: 'ZB', desc: t('risk.desc.jz.zb'), val: UI.fmt(v('JZ_ZB'), 4) },
+                    { name: 'ZC', desc: t('risk.desc.jz.zc'), val: UI.fmt(v('JZ_ZC'), 4) },
+                    { name: 'ZD', desc: t('risk.desc.jz.zd'), val: UI.fmt(v('JZ_ZD'), 4) },
+                ],
+                zones: [
+                    { range: 'JZ ≥ 0', label: t('dash.safe'), color: 'green' },
+                    { range: 'JZ < 0', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            cr: {
+                title: t('risk.current_ratio'),
+                color: v('current_ratio') >= 1.5 ? 'green' : (v('current_ratio') >= 1 ? 'yellow' : 'red'),
+                value: UI.fmt(v('current_ratio'), 4),
+                status: v('current_ratio') >= 1.5 ? t('dash.safe') : (v('current_ratio') >= 1 ? t('dash.grey') : t('dash.bankrupt')),
+                purpose: t('risk.desc.cr.purpose'),
+                formula: t('risk.desc.cr.formula'),
+                extra: `<div style="margin-top:8px">${t('risk.quick_ratio')}: <strong>${UI.fmt(v('quick_ratio'), 4)}</strong></div>`,
+                zones: [
+                    { range: '≥ 1.5', label: t('dash.safe'), color: 'green' },
+                    { range: '1.0 ~ 1.5', label: t('dash.grey'), color: 'yellow' },
+                    { range: '< 1.0', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            dr: {
+                title: t('risk.debt_ratio'),
+                color: v('debt_ratio') <= 50 ? 'green' : (v('debt_ratio') <= 70 ? 'yellow' : 'red'),
+                value: UI.fmt(v('debt_ratio'), 1) + '%',
+                status: v('debt_ratio') <= 50 ? t('dash.safe') : (v('debt_ratio') <= 70 ? t('dash.grey') : t('dash.bankrupt')),
+                purpose: t('risk.desc.dr.purpose'),
+                formula: t('risk.desc.dr.formula'),
+                zones: [
+                    { range: '≤ 50%', label: t('dash.safe'), color: 'green' },
+                    { range: '50% ~ 70%', label: t('dash.grey'), color: 'yellow' },
+                    { range: '> 70%', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+            roe: {
+                title: t('risk.roe'),
+                color: v('ROE') >= 0 ? 'green' : 'red',
+                value: UI.fmt(v('ROE'), 2) + '%',
+                status: v('ROE') >= 0 ? t('dash.safe') : t('dash.bankrupt'),
+                purpose: t('risk.desc.roe.purpose'),
+                formula: t('risk.desc.roe.formula'),
+                extra: `<div style="margin-top:8px">${t('risk.roa')}: <strong>${UI.fmt(v('ROA'), 2)}%</strong></div>`,
+                zones: [
+                    { range: '≥ 0%', label: t('dash.safe'), color: 'green' },
+                    { range: '< 0%', label: t('dash.bankrupt'), color: 'red' },
+                ]
+            },
+        };
+        const m = cfg[key];
+        if (!m) return;
+
+        const colorMap = { green: '#27ae60', yellow: '#f39c12', red: '#e74c3c' };
+        const badgeColor = colorMap[m.color] || '#7f8c8d';
+
+        const varsRows = (m.vars || []).map(v =>
+            `<tr><td style="font-weight:bold;color:#2980b9">${v.name}</td><td>${v.desc}</td><td class="num">${v.val}</td></tr>`
+        ).join('');
+
+        const zonesRows = m.zones.map(z => {
+            const isCur = (m.status === z.label);
+            return `<tr style="${isCur ? 'background:' + colorMap[z.color] + '22;font-weight:bold' : ''}">
+                <td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${colorMap[z.color]};margin-right:6px"></span>${z.label}</td>
+                <td class="num">${z.range}</td>
+                ${isCur ? `<td style="color:${colorMap[z.color]}">← ${t('risk.desc.current')}</td>` : '<td></td>'}
+            </tr>`;
+        }).join('');
+
+        const body = `
+            <div style="line-height:1.8;font-size:14px">
+                <div style="background:${badgeColor}15;padding:16px;border-radius:8px;margin-bottom:14px;border-left:4px solid ${badgeColor}">
+                    <div style="font-size:2em;font-weight:bold;color:#2c3e50">${m.value}</div>
+                    <span style="display:inline-block;margin-top:4px;padding:2px 12px;border-radius:12px;color:#fff;background:${badgeColor}">${m.status}</span>
+                </div>
+                <div style="margin-bottom:14px">
+                    <strong>📋 ${t('risk.desc.purpose')}：</strong>${m.purpose}
+                </div>
+                <div style="background:#f8f9fa;padding:10px 14px;border-radius:6px;margin-bottom:14px">
+                    <strong>🧮 ${t('risk.desc.formula')}：</strong><code style="background:#fff;padding:2px 6px;border-radius:4px">${m.formula}</code>
+                </div>
+                ${m.extra || ''}
+                ${varsRows ? `
+                <div style="margin-bottom:14px">
+                    <strong>📊 ${t('risk.desc.variables')}：</strong>
+                    <table class="data-table" style="margin-top:6px">
+                        <thead><tr><th>變數</th><th>說明</th><th>${t('risk.desc.value')}</th></tr></thead>
+                        <tbody>${varsRows}</tbody>
+                    </table>
+                </div>` : ''}
+                <div>
+                    <strong>🎯 ${t('risk.desc.zones')}：</strong>
+                    <table class="data-table" style="margin-top:6px">
+                        <thead><tr><th>${t('risk.desc.status')}</th><th>${t('risk.desc.range')}</th><th></th></tr></thead>
+                        <tbody>${zonesRows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        const footer = `<button class="btn" onclick="UI.closeModal()">${t('modal.close')}</button>`;
+        UI.modal(m.title, body, footer);
+    }
+};
 
 async function calcRisk() {
     try {
