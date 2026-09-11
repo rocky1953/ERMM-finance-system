@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 系統操作說明</title>
+<style>
+  :root{
+    --primary:#1e40af; --primary-2:#2563eb; --accent:#0ea5e9;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#1e40af,#0ea5e9); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:32px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#eff6ff,#dbeafe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f1f5f9}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.5; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+
+  .feature-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:16px; margin:20px 0;
+  }
+  .feature-card{
+    border:1px solid var(--border); border-radius:10px; padding:16px;
+    background:var(--surface); transition:box-shadow .2s,transform .2s;
+  }
+  .feature-card:hover{box-shadow:0 4px 16px rgba(15,23,42,.1); transform:translateY(-2px)}
+  .feature-card .icon{font-size:28px; margin-bottom:8px}
+  .feature-card h4{margin:0 0 6px; color:var(--primary)}
+  .feature-card p{margin:0; font-size:13px; color:var(--text-soft); line-height:1.6}
+
+  .nav-tree{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:8px;
+    padding:16px 20px; margin:16px 0; font-size:14px;
+  }
+  .nav-group{margin:8px 0}
+  .nav-group-title{font-weight:700; color:var(--primary); margin:12px 0 4px; font-size:15px}
+  .nav-item{padding:3px 0 3px 20px; color:var(--text-soft)}
+  .nav-item .ico{margin-right:6px}
+
+  .badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:12px;font-weight:600}
+  .badge.new{background:#dbeafe;color:#1e40af}
+  .badge.feat{background:#dcfce7;color:#166534}
+  .badge.warn{background:#fef3c7;color:#92400e}
+
+  .kbd{
+    display:inline-block;padding:2px 8px;border:1px solid var(--border);
+    border-bottom:2px solid var(--border);border-radius:4px;
+    background:var(--code-bg);font-family:monospace;font-size:12px;
+    color:var(--text-soft);
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — 系統操作說明</h1>
+  <div class="sub">涵蓋 27 個功能頁面、三大報表、風險預警、BEP 分析、KPI 指標、多語言切換</div>
+  <div class="meta">
+    <span>版本：v1.0</span>
+    <span>更新日期：2026-09-11</span>
+    <span>技術棧：Node.js + Express + MySQL 8 + Chart.js</span>
+  </div>
+  <span class="tag">27 頁面</span>
+  <span class="tag">三語 i18n</span>
+  <span class="tag">Excel 匯入/匯出</span>
+  <span class="tag">批次管線 7 步</span>
+  <span class="tag">Z-Score 風險模型</span>
+  <span class="tag">BEP 損益平衡</span>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#s1">系統總覽與架構</a></li>
+    <li><a href="#s2">安裝與啟動</a></li>
+    <li><a href="#s3">導航結構（全部頁面）</a></li>
+    <li><a href="#s4">財務儀表板（Dashboard）</a></li>
+    <li><a href="#s5">ERP 原始單據（PO / SO / DN / 暫存）</a></li>
+    <li><a href="#s6">日常作業（現金／發票／付款／票據／銀行／應收應付）</a></li>
+    <li><a href="#s7">財務分析（摘要／三大報表／風險／預測／趨勢／月結／BEP／科目／庫存）</a></li>
+    <li><a href="#s8">KPI 預警查詢（YG001–YG004）</a></li>
+    <li><a href="#s9">主檔管理（KPI 門檻／分公司／往來對象）</a></li>
+    <li><a href="#s10">系統管理（批次管線／系統設定／使用者）</a></li>
+    <li><a href="#s11">多語言切換（i18n）</a></li>
+    <li><a href="#s12">Excel 匯出</a></li>
+    <li><a href="#s13">常用操作技巧與快捷鍵</a></li>
+    <li><a href="#s14">常見問題排查</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. 系統總覽 ==================== -->
+<h2 id="s1">1. 系統總覽與架構</h2>
+
+<p>ERMM 財務模組管理系統是一套以 <strong>Node.js + Express</strong> 為後端、<strong>MySQL 8</strong> 為資料庫、純前端 JavaScript + <strong>Chart.js</strong> 為展示層的財務管理平台，覆蓋從 ERP 原始單據匯入、日常財務作業、三大報表生成、風險預警計算到損益平衡分析的全流程。</p>
+
+<div class="feature-grid">
+  <div class="feature-card">
+    <div class="icon">📊</div>
+    <h4>財務儀表板</h4>
+    <p>KPI 卡片、月度損益柱狀圖（可點擊鑽取發票明細）、風險燈號面板（Z-Score 可點擊查看說明）</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🛒</div>
+    <h4>ERP 原始單據</h4>
+    <p>採購單 PO、銷售訂單 SO、送貨單 DN、PO 暫存區，支援批次管線七步加工</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">💵</div>
+    <h4>日常作業</h4>
+    <p>現金日記帳、發票管理（進銷項）、付款明細、票據管理、銀行貸款、應收應付彙算</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">📋</div>
+    <h4>三大報表</h4>
+    <p>資產負債表、損益表（PL）、現金流量表，支援 Excel 匯出</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">⚠️</div>
+    <h4>風險預警</h4>
+    <p>Altman Z-Score / Z2 / Z3 三模型、流動比率、負債比、ROE / ROA 燈號面板</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">⚖️</div>
+    <h4>BEP 損益平衡</h4>
+    <p>材料成本 7 項鑽取、變動費用 / 固定成本明細、門檻值勾稽核驗、即時重算</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🎯</div>
+    <h4>KPI 指標</h4>
+    <p>YG001–YG004 四大模型，涵蓋預警指標、指標管理、報表異常甄別、預測模型分析</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🌐</div>
+    <h4>三語國際化</h4>
+    <p>繁體中文 / 簡體中文 / English 即時切換，覆蓋全部 27 頁面 UI 元素</p>
+  </div>
+</div>
+
+<h3>系統架構圖</h3>
+<pre><code>┌──────────────────────────────────────────────────┐
+│                 瀏覽器（前端）                       │
+│  index.html + public/js/pages/*.js (27 頁面)       │
+│  public/js/i18n.js (三語字典)                      │
+│  public/js/app.js (路由/工具/API 封裝)              │
+│  Chart.js (柱狀圖/折線圖)                           │
+└───────────────────────┬──────────────────────────┘
+                        │ HTTP REST API (JSON)
+┌───────────────────────▼──────────────────────────┐
+│              Node.js + Express (app.js)             │
+│  routes/*.js — 18 個路由模組                        │
+│  config/db.js — MySQL 連線池                        │
+│  routes/batch.js — 七步批次管線                      │
+└───────────────────────┬──────────────────────────┘
+                        │ mysql2 連線池
+┌───────────────────────▼──────────────────────────┐
+│              MySQL 8 (ERMM_db, utf8mb4)             │
+│  29 張表：ERP 原始／財務核心 8 表／主檔／系統／產出    │
+└──────────────────────────────────────────────────┘</code></pre>
+
+<div class="call info">
+  <strong>Git 倉庫：</strong><code>https://github.com/rocky1953/ERMM-finance-system</code><br>
+  本機路徑：<code>e:\finance</code>　|　服務埠：<code>3008</code>
+</div>
+
+<!-- ==================== 2. 安裝與啟動 ==================== -->
+<h2 id="s2">2. 安裝與啟動</h2>
+
+<h3>2.1 環境需求</h3>
+<table>
+  <tr><th>軟體</th><th>版本</th><th>用途</th></tr>
+  <tr><td>Node.js</td><td>18+（建議 20 LTS）</td><td>後端服務 + 離線匯入腳本</td></tr>
+  <tr><td>MySQL</td><td>8.x（utf8mb4）</td><td>資料庫 ERMM_db</td></tr>
+  <tr><td>瀏覽器</td><td>Chrome / Edge 最新版</td><td>前端操作</td></tr>
+  <tr><td>Git</td><td>2.x</td><td>版本控制</td></tr>
+</table>
+
+<h3>2.2 首次安裝</h3>
+<pre><code># 1. 克隆倉庫
+git clone https://github.com/rocky1953/ERMM-finance-system.git e:\finance
+cd e:\finance
+
+# 2. 安裝 Node 依賴
+npm.cmd install
+
+# 3. 建立 MySQL 資料庫
+mysql -uroot -p -e "CREATE DATABASE ERMM_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 4. 建表
+mysql -uroot -p ERMM_db < database\schema.sql
+# 或跑 migrations
+mysql -uroot -p ERMM_db -e "source migrations/run_all.sql"
+
+# 5. 建立 BEP 門檻表
+node database/create_bep.js
+
+# 6. 設定 .env（參見下方）
+# 7. 啟動服務
+node app.js</code></pre>
+
+<h3>2.3 環境設定檔 <code>.env</code></h3>
+<table>
+  <tr><th>鍵</th><th>說明</th><th>範例值</th></tr>
+  <tr><td><code>PORT</code></td><td>Express 監聽埠</td><td>3008</td></tr>
+  <tr><td><code>DB_HOST</code></td><td>MySQL 位址</td><td>127.0.0.1</td></tr>
+  <tr><td><code>DB_PORT</code></td><td>MySQL 埠</td><td>3306</td></tr>
+  <tr><td><code>DB_USER</code></td><td>DB 帳號</td><td>root</td></tr>
+  <tr><td><code>DB_PASSWORD</code></td><td>DB 密碼</td><td>（你的密碼）</td></tr>
+  <tr><td><code>DB_NAME</code></td><td>資料庫名</td><td>ERMM_db</td></tr>
+  <tr><td><code>JWT_SECRET</code></td><td>登入簽章</td><td>隨機長字串</td></tr>
+</table>
+
+<h3>2.4 啟動 / 停止 / 驗證</h3>
+<pre><code># 啟動
+cd e:\finance
+node app.js
+
+# 驗證（另一終端）
+Invoke-RestMethod http://localhost:3008/api/health -UseBasicParsing
+# 回傳 success=true 即正常
+
+# 停止（背景任務）
+netstat -ano | findstr ':3008' | findstr LISTENING
+taskkill /F /PID &lt;查到的PID&gt;</code></pre>
+
+<div class="call ok">
+  啟動後打開瀏覽器訪問 <code>http://localhost:3008</code> 即可使用全部功能。
+</div>
+
+<!-- ==================== 3. 導航結構 ==================== -->
+<h2 id="s3">3. 導航結構（全部頁面）</h2>
+
+<p>系統左側導航欄按功能分為 6 大群組，共 27 個頁面。頂部有<strong>公司別下拉</strong>（HM / HN / SZ）、<strong>月份選擇器</strong>和<strong>語言切換</strong>，這三個控制項是全域的——切換後所有頁面數據聯動刷新。</p>
+
+<div class="nav-tree">
+  <div class="nav-group">
+    <div class="nav-group-title">📊 儀表板</div>
+    <div class="nav-item"><span class="ico">📊</span>財務儀表板 <code>dashboard</code></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">🛒 ERP 原始單據</div>
+    <div class="nav-item"><span class="ico">🛒</span>採購單 PO <code>po</code></div>
+    <div class="nav-item"><span class="ico">📦</span>銷售訂單 SO <code>so</code></div>
+    <div class="nav-item"><span class="ico">🚚</span>送貨單 DN <code>dn</code></div>
+    <div class="nav-item"><span class="ico">📥</span>PO 暫存 <code>tempPo</code></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">💵 日常作業</div>
+    <div class="nav-item"><span class="ico">💵</span>現金日記帳 <code>cash</code></div>
+    <div class="nav-item"><span class="ico">🧾</span>發票管理 <code>invoice</code></div>
+    <div class="nav-item"><span class="ico">💳</span>付款明細 <code>pay</code></div>
+    <div class="nav-item"><span class="ico">📝</span>票據管理 <code>check</code></div>
+    <div class="nav-item"><span class="ico">🏦</span>銀行貸款 <code>bank</code></div>
+    <div class="nav-item"><span class="ico">📐</span>應收應付 <code>arap</code></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">📋 財務分析</div>
+    <div class="nav-item"><span class="ico">📋</span>財務摘要 <code>summary</code></div>
+    <div class="nav-item"><span class="ico">📈</span>三大報表 <code>report</code></div>
+    <div class="nav-item"><span class="ico">⚠️</span>風險預警 <code>risk</code></div>
+    <div class="nav-item"><span class="ico">🔮</span>財務預測 <code>forecast</code></div>
+    <div class="nav-item"><span class="ico">📉</span>年度趨勢 <code>trend</code></div>
+    <div class="nav-item"><span class="ico">📅</span>月結項目 <code>monthly</code></div>
+    <div class="nav-item"><span class="ico">⚖️</span>損益平衡分析 <code>bep</code></div>
+    <div class="nav-item"><span class="ico">📒</span>會計科目 <code>account</code></div>
+    <div class="nav-item"><span class="ico">📦</span>庫存減值 <code>xitems</code></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">📊 財務預警 / KPI 查詢</div>
+    <div class="nav-item"><span class="ico">📊</span>YG001 KPI 預警指標 <code>yg001</code></div>
+    <div class="nav-item"><span class="ico">📈</span>YG002 KPI 指標管理 <code>yg002</code></div>
+    <div class="nav-item"><span class="ico">⚠️</span>YG003 報表異常甄別 <code>yg003</code></div>
+    <div class="nav-item"><span class="ico">🎯</span>YG004 預測模型分析 <code>yg004</code></div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">⚙️ 主檔管理 & 系統</div>
+    <div class="nav-item"><span class="ico">🎯</span>KPI 門檻 <code>kpi</code></div>
+    <div class="nav-item"><span class="ico">🏢</span>分公司 <code>branch</code></div>
+    <div class="nav-item"><span class="ico">👥</span>往來對象 <code>relation</code></div>
+    <div class="nav-item"><span class="ico">⚙️</span>批次管線 <code>batch</code></div>
+    <div class="nav-item"><span class="ico">🔧</span>系統設定 <code>system</code></div>
+    <div class="nav-item"><span class="ico">👤</span>使用者管理 <code>user</code></div>
+  </div>
+</div>
+
+<div class="call info">
+  <strong>頂部控制列：</strong>切換公司別後，左側導航的高亮項保持不變，但所有頁面內容會自動以新公司+當前月份重新載入數據。月份格式為 <code>YYYY-MM</code>（如 <code>2025-06</code>），系統內部轉為 <code>YYYY/MM</code> 查詢。
+</div>
+
+<!-- ==================== 4. 儀表板 ==================== -->
+<h2 id="s4">4. 財務儀表板（Dashboard）</h2>
+
+<p>儀表板是系統首頁，彙整當前公司+月份的核心財務指標，分為四個區塊：</p>
+
+<h3>4.1 KPI 卡片區</h3>
+<p>頂部一排 KPI 卡片，即時顯示當月關鍵數據（銷貨收入、銷貨成本、營業毛利、淨利等），數據來自 <code>GET /api/summary</code>。</p>
+
+<h3>4.2 月度損益概況（柱狀圖 — 可鑽取）<span class="badge new">NEW</span></h3>
+<p>Chart.js 柱狀圖，6 根柱子分別為：銷貨收入、銷貨成本、營業毛利、營業利益、營業利潤、淨利。</p>
+
+<div class="call info">
+  <strong>鑽取操作：</strong>點擊<strong>銷貨收入</strong>（藍色柱）→ 彈出銷項發票（AR）明細視窗；點擊<strong>銷貨成本</strong>（紅色柱）→ 彈出進項發票（AP）明細視窗。明細表含日期、發票號、客戶/供應商、未稅金額、稅額、付款狀態、合計行與筆數。其餘 4 根柱子不可點擊。
+</div>
+
+<p>彈窗支援四種關閉方式：</p>
+<ul>
+  <li>右上角 <code>✕</code> 按鈕</li>
+  <li>底部「關閉」按鈕</li>
+  <li>點擊遮罩（彈窗外部區域）</li>
+  <li>按鍵盤 <span class="kbd">Esc</span></li>
+</ul>
+
+<h3>4.3 風險燈號面板（Z-Score — 可點擊說明）<span class="badge new">NEW</span></h3>
+<p>顯示 Altman Z-Score 及衍生指標，依分數著色：</p>
+<table>
+  <tr><th>燈號</th><th>Z 值範圍</th><th>風險等級</th><th>說明</th></tr>
+  <tr><td>🟢 綠燈</td><td>Z ≥ 2.9</td><td>安全</td><td>破產風險低，財務體質健全</td></tr>
+  <tr><td>🟡 黃燈</td><td>1.23 ≤ Z &lt; 2.9</td><td>灰色地帶</td><td>存在財務危機疑慮，應持續關注</td></tr>
+  <tr><td>🔴 紅燈</td><td>Z &lt; 1.23</td><td>破產區</td><td>破產風險高，須儘速改善財務結構</td></tr>
+</table>
+
+<div class="call info">
+  <strong>點擊操作：</strong>點擊「Z-Score 風險等級」卡片 → 彈出說明視窗，包含：
+  <ul>
+    <li>模型簡介（Altman Z-Score 用途）</li>
+    <li>當前 Z 值大數字 + 燈號徽章</li>
+    <li>三風險區間對照表（當前所在區間高亮+色條標記）</li>
+    <li>計算公式：<code>Z = 1.2·X1 + 1.4·X2 + 3.3·X3 + 0.6·X4 + 0.999·X5</code></li>
+    <li>X1–X5 五項變數表（權數 / 財務含義 / 本月實際值）</li>
+    <li>Z2-Score（私人公司模型）、Z3-Score（非製造業模型）分數卡片</li>
+  </ul>
+</div>
+
+<h3>4.4 資產負債摘要</h3>
+<p>底部展示流動資產、非流動資產、流動負債、長期負債等彙總數據，與三大報表中的資產負債表連動。</p>
+
+<!-- ==================== 5. ERP 原始單據 ==================== -->
+<h2 id="s5">5. ERP 原始單據</h2>
+
+<h3>5.1 採購單 PO（<code>po</code>）</h3>
+<p>管理正式採購訂單，由批次管線 Step1 從 PO 暫存區加工產出。頁面支援查詢（依公司+月份篩選）、檢視明細。PO 狀態值為中文（如「未審核」「審核通過」），前端以 <code>t()</code> 翻譯顯示。</p>
+
+<h3>5.2 銷售訂單 SO（<code>so</code>）</h3>
+<p>管理客戶銷售訂單，記錄訂單號、客戶、金額、幣別、匯率、交期等。可由頁面新增或 API 批量匯入。</p>
+
+<h3>5.3 送貨單 DN（<code>dn</code>）</h3>
+<p>記錄出貨/交貨單據，與 SO 關聯，記錄送貨日期、數量、狀態。</p>
+
+<h3>5.4 PO 暫存（<code>tempPo</code>）</h3>
+<p>第三方 ERP 採購單落地區。資料先進暫存，經批次管線 Step1 清洗加工後轉為正式 PO。支援按 <code>batch_id</code> 批量清除。</p>
+
+<div class="call warn">
+  <strong>批次管線流程：</strong>PO 暫存 → Step1 轉正式 PO → Step2 加工本幣金額 → Step3 供應商彙算 → Step5 庫存日結算 → Step6 AR/AP 彙算 → Step7 財務摘要重算。詳見第 10 節。
+</div>
+
+<!-- ==================== 6. 日常作業 ==================== -->
+<h2 id="s6">6. 日常作業</h2>
+
+<h3>6.1 現金日記帳（<code>cash</code>）</h3>
+<p>記錄每筆現金收支，欄位：<code>DB_CR</code>（DR=收入 / CR=支出）、<code>amt_type</code>（收支類型如銷貨收入/原料採購）、<code>sub_amt</code>（金額）。系統自動由 <code>DB_CR</code> + <code>sub_amt</code> 推導 <code>in_amt</code> / <code>out_amt</code>，並按日期累加計算 <code>balance_amt</code>（累計餘額）。</p>
+<p>頁面頂部顯示四張彙總卡片：總收入（DR 合計）、總支出（CR 合計）、淨額（收入-支出）、餘額（累計淨額）。</p>
+
+<h3>6.2 發票管理（<code>invoice</code>）</h3>
+<p>管理進銷項發票，<code>TX_type</code>：AR=銷項（收入）、AP=進項（成本）。支援 <code>POST /genAR</code>、<code>POST /genAP</code> 自動產生應收/應付發票。頁面篩選可依公司、月份、發票類型、客戶、發票號。</p>
+
+<div class="call info">
+  儀表板損益柱狀圖鑽取取的正是此表的 AR / AP 資料。
+</div>
+
+<h3>6.3 付款明細（<code>pay</code>）</h3>
+<p>記錄付款執行明細，支援 <code>POST /:uid/pay</code> 註記已付款，狀態分為 paid / unpaid。</p>
+
+<h3>6.4 票據管理（<code>check</code>）</h3>
+<p>管理應收/應付票據（支票），記錄開票日、到期日、金額、狀態。支援 <code>POST /:uid/clear</code> 兌現操作。</p>
+
+<h3>6.5 銀行貸款（<code>bank</code>）</h3>
+<p>管理銀行存貸款明細，<code>bu_no</code> + <code>loan_id</code> 為必填聯合鍵。支援 <code>POST /recalc</code> 重算餘額。</p>
+
+<h3>6.6 應收應付（<code>arap</code>）</h3>
+<p>月底 AR/AP 彙總，可由批次管線 Step6 自動產出，或 <code>POST /recalc</code> 手動觸發。</p>
+
+<!-- ==================== 7. 財務分析 ==================== -->
+<h2 id="s7">7. 財務分析</h2>
+
+<h3>7.1 財務摘要（<code>summary</code>）</h3>
+<p>核心樞紐頁面，200+ 欄位涵蓋資產、負債、權益、收入、成本、費用等全量財務數據。由批次管線 Step7 重算三大報表。支援 <code>POST /calcPL</code>（損益計算）和 <code>POST /addon</code>（附加計算）。</p>
+
+<h3>7.2 三大報表（<code>report</code>）</h3>
+<p>以頁籤切換顯示三張報表：</p>
+<ul>
+  <li><strong>資產負債表</strong>（Balance Sheet）— 資產 = 負債 + 股東權益</li>
+  <li><strong>損益表</strong>（P&L）— 收入 - 成本 - 費用 = 淨利</li>
+  <li><strong>現金流量表</strong>（Cash Flow）— 間接法，分營運/投資/籌資</li>
+</ul>
+<p>每張報表支援 Excel 匯出（<span class="badge feat">.xlsx</span>）：</p>
+<table>
+  <tr><th>報表</th><th>匯出路由</th></tr>
+  <tr><td>資產負債表</td><td><code>/api/report/export/balance-sheet.xlsx</code></td></tr>
+  <tr><td>損益表</td><td><code>/api/report/export/pl-table.xlsx</code></td></tr>
+  <tr><td>現金流量表</td><td><code>/api/report/export/cash-flow.xlsx</code></td></tr>
+</table>
+
+<h3>7.3 風險預警（<code>risk</code>）</h3>
+<p>展示 Z-Score / Z2 / Z3 三模型分數及流動比率、負債比、ROE / ROA、毛利率、淨利率等指標。可執行 <code>POST /api/risk/calc</code> 計算當月風險等級，結果寫入 <code>MGM_finance_summary</code> 的 <code>risk_color</code>、<code>wall_mode</code> 等欄位。</p>
+<div class="call warn">
+  需先跑過風險計算的月份才有 Z 值；未計算的月份 Z=0，儀表板彈窗變數值會顯示「-」。
+</div>
+
+<h3>7.4 財務預測（<code>forecast</code>）</h3>
+<p>按月錄入預測數據（銷售額、成本、費用等），<code>bu_no + YYYY_MM + forecast_type</code> 為唯一鍵，支援 UPSERT。</p>
+
+<h3>7.5 年度趨勢（<code>trend</code>）</h3>
+<p>Chart.js 折線圖展示全年 12 個月的收入/成本/利潤趨勢，支援多公司比較。</p>
+
+<h3>7.6 月結項目（<code>monthly</code>）</h3>
+<p>月結調整分錄管理，記錄每月結帳的調整項目。</p>
+
+<h3>7.7 損益平衡分析 BEP（<code>bep</code>）</h3>
+<p>基於 CW397 基準的損益平衡分析頁面，包含：</p>
+<ul>
+  <li><strong>材料成本 7 項</strong>：點擊各材料項目卡片 → 彈出明細視窗（來源：現金日記帳對應科目）</li>
+  <li><strong>變動費用</strong>：差旅費 / 廣告費 / 設備維修 三項明細</li>
+  <li><strong>固定成本</strong> <span class="badge new">NEW</span>：點擊卡片 → 彈出可編輯視窗（工資 / 廠租水電 / 利息支出），修改金額後 250ms 防抖即時重算 BEP</li>
+  <li><strong>門檻值儲存</strong>：修改後點「儲存門檻」→ <code>POST /api/bep/save</code> 寫入 <code>mgm_bep_threshold</code></li>
+  <li><strong>勾稽核驗</strong>：<code>node database/check_bep_reconcile_all.js</code> 驗證明細合計 = 門檻值</li>
+</ul>
+
+<h3>7.8 會計科目（<code>account</code>）</h3>
+<p>會計科目主檔管理，樹狀結構顯示資產/負債/權益/收入/費用等類別下的科目代碼與名稱。</p>
+
+<h3>7.9 庫存減值（<code>xitems</code>）</h3>
+<p>庫存日狀態與跌價減值管理，由批次管線 Step5 加工產出。頁面展示庫存明細與帳齡分析。</p>
+
+<!-- ==================== 8. KPI 預警 ==================== -->
+<h2 id="s8">8. KPI 預警查詢（YG001–YG004）</h2>
+
+<p>四個 KPI 模型頁面，各有不同分析視角：</p>
+
+<div class="feature-grid">
+  <div class="feature-card">
+    <div class="icon">📊</div>
+    <h4>YG001 預警指標</h4>
+    <p>財務健康度預警，點擊預警類別卡片可展開彈窗查看該類別下所有指標的目的、公式、判讀方式</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">📈</div>
+    <h4>YG002 指標管理</h4>
+    <p>指標定義與門檻值管理，支援編輯目標值</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">⚠️</div>
+    <h4>YG003 報表異常甄別</h4>
+    <p>自動偵測報表數據異常（如資產負債不平衡、利潤率驟變等）</p>
+  </div>
+  <div class="feature-card">
+    <div class="icon">🎯</div>
+    <h4>YG004 預測模型分析</h4>
+    <p>三種模型卡片：營運資產模型（藍）、沃爾比重模型（橙）、A 值模型（紅），支援目標值編輯</p>
+  </div>
+</div>
+
+<div class="call info">
+  YG001–YG004 的指標定義存於 <code>MGM_KPI_desc</code> 表，公式計算由 <code>routes/kpiQuery.js</code> 執行。點擊類別卡片彈窗顯示該類別下所有指標的說明。
+</div>
+
+<!-- ==================== 9. 主檔管理 ==================== -->
+<h2 id="s9">9. 主檔管理</h2>
+
+<h3>9.1 KPI 門檻（<code>kpi</code>）</h3>
+<p>管理 KPI 指標定義與門檻值，記錄指標代碼、名稱、公式、目標值、上下限。YG004 模型需確保 <code>MGM_KPI_desc</code> 表有對應 uid 記錄才能編輯目標值。</p>
+
+<h3>9.2 分公司（<code>branch</code>）</h3>
+<p>公司/分行主檔，維護 <code>bu_no</code>（HM / HN / SZ）、公司名稱、地址等。跨表 <code>bu_no</code> 必須與此處一致。</p>
+
+<h3>9.3 往來對象（<code>relation</code>）</h3>
+<p>客戶/供應商/關係人主檔，記錄往來代碼、名稱、類型、統一編號等。</p>
+
+<!-- ==================== 10. 系統管理 ==================== -->
+<h2 id="s10">10. 系統管理</h2>
+
+<h3>10.1 批次管線（<code>batch</code>）</h3>
+<p>七步財務加工管線的核心入口：</p>
+<table>
+  <tr><th>步驟</th><th>名稱</th><th>產出表</th><th>說明</th></tr>
+  <tr><td>Step1</td><td>erp2ermm_po</td><td><code>ermm_erp_po</code></td><td>暫存 PO → 正式 PO</td></tr>
+  <tr><td>Step2</td><td>proc_po</td><td>—</td><td>PO 本幣金額加工（×匯率）</td></tr>
+  <tr><td>Step3</td><td>proc_supplier</td><td>—</td><td>供應商彙算</td></tr>
+  <tr><td>Step4</td><td>proc_xitems</td><td>—</td><td>物料法規綁定（可跳過）</td></tr>
+  <tr><td>Step5</td><td>cal_daily_stock</td><td><code>e2_xitems_daily_status_chart</code></td><td>庫存日結算、跌價</td></tr>
+  <tr><td>Step6</td><td>batch_ARAP_upd</td><td><code>ERMM_arap_detail</code></td><td>AR/AP 彙算</td></tr>
+  <tr><td>Step7</td><td>finance_summary</td><td><code>MGM_finance_summary</code></td><td>三大報表重算</td></tr>
+</table>
+
+<p>頁面提供「一鍵執行全部」按鈕（<code>POST /api/batch/runAll</code>），也可單步執行。每步執行狀態記錄於 <code>cams_batch_control</code> 表。</p>
+
+<div class="call warn">
+  <strong>每月例行必做：</strong>資料匯入後必須跑 <code>runAll</code>，三大報表數字才會更新。
+</div>
+
+<h3>10.2 系統設定（<code>system</code>）</h3>
+<p>管理系統碼表（<code>cams_system_codes</code>），包含庫存帳齒分類、狀態選項等。碼表 <code>value_description</code> 為中文值，前端以 <code>t()</code> 或 <code>I18N.statusLabel()</code> 翻譯顯示，但 DB 存儲和後端查詢依賴中文原值，不可改為英文。</p>
+
+<h3>10.3 使用者管理（<code>user</code>）</h3>
+<p>系統使用者帳號管理，記錄帳號、密碼、權限。支援 <code>PUT /:user_id/permissions</code> 修改權限。登入記錄寫入 <code>login_user_record</code>。</p>
+
+<!-- ==================== 11. 多語言切換 ==================== -->
+<h2 id="s11">11. 多語言切換（i18n）</h2>
+
+<p>系統支援三種語言即時切換，覆蓋全部 27 頁面的 UI 元素（按鈕、表頭、標題、彈窗、導航、狀態標籤等）。</p>
+
+<table>
+  <tr><th>語言</th><th>代碼</th><th>字典物件</th></tr>
+  <tr><td>繁體中文</td><td><code>zh-TW</code></td><td>預設語言</td></tr>
+  <tr><td>簡體中文</td><td><code>zh-CN</code></td><td>—</td></tr>
+  <tr><td>English</td><td><code>en</code></td><td>—</td></tr>
+</table>
+
+<h3>操作方式</h3>
+<ol class="steps">
+  <li>點擊頂部導航列的「語言」下拉選擇器</li>
+  <li>選擇目標語言（繁體中文 / 简体中文 / English）</li>
+  <li>頁面即時刷新，所有 UI 文案切換為所選語言</li>
+  <li>切回原語言同樣即時生效，無需重新載入頁面</li>
+</ol>
+
+<div class="call info">
+  <strong>設計原則：</strong>業務數據（如 KPI 公式、報表項目）保持原文不翻譯；狀態選項（如「未審核」「審核通過」）DB 存中文值，前端以 <code>t()</code> 翻譯顯示標籤但保留原始值供後端查詢。
+</div>
+
+<h3>新增翻譯 key</h3>
+<p>若新增頁面文案，需在 <code>public/js/i18n.js</code> 的三個語言物件中同步加入同名 key，否則 <code>t()</code> 會回退顯示 key 名稱。</p>
+
+<!-- ==================== 12. Excel 匯出 ==================== -->
+<h2 id="s12">12. Excel 匯出</h2>
+
+<p>三大報表頁面支援一鍵匯出 <code>.xlsx</code> 檔案，使用 ExcelJS 生成：</p>
+
+<table>
+  <tr><th>報表</th><th>匯出按鈕位置</th><th>路由</th></tr>
+  <tr><td>資產負債表</td><td>三大報表頁 → 資產負債表頁籤 → 匯出</td><td><code>/api/report/export/balance-sheet.xlsx</code></td></tr>
+  <tr><td>損益表</td><td>三大報表頁 → 損益表頁籤 → 匯出</td><td><code>/api/report/export/pl-table.xlsx</code></td></tr>
+  <tr><td>現金流量表</td><td>三大報表頁 → 現金流量表頁籤 → 匯出</td><td><code>/api/report/export/cash-flow.xlsx</code></td></tr>
+</table>
+
+<p>匯出檔案會以當前選中的公司別 + 月份為篩選條件，包含格式化的表頭、數據行和合計行。</p>
+
+<!-- ==================== 13. 操作技巧 ==================== -->
+<h2 id="s13">13. 常用操作技巧與快捷鍵</h2>
+
+<h3>13.1 全域操作</h3>
+<table>
+  <tr><th>操作</th><th>方式</th><th>說明</th></tr>
+  <tr><td>切換公司別</td><td>頂部下拉 → 選 HM / HN / SZ</td><td>所有頁面數據聯動刷新</td></tr>
+  <tr><td>切換月份</td><td>頂部月份框 → 選 YYYY-MM</td><td>內部轉 YYYY/MM 查詢</td></tr>
+  <tr><td>切換語言</td><td>頂部語言下拉</td><td>即時切換 UI 語言</td></tr>
+  <tr><td>強制刷新</td><td><span class="kbd">Ctrl</span> + <span class="kbd">F5</span></td><td>清除前端快取（前端靜態檔已設 no-cache）</td></tr>
+  <tr><td>關閉彈窗</td><td><span class="kbd">Esc</span> 或點擊遮罩</td><td>適用所有 dashboard 彈窗</td></tr>
+</table>
+
+<h3>13.2 鑽取操作一覽</h3>
+<table>
+  <tr><th>頁面</th><th>點擊目標</th><th>彈出內容</th></tr>
+  <tr><td>儀表板</td><td>銷貨收入柱子</td><td>AR 銷項發票明細</td></tr>
+  <tr><td>儀表板</td><td>銷貨成本柱子</td><td>AP 進項發票明細</td></tr>
+  <tr><td>儀表板</td><td>Z-Score 卡片</td><td>風險等級說明（公式 / 變數 / 區間）</td></tr>
+  <tr><td>BEP</td><td>材料成本 7 項卡片</td><td>各材料現金日記帳明細</td></tr>
+  <tr><td>BEP</td><td>變動費用卡片</td><td>差旅費 / 廣告費 / 設備維修明細</td></tr>
+  <tr><td>BEP</td><td>固定成本卡片</td><td>工資 / 廠租水電 / 利息支出（可編輯）</td></tr>
+  <tr><td>YG001</td><td>預警類別卡片</td><td>該類別下所有指標說明</td></tr>
+  <tr><td>YG004</td><td>模型卡片</td><td>該模型下所有指標說明</td></tr>
+</table>
+
+<h3>13.3 開發者提示</h3>
+<div class="call info">
+  <ul>
+    <li>前端改完按 <span class="kbd">Ctrl</span>+<span class="kbd">F5</span> 即可，<strong>不需重啟服務</strong>（Express 靜態檔設 no-cache）</li>
+    <li>後端 routes 改完需重啟 <code>node app.js</code></li>
+    <li>PowerShell 中文 JSON body 需用 <code>[System.Text.Encoding]::UTF8.GetBytes()</code></li>
+    <li>全域函數名在各頁面 JS 中必須唯一（避免 system.js 和 kpi.js 的 <code>loadKPI</code> 衝突教訓）</li>
+    <li>HTML 內聯 <code>onclick</code> 傳參需把 <code>"</code> 轉為 <code>&quot;</code> 避免雙引號截斷</li>
+  </ul>
+</div>
+
+<!-- ==================== 14. 常見問題 ==================== -->
+<h2 id="s14">14. 常見問題排查</h2>
+
+<table>
+  <tr><th>現象</th><th>原因 / 處理</th></tr>
+  <tr><td>頁面顯示「-」或空白</td><td>確認有匯入資料 + 已跑批次管線 <code>runAll</code></td></tr>
+  <tr><td>報表數字沒更新</td><td>原始表匯入後忘記跑批次管線 → <code>POST /api/batch/runAll</code></td></tr>
+  <tr><td>Z-Score = 0</td><td>該月份未跑風險計算 → 風險預警頁執行 <code>POST /api/risk/calc</code></td></tr>
+  <tr><td>儀表板鑽取彈窗空白</td><td>該月無 AR/AP 發票資料 → 先匯入發票再跑 Step6</td></tr>
+  <tr><td>BEP 勾稽不符</td><td>跑 <code>node database/check_bep_reconcile_all.js</code> 檢查</td></tr>
+  <tr><td>資產負債不平衡</td><td>檢查 summary 輸入平衡 → 跑 runAll 由 Step7 校正</td></tr>
+  <tr><td>改了前端沒生效</td><td><span class="kbd">Ctrl</span>+<span class="kbd">F5</span> 強制刷新</td></tr>
+  <tr><td>連接埠 3008 被佔用</td><td><code>netstat -ano | findstr :3008</code> 找 PID → <code>taskkill /F /PID</code></td></tr>
+  <tr><td>i18n 顯示 key 名而非翻譯</td><td>三語字典缺少該 key → 在 <code>i18n.js</code> 三個物件同步加入</td></tr>
+  <tr><td>點擊卡片報 null 錯誤</td><td>全域函數名衝突 → 改名或放在閉包內</td></tr>
+  <tr><td>Excel 匯入失敗</td><td>Row 2 欄位代碼被修改 → 用 <code>gen_excel_template.js</code> 重新生成模板</td></tr>
+</table>
+
+<hr style="margin:48px 0 24px;border:none;border-top:2px solid var(--border)">
+
+<div class="call ok">
+  <strong>配套文件：</strong>
+  <ul style="margin:6px 0 0">
+    <li>資料導入總指南：<code>database/DATA_IMPORT_GUIDE.md</code> / <code>.html</code></li>
+    <li>離線匯入手冊：<code>database/OFFLINE_IMPORT_GUIDE.md</code></li>
+    <li>DB 結構：<code>database/schema.sql</code> / <code>migrations/</code></li>
+    <li>GitHub：<code>https://github.com/rocky1953/ERMM-finance-system</code></li>
+  </ul>
+</div>
+
+<p style="text-align:center;color:var(--text-mute);margin-top:40px">
+  ERMM 財務模組管理系統 — 版權所有 © 2026
+</p>
+
+</div>
+</body>
+</html>
