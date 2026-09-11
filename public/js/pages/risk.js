@@ -29,6 +29,34 @@ async function loadRisk() {
         // 從 Z 值重算顏色與狀態，不依賴 DB 可能過時的 risk_color / wall_mode
         const zColor = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
         const zWallMode = zVal >= 2.9 ? t('dash.safe') : (zVal >= 1.23 ? t('dash.grey') : t('dash.bankrupt'));
+        // Z2-Score: >=2.9 安全, >=1.23 灰色, <1.23 破產區
+        const z2 = Number(r.Z2_score || 0);
+        const z2Color = z2 >= 2.9 ? 'green' : (z2 >= 1.23 ? 'yellow' : 'red');
+        const z2Mode = z2 >= 2.9 ? t('dash.safe') : (z2 >= 1.23 ? t('dash.grey') : t('dash.bankrupt'));
+        // Z3-Score: >=2.6 安全, >=1.1 灰色, <1.1 破產區
+        const z3 = Number(r.Z3_score || 0);
+        const z3Color = z3 >= 2.6 ? 'green' : (z3 >= 1.1 ? 'yellow' : 'red');
+        const z3Mode = z3 >= 2.6 ? t('dash.safe') : (z3 >= 1.1 ? t('dash.grey') : t('dash.bankrupt'));
+        // BZ: >=0 安全, <0 破產區
+        const bz = Number(r.BZ_model || 0);
+        const bzColor = bz >= 0 ? 'green' : 'red';
+        const bzMode = bz >= 0 ? t('dash.safe') : t('dash.bankrupt');
+        // JZ: >=0 安全, <0 破產區
+        const jz = Number(r.JZ_model || 0);
+        const jzColor = jz >= 0 ? 'green' : 'red';
+        const jzMode = jz >= 0 ? t('dash.safe') : t('dash.bankrupt');
+        // 流動比率: >=1.5 安全, >=1 灰色, <1 破產區
+        const cr = Number(r.current_ratio || 0);
+        const crColor = cr >= 1.5 ? 'green' : (cr >= 1 ? 'yellow' : 'red');
+        const crMode = cr >= 1.5 ? t('dash.safe') : (cr >= 1 ? t('dash.grey') : t('dash.bankrupt'));
+        // 負債比: <=50 安全, <=70 灰色, >70 破產區
+        const dr = Number(r.debt_ratio || 0);
+        const drColor = dr <= 50 ? 'green' : (dr <= 70 ? 'yellow' : 'red');
+        const drMode = dr <= 50 ? t('dash.safe') : (dr <= 70 ? t('dash.grey') : t('dash.bankrupt'));
+        // ROE: >=0 安全, <0 破產區
+        const roe = Number(r.ROE || 0);
+        const roeColor = roe >= 0 ? 'green' : 'red';
+        const roeMode = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
         el.innerHTML = `
             <div class="kpi-grid">
                 <div class="kpi-card ${zColor}" style="cursor:pointer" onclick="RiskHelp.open('z')">
@@ -37,34 +65,41 @@ async function loadRisk() {
                     <div class="kpi-badge ${zColor}">${zWallMode}</div>
                     <div class="kpi-sub">${t('risk.threshold')}</div>
                 </div>
-                <div class="kpi-card ${Number(r.Z2_score)>=2.9?'green':Number(r.Z2_score)>=1.23?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('z2')">
+                <div class="kpi-card ${z2Color}" style="cursor:pointer" onclick="RiskHelp.open('z2')">
                     <div class="kpi-label">${t('risk.z2')}</div>
                     <div class="kpi-value">${UI.fmt(r.Z2_score, 4)}</div>
+                    <div class="kpi-badge ${z2Color}">${z2Mode}</div>
                 </div>
-                <div class="kpi-card ${Number(r.Z3_score)>=2.6?'green':Number(r.Z3_score)>=1.1?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('z3')">
+                <div class="kpi-card ${z3Color}" style="cursor:pointer" onclick="RiskHelp.open('z3')">
                     <div class="kpi-label">${t('risk.z3')}</div>
                     <div class="kpi-value">${UI.fmt(r.Z3_score, 4)}</div>
+                    <div class="kpi-badge ${z3Color}">${z3Mode}</div>
                 </div>
-                <div class="kpi-card ${Number(r.BZ_model)>=0?'green':'red'}" style="cursor:pointer" onclick="RiskHelp.open('bz')">
+                <div class="kpi-card ${bzColor}" style="cursor:pointer" onclick="RiskHelp.open('bz')">
                     <div class="kpi-label">${t('risk.bz')}</div>
                     <div class="kpi-value">${UI.fmt(r.BZ_model, 4)}</div>
+                    <div class="kpi-badge ${bzColor}">${bzMode}</div>
                 </div>
-                <div class="kpi-card green" style="cursor:pointer" onclick="RiskHelp.open('jz')">
+                <div class="kpi-card ${jzColor}" style="cursor:pointer" onclick="RiskHelp.open('jz')">
                     <div class="kpi-label">${t('risk.jz')}</div>
                     <div class="kpi-value">${UI.fmt(r.JZ_model, 4)}</div>
+                    <div class="kpi-badge ${jzColor}">${jzMode}</div>
                 </div>
-                <div class="kpi-card ${Number(r.current_ratio)>=1.5?'green':Number(r.current_ratio)>=1?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('cr')">
+                <div class="kpi-card ${crColor}" style="cursor:pointer" onclick="RiskHelp.open('cr')">
                     <div class="kpi-label">${t('risk.current_ratio')}</div>
                     <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
+                    <div class="kpi-badge ${crColor}">${crMode}</div>
                     <div class="kpi-sub">${t('risk.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
                 </div>
-                <div class="kpi-card ${Number(r.debt_ratio)<=50?'green':Number(r.debt_ratio)<=70?'yellow':'red'}" style="cursor:pointer" onclick="RiskHelp.open('dr')">
+                <div class="kpi-card ${drColor}" style="cursor:pointer" onclick="RiskHelp.open('dr')">
                     <div class="kpi-label">${t('risk.debt_ratio')}</div>
                     <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
+                    <div class="kpi-badge ${drColor}">${drMode}</div>
                 </div>
-                <div class="kpi-card ${Number(r.ROE)>=0?'green':'red'}" style="cursor:pointer" onclick="RiskHelp.open('roe')">
+                <div class="kpi-card ${roeColor}" style="cursor:pointer" onclick="RiskHelp.open('roe')">
                     <div class="kpi-label">${t('risk.roe')}</div>
                     <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
+                    <div class="kpi-badge ${roeColor}">${roeMode}</div>
                     <div class="kpi-sub">${t('risk.roa')} ${UI.fmt(r.ROA, 2)}%</div>
                 </div>
             </div>
@@ -158,7 +193,7 @@ const RiskHelp = {
             },
             jz: {
                 title: t('risk.jz'),
-                color: 'green',
+                color: v('JZ_model') >= 0 ? 'green' : 'red',
                 value: UI.fmt(v('JZ_model'), 4),
                 status: v('JZ_model') >= 0 ? t('dash.safe') : t('dash.bankrupt'),
                 purpose: t('risk.desc.jz.purpose'),
