@@ -101,7 +101,8 @@ registerPage('trend', async (c) => {
             for (let m = 1; m <= 12; m++) {
                 const row = monthly.find(r => Number(r.MM) === m);
                 labels.push(monthNames[m - 1]);
-                const val = row ? Number(row[metric] || 0) : 0;
+                // equity 在 summary 表的實際欄位名是 stockholder_amt
+                const val = row ? Number(row[metric === 'equity' ? 'stockholder_amt' : metric] || 0) : 0;
                 values.push(val);
             }
 

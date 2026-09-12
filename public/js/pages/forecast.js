@@ -110,20 +110,34 @@ async function loadForecast() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 
-async function loadCompare() {
+async function loadCompare(fcType) {
     const el = document.getElementById('fcCompare');
+    const type = fcType || window._fcCompareType || 'Sales';
+    window._fcCompareType = type;
     try {
-        const res = await API.get(`/api/forecast/compare?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('/')[0]}`);
+        const res = await API.get(`/api/forecast/compare?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('/')[0]}&forecast_type=${encodeURIComponent(type)}`);
         const d = res.data;
         if (!d || !d.labels || d.labels.length === 0) { el.innerHTML = `<p style="color:#7f8c8d">${t('fc.need_both')}</p>`; return; }
-        el.innerHTML = `<canvas id="fcChart" height="100"></canvas>`;
+
+        // 預測類型切換器
+        const typeOptions = ['Sales', 'Cost', 'Cash Flow'].map(tp =>
+            `<option value="${tp}" ${tp === type ? 'selected' : ''}>${tp}</option>`
+        ).join('');
+
+        el.innerHTML = `
+            <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px">
+                <span style="font-size:.88em;color:#7f8c8d">${t('fc.type')}：</span>
+                <select id="fcCompareType" class="btn btn-sm" onchange="loadCompare(this.value)">${typeOptions}</select>
+            </div>
+            <canvas id="fcChart" height="100"></canvas>
+        `;
         new Chart(document.getElementById('fcChart'), {
             type: 'line',
             data: {
                 labels: d.labels,
                 datasets: [
-                    { label: t('fc.forecast'), data: d.forecast, borderColor: '#3498db', backgroundColor: 'rgba(52,152,219,0.1)', fill: true },
-                    { label: t('fc.actual'), data: d.actual, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', fill: true }
+                    { label: `${t('fc.forecast')}(${d.forecast_type})`, data: d.forecast, borderColor: '#9b59b6', backgroundColor: 'rgba(155,89,182,0.1)', fill: true },
+                    { label: `${t('fc.actual')}(${d.forecast_type})`, data: d.actual, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.1)', fill: true }
                 ]
             },
             options: { responsive: true, plugins: { legend: { position: 'top' } } }

@@ -98,20 +98,40 @@ router.get('/compare', async (req, res) => {
     try {
         const { bu_no, forecast_type, year } = req.query;
         if (!bu_no || !year) return fail(res, '缺少必要參數 bu_no, year');
-        const fcType = forecast_type || '銷售';
 
-        const [fc] = await pool.execute(
-            'SELECT * FROM forecast_detail WHERE bu_no=? AND forecast_type=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM',
-            [bu_no, fcType, `${year}/%`]
-        );
+        // forecast_type 雙向兼容：前端存英文、舊測試/資料可能存中文
+        const aliasMap = { '銷售': 'Sales', '成本': 'Cost', '現金流': 'Cash Flow' };
+        const fcType = forecast_type || 'Sales';
+        const fcTypesToTry = [fcType];
+        const alias = aliasMap[fcType];
+        if (alias) fcTypesToTry.push(alias);   // 中文→加英文別名
+        const revAlias = Object.entries(aliasMap).find(([, v]) => v === fcType);
+        if (revAlias) fcTypesToTry.push(revAlias[0]);  // 英文→加中文別名
 
-        // 從 MGM_finance_summary 取實際值
+        // 依次嘗試 forecast_type 及別名，命中即停
+        let fc = [];
+        for (const t of fcTypesToTry) {
+            const [rows] = await pool.execute(
+                'SELECT * FROM forecast_detail WHERE bu_no=? AND forecast_type=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM',
+                [bu_no, t, `${year}/%`]
+            );
+            if (rows.length > 0) { fc = rows; break; }
+        }
+
+        // 根據命中的 forecast_type 動態選擇 MGM_finance_summary 對應的實際值欄位
+        const fieldMap = {
+            'Sales':     'sale_amt',   '銷售': 'sale_amt',
+            'Cost':      'sale_cost_amt', '成本': 'sale_cost_amt',
+            'Cash Flow': 'net_profit_amt', '現金流': 'net_profit_amt'
+        };
+        const actualField = fieldMap[fcType] || 'sale_amt';
+
         const [actuals] = await pool.execute(
-            'SELECT YYYY_MM, sale_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM',
+            `SELECT YYYY_MM, ${actualField} as actual_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM`,
             [bu_no, `${year}/%`]
         );
         const actualMap = {};
-        actuals.forEach(a => actualMap[a.YYYY_MM] = Number(a.sale_amt || 0));
+        actuals.forEach(a => actualMap[a.YYYY_MM] = Number(a.actual_amt || 0));
 
         const labels = [];
         const forecastData = [];
@@ -125,7 +145,7 @@ router.get('/compare', async (req, res) => {
             actualData.push(actualMap[ym] || 0);
         }
 
-        ok(res, { bu_no, forecast_type: fcType, year, labels, forecast: forecastData, actual: actualData });
+        ok(res, { bu_no, forecast_type: fcType, year, actual_field: actualField, labels, forecast: forecastData, actual: actualData });
     } catch (err) { fail500(res, err); }
 });
 
