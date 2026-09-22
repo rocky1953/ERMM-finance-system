@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 資料庫遷移指南 — Windows Server → Ubuntu</title>
+<style>
+  :root{
+    --primary:#6d28d9; --primary-2:#7c3aed; --accent:#db2777;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+    --win:#1e40af; --ub:#c2410c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#1e40af,#7c3aed,#c2410c); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:30px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#ede9fe,#ddd6fe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.55; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+  pre .h{color:#f472b6}
+  pre .p{color:#c4b5fd}
+  pre .v{color:#e2e8f0}
+  pre .win{color:#60a5fa}
+  pre .ub{color:#fb923c}
+
+  .flow{display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap}
+  .flow-step{
+    flex:1; min-width:130px; text-align:center; padding:16px 12px;
+    border:2px solid var(--border); border-radius:10px; background:var(--surface);
+  }
+  .flow-step .num{
+    width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:32px; font-size:14px; font-weight:700; margin:0 auto 8px;
+  }
+  .flow-step .ttl{font-size:14px; font-weight:700; color:var(--primary); margin-bottom:4px}
+  .flow-step .desc{font-size:12px; color:var(--text-soft); line-height:1.5}
+  .flow-step.win{border-color:var(--win); background:#eff6ff}
+  .flow-step.win .num{background:var(--win)}
+  .flow-step.win .ttl{color:var(--win)}
+  .flow-step.ub{border-color:var(--ub); background:#fff7ed}
+  .flow-step.ub .num{background:var(--ub)}
+  .flow-step.ub .ttl{color:var(--ub)}
+  .flow-arrow{display:flex; align-items:center; color:var(--primary); font-size:22px; padding:0 4px}
+
+  .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0}
+  .info-card{border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--surface)}
+  .info-card h4{margin:0 0 10px; font-size:14px}
+  .info-card.win h4{color:var(--win)}
+  .info-card.ub h4{color:var(--ub)}
+  .info-card pre{margin:0}
+
+  .compare{display:grid; grid-template-columns:1fr 1fr; gap:0; margin:20px 0; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+  .compare-side{padding:16px 20px}
+  .compare-side.win{background:#eff6ff; border-right:1px solid var(--border)}
+  .compare-side.ub{background:#fff7ed}
+  .compare-side h4{margin:0 0 8px; font-size:14px}
+  .compare-side.win h4{color:var(--win)}
+  .compare-side.ub h4{color:var(--ub)}
+  .compare-side pre{margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <h1>ERMM 資料庫遷移指南 — Windows Server → Ubuntu</h1>
+  <div class="sub">MySQL 8 ermm_db 資料庫完整遷移：Windows Server 2019 匯出 → 傳輸 → Ubuntu 匯入 → 驗證</div>
+  <div class="meta">
+    <span>版本：v1.0</span>
+    <span>日期：2026-09-13</span>
+    <span>資料庫：ermm_db（utf8mb4）</span>
+  </div>
+  <span class="tag">mysqldump 匯出</span>
+  <span class="tag">SCP 傳輸</span>
+  <span class="tag">字符集一致性</span>
+  <span class="tag">帳號權限遷移</span>
+  <span class="tag">資料完整性驗證</span>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#overview">遷移概覽與環境資訊</a></li>
+    <li><a href="#prereq">階段 0：前置準備</a></li>
+    <li><a href="#export">階段 1：Windows 端匯出</a></li>
+    <li><a href="#transfer">階段 2：傳輸到 Ubuntu</a></li>
+    <li><a href="#import">階段 3：Ubuntu 端匯入</a></li>
+    <li><a href="#accounts">階段 4：帳號與權限遷移</a></li>
+    <li><a href="#config">階段 5：應用配置調整</a></li>
+    <li><a href="#verify">階段 6：資料完整性驗證</a></li>
+    <li><a href="#checklist">遷移檢查清單</a></li>
+    <li><a href="#rollback">回滾方案</a></li>
+    <li><a href="#trouble">常見問題</a></li>
+  </ol>
+</div>
+
+<!-- ==================== OVERVIEW ==================== -->
+<h2 id="overview">一、遷移概覽與環境資訊</h2>
+
+<div class="compare">
+  <div class="compare-side win">
+    <h4>來源：Windows Server 2019</h4>
+    <ul style="margin:0; padding-left:18px; font-size:13px">
+      <li>MySQL 8.0（MySQL80 服務）</li>
+      <li>資料庫名：<code>ermm_db</code></li>
+      <li>字符集：<code>utf8mb4</code></li>
+      <li>應用帳號：<code>ermm_app</code></li>
+      <li>備份帳號：<code>ermm_backup</code></li>
+      <li>密碼：<code>aaabbb123</code></li>
+      <li>my.ini 路徑：<code>C:\ProgramData\MySQL\MySQL Server 8.0\my.ini</code></li>
+      <li>mysqldump 路徑：<code>C:\Program Files\MySQL\MySQL Server 8.0\bin\</code></li>
+    </ul>
+  </div>
+  <div class="compare-side ub">
+    <h4>目標：Ubuntu 22.04 / 24.04 LTS</h4>
+    <ul style="margin:0; padding-left:18px; font-size:13px">
+      <li>MySQL 8.0（mysql.service）</li>
+      <li>資料庫名：<code>ermm_db</code>（保持一致）</li>
+      <li>字符集：<code>utf8mb4</code>（保持一致）</li>
+      <li>應用帳號：<code>ermm_app</code>（重建）</li>
+      <li>備份帳號：<code>ermm_backup</code>（重建）</li>
+      <li>密碼：<code>aaabbb123</code>（保持一致）</li>
+      <li>設定檔路徑：<code>/etc/mysql/mysql.conf.d/mysqld.cnf</code></li>
+      <li>mysqldump 路徑：<code>/usr/bin/mysqldump</code></li>
+    </ul>
+  </div>
+</div>
+
+<h3>遷移流程</h3>
+<div class="flow">
+  <div class="flow-step win"><div class="num">0</div><div class="ttl">前置準備</div><div class="desc">確認版本 / 停服 / 檢查</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step win"><div class="num">1</div><div class="ttl">匯出</div><div class="desc">mysqldump → .sql</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">2</div><div class="ttl">傳輸</div><div class="desc">SCP / USB / 雲端</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step ub"><div class="num">3</div><div class="ttl">匯入</div><div class="desc">建庫 → mysql &lt; .sql</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step ub"><div class="num">4</div><div class="ttl">帳號+驗證</div><div class="desc">建帳號 / 驗資料</div></div>
+</div>
+
+<div class="call info">
+  <strong>遷移範圍</strong>：表結構 + 全部資料 + 觸發器 + 預存程序 + 自動遞增值。不含 MySQL 系統層的使用者帳號（需在 Ubuntu 端重新建立）。
+</div>
+
+<!-- ==================== PREREQ ==================== -->
+<h2 id="prereq">二、階段 0：前置準備</h2>
+
+<h3>0-1. 確認兩端 MySQL 版本相容</h3>
+<div class="compare">
+  <div class="compare-side win">
+    <h4>Windows 端（PowerShell）</h4>
+<pre><code><span class="c"># 確認 MySQL 版本</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p -e "SELECT VERSION();"
+
+<span class="c"># 確認資料庫存在</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p -e "SHOW DATABASES LIKE 'ermm_db';"
+
+<span class="c"># 確認表數量</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p ermm_db -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ermm_db';"</code></pre>
+  </div>
+  <div class="compare-side ub">
+    <h4>Ubuntu 端（SSH）</h4>
+<pre><code><span class="c"># 確認 MySQL 已安裝且運行</span>
+sudo systemctl status mysql
+mysql --version
+
+<span class="c"># 確認 MySQL 已初始化（空資料庫尚未建）</span>
+sudo mysql -e "SHOW DATABASES;"</code></pre>
+  </div>
+</div>
+
+<h3>0-2. 確認字符集一致</h3>
+<pre><code><span class="c"># Windows 端</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p ermm_db -e "SHOW VARIABLES LIKE 'character%';"
+
+<span class="c"># 預期輸出：</span>
+<span class="c"># character_set_database | utf8mb4</span>
+<span class="c"># character_set_server   | utf8mb4</span>
+<span class="c"># collation_database    | utf8mb4_unicode_ci</span>
+<span class="c"># collation_server       | utf8mb4_unicode_ci</span></code></pre>
+
+<h3>0-3. 停止應用服務（避免遷移期間寫入新資料）</h3>
+<div class="compare">
+  <div class="compare-side win">
+    <h4>Windows 端</h4>
+<pre><code><span class="c"># 停止 ERMM-Finance 服務</span>
+Stop-Service ERMM-Finance
+
+<span class="c"># 確認已停止</span>
+Get-Service ERMM-Finance</code></pre>
+  </div>
+  <div class="compare-side ub">
+    <h4>Ubuntu 端（如已有舊服務）</h4>
+<pre><code><span class="c"># 停止應用服務</span>
+sudo systemctl stop ermm-finance
+
+<span class="c"># 確認已停止</span>
+sudo systemctl status ermm-finance</code></pre>
+  </div>
+</div>
+
+<h3>0-4. 記錄遷移前基準值（用於匯入後對比）</h3>
+<pre><code><span class="c"># Windows 端：記錄各表記錄數（存到檔案方便對比）</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p ermm_db -e "
+SELECT table_name, table_rows
+FROM information_schema.tables
+WHERE table_schema='ermm_db'
+ORDER BY table_name;
+" | Out-File -FilePath C:\temp\table_counts_before.txt -Encoding utf8
+
+Get-Content C:\temp\table_counts_before.txt</code></pre>
+
+<div class="call warn">
+  <strong>建議在離峰時段執行遷移</strong>：停止應用服務後到匯入完成期間，系統無法使用。22 張表通常在 1~5 分鐘內完成匯出匯入。
+</div>
+
+<!-- ==================== EXPORT ==================== -->
+<h2 id="export">三、階段 1：Windows 端匯出</h2>
+
+<h3>1-1. 完整匯出（表結構 + 資料 + 觸發器 + 預存程序）</h3>
+<pre><code><span class="c"># 在 Windows Server 上以管理員 PowerShell 執行</span>
+
+<span class="c"># 設定 mysqldump 路徑變數</span>
+$mysqldump = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqldump.exe"
+
+<span class="c"># 完整匯出（一筆交易一致性 + 觸發器 + 預存程序 + utf8mb4）</span>
+<span class="win">&amp;</span> $mysqldump -u root -p \
+  --default-character-set=utf8mb4 \
+  --single-transaction \
+  --routines \
+  --triggers \
+  --events \
+  --set-gtid-purged=OFF \
+  --column-statistics=0 \
+  ermm_db > C:\temp\ermm_db_migration.sql
+
+<span class="c"># 另外匯出表結構（備用，用於對比）</span>
+<span class="win">&amp;</span> $mysqldump -u root -p \
+  --default-character-set=utf8mb4 \
+  --no-data \
+  --routines \
+  --triggers \
+  ermm_db > C:\temp\ermm_db_schema.sql</code></pre>
+
+<div class="call info">
+  <strong>參數說明</strong>：
+  <ul style="margin:6px 0 0 18px;padding:0">
+    <li><code>--single-transaction</code>：InnoDB 一致性快照匯出，不鎖表</li>
+    <li><code>--routines</code>：包含預存程序（PROCEDURE）和函數（FUNCTION）</li>
+    <li><code>--triggers</code>：包含觸發器</li>
+    <li><code>--events</code>：包含事件排程器（EVENT）</li>
+    <li><code>--set-gtid-purged=OFF</code>：避免 GTID 衝突（跨伺服器遷移必加）</li>
+    <li><code>--column-statistics=0</code>：MySQL 8 的 mysqldump 預設會查 column_statistics，舊版 MySQL 或某些設定下會報錯，加此參數跳過</li>
+  </ul>
+</div>
+
+<h3>1-2. 驗證匯出檔案</h3>
+<pre><code><span class="c"># 檢查檔案大小（不應為 0）</span>
+Get-Item C:\temp\ermm_db_migration.sql | Select-Object Name, @{N='SizeMB';E={[math]::Round($_.Length/1MB,2)}}
+
+<span class="c"># 檢查檔案頭部（應有 -- MySQL dump ...）</span>
+Get-Content C:\temp\ermm_db_migration.sql -TotalCount 5
+
+<span class="c"># 檢查檔案尾部（應有 -- Dump completed）</span>
+Get-Content C:\temp\ermm_db_migration.sql -Tail 5
+
+<span class="c"># 統計 CREATE TABLE 數量（應約 22）</span>
+(Select-String -Path C:\temp\ermm_db_migration.sql -Pattern "^CREATE TABLE" | Measure-Object).Count
+
+<span class="c"># 統計 INSERT 語句數量</span>
+(Select-String -Path C:\temp\ermm_db_migration.sql -Pattern "^INSERT INTO" | Measure-Object).Count</code></pre>
+
+<h3>1-3. 匯出帳號權限定義（參考用）</h3>
+<pre><code><span class="c"># 查看現有帳號與權限（用於在 Ubuntu 端重建）</span>
+<span class="win">&amp;</span> "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -p -e "
+SELECT user, host, authentication_string != '' AS has_password FROM mysql.user WHERE user IN ('ermm_app','ermm_backup');
+SHOW GRANTS FOR 'ermm_app'@'localhost';
+SHOW GRANTS FOR 'ermm_backup'@'localhost';
+" | Out-File C:\temp\account_grants.txt -Encoding utf8
+
+Get-Content C:\temp\account_grants.txt</code></pre>
+
+<!-- ==================== TRANSFER ==================== -->
+<h2 id="transfer">四、階段 2：傳輸到 Ubuntu</h2>
+
+<h3>方式 A：SCP 傳輸（推薦，需 SSH 連通）</h3>
+<pre><code><span class="c"># 在 Windows PowerShell 執行（需有 OpenSSH Client）</span>
+<span class="c"># 安裝：Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0</span>
+
+<span class="c"># 上傳匯出檔到 Ubuntu</span>
+scp C:\temp\ermm_db_migration.sql root@Ubuntu伺服器IP:/tmp/
+
+<span class="c"># 上傳基準對比檔</span>
+scp C:\temp\table_counts_before.txt root@Ubuntu伺服器IP:/tmp/
+
+<span class="c"># 上傳帳號權限參考</span>
+scp C:\temp\account_grants.txt root@Ubuntu伺服器IP:/tmp/</code></pre>
+
+<h3>方式 B：壓縮後傳輸（大檔案推薦）</h3>
+<pre><code><span class="c"># Windows 端壓縮</span>
+Compress-Archive -Path C:\temp\ermm_db_migration.sql -DestinationPath C:\temp\ermm_db_migration.zip
+
+<span class="c"># 上傳壓縮檔</span>
+scp C:\temp\ermm_db_migration.zip root@Ubuntu伺服器IP:/tmp/
+
+<span class="c"># Ubuntu 端解壓</span>
+ssh root@Ubuntu伺服器IP
+cd /tmp
+unzip ermm_db_migration.zip
+ls -lh ermm_db_migration.sql</code></pre>
+
+<h3>方式 C：USB / 網路共用（無 SSH 時）</h3>
+<pre><code><span class="c"># 將 C:\temp\ermm_db_migration.sql 拷貝到 USB 隨身碟</span>
+Copy-Item C:\temp\ermm_db_migration.sql E:\
+
+<span class="c"># 或透過網路共用資料夾傳輸</span>
+<span class="c"># 在 Ubuntu 端掛載 SMB 共用：</span>
+<span class="c"># sudo mount -t cifs //WindowsIP/共用名 /mnt -o username=user,password=pass</span>
+<span class="c"># cp /mnt/ermm_db_migration.sql /tmp/</span></code></pre>
+
+<h3>Ubuntu 端確認檔案已到達</h3>
+<pre><code><span class="c"># 在 Ubuntu 上確認</span>
+ls -lh /tmp/ermm_db_migration.sql
+
+<span class="c"># 檢查頭尾</span>
+head -5 /tmp/ermm_db_migration.sql
+tail -5 /tmp/ermm_db_migration.sql
+
+<span class="c"># 統計 CREATE TABLE 數量</span>
+grep -c "^CREATE TABLE" /tmp/ermm_db_migration.sql</code></pre>
+
+<!-- ==================== IMPORT ==================== -->
+<h2 id="import">五、階段 3：Ubuntu 端匯入</h2>
+
+<h3>3-1. 確認 MySQL 已安裝且運行</h3>
+<pre><code>sudo systemctl status mysql
+mysql --version
+<span class="c"># 預期：mysql  Ver 8.0.x</span></code></pre>
+
+<h3>3-2. 建立空資料庫</h3>
+<pre><code>sudo mysql <span class="p">&lt;&lt;'SQL'</span>
+CREATE DATABASE IF NOT EXISTS ermm_db
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+SQL
+
+<span class="c"># 確認</span>
+sudo mysql -e "SHOW CREATE DATABASE ermm_db;"</code></pre>
+
+<h3>3-3. 匯入 SQL 檔案</h3>
+<pre><code><span class="c"># 方式 A：用 root 匯入（最穩定，無權限問題）</span>
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql
+
+<span class="c"># 方式 B：用 ermm_app 匯入（需先建好帳號，見階段 4）</span>
+mysql -u ermm_app -p --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql</code></pre>
+
+<div class="call warn">
+  <strong>大檔案匯入加速</strong>：如果 SQL 檔超過 100MB，匯入前可先關閉外鍵檢查和唯一性檢查，匯入後再開啟：
+  <pre style="margin-top:8px"><code>sudo mysql ermm_db -e "SET GLOBAL foreign_key_checks=0; SET GLOBAL unique_checks=0;"
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql
+sudo mysql ermm_db -e "SET GLOBAL foreign_key_checks=1; SET GLOBAL unique_checks=1;"</code></pre>
+</div>
+
+<h3>3-4. 匯入後立即確認</h3>
+<pre><code><span class="c"># 確認表數量</span>
+sudo mysql ermm_db -e "SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema='ermm_db';"
+<span class="c"># 預期：約 22</span>
+
+<span class="c"># 確認表清單</span>
+sudo mysql ermm_db -e "SHOW TABLES;"
+
+<span class="c"># 對比記錄數（與 Windows 端的 table_counts_before.txt 比對）</span>
+sudo mysql ermm_db -e "
+SELECT table_name, table_rows
+FROM information_schema.tables
+WHERE table_schema='ermm_db'
+ORDER BY table_name;
+" > /tmp/table_counts_after.txt
+
+<span class="c"># 對比</span>
+diff /tmp/table_counts_before.txt /tmp/table_counts_after.txt
+<span class="c"># 若無輸出 = 完全一致</span></code></pre>
+
+<!-- ==================== ACCOUNTS ==================== -->
+<h2 id="accounts">六、階段 4：帳號與權限遷移</h2>
+
+<p>mysqldump 不會匯出 MySQL 使用者帳號，需要在 Ubuntu 端手動建立。</p>
+
+<h3>4-1. 建立應用帳號 ermm_app</h3>
+<pre><code>sudo mysql <span class="p">&lt;&lt;'SQL'</span>
+CREATE USER IF NOT EXISTS 'ermm_app'@'localhost'
+  IDENTIFIED BY 'aaabbb123';
+GRANT ALL PRIVILEGES ON ermm_db.* TO 'ermm_app'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+
+<span class="c"># 驗證帳號可登入且能存取資料</span>
+mysql -u ermm_app -p ermm_db -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='ermm_db';"</code></pre>
+
+<h3>4-2. 建立備份帳號 ermm_backup</h3>
+<pre><code>sudo mysql <span class="p">&lt;&lt;'SQL'</span>
+CREATE USER IF NOT EXISTS 'ermm_backup'@'localhost'
+  IDENTIFIED BY 'aaabbb123';
+GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES
+  ON ermm_db.* TO 'ermm_backup'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+
+<span class="c"># 驗證備份帳號可執行 mysqldump</span>
+mysqldump -u ermm_backup -p --single-transaction ermm_db > /dev/null
+<span class="c"># 無錯誤即成功</span></code></pre>
+
+<h3>4-3. 建立備份帳號認證檔</h3>
+<pre><code>sudo nano /etc/mysql/backup.cnf</code></pre>
+<pre><code><span class="h">[mysqldump]</span>
+user=ermm_backup
+password=aaabbb123
+host=127.0.0.1</code></pre>
+<pre><code>sudo chmod 600 /etc/mysql/backup.cnf
+
+<span class="c"># 驗證</span>
+sudo mysqldump --defaults-file=/etc/mysql/backup.cnf --single-transaction ermm_db > /dev/null
+echo "Backup account OK: $?"</code></pre>
+
+<!-- ==================== CONFIG ==================== -->
+<h2 id="config">七、階段 5：應用配置調整</h2>
+
+<h3>5-1. Ubuntu 端 .env 配置</h3>
+<pre><code>sudo nano /root/Project/ERMM-finance-system/.env</code></pre>
+<pre><code><span class="h"># ===== ERMM 財務模組 生產環境配置 =====</span>
+
+<span class="h"># --- 應用 ---</span>
+NODE_ENV=production
+PORT=3008
+USE_DB_CONFIG=true
+
+<span class="h"># --- MySQL ---</span>
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=ermm_app
+DB_PASSWORD=aaabbb123
+DB_NAME=ermm_db
+
+<span class="h"># --- Redis ---</span>
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=aaabbb123
+REDIS_DB=1
+
+<span class="h"># --- Session 安全 ---</span>
+SESSION_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c
+
+<span class="h"># --- JWT ---</span>
+JWT_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c</code></pre>
+
+<div class="call info">
+  <strong>.env 與 Windows 端完全一致</strong>：DB_NAME、DB_PASSWORD、SESSION_SECRET 等所有配置值不變，只需確保 DB_HOST 指向 <code>127.0.0.1</code>（Ubuntu 本機）。
+</div>
+
+<h3>5-2. 確認 MySQL bind-address</h3>
+<pre><code><span class="c"># 確認 MySQL 只監聽本機（安全）</span>
+sudo grep bind-address /etc/mysql/mysql.conf.d/mysqld.cnf
+<span class="c"># 預期：bind-address = 127.0.0.1</span>
+
+<span class="c"># 如果 Node 與 MySQL 同機，127.0.0.1 即可</span>
+<span class="c"># 如果分機，需改為 0.0.0.0 或內網 IP，並在 ufw 限制來源</span></code></pre>
+
+<h3>5-3. 啟動應用服務</h3>
+<pre><code><span class="c"># 啟動 systemd 服務</span>
+sudo systemctl start ermm-finance
+sudo systemctl status ermm-finance --no-pager
+
+<span class="c"># 驗證 API</span>
+curl http://127.0.0.1:3008/api/health | python3 -m json.tool</code></pre>
+
+<!-- ==================== VERIFY ==================== -->
+<h2 id="verify">八、階段 6：資料完整性驗證</h2>
+
+<h3>6-1. 表數量對比</h3>
+<pre><code><span class="c"># Ubuntu 端</span>
+sudo mysql ermm_db -e "SELECT COUNT(*) AS table_count FROM information_schema.tables WHERE table_schema='ermm_db';"
+<span class="c"># 預期：與 Windows 端一致（約 22）</span></code></pre>
+
+<h3>6-2. 各表記錄數對比</h3>
+<pre><code>sudo mysql ermm_db -e "
+SELECT table_name, table_rows
+FROM information_schema.tables
+WHERE table_schema='ermm_db'
+ORDER BY table_name;
+" | tee /tmp/verify_counts.txt
+
+<span class="c"># 與 Windows 端的 table_counts_before.txt 對比</span>
+diff /tmp/table_counts_before.txt /tmp/verify_counts.txt</code></pre>
+
+<h3>6-3. 關鍵資料驗證</h3>
+<pre><code><span class="c"># 1. 資產負債平衡檢查</span>
+sudo mysql ermm_db -e "
+SELECT
+  COUNT(*) AS total,
+  SUM(CASE WHEN ABS(ttl_asset_amt - ttl_debet_amt - stockholder_amt) < 1 THEN 1 ELSE 0 END) AS balanced
+FROM MGM_finance_summary;
+"
+<span class="c"># 預期：balanced = total</span>
+
+<span class="c"># 2. 預測資料非零</span>
+sudo mysql ermm_db -e "
+SELECT COUNT(*) AS total,
+       SUM(CASE WHEN forecast_amt > 0 THEN 1 ELSE 0 END) AS non_zero
+FROM forecast_detail;
+"
+<span class="c"># 預期：non_zero = total（216 筆全非零）</span>
+
+<span class="c"># 3. KPI 閾值正確（負債比）</span>
+sudo mysql ermm_db -e "
+SELECT bu_no, KPI1, KPI2, pct_type
+FROM MGM_KPI_desc
+WHERE KPI_desc = 'debt_ratio';
+"
+<span class="c"># 預期：KPI1=50, KPI2=70, pct_type=asc</span>
+
+<span class="c"># 4. 字符集確認</span>
+sudo mysql ermm_db -e "SHOW VARIABLES LIKE 'character_set_%';"
+<span class="c"># 預期：character_set_database = utf8mb4</span>
+
+<span class="c"># 5. 中文資料無亂碼</span>
+sudo mysql ermm_db -e "SELECT bu_no, bu_name FROM cams_branch LIMIT 3;"
+<span class="c"># 預期：中文名稱正常顯示</span></code></pre>
+
+<h3>6-4. API 端到端驗證</h3>
+<pre><code><span class="c"># 健康檢查</span>
+curl -s http://127.0.0.1:3008/api/health | python3 -m json.tool
+
+<span class="c"># 儀表板資料</span>
+curl -s "http://127.0.0.1:3008/api/dashboard?bu_no=HM&year=2025&month=06" | python3 -m json.tool | head -20
+
+<span class="c"># 預測對比</span>
+curl -s "http://127.0.0.1:3008/api/forecast/compare?bu_no=HM&year=2025&forecast_type=Sales" | python3 -m json.tool | head -20
+
+<span class="c"># 資產負債表</span>
+curl -s "http://127.0.0.1:3008/api/summary/balance-sheet?bu_no=HM&year=2025&month=06" | python3 -m json.tool | head -20</code></pre>
+
+<!-- ==================== CHECKLIST ==================== -->
+<h2 id="checklist">九、遷移檢查清單</h2>
+
+<table>
+  <thead><tr><th class="center">#</th><th>階段</th><th>檢查項</th><th>驗證方法</th><th>預期</th></tr></thead>
+  <tbody>
+    <tr><td class="center">1</td><td>匯出</td><td>SQL 檔案非空</td><td><code>ls -lh ermm_db_migration.sql</code></td><td>大小 &gt; 0</td></tr>
+    <tr><td class="center">2</td><td>匯出</td><td>檔案頭部正確</td><td><code>head -5</code></td><td>-- MySQL dump 8.0.x</td></tr>
+    <tr><td class="center">3</td><td>匯出</td><td>檔案尾部正確</td><td><code>tail -5</code></td><td>-- Dump completed</td></tr>
+    <tr><td class="center">4</td><td>匯出</td><td>CREATE TABLE 數量</td><td><code>grep -c "^CREATE TABLE"</code></td><td>約 22</td></tr>
+    <tr><td class="center">5</td><td>傳輸</td><td>檔案完整到達</td><td><code>ls -lh /tmp/ermm_db_migration.sql</code></td><td>大小與來源一致</td></tr>
+    <tr><td class="center">6</td><td>匯入</td><td>資料庫已建立</td><td><code>SHOW DATABASES</code></td><td>含 ermm_db</td></tr>
+    <tr><td class="center">7</td><td>匯入</td><td>表數量一致</td><td><code>SHOW TABLES</code></td><td>與 Windows 端相同</td></tr>
+    <tr><td class="center">8</td><td>匯入</td><td>各表記錄數一致</td><td>diff before/after</td><td>無差異</td></tr>
+    <tr><td class="center">9</td><td>帳號</td><td>ermm_app 可登入</td><td><code>mysql -u ermm_app -p ermm_db</code></td><td>成功連入</td></tr>
+    <tr><td class="center">10</td><td>帳號</td><td>ermm_backup 可備份</td><td><code>mysqldump --defaults-file=...</code></td><td>無錯誤</td></tr>
+    <tr><td class="center">11</td><td>資料</td><td>資產負債平衡</td><td>ABS(asset-debet-equity)&lt;1</td><td>balanced = total</td></tr>
+    <tr><td class="center">12</td><td>資料</td><td>預測資料非零</td><td>forecast_amt &gt; 0</td><td>216/216</td></tr>
+    <tr><td class="center">13</td><td>資料</td><td>KPI 閾值正確</td><td>debt_ratio KPI1=50,KPI2=70,asc</td><td>3 筆（HM/HN/SZ）</td></tr>
+    <tr><td class="center">14</td><td>資料</td><td>中文無亂碼</td><td>SELECT bu_name</td><td>正常顯示</td></tr>
+    <tr><td class="center">15</td><td>資料</td><td>字符集</td><td><code>SHOW VARIABLES LIKE 'character%'</code></td><td>utf8mb4</td></tr>
+    <tr><td class="center">16</td><td>API</td><td>健康檢查</td><td><code>curl /api/health</code></td><td>success:true</td></tr>
+    <tr><td class="center">17</td><td>API</td><td>儀表板有資料</td><td><code>curl /api/dashboard</code></td><td>非空 JSON</td></tr>
+    <tr><td class="center">18</td><td>服務</td><td>systemd 服務運行</td><td><code>systemctl status</code></td><td>active (running)</td></tr>
+    <tr><td class="center">19</td><td>.env</td><td>配置正確</td><td><code>cat .env</code></td><td>DB_NAME=ermm_db</td></tr>
+    <tr><td class="center">20</td><td>清理</td><td>暫存檔已清除</td><td><code>ls /tmp/ermm_db_*</code></td><td>無殘留</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== ROLLBACK ==================== -->
+<h2 id="rollback">十、回滾方案</h2>
+
+<div class="call err">
+  <strong>回滾條件</strong>：匯入後發現資料不完整、字符集錯誤、或 API 異常，且無法快速修復時。
+</div>
+
+<h3>方案 A：Ubuntu 端重新匯入（最常見）</h3>
+<pre><code><span class="c"># 1. 刪除有問題的資料庫</span>
+sudo mysql -e "DROP DATABASE IF EXISTS ermm_db;"
+
+<span class="c"># 2. 重建空資料庫</span>
+sudo mysql -e "CREATE DATABASE ermm_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+<span class="c"># 3. 重新匯入</span>
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql
+
+<span class="c"># 4. 重建帳號（帳號不隨 DB 刪除而消失，但若需重建）</span>
+sudo mysql -e "DROP USER IF EXISTS 'ermm_app'@'localhost';"
+sudo mysql <span class="p">&lt;&lt;'SQL'</span>
+CREATE USER 'ermm_app'@'localhost' IDENTIFIED BY 'aaabbb123';
+GRANT ALL PRIVILEGES ON ermm_db.* TO 'ermm_app'@'localhost';
+FLUSH PRIVILEGES;
+SQL</code></pre>
+
+<h3>方案 B：退回 Windows 端（應用回退）</h3>
+<pre><code><span class="c"># Windows 端重新啟動服務</span>
+Start-Service ERMM-Finance
+
+<span class="c"># 確認 API 正常</span>
+Invoke-RestMethod http://localhost:3008/api/health
+
+<span class="c"># 更新 DNS / Nginx 指回 Windows Server</span></code></pre>
+
+<h3>方案 C：使用結構備份重建</h3>
+<pre><code><span class="c"># 如果完整匯入失敗，可先用結構檔建表，再逐表匯入</span>
+sudo mysql ermm_db <span class="k">&lt;</span> /tmp/ermm_db_schema.sql
+<span class="c"># 然後逐表單獨匯出匯入</span></code></pre>
+
+<!-- ==================== TROUBLE ==================== -->
+<h2 id="trouble">十一、常見問題</h2>
+
+<h3>問題 1：匯入時報 "Unknown collation 'utf8mb4_0900_ai_ci'"</h3>
+<pre><code><span class="c"># 原因：Windows MySQL 8.0 預設排序規則與 Ubuntu MySQL 版本不同</span>
+<span class="c"># 解法：匯入前在 SQL 檔中替換排序規則</span>
+sed -i 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' /tmp/ermm_db_migration.sql
+sed -i 's/utf8mb4_0900_as_cs/utf8mb4_unicode_ci/g' /tmp/ermm_db_migration.sql
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql</code></pre>
+
+<h3>問題 2：匯入時報 "Access denied for user 'ermm_app'"</h3>
+<pre><code><span class="c"># 原因：帳號尚未建立或權限不足</span>
+<span class="c"># 解法：先用 root 匯入，再建帳號</span>
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql
+
+<span class="c"># 然後建立帳號（見階段 4）</span></code></pre>
+
+<h3>問題 3：匯入時報 "Row size too large"</h3>
+<pre><code><span class="c"># 原因：MySQL 的 InnoDB 行格式限制</span>
+<span class="c"># 解法：匯入前臨時調整</span>
+sudo mysql -e "SET GLOBAL innodb_strict_mode=0;"
+sudo mysql --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ermm_db_migration.sql
+sudo mysql -e "SET GLOBAL innodb_strict_mode=1;"</code></pre>
+
+<h3>問題 4：中文資料亂碼</h3>
+<pre><code><span class="c"># 原因：匯出或匯入時未指定 utf8mb4</span>
+<span class="c"># 確認：匯出和匯入都必須帶 --default-character-set=utf8mb4</span>
+
+<span class="c"># 檢查當前字符集</span>
+sudo mysql ermm_db -e "SHOW VARIABLES LIKE 'character%';"
+
+<span class="c"># 如果資料庫字符集不對，需修正：</span>
+sudo mysql -e "ALTER DATABASE ermm_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+<span class="c"># 如果表字符集不對，逐表修正：</span>
+sudo mysql ermm_db -e "
+SELECT CONCAT('ALTER TABLE \`', table_name, '\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;')
+FROM information_schema.tables
+WHERE table_schema='ermm_db' AND table_collation NOT LIKE 'utf8mb4%';
+" | sudo mysql ermm_db</code></pre>
+
+<h3>問題 5：SCP 傳輸逾時或中斷</h3>
+<pre><code><span class="c"># 使用 rsync 支援斷點續傳</span>
+rsync -avz --progress C:\temp\ermm_db_migration.sql root@Ubuntu伺服器IP:/tmp/
+
+<span class="c"># 或先壓縮再傳</span>
+Compress-Archive -Path C:\temp\ermm_db_migration.sql -DestinationPath C:\temp\ermm_db.zip
+scp C:\temp\ermm_db.zip root@Ubuntu伺服器IP:/tmp/
+<span class="c"># Ubuntu 端解壓</span>
+unzip /tmp/ermm_db.zip -d /tmp/</code></pre>
+
+<h3>問題 6：自動遞增 (AUTO_INCREMENT) 值不連續</h3>
+<pre><code><span class="c"># mysqldump 預設會匯出 AUTO_INCREMENT 值</span>
+<span class="c"># 確認匯出檔中有 SET AUTO_INCREMENT_VALUE</span>
+grep "AUTO_INCREMENT=" /tmp/ermm_db_migration.sql | head -10
+
+<span class="c"># 如果缺失，匯入後手動修正：</span>
+sudo mysql ermm_db -e "ALTER TABLE cams_xuser AUTO_INCREMENT=最大ID+1;"</code></pre>
+
+<h3>問題 7：觸發器 / 預存程序遺失</h3>
+<pre><code><span class="c"># 確認匯出時有加 --routines --triggers</span>
+<span class="c"># 檢查匯出檔中是否有觸發器定義</span>
+grep -c "CREATE TRIGGER" /tmp/ermm_db_migration.sql
+grep -c "CREATE PROCEDURE" /tmp/ermm_db_migration.sql
+
+<span class="c"># 如果為 0，重新匯出</span>
+mysqldump -u root -p --routines --triggers --single-transaction ermm_db > /tmp/ermm_db_full.sql</code></pre>
+
+<h3>問題 8：Windows 端 mysqldump 路徑找不到</h3>
+<pre><code><span class="c"># 查找 mysqldump 位置</span>
+Get-ChildItem "C:\Program Files\MySQL" -Recurse -Filter "mysqldump.exe" | Select-Object FullName
+
+<span class="c"># 或加入 PATH</span>
+$env:PATH += ";C:\Program Files\MySQL\MySQL Server 8.0\bin"
+mysqldump --version</code></pre>
+
+<h3>清理暫存檔</h3>
+<pre><code><span class="c"># Ubuntu 端</span>
+rm /tmp/ermm_db_migration.sql /tmp/ermm_db_schema.sql
+rm /tmp/table_counts_before.txt /tmp/table_counts_after.txt /tmp/account_grants.txt
+rm /tmp/ermm_db_migration.zip 2>/dev/null
+
+<span class="c"># Windows 端</span>
+Remove-Item C:\temp\ermm_db_migration.sql, C:\temp\ermm_db_schema.sql -ErrorAction SilentlyContinue
+Remove-Item C:\temp\table_counts_before.txt, C:\temp\account_grants.txt -ErrorAction SilentlyContinue</code></pre>
+
+<div style="text-align:center; margin-top:48px; color:var(--text-mute); font-size:13px; border-top:1px solid var(--border); padding-top:20px">
+  ERMM 資料庫遷移指南 — Windows Server → Ubuntu v1.0 &middot; 2026-09-13 &middot; rocky1953/ERMM-finance-system
+</div>
+
+</div>
+</body>
+</html>

@@ -7,6 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { testConnection } = require('./config/db');
+const { authRequired } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 });
 
 // ======= 路由引入 =======
+const authRoutes = require('./routes/auth');
 const systemRoutes = require('./routes/system');
 const arapRoutes = require('./routes/arap');
 const invoiceRoutes = require('./routes/invoice');
@@ -55,6 +57,12 @@ const kpiQueryRoutes = require('./routes/kpiQuery');
 const bepRoutes = require('./routes/bep');
 
 // ======= 路由註冊 =======
+// 公開端點（不需登入）：登入 API
+app.use('/api/auth', authRoutes);
+
+// 其餘 /api/* 一律需通過 JWT 登入驗證（白名單：/api/health；測試環境自動放行）
+app.use('/api', authRequired);
+
 app.use('/api/system', systemRoutes);
 app.use('/api/arap', arapRoutes);
 app.use('/api/invoice', invoiceRoutes);

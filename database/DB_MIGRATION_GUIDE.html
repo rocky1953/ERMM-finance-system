@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 資料庫遷移指南</title>
+<style>
+  :root{
+    --primary:#1e40af; --primary-2:#2563eb; --accent:#0ea5e9;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#1e40af,#0ea5e9); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:32px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#eff6ff,#dbeafe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f1f5f9}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.5; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+  pre .v{color:#e2e8f0}
+
+  .flow{
+    display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap;
+  }
+  .flow-step{
+    flex:1; min-width:140px; text-align:center; padding:16px 12px;
+    border:2px solid var(--border); border-radius:10px; background:var(--surface);
+    position:relative;
+  }
+  .flow-step .num{
+    width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:32px; font-size:14px; font-weight:700; margin:0 auto 8px;
+  }
+  .flow-step .ttl{font-size:14px; font-weight:700; color:var(--primary); margin-bottom:4px}
+  .flow-step .desc{font-size:12px; color:var(--text-soft); line-height:1.5}
+  .flow-arrow{
+    display:flex; align-items:center; color:var(--primary); font-size:24px;
+    padding:0 4px;
+  }
+
+  .checklist{list-style:none; padding-left:0; margin:16px 0}
+  .checklist li{
+    padding:8px 14px 8px 36px; margin:6px 0; font-size:14px;
+    background:var(--code-bg); border-radius:6px; position:relative;
+  }
+  .checklist li::before{
+    content:""; position:absolute; left:10px; top:50%; transform:translateY(-50%);
+    width:18px; height:18px; border:2px solid var(--primary-2); border-radius:4px;
+  }
+  .checklist li.done::before{
+    background:var(--ok); border-color:var(--ok);
+  }
+  .checklist li.done::after{
+    content:"\\2713"; position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    color:#fff; font-size:12px; font-weight:700;
+  }
+
+  .kbd{
+    display:inline-block;padding:2px 8px;border:1px solid var(--border);
+    border-bottom:2px solid var(--border);border-radius:4px;
+    background:var(--code-bg);font-family:monospace;font-size:12px;
+    color:var(--text-soft);
+  }
+
+  .info-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0;
+  }
+  .info-card{
+    border:1px solid var(--border); border-radius:10px; padding:16px;
+    background:var(--surface);
+  }
+  .info-card h4{margin:0 0 10px; color:var(--primary); font-size:14px}
+  .info-card .row{display:flex; justify-content:space-between; padding:4px 0; font-size:13px; border-bottom:1px dashed var(--border)}
+  .info-card .row:last-child{border-bottom:none}
+  .info-card .row .k{color:var(--text-soft)}
+  .info-card .row .v{color:var(--text); font-weight:600; font-family:monospace}
+
+  .tab-bar{display:flex; gap:0; border-bottom:2px solid var(--border); margin:20px 0}
+  .tab-bar .tab{
+    padding:8px 20px; font-size:14px; cursor:pointer; border:1px solid var(--border);
+    border-bottom:none; border-radius:8px 8px 0 0; background:var(--code-bg);
+    color:var(--text-soft);
+  }
+  .tab-bar .tab.active{background:var(--surface); color:var(--primary); font-weight:700;
+    border-bottom:2px solid var(--surface); margin-bottom:-2px}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — 資料庫遷移指南</h1>
+  <div class="sub">從源伺服器完整遷移至目標伺服器的操作手冊</div>
+  <div class="meta">
+    <span>版本：v1.0</span>
+    <span>日期：2026-09-12</span>
+    <span>資料庫：MySQL 8.0 / ERMM_db / utf8mb4</span>
+  </div>
+  <span class="tag">4 階段遷移</span>
+  <span class="tag">mysqldump</span>
+  <span class="tag">完整備份 + 還原</span>
+  <span class="tag">資料完整性驗證</span>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#overview">遷移概覽</a></li>
+    <li><a href="#prereq">前置條件</a></li>
+    <li><a href="#phase1">階段一：源伺服器導出</a></li>
+    <li><a href="#phase2">階段二：傳輸至目標伺服器</a></li>
+    <li><a href="#phase3">階段三：目標伺服器導入</a></li>
+    <li><a href="#phase4">階段四：部署應用 + 驗證</a></li>
+    <li><a href="#checklist">遷移檢查清單</a></li>
+    <li><a href="#troubleshoot">常見問題排查</a></li>
+    <li><a href="#rollback">回滾方案</a></li>
+  </ol>
+</div>
+
+<!-- ==================== OVERVIEW ==================== -->
+<h2 id="overview">一、遷移概覽</h2>
+
+<div class="info-grid">
+  <div class="info-card">
+    <h4>源伺服器（當前）</h4>
+    <div class="row"><span class="k">MySQL 主機</span><span class="v">localhost</span></div>
+    <div class="row"><span class="k">端口</span><span class="v">3306</span></div>
+    <div class="row"><span class="k">資料庫名</span><span class="v">ERMM_db</span></div>
+    <div class="row"><span class="k">字符集</span><span class="v">utf8mb4</span></div>
+    <div class="row"><span class="k">用戶</span><span class="v">root</span></div>
+    <div class="row"><span class="k">應用端口</span><span class="v">3008</span></div>
+  </div>
+  <div class="info-card">
+    <h4>目標伺服器（新）</h4>
+    <div class="row"><span class="k">MySQL 主機</span><span class="v">待確認</span></div>
+    <div class="row"><span class="k">端口</span><span class="v">3306</span></div>
+    <div class="row"><span class="k">資料庫名</span><span class="v">ERMM_db</span></div>
+    <div class="row"><span class="k">字符集</span><span class="v">utf8mb4</span></div>
+    <div class="row"><span class="k">用戶</span><span class="v">ermm_app</span></div>
+    <div class="row"><span class="k">應用端口</span><span class="v">3008</span></div>
+  </div>
+</div>
+
+<h3>遷移流程圖</h3>
+<div class="flow">
+  <div class="flow-step">
+    <div class="num">1</div>
+    <div class="ttl">導出</div>
+    <div class="desc">mysqldump<br>產出 .sql 備份檔</div>
+  </div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step">
+    <div class="num">2</div>
+    <div class="ttl">傳輸</div>
+    <div class="desc">壓縮 + 拷貝<br>USB / 網路</div>
+  </div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step">
+    <div class="num">3</div>
+    <div class="ttl">導入</div>
+    <div class="desc">mysql &lt; dump.sql<br>建庫 + 還原</div>
+  </div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step">
+    <div class="num">4</div>
+    <div class="ttl">驗證</div>
+    <div class="desc">部署應用<br>API + 資料檢查</div>
+  </div>
+</div>
+
+<div class="call info">
+  <strong>核心原則</strong>：整個遷移使用 MySQL 原生 <code>mysqldump</code> 工具，確保表結構、資料、索引、觸發器、存儲過程全部完整保留。無需第三方軟體。
+</div>
+
+<!-- ==================== PREREQ ==================== -->
+<h2 id="prereq">二、前置條件</h2>
+
+<table>
+  <thead>
+    <tr><th>項目</th><th>要求</th><th>確認方法</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>源伺服器 MySQL</td><td>8.0+ 已安裝 <code>mysqldump</code></td><td><code>mysqldump --version</code></td></tr>
+    <tr><td>目標伺服器 MySQL</td><td>8.0+ 已安裝</td><td><code>mysql --version</code></td></tr>
+    <tr><td>Node.js</td><td>18+ 已安裝於目標伺服器</td><td><code>node --version</code></td></tr>
+    <tr><td>Git</td><td>已安裝（用於拉取代碼）</td><td><code>git --version</code></td></tr>
+    <tr><td>磁碟空間</td><td>至少 2GB 可用</td><td><code>Get-PSDrive</code></td></tr>
+    <tr><td>端口可用</td><td>3008（應用）、3306（DB）</td><td><code>netstat -ano | findstr :3008</code></td></tr>
+  </tbody>
+</table>
+
+<div class="call warn">
+  <strong>版本一致性</strong>：源和目標 MySQL 最好同為 8.0+，避免 <code>utf8mb4</code> 排序規則差異。如果源是 8.0、目標是 5.7，需在導入時加 <code>--force</code> 並可能遺失 8.0 特有功能。
+</div>
+
+<!-- ==================== PHASE 1 ==================== -->
+<h2 id="phase1">三、階段一：源伺服器導出</h2>
+
+<h3>方法 A：完整 SQL 導出（推薦）</h3>
+<p>在<strong>源伺服器</strong>以 PowerShell 執行，產出單一 <code>.sql</code> 備份檔，包含表結構 + 資料 + 觸發器 + 存儲過程。</p>
+
+<pre><code><span class="c"># 1. 完整導出（表結構 + 資料 + 觸發器 + 存儲過程）</span>
+<span class="k">mysqldump</span> -u root -p <span class="n">--default-character-set=utf8mb4 --routines --triggers --single-transaction</span> ERMM_db <span class="k">&gt;</span> E:\ERMM_db_full.sql
+
+<span class="c"># 2. 單獨導出表結構（備用，用於對比）</span>
+<span class="k">mysqldump</span> -u root -p <span class="n">--default-character-set=utf8mb4 --no-data</span> ERMM_db <span class="k">&gt;</span> E:\ERMM_db_schema.sql
+
+<span class="c"># 3. 單獨導出資料（不含表結構，備用）</span>
+<span class="k">mysqldump</span> -u root -p <span class="n">--default-character-set=utf8mb4 --no-create-info --single-transaction</span> ERMM_db <span class="k">&gt;</span> E:\ERMM_db_data.sql</code></pre>
+
+<div class="call ok">
+  <strong>參數說明</strong>：
+  <ul style="margin:6px 0 0 18px; padding:0">
+    <li><code>--single-transaction</code>：InnoDB 無鎖導出，不影響線上服務</li>
+    <li><code>--routines</code>：包含存儲過程和函數</li>
+    <li><code>--triggers</code>：包含觸發器</li>
+    <li><code>--default-character-set=utf8mb4</code>：確保中文資料正確</li>
+  </ul>
+</div>
+
+<h3>方法 B：Excel 導出（僅用於人工審查）</h3>
+<p>專案內已有 22 張表的 Excel 導出工具，產出 <code>.xlsx</code> 供人工核對，但<strong>不適合完整遷移</strong>（遺失表結構、索引、約束）。</p>
+<pre><code><span class="c"># 在源伺服器執行</span>
+<span class="k">cd</span> e:\finance
+node database\export_tables_to_excel.js
+<span class="c"># 輸出至 database/exports/ 目錄</span></code></pre>
+
+<h3>確認導出檔大小</h3>
+<pre><code><span class="c"># 確認備份檔大小</span>
+<span class="k">Get-Item</span> E:\ERMM_db_full.sql | Select-Object Name, @{N='Size(MB)';E={[math]::Round($_.Length/1MB,1)}}
+<span class="c"># 預期輸出：ERMM_db_full.sql  Size(MB): 5~50</span></code></pre>
+
+<!-- ==================== PHASE 2 ==================== -->
+<h2 id="phase2">四、階段二：傳輸至目標伺服器</h2>
+
+<h3>方式 1：USB / 網路直接拷貝</h3>
+<pre><code><span class="c"># 將 SQL 備份檔拷貝至目標伺服器</span>
+<span class="k">Copy-Item</span> E:\ERMM_db_full.sql \\目標伺服器\共享目錄\
+
+<span class="c"># 或 USB 拷貝</span></code></pre>
+
+<h3>方式 2：壓縮後傳輸（大檔案推薦）</h3>
+<pre><code><span class="c"># 源伺服器壓縮</span>
+<span class="k">Compress-Archive</span> -Path E:\ERMM_db_full.sql -DestinationPath E:\ERMM_db_full.zip
+<span class="c"># 壓縮比通常 60~80%</span>
+
+<span class="c"># 目標伺服器解壓</span>
+<span class="k">Expand-Archive</span> -Path C:\temp\ERMM_db_full.zip -DestinationPath C:\temp\</code></pre>
+
+<h3>方式 3：SCP / 遠端傳輸（跨網段）</h3>
+<pre><code><span class="c"># 使用 scp（如果目標伺服器有 SSH）</span>
+scp E:\ERMM_db_full.sql user@目標IP:C:\temp\
+
+<span class="c"># 或使用 PowerShell 遠端複製</span>
+<span class="k">Copy-Item</span> E:\ERMM_db_full.sql -Destination \\目標IP\c$\temp\ -Credential (Get-Credential)</code></pre>
+
+<!-- ==================== PHASE 3 ==================== -->
+<h2 id="phase3">五、階段三：目標伺服器導入</h2>
+
+<h3>步驟 1：安裝 MySQL 8.0（如未安裝）</h3>
+<p>下載地址：<a href="https://dev.mysql.com/downloads/installer/">https://dev.mysql.com/downloads/installer/</a></p>
+<div class="call info">
+  <strong>安裝要點</strong>：選擇 Server Only；設定 root 密碼；字符集選 <code>utf8mb4</code>；端口 3306。
+  安裝後確認服務已啟動：<code>Get-Service mysql*</code>
+</div>
+
+<h3>步驟 2：建立空資料庫</h3>
+<pre><code><span class="c"># 在目標伺服器 PowerShell 執行</span>
+<span class="k">mysql</span> -u root -p <span class="n">-e "CREATE DATABASE IF NOT EXISTS ERMM_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"</span>
+
+<span class="c"># 確認建立成功</span>
+<span class="k">mysql</span> -u root -p <span class="n">-e "SHOW DATABASES LIKE 'ERMM%';"</span></code></pre>
+
+<h3>步驟 3：導入 SQL 備份檔</h3>
+<pre><code><span class="c"># 導入完整資料庫（表結構 + 資料 + 觸發器 + 存儲過程）</span>
+<span class="k">mysql</span> -u root -p <span class="n">--default-character-set=utf8mb4</span> ERMM_db <span class="k">&lt;</span> C:\temp\ERMM_db_full.sql
+
+<span class="c"># 如果檔案很大，加 --force 跳過非致命錯誤繼續導入</span>
+<span class="k">mysql</span> -u root -p <span class="n">--default-character-set=utf8mb4 --force</span> ERMM_db <span class="k">&lt;</span> C:\temp\ERMM_db_full.sql</code></pre>
+
+<div class="call warn">
+  <strong>注意</strong>：導入過程可能需要數分鐘到數十分鐘，取決於資料量。期間不要中斷。
+</div>
+
+<h3>步驟 4：建立應用專用帳號（推薦，不用 root 連線）</h3>
+<pre><code><span class="c"># 在 mysql 命令行執行</span>
+<span class="k">CREATE USER</span> <span class="s">'ermm_app'@'localhost'</span> <span class="k">IDENTIFIED BY</span> <span class="s">'你的強密碼'</span>;
+<span class="k">CREATE USER</span> <span class="s">'ermm_app'@'%'</span> <span class="k">IDENTIFIED BY</span> <span class="s">'你的強密碼'</span>;
+
+<span class="k">GRANT ALL PRIVILEGES ON</span> ERMM_db.* <span class="k">TO</span> <span class="s">'ermm_app'@'localhost'</span>;
+<span class="k">GRANT ALL PRIVILEGES ON</span> ERMM_db.* <span class="k">TO</span> <span class="s">'ermm_app'@'%'</span>;
+<span class="k">FLUSH PRIVILEGES</span>;</code></pre>
+
+<h3>步驟 5：確認表數量</h3>
+<pre><code><span class="c"># 確認所有表已建立</span>
+<span class="k">mysql</span> -u root -p ERMM_db <span class="n">-e "SHOW TABLES;"</span>
+<span class="c"># 預期輸出：~22 張表</span></code></pre>
+
+<!-- ==================== PHASE 4 ==================== -->
+<h2 id="phase4">六、階段四：部署應用 + 驗證</h2>
+
+<h3>步驟 1：部署程式碼</h3>
+<pre><code><span class="c"># 方式 A：從 GitHub 拉取</span>
+<span class="k">cd</span> C:\app\finance    <span class="c"># 或你選擇的目錄</span>
+<span class="k">git clone</span> https://github.com/rocky1953/ERMM-finance-system.git .
+
+<span class="c"># 方式 B：直接拷貝整個 e:\finance 目錄</span>
+<span class="k">Copy-Item</span> -Path \\源伺服器\e$\finance\* -Destination C:\app\finance\ -Recurse</code></pre>
+
+<h3>步驟 2：修改 .env 指向新資料庫</h3>
+<p>編輯 <code>.env</code> 檔案（不會被 Git 追蹤，需手動建立或修改）：</p>
+<pre><code><span class="c"># ERMM 財務模組 Node.js 後端配置</span>
+PORT=3008
+
+<span class="c"># 目標伺服器的 MySQL 連線</span>
+DB_HOST=127.0.0.1        <span class="c"># 或目標伺服器 IP</span>
+DB_PORT=3306
+DB_USER=ermm_app         <span class="c"># 用專用帳號（或 root）</span>
+DB_PASSWORD=你的強密碼
+DB_NAME=ERMM_db
+
+<span class="c"># JWT Secret</span>
+JWT_SECRET=ermm_finance_secret_key_2026</code></pre>
+
+<h3>步驟 3：安裝依賴並啟動</h3>
+<pre><code><span class="c"># 安裝 Node.js 依賴</span>
+<span class="k">cd</span> C:\app\finance
+<span class="k">npm</span> install
+
+<span class="c"># 啟動服務</span>
+<span class="k">node</span> app.js
+
+<span class="c"># 預期輸出：</span>
+<span class="c"># &gt; ERMM 財務模組 API 已啟動: http://localhost:3008</span>
+<span class="c"># &gt; ✅ 資料庫連線成功</span></code></pre>
+
+<h3>步驟 4：資料完整性驗證</h3>
+
+<h4>4-1. API 健康檢查</h4>
+<pre><code><span class="c"># 驗證 API 服務正常</span>
+<span class="k">Invoke-RestMethod</span> -Uri "http://localhost:3008/api/health" | ConvertTo-Json</code></pre>
+
+<h4>4-2. 各表記錄數統計</h4>
+<pre><code><span class="c"># 驗證各表資料筆數</span>
+<span class="k">node</span> -e "
+const {pool} = require('./config/db');
+(async()=>{
+  const tables = [
+    'MGM_finance_summary','forecast_detail','MGM_KPI_desc',
+    'MGM_BEP_threshold','MGM_BEP_detail','MGM_cash_journal',
+    'MGM_account_details','ermm_erp_so_dn','ermm_erp_po',
+    'ermm_erp_arap','cams_xuser','cams_branch'
+  ];
+  for(const t of tables){
+    const [r] = await pool.execute('SELECT COUNT(*) c FROM '+t);
+    console.log(t.padEnd(30), r[0].c, '筆');
+  }
+  process.exit(0);
+})()
+"</code></pre>
+
+<h4>4-3. 資產負債表平衡驗證</h4>
+<pre><code><span class="c"># 驗證資產 = 負債 + 權益</span>
+<span class="k">node</span> -e "
+const {pool} = require('./config/db');
+(async()=>{
+  const [rows] = await pool.execute(
+    'SELECT COUNT(*) as total, ' +
+    'SUM(CASE WHEN ABS(ttl_asset_amt - ttl_debet_amt - stockholder_amt) < 1 THEN 1 ELSE 0 END) as balanced ' +
+    'FROM MGM_finance_summary'
+  );
+  console.log('資產負債平衡:', rows[0].balanced, '/', rows[0].total);
+  process.exit(0);
+})()
+"</code></pre>
+
+<h4>4-4. 預測資料驗證</h4>
+<pre><code><span class="c"># 驗證預測 vs 實際對比 API 回傳非零值</span>
+<span class="k">Invoke-RestMethod</span> -Uri "http://localhost:3008/api/forecast/compare?bu_no=HM&year=2025&forecast_type=Sales" | ConvertTo-Json -Depth 3</code></pre>
+
+<h4>4-5. KPI 閾值驗證</h4>
+<pre><code><span class="c"># 確認負債比 KPI 閾值已更新</span>
+<span class="k">mysql</span> -u ermm_app -p ERMM_db <span class="n">-e "SELECT bu_no, KPI_id, KPI1, KPI2, pct_type FROM MGM_KPI_desc WHERE KPI_id='debt_ratio';"</span>
+<span class="c"># 預期：KPI1=50, KPI2=70, pct_type=asc</span></code></pre>
+
+<h4>4-6. 前端頁面驗證</h4>
+<p>在瀏覽器打開 <code>http://目標伺服器IP:3008</code>，確認：</p>
+<ul class="steps">
+  <li>儀表板有圖表和卡片資料</li>
+  <li>年度趨勢頁選「股東權益」有非零資料</li>
+  <li>財務預測頁有紫紅色預測線 + 綠色實際線</li>
+  <li>KPI 查詢頁負債比燈號與閾值一致</li>
+  <li>資產負債表、損益表、現金流量表三大報表正常</li>
+</ul>
+
+<!-- ==================== CHECKLIST ==================== -->
+<h2 id="checklist">七、遷移檢查清單</h2>
+
+<table>
+  <thead>
+    <tr><th class="center">#</th><th>檢查項</th><th>命令 / 方法</th><th>預期結果</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="center">1</td><td>MySQL 服務運行</td><td><code>Get-Service mysql*</code></td><td>Status: Running</td></tr>
+    <tr><td class="center">2</td><td>資料庫存在</td><td><code>mysql -e "SHOW DATABASES"</code></td><td>含 <code>ERMM_db</code></td></tr>
+    <tr><td class="center">3</td><td>表數量完整</td><td><code>mysql ERMM_db -e "SHOW TABLES"</code></td><td>~22 張表</td></tr>
+    <tr><td class="center">4</td><td>資產負債平衡</td><td>上方程式 4-3</td><td>balanced = total</td></tr>
+    <tr><td class="center">5</td><td>預測資料非零</td><td>compare API</td><td>forecast 陣列有非零值</td></tr>
+    <tr><td class="center">6</td><td>KPI 閾值正確</td><td>查 <code>MGM_KPI_desc</code></td><td>debt_ratio: KPI1=50, KPI2=70, asc</td></tr>
+    <tr><td class="center">7</td><td>前端正常</td><td>瀏覽器開 <code>http://IP:3008</code></td><td>儀表板有資料</td></tr>
+    <tr><td class="center">8</td><td>Git 版本一致</td><td><code>git log --oneline -1</code></td><td><code>f7670f8</code></td></tr>
+    <tr><td class="center">9</td><td>Node 版本</td><td><code>node --version</code></td><td>v18+</td></tr>
+    <tr><td class="center">10</td><td>.env 已修改</td><td>檢查 <code>DB_HOST</code> 等</td><td>指向目標 DB</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== TROUBLESHOOT ==================== -->
+<h2 id="troubleshoot">八、常見問題排查</h2>
+
+<h3>問題 1：導入時出現 "Unknown collation 'utf8mb4_0900_ai_ci'"</h3>
+<div class="call err">
+  <strong>原因</strong>：源伺服器 MySQL 8.0 導出的排序規則在目標 5.7 不支援。
+</div>
+<pre><code><span class="c"># 解法：在導入前替換排序規則</span>
+<span class="k">(Get-Content</span> C:\temp\ERMM_db_full.sql<span class="k">)</span> <span class="k">|</span>
+  <span class="k">ForEach-Object</span> { $_ -replace 'utf8mb4_0900_ai_ci','utf8mb4_unicode_ci' } <span class="k">|</span>
+  <span class="k">Set-Content</span> C:\temp\ERMM_db_fixed.sql
+<span class="k">mysql</span> -u root -p ERMM_db <span class="k">&lt;</span> C:\temp\ERMM_db_fixed.sql</code></pre>
+
+<h3>問題 2：中文亂碼</h3>
+<div class="call err">
+  <strong>原因</strong>：導出或導入時未指定 <code>utf8mb4</code> 字符集。
+</div>
+<pre><code><span class="c"># 確保導出和導入都加 --default-character-set=utf8mb4</span>
+<span class="k">mysqldump</span> -u root -p <span class="n">--default-character-set=utf8mb4</span> ERMM_db <span class="k">&gt;</span> backup.sql
+<span class="k">mysql</span> -u root -p <span class="n">--default-character-set=utf8mb4</span> ERMM_db <span class="k">&lt;</span> backup.sql</code></pre>
+
+<h3>問題 3：端口 3008 已被佔用</h3>
+<pre><code><span class="c"># 找到佔用 3008 端口的進程</span>
+<span class="k">netstat</span> -ano <span class="k">|</span> findstr :3008
+<span class="c"># 輸出最後一欄是 PID，例如 12345</span>
+
+<span class="c"># 停止該進程</span>
+<span class="k">Stop-Process</span> -Id 12345 -Force
+
+<span class="c"># 重新啟動</span>
+<span class="k">node</span> app.js</code></pre>
+
+<h3>問題 4：應用連不上資料庫</h3>
+<div class="call err">
+  <strong>症狀</strong>：啟動時顯示 <code>❌ 資料庫連線失敗</code>
+</div>
+<pre><code><span class="c"># 1. 確認 MySQL 服務運行</span>
+<span class="k">Get-Service</span> mysql*
+
+<span class="c"># 2. 確認 .env 設定正確</span>
+<span class="k">Get-Content</span> .env <span class="k">|</span> Select-String "DB_"
+
+<span class="c"># 3. 手動測試連線</span>
+<span class="k">mysql</span> -u ermm_app -p -e "SELECT 1;"
+
+<span class="c"># 4. 確認防火牆未擋 3306</span>
+<span class="k">netsh</span> advfirewall firewall add rule name="MySQL" dir=in action=allow protocol=TCP localport=3306</code></pre>
+
+<h3>問題 5：Git clone 失敗（網路問題）</h3>
+<pre><code><span class="c"># 方式 A：重試</span>
+<span class="k">git clone</span> https://github.com/rocky1953/ERMM-finance-system.git
+
+<span class="c"># 方式 B：直接拷貝（不走 Git）</span>
+<span class="c"># 將 e:\finance 整個目錄壓縮拷貝到目標伺服器解壓</span></code></pre>
+
+<h3>問題 6：PowerShell 執行 node 腳本被擋</h3>
+<div class="call warn">
+  <strong>原因</strong>：PowerShell 預設禁止執行未簽署腳本。
+</div>
+<pre><code><span class="c"># 使用 .cmd 版本或直接用 node 執行 .js 檔（不走 .ps1）</span>
+<span class="k">node</span> app.js              <span class="c"># 直接執行，不受執行策略影響</span>
+<span class="k">npm.cmd</span> install          <span class="c"># 用 .cmd 版本</span></code></pre>
+
+<!-- ==================== ROLLBACK ==================== -->
+<h2 id="rollback">九、回滾方案</h2>
+
+<div class="call warn">
+  <strong>回滾時機</strong>：遷移後發現資料異常或應用無法正常運作，需還原至源伺服器。
+</div>
+
+<h3>情況 A：目標伺服器有問題，源伺服器未動</h3>
+<pre><code><span class="c"># 源伺服器未停止過服務 → 直接在源伺服器繼續使用即可</span>
+<span class="c"># 無需回滾操作</span></code></pre>
+
+<h3>情況 B：源伺服器已被修改</h3>
+<pre><code><span class="c"># 1. 用遷移前的備份檔還原源伺服器</span>
+<span class="k">mysql</span> -u root -p <span class="n">--default-character-set=utf8mb4</span> ERMM_db <span class="k">&lt;</span> E:\ERMM_db_full.sql
+
+<span class="c"># 2. 重啟應用</span>
+<span class="k">node</span> app.js</code></pre>
+
+<h3>情況 C：需要保留目標伺服器的新資料</h3>
+<pre><code><span class="c"># 1. 從目標伺服器反向導出</span>
+<span class="k">mysqldump</span> -u ermm_app -p <span class="n">--single-transaction --default-character-set=utf8mb4</span> ERMM_db <span class="k">&gt;</span> C:\ERMM_db_new.sql
+
+<span class="c"># 2. 傳輸回源伺服器</span>
+
+<span class="c"># 3. 在源伺服器導入</span>
+<span class="k">mysql</span> -u root -p <span class="n">--default-character-set=utf8mb4</span> ERMM_db <span class="k">&lt;</span> E:\ERMM_db_new.sql</code></pre>
+
+<div class="call info">
+  <strong>最佳實踐</strong>：遷移前確保源伺服器服務不停止，先在目標伺服器完整驗證通過後，再切換流量。這樣回滾只需把流量指回源伺服器即可，零風險。
+</div>
+
+<!-- ==================== SUMMARY ==================== -->
+<h2 id="summary" style="margin-top:60px">附錄：遷移檔案清單</h2>
+
+<table>
+  <thead>
+    <tr><th>檔案 / 目錄</th><th>用途</th><th>是否入 Git</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>.env</code></td><td>資料庫連線設定</td><td>否（需手動修改）</td></tr>
+    <tr><td><code>config/db.js</code></td><td>連線池邏輯</td><td>是</td></tr>
+    <tr><td><code>routes/*.js</code></td><td>所有 API 路由</td><td>是</td></tr>
+    <tr><td><code>public/js/pages/*.js</code></td><td>前端頁面邏輯</td><td>是</td></tr>
+    <tr><td><code>public/js/i18n.js</code></td><td>三語翻譯字典</td><td>是</td></tr>
+    <tr><td><code>database/*.js</code></td><td>資料維護腳本</td><td>是</td></tr>
+    <tr><td><code>app.js</code></td><td>應用入口</td><td>是</td></tr>
+    <tr><td><code>package.json</code></td><td>依賴清單</td><td>是</td></tr>
+    <tr><td><code>node_modules/</code></td><td>依賴安裝目錄</td><td>否（<code>npm install</code> 重建）</td></tr>
+    <tr><td><code>ERMM_db_full.sql</code></td><td>資料庫備份檔</td><td>否（mysqldump 產出）</td></tr>
+  </tbody>
+</table>
+
+<div class="call ok" style="margin-top:40px">
+  <strong>完成遷移確認</strong>：當所有檢查清單項目通過、前端頁面資料正常、三大報表可正常產出、預測圖表有非零值時，遷移即告完成。
+</div>
+
+<div style="text-align:center; margin-top:40px; color:var(--text-mute); font-size:13px; border-top:1px solid var(--border); padding-top:20px">
+  ERMM 財務模組 — 資料庫遷移指南 v1.0 &middot; 2026-09-12 &middot; GitHub: rocky1953/ERMM-finance-system
+</div>
+
+</div>
+</body>
+</html>

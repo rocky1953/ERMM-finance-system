@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — Ubuntu 正式環境部署操作手冊</title>
+<style>
+  :root{
+    --primary:#6d28d9; --primary-2:#7c3aed; --accent:#db2777;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#4338ca,#7c3aed,#db2777); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:30px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#ede9fe,#ddd6fe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f5f3ff}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.55; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+  pre .h{color:#f472b6}
+  pre .p{color:#c4b5fd}
+  pre .v{color:#e2e8f0}
+
+  .flow{display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap}
+  .flow-step{
+    flex:1; min-width:130px; text-align:center; padding:16px 12px;
+    border:2px solid var(--border); border-radius:10px; background:var(--surface);
+  }
+  .flow-step .num{
+    width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:32px; font-size:14px; font-weight:700; margin:0 auto 8px;
+  }
+  .flow-step .ttl{font-size:14px; font-weight:700; color:var(--primary); margin-bottom:4px}
+  .flow-step .desc{font-size:12px; color:var(--text-soft); line-height:1.5}
+  .flow-arrow{display:flex; align-items:center; color:var(--primary); font-size:22px; padding:0 4px}
+
+  .arch{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:10px;
+    padding:24px; margin:20px 0; text-align:center; font-family:monospace; font-size:14px;
+    line-height:2; color:var(--text-soft);
+  }
+  .arch .box{
+    display:inline-block; padding:8px 24px; border-radius:8px; margin:4px 8px;
+    font-weight:700;
+  }
+  .arch .client{background:#dbeafe; color:#1e40af; border:2px solid #60a5fa}
+  .arch .nginx{background:#dcfce7; color:#166534; border:2px solid #4ade80}
+  .arch .node{background:#fef3c7; color:#92400e; border:2px solid #fbbf24}
+  .arch .redis{background:#fef2f2; color:#991b1b; border:2px solid #f87171}
+  .arch .mysql{background:#fce7f3; color:#9d174d; border:2px solid #f472b6}
+  .arch .svc{background:#ede9fe; color:#5b21b6; border:2px solid #a78bfa; font-size:12px}
+  .arch .arr{color:var(--primary); font-size:18px; font-weight:700}
+
+  .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0}
+  .info-card{border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--surface)}
+  .info-card h4{margin:0 0 10px; color:var(--primary); font-size:14px}
+  .info-card pre{margin:0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — Ubuntu 正式環境部署操作手冊</h1>
+  <div class="sub">Node.js + Express + MySQL 8 + Redis 生產級部署：systemd 守護、Nginx 純反向代理（路由全在 Node.js）、Certbot HTTPS、Cron 備份</div>
+  <div class="meta">
+    <span>版本：v2.0</span>
+    <span>日期：2026-09-13</span>
+    <span>適用 OS：Ubuntu 22.04 / 24.04 LTS</span>
+    <span>Git：rocky1953/ERMM-finance-system</span>
+  </div>
+  <span class="tag">systemd 開機自啟</span>
+  <span class="tag">Nginx 純反向代理</span>
+  <span class="tag">路由分發在 Node.js</span>
+  <span class="tag">Redis 會話快取</span>
+  <span class="tag">Let's Encrypt HTTPS</span>
+  <span class="tag">MySQL 8 調優</span>
+  <span class="tag">Cron 定時備份</span>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#arch">部署架構總覽</a></li>
+    <li><a href="#prereq">階段 0：系統初始化</a></li>
+    <li><a href="#mysql">階段 1：安裝並調優 MySQL 8</a></li>
+    <li><a href="#redis">階段 2：安裝 Redis</a></li>
+    <li><a href="#node">階段 3：安裝 Node.js 20 LTS</a></li>
+    <li><a href="#code">階段 4：部署應用程式碼</a></li>
+    <li><a href="#env">階段 5：生產環境 .env 配置</a></li>
+    <li><a href="#systemd">階段 6：systemd 服務註冊</a></li>
+    <li><a href="#firewall">階段 7：ufw 防火牆</a></li>
+    <li><a href="#nginx">階段 8：Nginx 反向代理 + HTTPS</a></li>
+    <li><a href="#backup">階段 9：MySQL 定時備份</a></li>
+    <li><a href="#verify">上線驗證清單</a></li>
+    <li><a href="#ops">日常運維操作</a></li>
+    <li><a href="#update">版本更新與回滾</a></li>
+    <li><a href="#trouble">故障排查</a></li>
+  </ol>
+</div>
+
+<!-- ==================== ARCH ==================== -->
+<h2 id="arch">一、部署架構總覽</h2>
+
+<div class="arch">
+  <span class="box client">使用者瀏覽器</span>
+  <span class="arr">&rarr;</span>
+  <span class="box nginx">Nginx :80 / :443<br><small>純反向代理（不路由）</small></span>
+  <span class="arr">&rarr;</span>
+  <span class="box node">Node.js Express :3008<br><small>app.js + routes/（全部路由）</small></span>
+  <span class="arr">&rarr;</span>
+  <span class="box mysql">MySQL 8 :3306<br><small>ermm_db</small></span>
+  <br>
+  <span class="box redis">Redis :6379 / DB 1<br><small>會話快取</small></span>
+  <br><br>
+  <span class="box svc">systemd：ermm-finance.service</span>
+  &nbsp;
+  <span class="box svc">mysql.service</span>
+  &nbsp;
+  <span class="box svc">redis-server.service</span>
+  &nbsp;
+  <span class="box svc">Cron：每日 02:00 備份</span>
+</div>
+
+<div class="call ok">
+  <strong>設計原則：Nginx 不參與路由分發</strong><br>
+  Nginx 的 <code>location /</code> 將<strong>所有</strong>請求（含 <code>/api/*</code>、靜態檔、SPA 前端）統一代理到 Node.js 的 3008 埠。路由分發的職責完全由 <code>app.js</code> 的 <code>app.use('/api/xxx', routes)</code> 和 <code>routes/</code> 資料夾下的 25 個路由檔承擔。<strong>新增功能只需在 Node.js 層加路由檔，Nginx 設定永不改動</strong>。
+</div>
+
+<h3>部署流程</h3>
+<div class="flow">
+  <div class="flow-step"><div class="num">0</div><div class="ttl">系統初始化</div><div class="desc">更新、時區、目錄</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">1</div><div class="ttl">MySQL 8</div><div class="desc">安裝調優 + 還原資料</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">2</div><div class="ttl">Redis</div><div class="desc">安裝 + 安全設定</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">3</div><div class="ttl">Node + systemd</div><div class="desc">程式碼 + 服務守護</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">4</div><div class="ttl">代理/備份</div><div class="desc">Nginx + HTTPS + Cron</div></div>
+</div>
+
+<!-- ==================== PREREQ ==================== -->
+<h2 id="prereq">二、階段 0：系統初始化</h2>
+
+<h3>0-1. 系統需求</h3>
+<table>
+  <thead><tr><th>元件</th><th>版本要求</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>Ubuntu Server</td><td><strong>22.04 LTS 或 24.04 LTS</strong></td><td>主機作業系統</td></tr>
+    <tr><td>Node.js</td><td><strong>20 LTS</strong></td><td>執行 Express 應用</td></tr>
+    <tr><td>MySQL</td><td>8.0.x</td><td>資料庫（ermm_db / utf8mb4）</td></tr>
+    <tr><td>Redis</td><td>7.0+</td><td>會話快取（DB 1）</td></tr>
+    <tr><td>Nginx</td><td>1.18+</td><td>純反向代理 + HTTPS</td></tr>
+    <tr><td>記憶體 / 磁碟</td><td>建議 2GB+ / 20GB 可用</td><td>含資料與備份保留空間</td></tr>
+    <tr><td>權限</td><td>root（本手冊以 root 執行）</td><td>目錄在 /root/Project/</td></tr>
+  </tbody>
+</table>
+
+<h3>0-2. 系統更新與基礎套件</h3>
+<pre><code><span class="c"># 更新套件索引並升級現有套件</span>
+apt update <span class="p">&amp;&amp;</span> apt upgrade -y
+
+<span class="c"># 安裝基礎工具</span>
+apt install -y git curl wget ca-certificates gnupg ufw build-essential unzip software-properties-common</code></pre>
+
+<h3>0-3. 設定時區（財務日期一致性很重要）</h3>
+<pre><code><span class="c"># 設定為台灣時區 (UTC+8)</span>
+timedatectl set-timezone Asia/Taipei
+timedatectl
+<span class="c"># 預期：Time zone: Asia/Taipei (CST, +0800)</span></code></pre>
+
+<h3>0-4. 建立標準目錄結構</h3>
+<pre><code><span class="c"># 專案目錄</span>
+mkdir -p /root/Project/ERMM-finance-system
+
+<span class="c"># 備份目錄</span>
+mkdir -p /var/backups/ermm-mysql
+
+<span class="c"># 日誌目錄</span>
+mkdir -p /var/log/ermm
+
+<span class="c"># 服務腳本目錄</span>
+mkdir -p /root/Project/ERMM-finance-system/scripts</code></pre>
+
+<!-- ==================== MYSQL ==================== -->
+<h2 id="mysql">三、階段 1：安裝並調優 MySQL 8</h2>
+
+<h3>1-1. 安裝 MySQL 8.0</h3>
+<pre><code>apt install -y mysql-server
+
+<span class="c"># 確認服務狀態</span>
+systemctl status mysql --no-pager
+mysql --version</code></pre>
+
+<h3>1-2. 安全性初始化</h3>
+<pre><code><span class="c"># 執行安全設定精靈</span>
+mysql_secure_installation
+<span class="c"># 依提示設定 VALIDATE PASSWORD 原則（內網可選 LOW）、設定 root 密碼等</span></code></pre>
+
+<h3>1-3. 建立資料庫</h3>
+<pre><code>mysql <span class="p">&lt;&lt;'SQL'</span>
+<span class="c">-- 建立資料庫（小寫 ermm_db）</span>
+CREATE DATABASE IF NOT EXISTS ermm_db
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+<span class="c">-- 建立 ermm_app 帳號（僅允許本機連線）</span>
+CREATE USER IF NOT EXISTS 'ermm_app'@'localhost'
+  IDENTIFIED BY 'aaabbb123';
+GRANT ALL PRIVILEGES ON ermm_db.* TO 'ermm_app'@'localhost';
+
+<span class="c">-- 建立備份專用帳號</span>
+CREATE USER IF NOT EXISTS 'ermm_backup'@'localhost'
+  IDENTIFIED BY 'aaabbb123';
+GRANT SELECT, SHOW VIEW, TRIGGER, LOCK TABLES
+  ON ermm_db.* TO 'ermm_backup'@'localhost';
+
+FLUSH PRIVILEGES;
+<span class="p">SQL</span>
+
+<span class="c"># 驗證帳號可登入</span>
+mysql -u ermm_app -p ermm_db -e "SELECT VERSION();"</code></pre>
+
+<h3>1-4. 還原資料庫備份</h3>
+<pre><code><span class="c"># 在本機執行：上傳備份檔</span>
+scp ERMM_db_full.sql root@伺服器IP:/tmp/
+
+<span class="c"># 在伺服器執行：導入完整備份</span>
+mysql -u ermm_app -p --default-character-set=utf8mb4 ermm_db <span class="k">&lt;</span> /tmp/ERMM_db_full.sql
+
+<span class="c"># 驗證表數量（預期約 22 張）</span>
+mysql -u ermm_app -p ermm_db -e "SHOW TABLES;"
+
+<span class="c"># 刪除暫存備份檔</span>
+rm /tmp/ERMM_db_full.sql</code></pre>
+
+<h3>1-5. MySQL 生產調優</h3>
+<pre><code>nano /etc/mysql/mysql.conf.d/mysqld.cnf</code></pre>
+<pre><code><span class="h">[mysqld]</span>
+<span class="c"># --- 基本 ---</span>
+character-set-server = utf8mb4
+collation-server     = utf8mb4_unicode_ci
+default-time-zone    = '+08:00'
+max_connections      = 100
+wait_timeout         = 28800
+interactive_timeout  = 28800
+
+<span class="c"># --- InnoDB（2GB 記憶體：512M；4GB 可用 1G）---</span>
+innodb_buffer_pool_size       = 512M
+innodb_log_file_size          = 256M
+innodb_flush_log_at_trx_commit = 1
+
+<span class="c"># --- 封包大小（Excel 匯入上傳較大）---</span>
+max_allowed_packet = 64M
+
+<span class="c"># --- 慢查詢日誌 ---</span>
+slow_query_log      = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time     = 2
+
+<span class="c"># --- 安全：只監聽本機 ---</span>
+bind-address = 127.0.0.1</code></pre>
+<pre><code><span class="c"># 重啟生效</span>
+systemctl restart mysql
+systemctl enable mysql</code></pre>
+
+<!-- ==================== REDIS ==================== -->
+<h2 id="redis">四、階段 2：安裝 Redis</h2>
+
+<pre><code><span class="c"># 安裝 Redis</span>
+apt install -y redis-server
+
+<span class="c"># 確認服務狀態</span>
+systemctl status redis-server --no-pager
+systemctl enable redis-server</code></pre>
+
+<h3>2-1. Redis 安全設定</h3>
+<pre><code>nano /etc/redis/redis.conf</code></pre>
+<pre><code><span class="c"># 綁定本機（不允許遠端連線）</span>
+bind 127.0.0.1 ::1
+
+<span class="c"># 設定密碼（取消註解並設定密碼）</span>
+requirepass aaabbb123
+
+<span class="c"># 預設 DB 數量（16 個，本系統使用 DB 1）</span>
+databases 16
+
+<span class="c"># 記憶體上限（2GB 機器設 256MB）</span>
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+<span class="c"># 持久化（RDB 快照）</span>
+save 900 1
+save 300 10
+save 60 10000</code></pre>
+<pre><code><span class="c"># 重啟生效</span>
+systemctl restart redis-server
+
+<span class="c"># 驗證連線（指定 DB 1）</span>
+redis-cli -a aaabbb123 -n 1 ping
+<span class="c"># 預期：PONG</span></code></pre>
+
+<div class="call info">
+  <strong>Redis DB 1 的用途</strong>：本系統使用 Redis DB 1 存放會話（Session）資料。透過 <code>SESSION_SECRET</code> 加密簽章，<code>USE_DB_CONFIG=true</code> 啟用資料庫驅動的會話儲存。
+</div>
+
+<!-- ==================== NODE ==================== -->
+<h2 id="node">五、階段 3：安裝 Node.js 20 LTS</h2>
+
+<pre><code><span class="c"># 匯入 NodeSource GPG 金鑰與 20.x 套件源</span>
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
+
+<span class="c"># 安裝 Node.js（含 npm）</span>
+apt update
+apt install -y nodejs
+
+<span class="c"># 驗證版本</span>
+node --version    <span class="c"># v20.x.x</span>
+npm --version</code></pre>
+
+<!-- ==================== CODE ==================== -->
+<h2 id="code">六、階段 4：部署應用程式碼</h2>
+
+<h3>4-1. 從 GitHub 取得程式碼</h3>
+<pre><code><span class="c"># clone 到指定目錄</span>
+cd /root/Project
+git clone https://github.com/rocky1953/ERMM-finance-system.git ERMM-finance-system
+cd ERMM-finance-system
+
+<span class="c"># 確認版本 commit</span>
+git log --oneline -1</code></pre>
+
+<h3>4-2. 安裝生產依賴</h3>
+<pre><code>cd /root/Project/ERMM-finance-system
+
+<span class="c"># 只裝生產依賴</span>
+npm install --omit=dev
+
+<span class="c"># 若需 Redis 會話支援，安裝相關套件（如尚未在 package.json 中）</span>
+npm install redis connect-redis express-session
+
+<span class="c"># 驗證依賴</span>
+npm ls --depth=0</code></pre>
+
+<h3>4-3. 前台測試啟動</h3>
+<pre><code><span class="c"># 先完成階段 5 的 .env，再以前台模式驗證</span>
+node app.js
+
+<span class="c"># 預期輸出：</span>
+<span class="c"># ✅ 資料庫連線成功</span>
+<span class="c"># 🚀 ERMM 財務模組 API 已啟動: http://localhost:3008</span>
+
+<span class="c"># 另開 SSH 測試健康檢查</span>
+curl http://127.0.0.1:3008/api/health
+<span class="c"># Ctrl+C 停止前台測試</span></code></pre>
+
+<!-- ==================== ENV ==================== -->
+<h2 id="env">七、階段 5：生產環境 .env 配置</h2>
+
+<pre><code>nano /root/Project/ERMM-finance-system/.env</code></pre>
+<pre><code><span class="h"># ===== ERMM 財務模組 生產環境配置 =====</span>
+
+<span class="h"># --- 應用 ---</span>
+NODE_ENV=production
+PORT=3008
+USE_DB_CONFIG=true
+
+<span class="h"># --- MySQL ---</span>
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=ermm_app
+DB_PASSWORD=aaabbb123
+DB_NAME=ermm_db
+
+<span class="h"># --- Redis ---</span>
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=aaabbb123
+REDIS_DB=1
+
+<span class="h"># --- Session 安全 ---</span>
+SESSION_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c
+
+<span class="h"># --- JWT ---</span>
+JWT_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c</code></pre>
+
+<pre><code><span class="c"># 鎖定檔案權限：僅 root 可讀寫</span>
+chmod 600 /root/Project/ERMM-finance-system/.env
+
+<span class="c"># 驗證設定值</span>
+cat /root/Project/ERMM-finance-system/.env</code></pre>
+
+<div class="call warn">
+  <strong>配置項說明</strong>：
+  <table style="margin-top:8px">
+    <thead><tr><th>參數</th><th>值</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>PORT</code></td><td>3008</td><td>Express 監聽埠</td></tr>
+      <tr><td><code>USE_DB_CONFIG</code></td><td>true</td><td>啟用資料庫驅動配置（從 DB 載入系統設定）</td></tr>
+      <tr><td><code>DB_NAME</code></td><td>ermm_db</td><td>MySQL 資料庫名（小寫）</td></tr>
+      <tr><td><code>DB_PASSWORD</code></td><td>aaabbb123</td><td>ermm_app 帳號密碼</td></tr>
+      <tr><td><code>REDIS_DB</code></td><td>1</td><td>Redis 會話快取使用 DB 1</td></tr>
+      <tr><td><code>SESSION_SECRET</code></td><td>e41a01bc...b4e61c</td><td>會話簽章密鑰（64 字元 hex）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== SYSTEMD ==================== -->
+<h2 id="systemd">八、階段 6：systemd 服務註冊</h2>
+
+<h3>6-1. 建立服務單元檔</h3>
+<pre><code>nano /etc/systemd/system/ermm-finance.service</code></pre>
+<pre><code><span class="h">[Unit]</span>
+Description=ERMM Finance Module (Node.js Express)
+Documentation=https://github.com/rocky1953/ERMM-finance-system
+After=network.target mysql.service redis-server.service
+Wants=mysql.service redis-server.service
+
+<span class="h">[Service]</span>
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/Project/ERMM-finance-system
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /root/Project/ERMM-finance-system/app.js
+
+<span class="c"># 崩潰自動重啟</span>
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+<span class="c"># 日誌輸出到 journald</span>
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ermm-finance
+
+<span class="c"># 安全強化</span>
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/root/Project/ERMM-finance-system/logs
+
+<span class="h">[Install]</span>
+WantedBy=multi-user.target</code></pre>
+
+<div class="call info">
+  <strong>服務相依性</strong>：<code>After/Wants=mysql.service redis-server.service</code> 確保 MySQL 和 Redis 啟動後才啟動應用，避免啟動順序導致連線失敗。
+</div>
+
+<h3>6-2. 啟用並啟動服務</h3>
+<pre><code><span class="c"># 建立應用日誌目錄</span>
+mkdir -p /root/Project/ERMM-finance-system/logs
+
+<span class="c"># 重新載入 systemd 設定</span>
+systemctl daemon-reload
+
+<span class="c"># 啟動並設為開機自啟</span>
+systemctl enable --now ermm-finance
+
+<span class="c"># 確認狀態</span>
+systemctl status ermm-finance --no-pager</code></pre>
+
+<div class="call ok">
+  <strong>預期結果</strong>：<code>active (running)</code> + <code>enabled</code>。重開機後自動啟動；崩潰 5 秒後自動重啟。
+</div>
+
+<h3>6-3. 服務操作指令</h3>
+<pre><code>systemctl start ermm-finance       <span class="c"># 啟動</span>
+systemctl stop ermm-finance        <span class="c"># 停止</span>
+systemctl restart ermm-finance     <span class="c"># 重啟（更新程式碼後使用）</span>
+
+<span class="c"># 查即時日誌</span>
+journalctl -u ermm-finance -f
+
+<span class="c"># 查最近 100 行</span>
+journalctl -u ermm-finance -n 100 --no-pager</code></pre>
+
+<!-- ==================== FIREWALL ==================== -->
+<h2 id="firewall">九、階段 7：ufw 防火牆</h2>
+
+<pre><code><span class="c"># 預設拒絕連入、允許連出</span>
+ufw default deny incoming
+ufw default allow outgoing
+
+<span class="c"># 【最重要】先放行 SSH</span>
+ufw allow OpenSSH
+
+<span class="c"># 完整模式：只開 80/443，3008 不對外</span>
+ufw allow 80/tcp
+ufw allow 443/tcp
+
+<span class="c"># 啟用防火牆</span>
+ufw enable
+ufw status verbose</code></pre>
+
+<div class="call warn">
+  <strong>雲端主機</strong>：除 ufw 外，還需在雲平台安全群組放行 80/443。
+</div>
+
+<!-- ==================== NGINX ==================== -->
+<h2 id="nginx">十、階段 8：Nginx 反向代理 + HTTPS</h2>
+
+<div class="call ok">
+  <strong>核心設計原則：Nginx 只當純反向代理，路由分發全在 Node.js</strong><br>
+  Nginx 設定只需 <code>location / { proxy_pass http://127.0.0.1:3008; }</code>，所有 <code>/api/*</code> 路由由 <code>app.js</code> 和 <code>routes/</code> 資料夾管理。<strong>新增功能不需要修改 Nginx</strong>，只需在 Node.js 層新增路由檔即可。
+</div>
+
+<h3>路由分發架構</h3>
+<table>
+  <thead><tr><th>層級</th><th>檔案</th><th>職責</th><th>新增功能是否需改</th></tr></thead>
+  <tbody>
+    <tr><td>Nginx</td><td><code>/etc/nginx/sites-available/ermm-finance</code></td><td>反向代理 + HTTPS + 上傳限制</td><td><strong>不需要</strong></td></tr>
+    <tr><td>Node.js 入口</td><td><code>app.js</code></td><td>引入路由檔 + 註冊路徑前綴 + 靜態檔服務</td><td>加 2 行（require + app.use）</td></tr>
+    <tr><td>路由邏輯</td><td><code>routes/新模組.js</code></td><td>定義 GET/POST/PUT/DELETE 端點</td><td>新增此檔案</td></tr>
+    <tr><td>前端頁面</td><td><code>public/js/pages/新頁面.js</code></td><td>呼叫新 API + 渲染 UI</td><td>新增此檔案</td></tr>
+  </tbody>
+</table>
+
+<h3>8-1. 安裝 Nginx</h3>
+<pre><code>apt install -y nginx
+systemctl enable --now nginx
+nginx -v</code></pre>
+
+<h3>8-2. 建立反向代理站台設定</h3>
+<pre><code>nano /etc/nginx/sites-available/ermm-finance</code></pre>
+<pre><code><span class="h"># ERMM 財務模組 — 純反向代理，路由全在 Node.js</span>
+<span class="c"># 先以 HTTP 設定，憑證申請完成後 certbot 會自動改寫為 HTTPS</span>
+server {
+    listen 80;
+    listen [::]:80;
+    server_name finance.company.com;          <span class="c"># 改成你的網域</span>
+
+    <span class="c"># Excel 匯入上傳限制</span>
+    client_max_body_size 50m;
+
+    <span class="c"># 安全回應標頭</span>
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+
+    <span class="c"># 所有請求統一代理到 Node.js（不在此做路由分發）</span>
+    location / {
+        proxy_pass http://127.0.0.1:3008;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        <span class="c"># Excel 批次匯入耗時，逾時拉長至 5 分鐘</span>
+        proxy_connect_timeout 60s;
+        proxy_read_timeout    300s;
+        proxy_send_timeout    300s;
+    }
+}</code></pre>
+
+<pre><code><span class="c"># 啟用站台並移除預設站台</span>
+ln -s /etc/nginx/sites-available/ermm-finance /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+<span class="c"># 測試語法並重新載入</span>
+nginx -t
+systemctl reload nginx</code></pre>
+
+<div class="call info">
+  <strong>新增一組功能的完整步驟（零 Nginx 修改）</strong>：
+  <pre style="margin-top:8px"><code><span class="c">// 1. 新增路由檔 routes/payment.js</span>
+const express = require('express');
+const router = express.Router();
+router.get('/', async (req, res) => { res.json({ success: true }); });
+module.exports = router;
+
+<span class="c">// 2. 在 app.js 加兩行（與其他 25 個路由並列）</span>
+const paymentRoutes = require('./routes/payment');   <span class="c">// &lt;- 加這行</span>
+app.use('/api/payment', paymentRoutes);               <span class="c">// &lt;- 加這行</span>
+
+<span class="c">// 3. 重啟服務即可生效，Nginx 不需動</span>
+systemctl restart ermm-finance</code></pre>
+</div>
+
+<h3>8-3. Certbot 申請 Let's Encrypt 憑證</h3>
+<pre><code><span class="c"># 安裝 certbot 與 Nginx 外掛</span>
+apt install -y certbot python3-certbot-nginx
+
+<span class="c"># 自動申請憑證、改寫 Nginx 設定、強制 HTTP→HTTPS 跳轉</span>
+certbot --nginx \
+  -d finance.company.com \
+  --redirect \
+  --agree-tos \
+  -m admin@company.com \
+  --non-interactive
+
+<span class="c"># 測試憑證自動續期</span>
+certbot renew --dry-run
+systemctl list-timers certbot.timer --no-pager</code></pre>
+
+<h3>8-4. 無網域時的內網 HTTPS（選配）</h3>
+<pre><code>mkdir -p /etc/nginx/ssl
+openssl req -x509 -nodes -days 3650 \
+  -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/ermm.key \
+  -out /etc/nginx/ssl/ermm.crt \
+  -subj "/CN=伺服器內網IP或主機名"</code></pre>
+
+<!-- ==================== BACKUP ==================== -->
+<h2 id="backup">十一、階段 9：MySQL 定時備份</h2>
+
+<h3>9-1. 備份帳號認證檔</h3>
+<pre><code>nano /etc/mysql/backup.cnf</code></pre>
+<pre><code><span class="h">[mysqldump]</span>
+user=ermm_backup
+password=aaabbb123
+host=127.0.0.1</code></pre>
+<pre><code>chmod 600 /etc/mysql/backup.cnf</code></pre>
+
+<h3>9-2. 備份腳本</h3>
+<pre><code>nano /root/Project/ERMM-finance-system/scripts/db_backup.sh</code></pre>
+<pre><code><span class="h">#!/usr/bin/env bash</span>
+<span class="c"># ERMM MySQL 每日備份 + gzip + 保留 14 天</span>
+set -euo pipefail
+
+BACKUP_DIR=/var/backups/ermm-mysql
+RETENTION_DAYS=14
+DB=ermm_db
+TS=$(date +%Y%m%d_%H%M)
+FILE="$BACKUP_DIR/ERMM_$TS.sql"
+
+mkdir -p "$BACKUP_DIR"
+
+mysqldump \
+  --defaults-file=/etc/mysql/backup.cnf \
+  --single-transaction \
+  --routines --triggers \
+  --default-character-set=utf8mb4 \
+  "$DB" &gt; "$FILE"
+
+gzip -9 "$FILE"
+
+find "$BACKUP_DIR" -name 'ERMM_*.sql.gz' -mtime +$RETENTION_DAYS -delete
+
+echo "[$(date '+%F %T')] Backup OK: $FILE.gz"</code></pre>
+
+<pre><code>chmod 700 /root/Project/ERMM-finance-system/scripts/db_backup.sh
+
+<span class="c"># 手動試跑一次</span>
+/root/Project/ERMM-finance-system/scripts/db_backup.sh
+ls -lh /var/backups/ermm-mysql/</code></pre>
+
+<h3>9-3. 註冊 Cron 每日 02:00 執行</h3>
+<pre><code>nano /etc/cron.d/ermm-backup</code></pre>
+<pre><code><span class="c"># ERMM 資料庫每日備份（每天 02:00）</span>
+0 2 * * * root /root/Project/ERMM-finance-system/scripts/db_backup.sh &gt;&gt; /var/log/ermm/backup.log 2&gt;&amp;1</code></pre>
+<pre><code>chmod 644 /etc/cron.d/ermm-backup
+systemctl restart cron</code></pre>
+
+<h3>9-4. 備份日誌輪轉</h3>
+<pre><code>nano /etc/logrotate.d/ermm-backup</code></pre>
+<pre><code>/var/log/ermm/backup.log {
+    monthly
+    rotate 6
+    compress
+    missingok
+    notifempty
+    create 0640 root root
+}</code></pre>
+
+<!-- ==================== VERIFY ==================== -->
+<h2 id="verify">十二、上線驗證清單</h2>
+
+<table>
+  <thead><tr><th class="center">#</th><th>類別</th><th>檢查項</th><th>驗證方法</th><th>預期</th></tr></thead>
+  <tbody>
+    <tr><td class="center">1</td><td>服務</td><td>MySQL 運行中</td><td><code>systemctl status mysql</code></td><td>active / enabled</td></tr>
+    <tr><td class="center">2</td><td>服務</td><td>Redis 運行中</td><td><code>systemctl status redis-server</code></td><td>active / enabled</td></tr>
+    <tr><td class="center">3</td><td>服務</td><td>ermm-finance 運行中</td><td><code>systemctl status ermm-finance</code></td><td>active / enabled</td></tr>
+    <tr><td class="center">4</td><td>服務</td><td>崩潰自動重啟</td><td><code>pkill -f "node app.js"</code> 後等 10 秒</td><td>服務自動恢復</td></tr>
+    <tr><td class="center">5</td><td>API</td><td>健康檢查</td><td><code>curl http://127.0.0.1:3008/api/health</code></td><td>success:true</td></tr>
+    <tr><td class="center">6</td><td>DB</td><td>表數量完整</td><td><code>mysql -u ermm_app -p ermm_db -e "SHOW TABLES"</code></td><td>約 22 張</td></tr>
+    <tr><td class="center">7</td><td>DB</td><td>字符集</td><td><code>SHOW VARIABLES LIKE 'character_set_server'</code></td><td>utf8mb4</td></tr>
+    <tr><td class="center">8</td><td>Redis</td><td>DB 1 連通</td><td><code>redis-cli -a aaabbb123 -n 1 ping</code></td><td>PONG</td></tr>
+    <tr><td class="center">9</td><td>.env</td><td>配置正確</td><td><code>cat .env | grep -E 'PORT|DB_NAME|REDIS_DB|USE_DB_CONFIG'</code></td><td>3008 / ermm_db / 1 / true</td></tr>
+    <tr><td class="center">10</td><td>.env</td><td>權限鎖定</td><td><code>ls -l .env</code></td><td>-rw------- root</td></tr>
+    <tr><td class="center">11</td><td>Nginx</td><td>反向代理</td><td><code>curl -I http://網域/</code></td><td>200 OK</td></tr>
+    <tr><td class="center">12</td><td>Nginx</td><td>HTTPS</td><td>瀏覽器開 https://網域/</td><td>鎖頭，無警告</td></tr>
+    <tr><td class="center">13</td><td>Nginx</td><td>HTTP→HTTPS</td><td><code>curl -I http://網域/</code></td><td>301 → https</td></tr>
+    <tr><td class="center">14</td><td>Nginx</td><td>憑證續期</td><td><code>certbot renew --dry-run</code></td><td>successful</td></tr>
+    <tr><td class="center">15</td><td>備份</td><td>備份檔產出</td><td><code>ls -lh /var/backups/ermm-mysql/</code></td><td>有 .sql.gz</td></tr>
+    <tr><td class="center">16</td><td>ufw</td><td>防火牆規則</td><td><code>ufw status</code></td><td>22 + 80/443</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== OPS ==================== -->
+<h2 id="ops">十三、日常運維操作速查</h2>
+
+<div class="info-grid">
+  <div class="info-card">
+    <h4>應用服務</h4>
+<pre><code>systemctl status ermm-finance
+systemctl restart ermm-finance
+journalctl -u ermm-finance -f
+journalctl -u ermm-finance -n 200 --no-pager
+journalctl -u ermm-finance --since "1 hour ago"</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>MySQL</h4>
+<pre><code>systemctl status mysql
+systemctl restart mysql
+mysql -u ermm_app -p ermm_db
+mysqladmin -u ermm_app -p status
+tail -f /var/log/mysql/error.log</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>Redis</h4>
+<pre><code>systemctl status redis-server
+redis-cli -a aaabbb123 -n 1
+redis-cli -a aaabbb123 info memory
+redis-cli -a aaabbb123 -n 1 dbsize</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>Nginx / 防火牆 / 備份</h4>
+<pre><code>systemctl reload nginx
+nginx -t
+tail -f /var/log/nginx/access.log
+ufw status verbose
+ls -lh /var/backups/ermm-mysql/
+df -h ; free -h</code></pre>
+  </div>
+</div>
+
+<!-- ==================== UPDATE ==================== -->
+<h2 id="update">十四、版本更新與回滾</h2>
+
+<h3>標準更新流程</h3>
+<pre><code><span class="c"># 1. 備份資料庫</span>
+/root/Project/ERMM-finance-system/scripts/db_backup.sh
+
+<span class="c"># 2. 停止服務</span>
+systemctl stop ermm-finance
+
+<span class="c"># 3. 更新程式碼</span>
+cd /root/Project/ERMM-finance-system
+git fetch --all
+git reset --hard origin/main
+
+<span class="c"># 4. 若 package.json 有變動</span>
+npm install --omit=dev
+
+<span class="c"># 5. 啟動並驗證</span>
+systemctl start ermm-finance
+sleep 3
+curl http://127.0.0.1:3008/api/health</code></pre>
+
+<h3>快速回滾</h3>
+<pre><code>cd /root/Project/ERMM-finance-system
+git log --oneline -5
+
+systemctl stop ermm-finance
+git reset --hard &lt;舊版commit&gt;
+npm install --omit=dev    <span class="c"># 僅當依賴有變動時</span>
+systemctl start ermm-finance</code></pre>
+
+<!-- ==================== TROUBLE ==================== -->
+<h2 id="trouble">十五、故障排查</h2>
+
+<h3>症狀 1：服務啟動失敗</h3>
+<pre><code>journalctl -u ermm-finance -n 100 --no-pager
+
+<span class="c"># 常見原因：</span>
+<span class="c"># ① Cannot find module 'express'  → 未執行 npm install --omit=dev</span>
+<span class="c"># ② ENOENT .env / WorkingDirectory → 目錄路徑錯</span>
+<span class="c"># ③ Access denied for user          → .env 密碼錯</span>
+<span class="c"># ④ EADDRINUSE :3008                → 埠口被佔</span>
+<span class="c"># ⑤ Redis connection refused        → Redis 未啟動或密碼錯</span></code></pre>
+
+<h3>症狀 2：Redis 連線失敗</h3>
+<pre><code><span class="c"># 確認 Redis 運行</span>
+systemctl status redis-server
+
+<span class="c"># 測試連線（帶密碼 + 指定 DB 1）</span>
+redis-cli -a aaabbb123 -n 1 ping
+<span class="c"># 若回 NOAUTH → .env 的 REDIS_PASSWORD 與 redis.conf 不一致</span>
+<span class="c"># 若回 Connection refused → Redis 服務未啟動或 bind-address 不對</span></code></pre>
+
+<h3>症狀 3：3008 埠口被佔用</h3>
+<pre><code>ss -ltnp | grep :3008
+pkill -f "node app.js"
+systemctl restart ermm-finance</code></pre>
+
+<h3>症狀 4：Nginx 502 Bad Gateway</h3>
+<pre><code>systemctl status ermm-finance
+curl http://127.0.0.1:3008/api/health
+tail -20 /var/log/nginx/error.log</code></pre>
+
+<h3>症狀 5：Nginx 413 Request Entity Too Large</h3>
+<pre><code><span class="c"># 確認 Nginx 設定有：</span>
+client_max_body_size 50m;
+<span class="c"># 修改後：nginx -t && systemctl reload nginx</span></code></pre>
+
+<h3>症狀 6：中文資料亂碼</h3>
+<pre><code>mysql -u ermm_app -p ermm_db -e "SHOW VARIABLES LIKE 'character%';"
+<span class="c"># 確認 character_set_server = utf8mb4</span>
+<span class="c"># mysqldump 與 mysql 導入都需帶 --default-character-set=utf8mb4</span></code></pre>
+
+<h3>症狀 7：重開機後服務沒起來</h3>
+<pre><code>systemctl is-enabled ermm-finance mysql redis-server nginx
+<span class="c"># 若非 enabled：</span>
+systemctl enable ermm-finance mysql redis-server nginx
+journalctl -u ermm-finance -b --no-pager | head -50</code></pre>
+
+<div style="text-align:center; margin-top:48px; color:var(--text-mute); font-size:13px; border-top:1px solid var(--border); padding-top:20px">
+  ERMM 財務模組 — Ubuntu 正式環境部署操作手冊 v2.0 &middot; 2026-09-13 &middot; rocky1953/ERMM-finance-system
+</div>
+
+</div>
+</body>
+</html>

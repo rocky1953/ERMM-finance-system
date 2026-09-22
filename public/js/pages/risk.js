@@ -109,8 +109,9 @@ async function loadRisk() {
 
 // ===== 風險指標說明彈窗 =====
 const RiskHelp = {
-    open(key) {
-        const r = _riskData || {};
+    open(key, data) {
+        // data 為選填：由儀表板等其他頁面傳入風險資料；風險預警頁本身用 _riskData
+        const r = data || _riskData || {};
         const v = (k) => Number(r[k] || 0);
         const cfg = {
             z: {

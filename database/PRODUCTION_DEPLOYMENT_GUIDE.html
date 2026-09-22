@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — Windows Server 2019 正式環境部署操作手冊</title>
+<style>
+  :root{
+    --primary:#1e40af; --primary-2:#2563eb; --accent:#0ea5e9;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#1e40af,#0891b2); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:30px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px; columns:2; column-gap:40px}
+  .toc li{margin:4px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#eff6ff,#dbeafe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f1f5f9}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+  td.center{text-align:center}
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.55; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+  pre .h{color:#f472b6}
+  pre .p{color:#c4b5fd}
+  pre .v{color:#e2e8f0}
+
+  .flow{display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap}
+  .flow-step{
+    flex:1; min-width:130px; text-align:center; padding:16px 12px;
+    border:2px solid var(--border); border-radius:10px; background:var(--surface);
+  }
+  .flow-step .num{
+    width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:32px; font-size:14px; font-weight:700; margin:0 auto 8px;
+  }
+  .flow-step .ttl{font-size:14px; font-weight:700; color:var(--primary); margin-bottom:4px}
+  .flow-step .desc{font-size:12px; color:var(--text-soft); line-height:1.5}
+  .flow-arrow{display:flex; align-items:center; color:var(--primary); font-size:22px; padding:0 4px}
+
+  .arch{
+    background:var(--code-bg); border:1px solid var(--border); border-radius:10px;
+    padding:24px; margin:20px 0; text-align:center; font-family:monospace; font-size:14px;
+    line-height:2; color:var(--text-soft);
+  }
+  .arch .box{
+    display:inline-block; padding:8px 24px; border-radius:8px; margin:4px 8px;
+    font-weight:700;
+  }
+  .arch .client{background:#dbeafe; color:#1e40af; border:2px solid #60a5fa}
+  .arch .iis{background:#dcfce7; color:#166534; border:2px solid #4ade80}
+  .arch .node{background:#fef3c7; color:#92400e; border:2px solid #fbbf24}
+  .arch .redis{background:#fef2f2; color:#991b1b; border:2px solid #f87171}
+  .arch .mysql{background:#fce7f3; color:#9d174d; border:2px solid #f472b6}
+  .arch .svc{background:#e0e7ff; color:#3730a3; border:2px solid #818cf8; font-size:12px}
+  .arch .arr{color:var(--primary); font-size:18px; font-weight:700}
+
+  .info-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0}
+  .info-card{border:1px solid var(--border); border-radius:10px; padding:16px; background:var(--surface)}
+  .info-card h4{margin:0 0 10px; color:var(--primary); font-size:14px}
+  .info-card pre{margin:0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ==================== COVER ==================== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — Windows Server 2019 正式環境部署操作手冊</h1>
+  <div class="sub">Node.js + Express + MySQL 8 + Redis 生產級部署：NSSM 服務守護、IIS 純反向代理（路由全在 Node.js）、HTTPS、定時備份</div>
+  <div class="meta">
+    <span>版本：v2.0</span>
+    <span>日期：2026-09-13</span>
+    <span>適用 OS：Windows Server 2019 (1809+)</span>
+    <span>Git：rocky1953/ERMM-finance-system</span>
+  </div>
+  <span class="tag">NSSM Windows 服務</span>
+  <span class="tag">IIS 純反向代理</span>
+  <span class="tag">路由分發在 Node.js</span>
+  <span class="tag">Redis 會話快取</span>
+  <span class="tag">Let's Encrypt HTTPS</span>
+  <span class="tag">MySQL 8 調優</span>
+  <span class="tag">定時備份</span>
+  <span class="tag">開機自啟</span>
+</div>
+
+<!-- ==================== TOC ==================== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#arch">部署架構總覽</a></li>
+    <li><a href="#prereq">階段 0：環境與權限準備</a></li>
+    <li><a href="#mysql">階段 1：安裝並調優 MySQL 8</a></li>
+    <li><a href="#redis">階段 2：安裝 Redis</a></li>
+    <li><a href="#node">階段 3：安裝 Node.js 20 LTS 與 NSSM</a></li>
+    <li><a href="#code">階段 4：部署應用程式碼</a></li>
+    <li><a href="#env">階段 5：生產環境 .env 配置</a></li>
+    <li><a href="#service">階段 6：NSSM 註冊 Windows 服務</a></li>
+    <li><a href="#firewall">階段 7：防火牆與埠口</a></li>
+    <li><a href="#iis">階段 8：IIS 反向代理 + HTTPS</a></li>
+    <li><a href="#backup">階段 9：MySQL 定時備份</a></li>
+    <li><a href="#verify">上線驗證清單</a></li>
+    <li><a href="#ops">日常運維操作</a></li>
+    <li><a href="#update">版本更新與回滾</a></li>
+    <li><a href="#trouble">故障排查</a></li>
+  </ol>
+</div>
+
+<!-- ==================== ARCH ==================== -->
+<h2 id="arch">一、部署架構總覽</h2>
+
+<div class="arch">
+  <span class="box client">使用者瀏覽器</span>
+  <span class="arr">&rarr;</span>
+  <span class="box iis">IIS 10 :80 / :443<br><small>純反向代理（不路由）</small></span>
+  <span class="arr">&rarr;</span>
+  <span class="box node">Node.js Express :3008<br><small>app.js + routes/（全部路由）</small></span>
+  <span class="arr">&rarr;</span>
+  <span class="box mysql">MySQL 8 :3306<br><small>ermm_db</small></span>
+  <br>
+  <span class="box redis">Redis :6379 / DB 1<br><small>會話快取</small></span>
+  <br><br>
+  <span class="box svc">NSSM 服務：ERMM-Finance（開機自啟 / 崩潰重啟）</span>
+  &nbsp;
+  <span class="box svc">MySQL 服務：MySQL80</span>
+  &nbsp;
+  <span class="box svc">Redis 服務：Redis</span>
+  &nbsp;
+  <span class="box svc">工作排程：每日 02:00 備份</span>
+</div>
+
+<div class="call ok">
+  <strong>設計原則：IIS 不參與路由分發</strong><br>
+  IIS 的 <code>web.config</code> 只需一條 Rewrite 規則將所有請求代理到 <code>http://127.0.0.1:3008/</code>。所有 <code>/api/*</code> 路由由 <code>app.js</code> 和 <code>routes/</code> 資料夾管理。<strong>新增功能不需要修改 IIS</strong>，只需在 Node.js 層新增路由檔即可。
+</div>
+
+<div class="call info">
+  <strong>兩種部署模式</strong>：
+  <ul style="margin:6px 0 0 18px;padding:0">
+    <li><strong>簡易模式（內網使用）</strong>：跳過 IIS，使用者直接訪問 <code>http://伺服器IP:3008</code>。只需完成階段 1~7。</li>
+    <li><strong>完整模式（對外 / 需要 HTTPS）</strong>：IIS 接管 80/443 埠反向代理至 3008。完成全部階段。</li>
+  </ul>
+</div>
+
+<h3>部署流程</h3>
+<div class="flow">
+  <div class="flow-step"><div class="num">0</div><div class="ttl">環境準備</div><div class="desc">Node / Git / IIS / NSSM</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">1</div><div class="ttl">MySQL</div><div class="desc">安裝調優 + 還原資料</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">2</div><div class="ttl">Redis</div><div class="desc">安裝 + 安全設定</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">3</div><div class="ttl">程式碼 + 服務</div><div class="desc">Git clone + NSSM 守護</div></div>
+  <div class="flow-arrow">&rarr;</div>
+  <div class="flow-step"><div class="num">4</div><div class="ttl">代理/備份</div><div class="desc">IIS + HTTPS + 排程</div></div>
+</div>
+
+<!-- ==================== PREREQ ==================== -->
+<h2 id="prereq">二、階段 0：環境與權限準備</h2>
+
+<h3>0-1. 系統需求</h3>
+<table>
+  <thead><tr><th>元件</th><th>版本要求</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>Windows Server 2019</td><td>1809 (Build 17763) 以上</td><td>主機作業系統</td></tr>
+    <tr><td>Node.js</td><td><strong>20 LTS（推薦）</strong></td><td>執行 Express 應用</td></tr>
+    <tr><td>MySQL</td><td>8.0.x</td><td>資料庫（ermm_db / utf8mb4）</td></tr>
+    <tr><td>Redis</td><td>7.0+（Windows 版或 WSL）</td><td>會話快取（DB 1）</td></tr>
+    <tr><td>Git for Windows</td><td>2.40+</td><td>拉取程式碼</td></tr>
+    <tr><td>NSSM</td><td>2.24+</td><td>將 node app.js 註冊為 Windows 服務</td></tr>
+    <tr><td>IIS 10</td><td>Server 2019 內建</td><td>反向代理（選配）</td></tr>
+    <tr><td>記憶體 / 磁碟</td><td>建議 4GB+ / 20GB 可用</td><td>含資料與備份保留空間</td></tr>
+  </tbody>
+</table>
+
+<h3>0-2. 安裝 Node.js 20 LTS、Git</h3>
+<pre><code><span class="c"># Node.js：下載 LTS MSI 安裝（勾選 Add to PATH）</span>
+<span class="c"># https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi</span>
+
+<span class="c"># Git：下載 64-bit 安裝</span>
+<span class="c"># https://git-scm.com/download/win</span>
+
+<span class="c"># 驗證（重開 PowerShell 後）</span>
+node --version   <span class="c"># v20.x.x</span>
+npm --version
+git --version</code></pre>
+
+<h3>0-3. 安裝 IIS（僅完整模式需要）</h3>
+<pre><code><span class="c"># 以系統管理員 PowerShell 執行</span>
+Install-WindowsFeature -Name Web-Server, Web-Mgmt-Tools, Web-Mgmt-Console -IncludeManagementTools
+
+<span class="c"># 確認安裝成功</span>
+Get-Website</code></pre>
+
+<p>另需下載並安裝兩個 IIS 擴充元件（微軟官方，免費）：</p>
+<ul class="steps">
+  <li><strong>URL Rewrite 2.1</strong>：<a href="https://www.iis.net/downloads/microsoft/url-rewrite">iis.net/downloads/microsoft/url-rewrite</a></li>
+  <li><strong>Application Request Routing (ARR) 3.0</strong>：<a href="https://www.iis.net/downloads/microsoft/application-request-routing">iis.net/downloads/microsoft/application-request-routing</a></li>
+</ul>
+<pre><code><span class="c"># 安裝 ARR 後，啟用代理功能</span>
+&amp; "$env:windir\system32\inetsrv\appcmd.exe" set config -section:system.webServer/proxy /enabled:"True" /commit:apphost</code></pre>
+
+<h3>0-4. 下載 NSSM</h3>
+<p>官網：<a href="https://nssm.cc/download">nssm.cc/download</a>，解壓後將 <code>nssm.exe</code>（win64 版）放到 <code>C:\tools\nssm\</code>。</p>
+
+<h3>0-5. 建立標準目錄結構</h3>
+<pre><code><span class="c"># 專案目錄</span>
+New-Item -ItemType Directory -Force C:\Project\ERMM-finance-system | Out-Null
+
+<span class="c"># 備份目錄</span>
+New-Item -ItemType Directory -Force D:\backup\mysql | Out-Null
+
+<span class="c"># 日誌目錄</span>
+New-Item -ItemType Directory -Force C:\Project\ERMM-finance-system\logs | Out-Null
+
+<span class="c"># 服務腳本目錄</span>
+New-Item -ItemType Directory -Force C:\Project\ERMM-finance-system\scripts | Out-Null
+
+<span class="c"># NSSM 工具目錄</span>
+New-Item -ItemType Directory -Force C:\tools\nssm | Out-Null</code></pre>
+
+<!-- ==================== MYSQL ==================== -->
+<h2 id="mysql">三、階段 1：安裝並調優 MySQL 8</h2>
+
+<h3>1-1. 安裝 MySQL 8.0</h3>
+<p>下載 <strong>MySQL Installer for Windows</strong>：<a href="https://dev.mysql.com/downloads/installer/">dev.mysql.com/downloads/installer</a></p>
+<ul class="steps">
+  <li>安裝類型選擇 <strong>Server only</strong></li>
+  <li>Config Type 選 <strong>Server Machine</strong>；連線數維持預設或調為 100</li>
+  <li>埠口 <code>3306</code>，勾選開機自動啟動（Windows Service 名稱預設 <code>MySQL80</code>）</li>
+  <li>Authentication Method 選 <strong>Use Strong Password Encryption</strong></li>
+  <li>設定 root 強密碼並妥善保存</li>
+</ul>
+
+<h3>1-2. 建立資料庫與專用帳號</h3>
+<pre><code><span class="c"># 建立資料庫（小寫 ermm_db）</span>
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS ermm_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+<span class="c"># 建立應用專用帳號</span>
+mysql -u root -p -e "CREATE USER IF NOT EXISTS 'ermm_app'@'localhost' IDENTIFIED BY 'aaabbb123'; GRANT ALL PRIVILEGES ON ermm_db.* TO 'ermm_app'@'localhost'; FLUSH PRIVILEGES;"
+
+<span class="c"># 驗證帳號可登入</span>
+mysql -u ermm_app -p ermm_db -e "SELECT VERSION();"</code></pre>
+
+<h3>1-3. 還原資料庫備份</h3>
+<pre><code><span class="c"># 將源伺服器的 ERMM_db_full.sql 放到 D:\backup\，然後導入</span>
+mysql -u ermm_app -p --default-character-set=utf8mb4 ermm_db &lt; D:\backup\ERMM_db_full.sql
+
+<span class="c"># 驗證表數量（預期約 22 張）</span>
+mysql -u ermm_app -p ermm_db -e "SHOW TABLES;"</code></pre>
+
+<h3>1-4. my.ini 生產調優</h3>
+<p>編輯 MySQL 設定檔（預設路徑 <code>C:\ProgramData\MySQL\MySQL Server 8.0\my.ini</code>），在 <code>[mysqld]</code> 段加入：</p>
+<pre><code>nano <span class="c"># 或用 notepad</span>
+<span class="c"># 編輯 C:\ProgramData\MySQL\MySQL Server 8.0\my.ini</span></code></pre>
+<pre><code><span class="h">[mysqld]</span>
+<span class="c"># --- 基本 ---</span>
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci
+default-time-zone='+08:00'
+max_connections=100
+wait_timeout=28800
+interactive_timeout=28800
+
+<span class="c"># --- InnoDB（4GB 機器範例）---</span>
+innodb_buffer_pool_size=1G
+innodb_log_file_size=256M
+innodb_flush_log_at_trx_commit=1
+
+<span class="c"># --- 連線/封包 ---</span>
+max_allowed_packet=64M
+
+<span class="c"># --- 慢查詢日誌 ---</span>
+slow_query_log=1
+slow_query_log_file=D:/backup/mysql/slow.log
+long_query_time=2
+
+<span class="c"># --- 安全：綁定本機 ---</span>
+bind-address=127.0.0.1</code></pre>
+<pre><code><span class="c"># 修改後重啟 MySQL 服務生效</span>
+Restart-Service MySQL80</code></pre>
+
+<!-- ==================== REDIS ==================== -->
+<h2 id="redis">四、階段 2：安裝 Redis</h2>
+
+<div class="call warn">
+  <strong>Windows 上的 Redis</strong>：Redis 官方不直接支援 Windows。推薦使用<strong> Memurai</strong>（Redis 相容的 Windows 原生服務，免費 Developer 版）或透過 <strong>WSL2</strong> 運行 Redis。以下以 Memurai 為例。
+</div>
+
+<h3>2-1. 安裝 Memurai（Redis for Windows）</h3>
+<pre><code><span class="c"># 下載 Memurai Developer（免費）</span>
+<span class="c"># https://www.memurai.com/get-memurai</span>
+
+<span class="c"># 安裝後確認服務</span>
+Get-Service Memurai
+<span class="c"># 或使用 WSL2：</span>
+<span class="c"># wsl --install -d Ubuntu-22.04</span>
+<span class="c"># sudo apt install redis-server</span></code></pre>
+
+<h3>2-2. Redis 安全設定</h3>
+<p>編輯 Redis 設定檔（Memurai：<code>C:\Program Files\Memurai\memurai.conf</code>；WSL：<code>/etc/redis/redis.conf</code>）：</p>
+<pre><code><span class="c"># 綁定本機</span>
+bind 127.0.0.1 ::1
+
+<span class="c"># 設定密碼</span>
+requirepass aaabbb123
+
+<span class="c"># 預設 DB 數量（本系統使用 DB 1）</span>
+databases 16
+
+<span class="c"># 記憶體上限</span>
+maxmemory 256mb
+maxmemory-policy allkeys-lru</code></pre>
+<pre><code><span class="c"># 重啟服務</span>
+Restart-Service Memurai
+<span class="c"># 或 WSL：sudo systemctl restart redis-server</span>
+
+<span class="c"># 驗證連線（指定 DB 1）</span>
+redis-cli -a aaabbb123 -n 1 ping
+<span class="c"># 預期：PONG</span></code></pre>
+
+<!-- ==================== NODE ==================== -->
+<h2 id="node">五、階段 3：安裝 Node.js 20 LTS 與 NSSM</h2>
+
+<p>Node.js 和 Git 已在階段 0-2 安裝。此階段確認 NSSM 已就位：</p>
+<pre><code><span class="c"># 確認 NSSM 已就位</span>
+C:\tools\nssm\nssm.exe version
+
+<span class="c"># 確認 Node.js 版本</span>
+node --version    <span class="c"># v20.x.x</span></code></pre>
+
+<!-- ==================== CODE ==================== -->
+<h2 id="code">六、階段 4：部署應用程式碼</h2>
+
+<h3>4-1. 從 GitHub 取得程式碼</h3>
+<pre><code>cd C:\Project
+git clone https://github.com/rocky1953/ERMM-finance-system.git ERMM-finance-system
+cd ERMM-finance-system
+
+<span class="c"># 確認版本</span>
+git log --oneline -1</code></pre>
+
+<h3>4-2. 安裝生產依賴</h3>
+<pre><code>cd C:\Project\ERMM-finance-system
+
+<span class="c"># 只裝生產依賴（用 npm.cmd 避免 PowerShell 執行原則問題）</span>
+npm.cmd install --omit=dev
+
+<span class="c"># 若需 Redis 會話支援</span>
+npm.cmd install redis connect-redis express-session
+
+<span class="c"># 驗證依賴</span>
+npm.cmd ls --depth=0</code></pre>
+
+<h3>4-3. 前台測試啟動</h3>
+<pre><code><span class="c"># 先完成階段 5 的 .env，再以前台模式驗證</span>
+node app.js
+
+<span class="c"># 預期輸出：</span>
+<span class="c"># ✅ 資料庫連線成功</span>
+<span class="c"># 🚀 ERMM 財務模組 API 已啟動: http://localhost:3008</span>
+
+<span class="c"># 另一個 PowerShell 測試健康檢查</span>
+Invoke-RestMethod http://localhost:3008/api/health | ConvertTo-Json
+<span class="c"># Ctrl+C 停止前台測試</span></code></pre>
+
+<!-- ==================== ENV ==================== -->
+<h2 id="env">七、階段 5：生產環境 .env 配置</h2>
+
+<pre><code><span class="c"># 建立 .env 檔案</span>
+notepad C:\Project\ERMM-finance-system\.env</code></pre>
+<pre><code><span class="h"># ===== ERMM 財務模組 生產環境配置 =====</span>
+
+<span class="h"># --- 應用 ---</span>
+NODE_ENV=production
+PORT=3008
+USE_DB_CONFIG=true
+
+<span class="h"># --- MySQL ---</span>
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=ermm_app
+DB_PASSWORD=aaabbb123
+DB_NAME=ermm_db
+
+<span class="h"># --- Redis ---</span>
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_PASSWORD=aaabbb123
+REDIS_DB=1
+
+<span class="h"># --- Session 安全 ---</span>
+SESSION_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c
+
+<span class="h"># --- JWT ---</span>
+JWT_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c</code></pre>
+
+<pre><code><span class="c"># 鎖定檔案權限：僅 Administrators 可讀寫</span>
+icacls C:\Project\ERMM-finance-system\.env /inheritance:r /grant:r "Administrators:F"
+
+<span class="c"># 驗證設定值</span>
+Get-Content C:\Project\ERMM-finance-system\.env</code></pre>
+
+<div class="call warn">
+  <strong>配置項說明</strong>：
+  <table style="margin-top:8px">
+    <thead><tr><th>參數</th><th>值</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td><code>PORT</code></td><td>3008</td><td>Express 監聽埠</td></tr>
+      <tr><td><code>USE_DB_CONFIG</code></td><td>true</td><td>啟用資料庫驅動配置</td></tr>
+      <tr><td><code>DB_NAME</code></td><td>ermm_db</td><td>MySQL 資料庫名（小寫）</td></tr>
+      <tr><td><code>DB_PASSWORD</code></td><td>aaabbb123</td><td>ermm_app 帳號密碼</td></tr>
+      <tr><td><code>REDIS_DB</code></td><td>1</td><td>Redis 會話快取使用 DB 1</td></tr>
+      <tr><td><code>SESSION_SECRET</code></td><td>e41a01bc...b4e61c</td><td>會話簽章密鑰（64 字元 hex）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================== SERVICE ==================== -->
+<h2 id="service">八、階段 6：NSSM 註冊 Windows 服務</h2>
+
+<h3>6-1. 註冊服務（管理員 PowerShell）</h3>
+<pre><code><span class="c"># 建立日誌目錄</span>
+New-Item -ItemType Directory -Force C:\Project\ERMM-finance-system\logs | Out-Null
+
+<span class="c"># 註冊服務：ERMM-Finance</span>
+C:\tools\nssm\nssm.exe install ERMM-Finance "C:\Program Files\nodejs\node.exe" "C:\Project\ERMM-finance-system\app.js"
+
+<span class="c"># 設定工作目錄（重要，否則找不到 .env 與相對路徑）</span>
+C:\tools\nssm\nssm.exe set ERMM-Finance AppDirectory C:\Project\ERMM-finance-system
+
+<span class="c"># 輸出日誌重定向</span>
+C:\tools\nssm\nssm.exe set ERMM-Finance AppStdout C:\Project\ERMM-finance-system\logs\service-out.log
+C:\tools\nssm\nssm.exe set ERMM-Finance AppStderr C:\Project\ERMM-finance-system\logs\service-err.log
+C:\tools\nssm\nssm.exe set ERMM-Finance AppRotateFiles 1
+C:\tools\nssm\nssm.exe set ERMM-Finance AppRotateBytes 10485760   <span class="c"># 10MB 輪轉</span>
+
+<span class="c"># 崩潰自動重啟策略</span>
+C:\tools\nssm\nssm.exe set ERMM-Finance AppExit Default Restart
+C:\tools\nssm\nssm.exe set ERMM-Finance AppRestartDelay 5000      <span class="c"># 5 秒後重啟</span>
+
+<span class="c"># 設定服務相依 MySQL 與 Redis</span>
+C:\tools\nssm\nssm.exe set ERMM-Finance DependOnService MySQL80 Memurai
+
+<span class="c"># 啟動服務</span>
+Start-Service ERMM-Finance
+Get-Service ERMM-Finance</code></pre>
+
+<div class="call ok">
+  <strong>預期結果</strong>：<code>Get-Service ERMM-Finance</code> 顯示 <code>Status: Running</code>，<code>StartType: Automatic</code>。重開機後自動啟動；崩潰 5 秒後自動重啟。
+</div>
+
+<h3>6-2. 服務日常操作指令</h3>
+<pre><code>Stop-Service    ERMM-Finance   <span class="c"># 停止</span>
+Start-Service   ERMM-Finance   <span class="c"># 啟動</span>
+Restart-Service ERMM-Finance   <span class="c"># 重啟</span>
+
+<span class="c"># 查日誌最後 50 行</span>
+Get-Content C:\Project\ERMM-finance-system\logs\service-out.log -Tail 50 -Wait
+
+<span class="c"># 移除服務（解除安裝時）</span>
+Stop-Service ERMM-Finance
+C:\tools\nssm\nssm.exe remove ERMM-Finance confirm</code></pre>
+
+<!-- ==================== FIREWALL ==================== -->
+<h2 id="firewall">九、階段 7：防火牆與埠口</h2>
+
+<h3>簡易模式：放行 3008（內網直連）</h3>
+<pre><code><span class="c"># 新建輸入規則放行 3008（僅內網網段）</span>
+New-NetFirewallRule -DisplayName "ERMM Finance 3008" `
+  -Direction Inbound -Protocol TCP -LocalPort 3008 `
+  -Action Allow -Profile Domain,Private
+
+<span class="c"># 驗證埠口監聽</span>
+netstat -ano | findstr :3008</code></pre>
+
+<h3>完整模式：僅放行 80/443</h3>
+<pre><code>New-NetFirewallRule -DisplayName "HTTP 80"  -Direction Inbound -Protocol TCP -LocalPort 80  -Action Allow
+New-NetFirewallRule -DisplayName "HTTPS 443" -Direction Inbound -Protocol TCP -LocalPort 443 -Action Allow</code></pre>
+
+<!-- ==================== IIS ==================== -->
+<h2 id="iis">十、階段 8：IIS 反向代理 + HTTPS</h2>
+
+<div class="call ok">
+  <strong>核心設計原則：IIS 只當純反向代理，路由分發全在 Node.js</strong><br>
+  IIS 的 <code>web.config</code> 只需一條 <code>&lt;rule&gt;</code> 將所有請求代理到 <code>http://127.0.0.1:3008/</code>。所有 <code>/api/*</code> 路由由 <code>app.js</code> 和 <code>routes/</code> 資料夾管理。<strong>新增功能不需要修改 IIS/web.config</strong>，只需在 Node.js 層新增路由檔即可。
+</div>
+
+<h3>路由分發架構</h3>
+<table>
+  <thead><tr><th>層級</th><th>檔案</th><th>職責</th><th>新增功能是否需改</th></tr></thead>
+  <tbody>
+    <tr><td>IIS</td><td><code>web.config</code>（URL Rewrite + ARR）</td><td>反向代理 + HTTPS + 上傳限制</td><td><strong>不需要</strong></td></tr>
+    <tr><td>Node.js 入口</td><td><code>app.js</code></td><td>引入路由檔 + 註冊路徑前綴 + 靜態檔服務</td><td>加 2 行（require + app.use）</td></tr>
+    <tr><td>路由邏輯</td><td><code>routes/新模組.js</code></td><td>定義 GET/POST/PUT/DELETE 端點</td><td>新增此檔案</td></tr>
+    <tr><td>前端頁面</td><td><code>public/js/pages/新頁面.js</code></td><td>呼叫新 API + 渲染 UI</td><td>新增此檔案</td></tr>
+  </tbody>
+</table>
+
+<h3>8-1. 建立站台與 web.config</h3>
+<ul class="steps">
+  <li>開啟 <strong>IIS 管理員</strong>（inetmgr）→ 網站 → 新增網站</li>
+  <li>站台名稱 <code>ERMM-Finance</code>；實體路徑指向空目錄（如 <code>C:\inetpub\ERMM</code>）</li>
+  <li>繫結：http 埠 <code>80</code>，主機名稱填你的網域</li>
+  <li>應用程式集區 <code>.NET CLR 版本</code> 選 <strong>無 Managed 程式碼</strong></li>
+</ul>
+
+<p>在站台實體目錄建立 <code>web.config</code>：</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;configuration&gt;
+  &lt;system.webServer&gt;
+    &lt;rewrite&gt;
+      &lt;rules&gt;
+        &lt;rule name="ReverseProxyToNode" stopProcessing="true"&gt;
+          &lt;match url="(.*)" /&gt;
+          &lt;action type="Rewrite" url="http://127.0.0.1:3008/{R:1}" /&gt;
+          &lt;serverVariables&gt;
+            &lt;set name="HTTP_X_FORWARDED_PROTO" value="https" /&gt;
+            &lt;set name="HTTP_X_REAL_IP" value="{REMOTE_ADDR}" /&gt;
+          &lt;/serverVariables&gt;
+        &lt;/rule&gt;
+      &lt;/rules&gt;
+    &lt;/rewrite&gt;
+    &lt;security&gt;
+      &lt;requestFiltering&gt;
+        &lt;requestLimits maxAllowedContentLength="52428800" /&gt;  &lt;!-- 50MB --&gt;
+      &lt;/requestFiltering&gt;
+    &lt;/security&gt;
+    &lt;httpProtocol&gt;
+      &lt;customHeaders&gt;
+        &lt;add name="X-Content-Type-Options" value="nosniff" /&gt;
+        &lt;add name="X-Frame-Options" value="SAMEORIGIN" /&gt;
+      &lt;/customHeaders&gt;
+    &lt;/httpProtocol&gt;
+  &lt;/system.webServer&gt;
+&lt;/configuration&gt;</code></pre>
+
+<div class="call info">
+  <strong>新增一組功能的完整步驟（零 IIS 修改）</strong>：
+  <pre style="margin-top:8px"><code><span class="c">// 1. 新增路由檔 routes/payment.js</span>
+const express = require('express');
+const router = express.Router();
+router.get('/', async (req, res) => { res.json({ success: true }); });
+module.exports = router;
+
+<span class="c">// 2. 在 app.js 加兩行</span>
+const paymentRoutes = require('./routes/payment');   <span class="c">// &lt;- 加這行</span>
+app.use('/api/payment', paymentRoutes);               <span class="c">// &lt;- 加這行</span>
+
+<span class="c">// 3. 重啟服務即可生效，IIS 不需動</span>
+Restart-Service ERMM-Finance</code></pre>
+</div>
+
+<h3>8-2. 設定 HTTPS 憑證</h3>
+
+<h4>方式 A：商用 / 內部 CA 憑證</h4>
+<ul class="steps">
+  <li>向 CA 申請憑證，取得 <code>.pfx</code> 檔</li>
+  <li>IIS 管理員 → 伺服器節點 → 伺服器憑證 → 匯入 PFX</li>
+  <li>站台 → 繫結 → 新增：類型 <code>https</code>、埠 <code>443</code>、選取憑證</li>
+</ul>
+
+<h4>方式 B：win-acme 免費 Let's Encrypt（需公開網域 + 80 埠可達）</h4>
+<pre><code><span class="c"># 下載 win-acme：https://www.win-acme.com/</span>
+<span class="c"># 以管理員執行 wacs.exe，依精靈選 N: 建立新憑證 → 選站台 → 自動驗證並繫結</span>
+<span class="c"># 工具會自動設定 443 繫結與到期前自動續期排程</span></code></pre>
+
+<h4>HTTP 強制跳轉 HTTPS（加進 web.config 的 rules 最前面）</h4>
+<pre><code>&lt;rule name="HTTPtoHTTPS" stopProcessing="true"&gt;
+  &lt;match url="(.*)" /&gt;
+  &lt;conditions&gt;
+    &lt;add input="{HTTPS}" pattern="^OFF$" /&gt;
+  &lt;/conditions&gt;
+  &lt;action type="Redirect" url="https://{HTTP_HOST}/{R:1}" redirectType="Permanent" /&gt;
+&lt;/rule&gt;</code></pre>
+
+<h3>8-3. 調整應用集區逾時</h3>
+<pre><code>Import-Module WebAdministration
+Set-ItemProperty "IIS:\AppPools\ERMM-Finance" -Name processModel.idleTimeout -Value "00:00:00"
+Set-ItemProperty "IIS:\AppPools\ERMM-Finance" -Name recycling.periodicRestart.time -Value "00:00:00"
+Set-ItemProperty "IIS:\AppPools\ERMM-Finance" -Name recycling.periodicRestart.schedule -Value @{value="03:00:00"}
+
+<span class="c"># 代理逾時拉長（Excel 批次匯入較慢）</span>
+&amp; "$env:windir\system32\inetsrv\appcmd.exe" set config -section:system.webServer/proxy /timeout:"00:05:00" /commit:apphost</code></pre>
+
+<!-- ==================== BACKUP ==================== -->
+<h2 id="backup">十一、階段 9：MySQL 定時備份</h2>
+
+<h3>9-1. 備份腳本</h3>
+<pre><code><span class="c"># 建立 db_backup.ps1</span>
+notepad C:\Project\ERMM-finance-system\scripts\db_backup.ps1</code></pre>
+<pre><code><span class="h"># ERMM MySQL 每日備份 + 壓縮 + 保留 14 天</span>
+$ErrorActionPreference = "Stop"
+$dump = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqldump.exe"
+$user = "ermm_backup"
+$env:MYSQL_PWD = "aaabbb123"
+$db   = "ermm_db"
+$dir  = "D:\backup\mysql"
+$date = Get-Date -Format "yyyyMMdd_HHmm"
+$file = Join-Path $dir "ERMM_$date.sql"
+
+New-Item -ItemType Directory -Force $dir | Out-Null
+
+&amp; $dump -u $user --default-character-set=utf8mb4 --single-transaction --routines --triggers $db |
+  Out-File -FilePath $file -Encoding utf8
+
+Compress-Archive -Path $file -DestinationPath "$file.zip"
+Remove-Item $file
+
+Get-ChildItem "$dir\ERMM_*.zip" |
+  Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-14) } |
+  Remove-Item
+
+Write-Output "[$(Get-Date)] Backup OK: $file.zip"</code></pre>
+
+<h3>9-2. 註冊每日排程（管理員 PowerShell）</h3>
+<pre><code>$action  = New-ScheduledTaskAction -Execute "powershell.exe" `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -File C:\Project\ERMM-finance-system\scripts\db_backup.ps1"
+$trigger = New-ScheduledTaskTrigger -Daily -At 2:00AM
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+Register-ScheduledTask -TaskName "ERMM-DB-Backup" -Action $action -Trigger $trigger -Principal $principal
+
+<span class="c"># 立即試跑一次</span>
+Start-ScheduledTask -TaskName "ERMM-DB-Backup"
+Get-ChildItem D:\backup\mysql\</code></pre>
+
+<!-- ==================== VERIFY ==================== -->
+<h2 id="verify">十二、上線驗證清單</h2>
+
+<table>
+  <thead><tr><th class="center">#</th><th>類別</th><th>檢查項</th><th>驗證方法</th><th>預期</th></tr></thead>
+  <tbody>
+    <tr><td class="center">1</td><td>服務</td><td>MySQL80 運行中</td><td><code>Get-Service MySQL80</code></td><td>Running / Automatic</td></tr>
+    <tr><td class="center">2</td><td>服務</td><td>Redis(Memurai) 運行中</td><td><code>Get-Service Memurai</code></td><td>Running</td></tr>
+    <tr><td class="center">3</td><td>服務</td><td>ERMM-Finance 運行中</td><td><code>Get-Service ERMM-Finance</code></td><td>Running / Automatic</td></tr>
+    <tr><td class="center">4</td><td>服務</td><td>服務相依性正確</td><td>服務內容 → 相依性</td><td>相依 MySQL80 + Memurai</td></tr>
+    <tr><td class="center">5</td><td>服務</td><td>崩潰自動重啟</td><td><code>Stop-Process -Name node -Force</code> 後等 10 秒</td><td>服務自動恢復</td></tr>
+    <tr><td class="center">6</td><td>服務</td><td>開機自啟</td><td>重開機後檢查</td><td>Automatic</td></tr>
+    <tr><td class="center">7</td><td>API</td><td>健康檢查</td><td><code>Invoke-RestMethod http://localhost:3008/api/health</code></td><td>success:true</td></tr>
+    <tr><td class="center">8</td><td>DB</td><td>表數量完整</td><td><code>mysql -u ermm_app -p ermm_db -e "SHOW TABLES"</code></td><td>約 22 張</td></tr>
+    <tr><td class="center">9</td><td>DB</td><td>字符集</td><td><code>SHOW VARIABLES LIKE 'character_set_server'</code></td><td>utf8mb4</td></tr>
+    <tr><td class="center">10</td><td>Redis</td><td>DB 1 連通</td><td><code>redis-cli -a aaabbb123 -n 1 ping</code></td><td>PONG</td></tr>
+    <tr><td class="center">11</td><td>.env</td><td>配置正確</td><td><code>Select-String .env -Pattern 'PORT|DB_NAME|REDIS_DB|USE_DB_CONFIG'</code></td><td>3008 / ermm_db / 1 / true</td></tr>
+    <tr><td class="center">12</td><td>.env</td><td>權限鎖定</td><td><code>icacls .env</code></td><td>僅 Administrators</td></tr>
+    <tr><td class="center">13</td><td>IIS</td><td>反向代理</td><td>瀏覽器開 <code>http://網域/</code></td><td>正常進首頁</td></tr>
+    <tr><td class="center">14</td><td>IIS</td><td>HTTPS</td><td>開 <code>https://網域/</code></td><td>鎖頭，無警告</td></tr>
+    <tr><td class="center">15</td><td>IIS</td><td>HTTP 跳 HTTPS</td><td>開 <code>http://網域/</code></td><td>301 跳轉</td></tr>
+    <tr><td class="center">16</td><td>備份</td><td>備份檔產出</td><td><code>Get-ChildItem D:\backup\mysql\</code></td><td>有 .zip</td></tr>
+    <tr><td class="center">17</td><td>防火牆</td><td>規則正確</td><td><code>Get-NetFirewallRule</code></td><td>80/443 或 3008</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== OPS ==================== -->
+<h2 id="ops">十三、日常運維操作速查</h2>
+
+<div class="info-grid">
+  <div class="info-card">
+    <h4>應用服務</h4>
+<pre><code>Get-Service ERMM-Finance, MySQL80, Memurai
+Restart-Service ERMM-Finance
+Get-Content C:\Project\ERMM-finance-system\logs\service-out.log -Tail 100 -Wait
+Get-Content C:\Project\ERMM-finance-system\logs\service-err.log -Tail 100</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>MySQL</h4>
+<pre><code>Get-Service MySQL80
+Restart-Service MySQL80
+mysql -u ermm_app -p ermm_db
+mysqladmin -u ermm_app -p status</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>Redis</h4>
+<pre><code>Get-Service Memurai
+Restart-Service Memurai
+redis-cli -a aaabbb123 -n 1
+redis-cli -a aaabbb123 info memory</code></pre>
+  </div>
+  <div class="info-card">
+    <h4>IIS / 防火牆 / 備份</h4>
+<pre><code>iisreset
+Get-Website
+Get-NetFirewallRule -DisplayName "*ERMM*"
+Get-ScheduledTask ERMM-DB-Backup
+Get-ChildItem D:\backup\mysql\
+Get-Process node | Select-Object CPU,WS</code></pre>
+  </div>
+</div>
+
+<!-- ==================== UPDATE ==================== -->
+<h2 id="update">十四、版本更新與回滾</h2>
+
+<h3>標準更新流程</h3>
+<pre><code><span class="c"># 1. 備份資料庫</span>
+Start-ScheduledTask -TaskName ERMM-DB-Backup
+
+<span class="c"># 2. 停止服務</span>
+Stop-Service ERMM-Finance
+
+<span class="c"># 3. 更新程式碼</span>
+cd C:\Project\ERMM-finance-system
+git fetch --all
+git reset --hard origin/main
+
+<span class="c"># 4. 若 package.json 有變動</span>
+npm.cmd install --omit=dev
+
+<span class="c"># 5. 啟動並驗證</span>
+Start-Service ERMM-Finance
+Start-Sleep 3
+Invoke-RestMethod http://localhost:3008/api/health | ConvertTo-Json</code></pre>
+
+<h3>快速回滾</h3>
+<pre><code>cd C:\Project\ERMM-finance-system
+git log --oneline -5
+
+Stop-Service ERMM-Finance
+git reset --hard &lt;舊版commit&gt;
+npm.cmd install --omit=dev    <span class="c"># 僅當依賴有變動時</span>
+Start-Service ERMM-Finance</code></pre>
+
+<!-- ==================== TROUBLE ==================== -->
+<h2 id="trouble">十五、故障排查</h2>
+
+<h3>症狀 1：服務啟動後立刻停止</h3>
+<pre><code>Get-Content C:\Project\ERMM-finance-system\logs\service-err.log -Tail 30
+<span class="c"># ① Cannot find module → 未執行 npm install 或 AppDirectory 設錯</span>
+<span class="c"># ② Access denied for user → .env 密碼錯</span>
+<span class="c"># ③ EADDRINUSE :3008 → 埠口被佔：netstat -ano | findstr :3008</span>
+<span class="c"># ④ Redis connection refused → Memurai 服務未啟動或密碼錯</span></code></pre>
+
+<h3>症狀 2：Redis 連線失敗</h3>
+<pre><code><span class="c"># 確認 Memurai 服務運行</span>
+Get-Service Memurai
+
+<span class="c"># 測試連線</span>
+redis-cli -a aaabbb123 -n 1 ping
+<span class="c"># 若回 NOAUTH → .env 的 REDIS_PASSWORD 與 memurai.conf 不一致</span>
+<span class="c"># 若回 Connection refused → Memurai 服務未啟動</span></code></pre>
+
+<h3>症狀 3：3008 埠口被佔用</h3>
+<pre><code>netstat -ano | findstr :3008
+Stop-Process -Id &lt;PID&gt; -Force
+Start-Service ERMM-Finance</code></pre>
+
+<h3>症狀 4：IIS 回 502.3 / 502.5</h3>
+<pre><code>Get-Service ERMM-Finance
+Invoke-RestMethod http://127.0.0.1:3008/api/health
+<span class="c"># 確認 web.config 代理目標與 .env PORT 一致（皆 3008）</span>
+<span class="c"># 確認 ARR Proxy 已啟用</span></code></pre>
+
+<h3>症狀 5：Excel 匯入逾時或 413</h3>
+<pre><code><span class="c"># 確認 web.config 有：</span>
+<span class="c"># maxAllowedContentLength="52428800"（50MB）</span>
+<span class="c"># proxy timeout 設為 00:05:00</span></code></pre>
+
+<h3>症狀 6：重開機後服務沒起來</h3>
+<pre><code>Get-Service ERMM-Finance, MySQL80, Memurai | Select Name, Status, StartType
+<span class="c"># 若 StartType 非 Automatic：</span>
+Set-Service ERMM-Finance -StartupType Automatic</code></pre>
+
+<h3>症狀 7：中文資料亂碼</h3>
+<pre><code>mysql -u ermm_app -p ermm_db -e "SHOW VARIABLES LIKE 'character%';"
+<span class="c"># 確認 character_set_server = utf8mb4</span>
+<span class="c"># mysqldump 與 mysql 導入都需帶 --default-character-set=utf8mb4</span></code></pre>
+
+<h3>症狀 8：PowerShell 執行 node 腳本被擋</h3>
+<pre><code><span class="c"># 使用 .cmd 版本或直接用 node 執行 .js 檔</span>
+node app.js              <span class="c"># 直接執行，不受執行策略影響</span>
+npm.cmd install          <span class="c"># 用 .cmd 版本</span>
+<span class="c"># 不要修改系統執行原則</span></code></pre>
+
+<div style="text-align:center; margin-top:48px; color:var(--text-mute); font-size:13px; border-top:1px solid var(--border); padding-top:20px">
+  ERMM 財務模組 — Windows Server 2019 正式環境部署操作手冊 v2.0 &middot; 2026-09-13 &middot; rocky1953/ERMM-finance-system
+</div>
+
+</div>
+</body>
+</html>

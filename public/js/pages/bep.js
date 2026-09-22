@@ -130,6 +130,16 @@
         const bu = document.getElementById('bepBU').value || State.bu_no || 'HM';
         const ym = document.getElementById('bepYM').value;
         const v = getInputVals();
+
+        // 防呆：本次提交所有成本欄位皆為 0，但該月份已載入過非零門檻值時，要求二次確認
+        const costFields = ['consumable','packaging','processing','misc_purchase',
+            'freight','customs','service_part_comp','variable_expense',
+            'fixed_salary','fixed_rent','fixed_interest'];
+        const submittingAllZero = costFields.every(f => !Number(v[f]));
+        const hadNonZero = BEP && costFields.some(f => Number(BEP[f]) > 0);
+        if (submittingAllZero && hadNonZero && !window.confirm(t('bep.msg.confirm_zero'))) {
+            return;
+        }
         const payload = {
             bu_no: bu, YYYY_MM: ym,
             consumable: v.consumable, packaging: v.packaging, processing: v.processing,
@@ -147,7 +157,9 @@
             });
             const j = await r.json();
             if (!j.success) { UI.toast(j.message, 'error'); return; }
-            BEP = j.data;
+            // 後端回傳結構為 { saved:true, data: result }（見 routes/bep.js），
+            // 需取內層 result；相容直接回傳 result 的情況
+            BEP = (j.data && j.data.data) ? j.data.data : j.data;
             fillInputs(BEP);
             const saleInput = document.getElementById('bep_sale_input');
             if (saleInput) saleInput.value = BEP.sale_amt || 0;

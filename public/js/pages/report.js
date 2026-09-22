@@ -122,7 +122,33 @@ async function loadReport() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 
-function exportReport() {
+async function exportReport() {
     const type = currentReportTab === 'bs' ? 'balance-sheet' : currentReportTab === 'pl' ? 'pl-table' : 'cash-flow';
-    window.open(`/api/report/export/${type}.xlsx?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`, '_blank');
+    const url = `/api/report/export/${type}.xlsx?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`;
+    // 改用帶 Authorization 標頭的 fetch 下載（window.open 無法帶 JWT，會被 401 擋下）
+    try {
+        const res = await fetch(url);
+        if (res.status === 401) { Auth.handle401(); return; }
+        if (!res.ok) {
+            const j = await res.json().catch(() => null);
+            throw new Error(j?.message || `HTTP ${res.status}`);
+        }
+        // 優先使用伺服器給的檔名，否則用規則組一個
+        let filename = `${type}_${State.bu_no}_${State.YYYY_MM.replace('/', '')}.xlsx`;
+        const cd = res.headers.get('Content-Disposition') || '';
+        const m = /filename\*?=(?:UTF-8'')?["']?([^;"']+)/i.exec(cd);
+        if (m) filename = decodeURIComponent(m[1]);
+
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objUrl);
+    } catch (e) {
+        UI.toast((typeof t === 'function' ? t('export_fail') : '匯出失敗') + ': ' + e.message, 'error');
+    }
 }

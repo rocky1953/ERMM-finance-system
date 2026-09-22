@@ -363,35 +363,44 @@ registerPage('dashboard', async (c) => {
             const roe = Number(r.ROE || 0);
             const roeZone = roe >= 0 ? 'green' : 'red';
             const roeLabel = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
+            const hint = `<span style="font-size:.75em;font-weight:400;opacity:.75;">👆 ${t('dash.zmodal.hint')}</span>`;
             rp.innerHTML = `
                 <div class="kpi-grid">
                     <div class="kpi-card ${zZone} clickable" id="zScoreCard" title="${t('dash.zmodal.hint')}">
-                        <div class="kpi-label">${t('dash.z_score')} <span style="font-size:.75em;font-weight:400;opacity:.75;">👆 ${t('dash.zmodal.hint')}</span></div>
+                        <div class="kpi-label">${t('dash.z_score')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
                         <div class="kpi-badge ${zZone}">${zZoneLabel}</div>
                     </div>
-                    <div class="kpi-card ${crZone}">
-                        <div class="kpi-label">${t('dash.current_ratio')}</div>
+                    <div class="kpi-card ${crZone} clickable" id="crCard" title="${t('dash.zmodal.hint')}">
+                        <div class="kpi-label">${t('dash.current_ratio')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
                         <div class="kpi-badge ${crZone}">${crLabel}</div>
                         <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
                     </div>
-                    <div class="kpi-card ${drZone}">
-                        <div class="kpi-label">${t('dash.debt_ratio_label')}</div>
+                    <div class="kpi-card ${drZone} clickable" id="drCard" title="${t('dash.zmodal.hint')}">
+                        <div class="kpi-label">${t('dash.debt_ratio_label')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
                         <div class="kpi-badge ${drZone}">${drLabel}</div>
                     </div>
-                    <div class="kpi-card ${roeZone}">
-                        <div class="kpi-label">${t('dash.roe')}</div>
+                    <div class="kpi-card ${roeZone} clickable" id="roeCard" title="${t('dash.zmodal.hint')}">
+                        <div class="kpi-label">${t('dash.roe')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
                         <div class="kpi-badge ${roeZone}">${roeLabel}</div>
                         <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}%</div>
                     </div>
                 </div>
             `;
-            // 唯一入口：僅 Z-Score 卡片可點擊開啟說明彈窗
+            // 四張風險燈號卡片皆可點擊查看風險等級說明
             const zCard = document.getElementById('zScoreCard');
             if (zCard) zCard.addEventListener('click', () => openZDetail(r));
+            const bindHelp = (id, key) => {
+                const el = document.getElementById(id);
+                // RiskHelp 定義於 risk.js（全域詞法作用域，const 不掛 window，故用 typeof 判斷）
+                if (el && typeof RiskHelp !== 'undefined') el.addEventListener('click', () => RiskHelp.open(key, r));
+            };
+            bindHelp('crCard', 'cr');
+            bindHelp('drCard', 'dr');
+            bindHelp('roeCard', 'roe');
         } else {
             rp.innerHTML = UI.empty('⚠️', t('dash.no_risk'));
         }

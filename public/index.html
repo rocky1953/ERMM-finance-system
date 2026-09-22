@@ -7,7 +7,29 @@
 <link rel="stylesheet" href="/css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<body class="locked">
+
+<!-- 登入畫面（未登入時覆蓋整個視窗） -->
+<div id="loginScreen">
+    <form id="loginForm" class="login-card" autocomplete="off">
+        <div class="login-logo">🏢 ERMM</div>
+        <h2 data-i18n="login.title">系統登入</h2>
+        <label class="login-label" data-i18n="login.user_id">使用者 ID</label>
+        <input type="text" id="loginUserId" autocomplete="username" required>
+        <label class="login-label" data-i18n="login.password">密碼</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <div id="loginError" class="login-error"></div>
+        <button type="submit" id="loginBtn" class="login-submit" data-i18n="login.submit">登入</button>
+        <div class="login-lang">
+            <span data-i18n="login.lang">語言</span>
+            <select id="loginLang">
+                <option value="zh-TW">繁體中文</option>
+                <option value="zh-CN">简体中文</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+    </form>
+</div>
 
 <!-- 侧边栏 -->
 <aside id="sidebar">
@@ -147,6 +169,9 @@
                 <option value="zh-CN">简体中文</option>
                 <option value="en">English</option>
             </select>
+            <span style="margin-left:14px;font-size:0.85em;color:#2c3e50;">👤 <b id="currentUser"></b></span>
+            <button onclick="Auth.logout()" data-i18n="login.logout"
+                style="margin-left:8px;padding:6px 14px;border:1px solid #e74c3c;background:#fff;color:#e74c3c;border-radius:6px;cursor:pointer;font-size:0.85em;">登出</button>
         </div>
     </div>
     <div id="pageContent"></div>
@@ -190,6 +215,8 @@
 let currentPage = 'dashboard';
 const origNav = navigate;
 navigate = async function(pageId, params) {
+    // 未登入時不允許渲染任何功能頁面
+    if (!Auth.isLoggedIn()) return;
     currentPage = pageId;
     document.getElementById('pageTitle').textContent = t('page.' + pageId);
     await origNav(pageId, params);
@@ -199,12 +226,37 @@ navigate = async function(pageId, params) {
 document.getElementById('globalMonth').value = State.YYYY_MM.replace('/', '-');
 document.getElementById('globalBU').value = State.bu_no;
 document.getElementById('globalLang').value = I18N.lang;
+document.getElementById('loginLang').value = I18N.lang;
+document.getElementById('loginLang').onchange = function () { I18N.setLang(this.value); };
 
-// 应用语言到侧边栏
+// 應用語言到側邊欄
 I18N.applyUI();
 
-// 启动
-navigate('dashboard');
+// 登入表單送出
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const userId = document.getElementById('loginUserId').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    errEl.textContent = '';
+    if (!userId || !password) { errEl.textContent = t('login.need_input'); return; }
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = t('login.logging');
+    try {
+        await Auth.login(userId, password);
+        document.getElementById('loginPassword').value = '';
+    } catch (err) {
+        errEl.textContent = err.message;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+});
+
+// 啟動：檢查登入狀態
+Auth.init();
 </script>
 </body>
 </html>

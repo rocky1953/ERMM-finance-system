@@ -7,6 +7,18 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, n } = require('../utils/response');
 const crypto = require('crypto');
+const { requireAdmin } = require('../middleware/auth');
+
+// 整個「使用者管理」模組僅限管理員（前頁也有入口攔截，此處為服務端強制校驗）
+router.use(requireAdmin);
+
+// admin 欄位合法值白名單
+const ADMIN_VALUES = ['管理員', '普通者'];
+const normAdmin = v => ADMIN_VALUES.includes(v) ? v : '普通者';
+
+// xuser_type 欄位合法值白名單
+const TYPE_VALUES = ['一般員工', '部門經理', '高階主管'];
+const normType = v => TYPE_VALUES.includes(v) ? v : '一般員工';
 
 function hashPwd(pwd) { return crypto.createHash('sha256').update(String(pwd)).digest('hex'); }
 
@@ -14,7 +26,7 @@ function hashPwd(pwd) { return crypto.createHash('sha256').update(String(pwd)).d
 router.get('/', async (req, res) => {
     try {
         const { inuse_flag } = req.query;
-        let sql = 'SELECT id, xuser_id, xuser_name, xuser_dept, client_id, inuse_flag, create_time FROM cams_xuser WHERE 1=1';
+        let sql = 'SELECT id, xuser_id, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type, create_time FROM cams_xuser WHERE 1=1';
         const params = [];
         if (inuse_flag) { sql += ' AND inuse_flag=?'; params.push(inuse_flag); }
         sql += ' ORDER BY xuser_id';
@@ -41,9 +53,9 @@ router.post('/', async (req, res) => {
         if (!d.xuser_id || !d.xuser_password) return fail(res, '帳號與密碼必填', 400);
         const hashed = hashPwd(d.xuser_password);
         const [r] = await pool.execute(`
-            INSERT INTO cams_xuser (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag)
-            VALUES (?,?,?,?,?,?)
-        `, [d.xuser_id, hashed, n(d.xuser_name), n(d.xuser_dept), n(d.client_id), d.inuse_flag || 'USE']);
+            INSERT INTO cams_xuser (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+        `, [d.xuser_id, hashed, n(d.xuser_name), n(d.xuser_dept), n(d.client_id), d.inuse_flag || 'USE', normAdmin(d.admin), n(d.email), n(d.tel_no), normType(d.xuser_type)]);
         ok(res, { id: r.insertId }, '已新增使用者');
     } catch (err) { fail500(res, err); }
 });
@@ -51,8 +63,10 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const d = req.body;
-        const fields = ['xuser_name', 'xuser_dept', 'client_id', 'inuse_flag'];
-        const updates = fields.filter(k => d[k] !== undefined).map(k => `${k}=?`).join(',');
+        if (d.admin !== undefined) d.admin = normAdmin(d.admin);
+        if (d.xuser_type !== undefined) d.xuser_type = normType(d.xuser_type);
+        const fields = ['xuser_name', 'xuser_dept', 'client_id', 'inuse_flag', 'admin', 'email', 'tel_no', 'xuser_type'];
+        let updates = fields.filter(k => d[k] !== undefined).map(k => `${k}=?`).join(',');
         const values = fields.filter(k => d[k] !== undefined).map(k => d[k]);
         if (d.xuser_password) {
             updates = (updates ? updates + ',' : '') + 'xuser_password=?';

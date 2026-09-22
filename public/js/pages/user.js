@@ -5,6 +5,16 @@
  * tab 3: login_user_record 登入紀錄（唯讀 + 清除）
  */
 registerPage('user', async (c) => {
+    // 權限攔截：僅管理員可進入「使用者管理」
+    if (!Auth.isAdmin()) {
+        c.innerHTML = `
+            <div class="card" style="text-align:center;padding:60px 20px;">
+                <div style="font-size:48px;margin-bottom:16px;">🔒</div>
+                <p style="color:#e74c3c;font-size:16px;font-weight:600;margin:0;">${t('user.msg.no_admin')}</p>
+            </div>`;
+        UI.toast(t('user.msg.no_admin'), 'error');
+        return;
+    }
     c.innerHTML = `
         <div class="card">
             <div style="border-bottom:2px solid #ecf0f1;margin-bottom:16px;display:flex;gap:0;">
@@ -68,9 +78,11 @@ async function loadUsers() {
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">👤 ${t('user.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('user.col.id')}</th><th>${t('user.col.name')}</th><th>${t('user.col.dept')}</th><th>${t('system.col.status')}</th><th>${t('user.col.create_time')}</th><th>${t('system.col.action')}</th></tr></thead>
+            <thead><tr><th>${t('user.col.id')}</th><th>${t('user.col.name')}</th><th>${t('user.col.dept')}</th><th>${t('user.col.xuser_type')}</th><th>${t('user.col.admin')}</th><th>${t('system.col.status')}</th><th>${t('user.col.create_time')}</th><th>${t('system.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `
                 <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${r.xuser_dept||'-'}</td>
+                    <td>${r.xuser_type||t('user.type.staff')}</td>
+                    <td>${r.admin==='管理員' ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>' : '<span style="color:#95a5a6">'+t('user.admin.normal')+'</span>'}</td>
                     <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● '+t('system.status.active')+'</span>' : '<span style="color:#95a5a6">○ '+t('system.status.inactive')+'</span>'}</td>
                     <td>${r.create_time||'-'}</td>
                     <td>
@@ -91,15 +103,16 @@ async function loadUsers() {
 }
 
 const UserForm = {
-    open(id) {
-        if (id) API.get(`/api/user/permissions`).then(async r => {
-            const u = r.data.find(x => x.id === id || x.user_id === undefined);
-            API.get(`/api/user/${id}`).catch(() => {
-                // 用 permissions 裡找
-            });
-            this._render(u || { id });
-        }).catch(e => UI.toast(e.message,'error'));
-        else this._render({ inuse_flag: 'USE' });
+    async open(id) {
+        // 新增：直接開空白表單
+        if (!id) { this._render({ inuse_flag: 'USE', admin: '普通者', xuser_type: '一般員工' }); return; }
+        // 編輯：/api/user 清單含數字主鍵 id，按 id 精確找到該列後回填
+        try {
+            const res = await API.get('/api/user');
+            const u = (res.data || []).find(x => x.id === id);
+            if (!u) { UI.toast(t('user.no_data'), 'error'); return; }
+            this._render(u);
+        } catch (e) { UI.toast(e.message, 'error'); }
     },
     async _render(d) {
         let u = d;
@@ -118,14 +131,24 @@ const UserForm = {
                     <input type="password" id="uf_pwd" placeholder="${isEdit?'• • • • • •':t('user.form.required')}"></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
                     <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
+                <div class="form-group"><label>${t('user.col.admin')}</label>
+                    <select id="uf_admin"><option value="管理員">${t('user.admin.manager')}</option><option value="普通者">${t('user.admin.normal')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('user.col.name')}</label><input id="uf_name" value="${u.xuser_name||''}"></div>
                 <div class="form-group"><label>${t('user.col.dept')}</label><input id="uf_dept" value="${u.xuser_dept||''}"></div>
                 <div class="form-group"><label>${t('user.form.client_id')}</label><input id="uf_cid" value="${u.client_id||''}"></div>
             </div>
+            <div class="form-row">
+                <div class="form-group"><label>${t('user.col.email')}</label><input id="uf_email" type="email" value="${u.email||''}"></div>
+                <div class="form-group"><label>${t('user.col.tel_no')}</label><input id="uf_tel" value="${u.tel_no||''}"></div>
+                <div class="form-group"><label>${t('user.col.xuser_type')}</label>
+                    <select id="uf_type"><option value="一般員工">${t('user.type.staff')}</option><option value="部門經理">${t('user.type.manager')}</option><option value="高階主管">${t('user.type.executive')}</option></select></div>
+            </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">${t('save')}</button>`);
         if (u.inuse_flag) document.getElementById('uf_stat').value = u.inuse_flag;
+        document.getElementById('uf_admin').value = (u.admin === '管理員') ? '管理員' : '普通者';
+        document.getElementById('uf_type').value = (u.xuser_type === '部門經理' || u.xuser_type === '高階主管') ? u.xuser_type : '一般員工';
     },
     async save(id) {
         const body = {
@@ -135,6 +158,10 @@ const UserForm = {
             xuser_dept: document.getElementById('uf_dept').value,
             client_id: document.getElementById('uf_cid').value,
             inuse_flag: document.getElementById('uf_stat').value,
+            admin: document.getElementById('uf_admin').value,
+            email: document.getElementById('uf_email').value,
+            tel_no: document.getElementById('uf_tel').value,
+            xuser_type: document.getElementById('uf_type').value,
         };
         try {
             if (id) {

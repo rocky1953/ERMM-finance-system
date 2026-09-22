@@ -8,19 +8,80 @@ const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const ExcelJS = require('exceljs');
 
+// ===== 共用資料函式（API 路由與 Excel 匯出直接調用，避免內部 HTTP 自調被 JWT 攔截）=====
+async function getSummaryRow(bu_no, YYYY_MM) {
+    const [rows] = await pool.execute(
+        `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
+        [bu_no, YYYY_MM]
+    );
+    return rows.length > 0 ? rows[0] : null;
+}
+
+// 損益表資料組裝
+function buildPLData(r) {
+    return {
+        sale_amt: Number(r.sale_amt || 0),
+        sale_cost_amt: Number(r.sale_cost_amt || 0),
+        VAT_rate: Number(r.VAT_rate || 13),
+        VAT_amt: Number(r.VAT_amt || 0),
+        sale_discount_amt: Number(r.sale_discount_amt || 0),
+        BIZ_major_margin_amt: Number(r.BIZ_major_margin_amt || 0),
+        BIZ_other_INC_amt: Number(r.BIZ_other_INC_amt || 0) + Number(r.others_INC_amt || 0),
+        sale_exp_amt: Number(r.sale_exp_amt || 0),
+        MGM_EXP_amt: Number(r.MGM_EXP_amt || 0),
+        finance_EXP_amt: Number(r.finance_EXP_amt || 0),
+        BIZ_margin_amt: Number(r.BIZ_margin_amt || 0),
+        INVEST_profit_amt: Number(r.INVEST_profit_amt || 0),
+        AR_subsidy_amt: Number(r.AR_subsidy_amt || 0),
+        operation_profit_amt: Number(r.operation_profit_amt || 0),
+        net_profit_amt: Number(r.net_profit_amt || 0)
+    };
+}
+
+// 現金流量表資料組裝
+function buildCashFlowData(r) {
+    const net_profit = Number(r.net_profit_amt || 0);
+    // 折舊攤銷 = 當月累計折舊變動
+    const depreciation = Number(r.acc_de_building || 0) / 20 +   // 假設 20 年平均
+        Number(r.acc_de_EQMT || 0) / 10 +   // 10 年
+        Number(r.acc_de_vehicle || 0) / 8 + // 8 年
+        Number(r.acc_de_office || 0) / 5;   // 5 年
+    const ar_change = Number(r.AR_amt || 0) * 0.15;     // 假設 AR 當月增加 15%
+    const inventory_change = Number(r.stock_P_amt || 0) * 0.10; // 存貨增加 10%
+    const ap_change = Number(r.AP_amt || 0) * 0.10;    // AP 增加 10%
+
+    const operating_cf = net_profit + depreciation + ar_change + inventory_change + ap_change;
+    const capex = -(Number(r.building_amt || 0) * 0.01 + Number(r.equipment_amt || 0) * 0.02);
+    const investing_cf = capex + Number(r.INVEST_profit_amt || 0);
+    const loan_change = Number(r.LT_loan_amt || 0) * 0.05; // 長期借款變動
+    const financing_cf = loan_change + Number(r.captial_reserve || 0) * 0.01;
+
+    const net_cash_change = operating_cf + investing_cf + financing_cf;
+
+    return {
+        net_profit,
+        depreciation: Math.round(depreciation),
+        ar_change: Math.round(ar_change),
+        inventory_change: Math.round(inventory_change),
+        ap_change: Math.round(ap_change),
+        operating_cf: Math.round(operating_cf),
+        capex: Math.round(capex),
+        investing_cf: Math.round(investing_cf),
+        loan_change: Math.round(loan_change),
+        financing_cf: Math.round(financing_cf),
+        net_cash_change: Math.round(net_cash_change)
+    };
+}
+
 // ===== 資產負債表 =====
 router.get('/balance-sheet', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const [rows] = await pool.execute(
-            `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
-            [bu_no, YYYY_MM]
-        );
-        if (rows.length === 0) return fail(res, '找不到該月資料', 404);
+        const cur = await getSummaryRow(bu_no, YYYY_MM);
+        if (!cur) return fail(res, '找不到該月資料', 404);
 
-        const cur = rows[0];
         const bs = buildBalanceSheet(cur);
         ok(res, {
             bu_no, YYYY_MM,
@@ -97,31 +158,10 @@ router.get('/pl-table', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const [rows] = await pool.execute(
-            `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
-            [bu_no, YYYY_MM]
-        );
-        if (rows.length === 0) return fail(res, '找不到該月資料', 404);
-        const r = rows[0];
+        const r = await getSummaryRow(bu_no, YYYY_MM);
+        if (!r) return fail(res, '找不到該月資料', 404);
 
-        ok(res, {
-            bu_no, YYYY_MM,
-            sale_amt: Number(r.sale_amt || 0),
-            sale_cost_amt: Number(r.sale_cost_amt || 0),
-            VAT_rate: Number(r.VAT_rate || 13),
-            VAT_amt: Number(r.VAT_amt || 0),
-            sale_discount_amt: Number(r.sale_discount_amt || 0),
-            BIZ_major_margin_amt: Number(r.BIZ_major_margin_amt || 0),
-            BIZ_other_INC_amt: Number(r.BIZ_other_INC_amt || 0) + Number(r.others_INC_amt || 0),
-            sale_exp_amt: Number(r.sale_exp_amt || 0),
-            MGM_EXP_amt: Number(r.MGM_EXP_amt || 0),
-            finance_EXP_amt: Number(r.finance_EXP_amt || 0),
-            BIZ_margin_amt: Number(r.BIZ_margin_amt || 0),
-            INVEST_profit_amt: Number(r.INVEST_profit_amt || 0),
-            AR_subsidy_amt: Number(r.AR_subsidy_amt || 0),
-            operation_profit_amt: Number(r.operation_profit_amt || 0),
-            net_profit_amt: Number(r.net_profit_amt || 0)
-        });
+        ok(res, { bu_no, YYYY_MM, ...buildPLData(r) });
     } catch (err) { fail500(res, err); }
 });
 
@@ -131,45 +171,10 @@ router.get('/cash-flow', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const [rows] = await pool.execute(
-            `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
-            [bu_no, YYYY_MM]
-        );
-        if (rows.length === 0) return fail(res, '找不到該月資料', 404);
-        const r = rows[0];
+        const r = await getSummaryRow(bu_no, YYYY_MM);
+        if (!r) return fail(res, '找不到該月資料', 404);
 
-        const net_profit = Number(r.net_profit_amt || 0);
-        // 折舊攤銷 = 當月累計折舊變動
-        const depreciation = Number(r.acc_de_building || 0) / 20 +   // 假設 20 年平均
-            Number(r.acc_de_EQMT || 0) / 10 +   // 10 年
-            Number(r.acc_de_vehicle || 0) / 8 + // 8 年
-            Number(r.acc_de_office || 0) / 5;   // 5 年
-        const ar_change = Number(r.AR_amt || 0) * 0.15;     // 假設 AR 當月增加 15%
-        const inventory_change = Number(r.stock_P_amt || 0) * 0.10; // 存貨增加 10%
-        const ap_change = Number(r.AP_amt || 0) * 0.10;    // AP 增加 10%
-
-        const operating_cf = net_profit + depreciation + ar_change + inventory_change + ap_change;
-        const capex = -(Number(r.building_amt || 0) * 0.01 + Number(r.equipment_amt || 0) * 0.02);
-        const investing_cf = capex + Number(r.INVEST_profit_amt || 0);
-        const loan_change = Number(r.LT_loan_amt || 0) * 0.05; // 長期借款變動
-        const financing_cf = loan_change + Number(r.captial_reserve || 0) * 0.01;
-
-        const net_cash_change = operating_cf + investing_cf + financing_cf;
-
-        ok(res, {
-            bu_no, YYYY_MM,
-            net_profit,
-            depreciation: Math.round(depreciation),
-            ar_change: Math.round(ar_change),
-            inventory_change: Math.round(inventory_change),
-            ap_change: Math.round(ap_change),
-            operating_cf: Math.round(operating_cf),
-            capex: Math.round(capex),
-            investing_cf: Math.round(investing_cf),
-            loan_change: Math.round(loan_change),
-            financing_cf: Math.round(financing_cf),
-            net_cash_change: Math.round(net_cash_change)
-        });
+        ok(res, { bu_no, YYYY_MM, ...buildCashFlowData(r) });
     } catch (err) { fail500(res, err); }
 });
 
@@ -179,9 +184,9 @@ router.get('/export/pl-table.xlsx', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const plResp = await fetch(`http://localhost:${process.env.PORT || 3008}/api/report/pl-table?bu_no=${bu_no}&YYYY_MM=${YYYY_MM}`).then(r => r.json()).catch(() => null);
-        if (!plResp?.success) return fail(res, '無法取得報表資料');
-        const d = plResp.data;
+        const rowPL = await getSummaryRow(bu_no, YYYY_MM);
+        if (!rowPL) return fail(res, '無法取得報表資料');
+        const d = buildPLData(rowPL);
 
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet('損益表');
@@ -226,9 +231,9 @@ router.get('/export/cash-flow.xlsx', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const cfResp = await fetch(`http://localhost:${process.env.PORT || 3008}/api/report/cash-flow?bu_no=${bu_no}&YYYY_MM=${YYYY_MM}`).then(r => r.json()).catch(() => null);
-        if (!cfResp?.success) return fail(res, '無法取得報表資料');
-        const d = cfResp.data;
+        const rowCF = await getSummaryRow(bu_no, YYYY_MM);
+        if (!rowCF) return fail(res, '無法取得報表資料');
+        const d = buildCashFlowData(rowCF);
 
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet('現金流量表');
@@ -278,9 +283,9 @@ router.get('/export/balance-sheet.xlsx', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
 
-        const bsResp = await fetch(`http://localhost:${process.env.PORT || 3008}/api/report/balance-sheet?bu_no=${bu_no}&YYYY_MM=${YYYY_MM}`).then(r => r.json()).catch(() => null);
-        if (!bsResp?.success) return fail(res, '無法取得報表資料');
-        const bs = bsResp.data.balance_sheet;
+        const rowBS = await getSummaryRow(bu_no, YYYY_MM);
+        if (!rowBS) return fail(res, '無法取得報表資料');
+        const bs = buildBalanceSheet(rowBS);
 
         const wb = new ExcelJS.Workbook();
         const ws = wb.addWorksheet('資產負債表');
