@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 5 套風險預警模型路由
  * Z-Score / Z2-Score / Z3-Score / BZ 破產概率 / JZ 營運能力
  * Wolf 模型 + KPI 燈號
@@ -18,7 +18,7 @@ router.post('/calc', async (req, res) => {
         await conn.beginTransaction();
 
         const [rows] = await conn.execute(
-            'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
+            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
         );
         if (rows.length === 0) return fail(res, '該月摘要不存在');
 
@@ -88,7 +88,7 @@ router.post('/calc', async (req, res) => {
 
         // 更新資料庫
         await conn.execute(`
-            UPDATE MGM_finance_summary SET
+            UPDATE mgm_finance_summary SET
                 Z_X1=?, Z_X2=?, Z_X3=?, Z_X4=?, Z_X5=?,
                 Z_score=?, Z2_score=?, Z3_score=?,
                 BZ_X1=?, BZ_X2=?, BZ_X3=?, BZ_X4=?, BZ_X5=?, BZ_model=?,
@@ -105,7 +105,7 @@ router.post('/calc', async (req, res) => {
             current_ratio, quick_ratio, debt_ratio, ROI, ROE, ROA, gross_margin, net_margin,
             r.uid]);
 
-        // 更新 KPI 當前值（燈號依 MGM_KPI_desc 門檻動態計算，與 kpiQuery 邏輯一致）
+        // 更新 KPI 當前值（燈號依 mgm_kpi_desc 門檻動態計算，與 kpiQuery 邏輯一致）
         // asc  = 值高=差 → val<=low GREEN, low<val<=high YELLOW, val>high RED
         // desc = 值低=差 → val>=high GREEN, low<=val<high YELLOW, val<low RED
         const kpiLight = (val, low, high, pct_type) => {
@@ -116,20 +116,20 @@ router.post('/calc', async (req, res) => {
             return val >= high ? 'GREEN' : (val < low ? 'RED' : 'YELLOW');
         };
         const [kpiRows] = await conn.execute(
-            "SELECT KPI_id, KPI1, KPI2, pct_type FROM MGM_KPI_desc WHERE bu_no=? AND KPI_id IN ('current_ratio','debt_ratio')",
+            "SELECT KPI_id, KPI1, KPI2, pct_type FROM mgm_kpi_desc WHERE bu_no=? AND KPI_id IN ('current_ratio','debt_ratio')",
             [bu_no]
         );
         const kpiMap = {};
         kpiRows.forEach(k => kpiMap[k.KPI_id] = k);
 
         await conn.execute(`
-            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
+            INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_value, KPI_color)
             VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
         `, [bu_no, 'Z_score', Z_score, risk_color]);
 
         const crKpi = kpiMap['current_ratio'] || {};
         await conn.execute(`
-            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
+            INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_value, KPI_color)
             VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
         `, [bu_no, 'current_ratio', current_ratio,
             kpiLight(current_ratio, Number(crKpi.KPI1 || 0), Number(crKpi.KPI2 || 0), crKpi.pct_type)]);
@@ -137,7 +137,7 @@ router.post('/calc', async (req, res) => {
         // 負債比：KPI1=50, KPI2=70, pct_type='asc'（值越高越差）
         const drKpi = kpiMap['debt_ratio'] || { KPI1: 50, KPI2: 70, pct_type: 'asc' };
         await conn.execute(`
-            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_value, KPI_color)
+            INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_value, KPI_color)
             VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)
         `, [bu_no, 'debt_ratio', debt_ratio,
             kpiLight(debt_ratio, Number(drKpi.KPI1 || 50), Number(drKpi.KPI2 || 70), drKpi.pct_type || 'asc')]);
@@ -180,7 +180,7 @@ router.post('/calc', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
-        let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, BZ_X1, BZ_X2, BZ_X3, BZ_X4, BZ_X5, JZ_ZA, JZ_ZB, JZ_ZC, JZ_ZD, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM MGM_finance_summary WHERE 1=1';
+        let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, BZ_X1, BZ_X2, BZ_X3, BZ_X4, BZ_X5, JZ_ZA, JZ_ZB, JZ_ZC, JZ_ZD, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM mgm_finance_summary WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
@@ -198,7 +198,7 @@ router.post('/kpi-light', async (req, res) => {
         if (!bu_no) return fail(res, '需要 bu_no');
 
         // 讀取所有 KPI
-        const [kpis] = await conn.execute('SELECT * FROM MGM_KPI_desc WHERE bu_no=?', [bu_no]);
+        const [kpis] = await conn.execute('SELECT * FROM mgm_kpi_desc WHERE bu_no=?', [bu_no]);
         const results = [];
 
         for (const kpi of kpis) {
@@ -216,7 +216,7 @@ router.post('/kpi-light', async (req, res) => {
             }
 
             await conn.execute(
-                'UPDATE MGM_KPI_desc SET KPI_color=? WHERE uid=?', [color, kpi.uid]
+                'UPDATE mgm_kpi_desc SET KPI_color=? WHERE uid=?', [color, kpi.uid]
             );
             results.push({ KPI_id: kpi.KPI_id, KPI_name: kpi.KPI_name, value: v, low, high, color });
         }

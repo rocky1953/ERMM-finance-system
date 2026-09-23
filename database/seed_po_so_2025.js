@@ -1,4 +1,4 @@
-/**
+﻿/**
  * seed_po_so_2025.js
  * 生成 2025 年 3 公司的採購單 PO + 銷售訂單 SO 測試資料
  * 
@@ -40,7 +40,7 @@ function fmt(v) { return Number(v).toLocaleString(); }
   // 2. 讀取 finance_summary（sale_amt 基準）
   const [summary] = await conn.execute(`
     SELECT bu_no, YYYY_MM, sale_amt
-    FROM MGM_finance_summary
+    FROM mgm_finance_summary
     WHERE YYYY_MM >= '2025/01' AND YYYY_MM <= '2025/12'
     ORDER BY bu_no, YYYY_MM
   `);

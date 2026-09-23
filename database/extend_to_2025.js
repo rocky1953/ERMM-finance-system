@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 將 2024/11 的資料按月 7% 複利成長，外推到 2024/12 ~ 2025/12
  * 四張表：mgm_finance_summary, mgm_invoice_details, pay_detail, ermm_arap_detail
  */
@@ -41,7 +41,7 @@ async function main() {
 
         // 1. 讀取 2024/11 基準 summary
         const [baseRows] = await pool.execute(
-            'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
             [bu_no, START_BASE_MONTH]
         );
         if (baseRows.length === 0) { console.error(`找不到 ${bu_no} ${START_BASE_MONTH} 的 summary`); continue; }
@@ -59,7 +59,7 @@ async function main() {
 
             // 先檢查是否已存在
             const [exist] = await pool.execute(
-                'SELECT uid FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT uid FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
                 [bu_no, ym]
             );
             if (exist.length > 0) { console.log(`  [跳過] summary ${bu_no} ${ym} 已存在`); continue; }
@@ -96,7 +96,7 @@ async function main() {
             // 用參數化 INSERT — 動態生成 SQL
             const cols = Object.keys(row).filter(k => k !== 'uid' && k !== 'create_time' && k !== 'update_time');
             const placeholders = cols.map(() => '?').join(',');
-            const sql = `INSERT INTO MGM_finance_summary (${cols.join(',')}) VALUES (${placeholders})`;
+            const sql = `INSERT INTO mgm_finance_summary (${cols.join(',')}) VALUES (${placeholders})`;
             const vals = cols.map(c => {
                 const v = row[c];
                 return (v === null || v === undefined) ? null : v;
@@ -113,13 +113,13 @@ async function main() {
             const [yyyy, mm] = ym.split('/').map(Number);
 
             const [existInv] = await pool.execute(
-                'SELECT uid FROM MGM_invoice_details WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+                'SELECT uid FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
                 [bu_no, ym]
             );
             if (existInv.length > 0) continue;
 
             const [baseInvs] = await pool.execute(
-                'SELECT * FROM MGM_invoice_details WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT * FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?',
                 [bu_no, START_BASE_MONTH]
             );
 
@@ -139,7 +139,7 @@ async function main() {
                 const payment = Math.round(Number(inv.payment || 0) * factor * 100) / 100;
 
                 await pool.execute(`
-                    INSERT INTO MGM_invoice_details
+                    INSERT INTO mgm_invoice_details
                     (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt, tax_type, tax_rate,
                      VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -204,7 +204,7 @@ async function main() {
             const [yyyy] = ym.split('/');
 
             const [existARAP] = await pool.execute(
-                'SELECT uid FROM ERMM_ARAP_detail WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT uid FROM ermm_arap_detail WHERE bu_no=? AND YYYY_MM=?',
                 [bu_no, ym]
             );
             if (existARAP.length > 0) continue;
@@ -215,7 +215,7 @@ async function main() {
             const ap_ageing = Math.round(ap_amt * 0.3 * 100) / 100;
 
             await pool.execute(`
-                INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, batch_id)
+                INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, batch_id)
                 VALUES (?,?,?,?,?,?,?,?)
             `, [bu_no, yyyy, ym, ar_amt, ap_amt, ar_ageing, ap_ageing, 'EXTEND']);
 

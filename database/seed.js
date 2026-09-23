@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ERMM_db 種子資料 (Seed Data)
  * 系統碼表、公司別、匯率、KPI 門檻等初始化資料
  */
@@ -77,9 +77,9 @@ async function seed() {
             ON DUPLICATE KEY UPDATE class=VALUES(class)
         `);
 
-        // 7. MGM_KPI_desc 初始化 - Z-Score 門檻
+        // 7. mgm_kpi_desc 初始化 - Z-Score 門檻
         await conn.query(`
-            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, pct_type, unit) VALUES
+            INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, pct_type, unit) VALUES
             ('HM', 'Z_score', 'Z-Score 破產風險', 1.23, 2.90, 'asc', '分'),
             ('HM', 'current_ratio', '流動比率', 1.5, 3.0, 'asc', '%'),
             ('HM', 'quick_ratio', '速動比率', 1.0, 2.0, 'asc', '%'),
@@ -97,8 +97,8 @@ async function seed() {
         const bus = ['LD', 'MQ', 'JS', 'VENTEC', 'ICHIA', 'GY'];
         for (const bu of bus) {
             await conn.query(`
-                INSERT IGNORE INTO MGM_KPI_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, pct_type, unit)
-                SELECT '${bu}', KPI_id, KPI_name, KPI1, KPI2, pct_type, unit FROM MGM_KPI_desc WHERE bu_no='HM'
+                INSERT IGNORE INTO mgm_kpi_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, pct_type, unit)
+                SELECT '${bu}', KPI_id, KPI_name, KPI1, KPI2, pct_type, unit FROM mgm_kpi_desc WHERE bu_no='HM'
             `);
         }
 

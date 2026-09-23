@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 修正 HM 2024/12（用完整 string→number fallback 逻辑）
  */
 require('dotenv').config();
@@ -14,10 +14,10 @@ async function main() {
     });
 
     // 先 DELETE HM 2024/12 错误数据
-    await pool.execute("DELETE FROM MGM_finance_summary WHERE bu_no='HM' AND YYYY_MM='2024/12'");
+    await pool.execute("DELETE FROM mgm_finance_summary WHERE bu_no='HM' AND YYYY_MM='2024/12'");
 
     const [baseRows] = await pool.execute(
-        'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+        'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
         ['HM', '2024/11']
     );
     const base = baseRows[0];
@@ -52,7 +52,7 @@ async function main() {
 
     const cols = Object.keys(row).filter(k => k !== 'uid' && k !== 'create_time' && k !== 'update_time');
     const placeholders = cols.map(() => '?').join(',');
-    const sql = `INSERT INTO MGM_finance_summary (${cols.join(',')}) VALUES (${placeholders})`;
+    const sql = `INSERT INTO mgm_finance_summary (${cols.join(',')}) VALUES (${placeholders})`;
     const vals = cols.map(c => {
         const v = row[c];
         return (v === null || v === undefined) ? null : v;

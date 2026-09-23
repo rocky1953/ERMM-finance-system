@@ -1,4 +1,4 @@
-/**
+﻿/**
  * KPI 查詢 API 測試 — routes/kpiQuery.js
  *
  * 驗證：
@@ -34,12 +34,12 @@ describe('KPI 查詢 API /api/kpi-query', () => {
 
     beforeAll(async () => {
         // 先清掉舊測試資料再重寫（避免 ON DUPLICATE 欄位不齊）
-        await pool.execute('DELETE FROM MGM_finance_summary WHERE bu_no=?', [TEST_BU]);
-        await pool.execute('DELETE FROM MGM_KPI_desc WHERE bu_no=?', [TEST_BU]);
+        await pool.execute('DELETE FROM mgm_finance_summary WHERE bu_no=?', [TEST_BU]);
+        await pool.execute('DELETE FROM mgm_kpi_desc WHERE bu_no=?', [TEST_BU]);
 
         // 寫入當月 summary（含 KPI 公式所需所有欄位）
         await pool.execute(`
-            INSERT INTO MGM_finance_summary
+            INSERT INTO mgm_finance_summary
                 (bu_no, YYYY_MM, YYYY, MM, flag,
                  sale_amt, sale_cost_amt, sale_exp_amt,
                  cash_amt, deposite_amt, AR_amt, AP_amt, AP_tax_amt, AP_salary_amt, AP_other_amt, loan_amt,
@@ -57,14 +57,14 @@ describe('KPI 查詢 API /api/kpi-query', () => {
 
         // 上月資料（成長率用）
         await pool.execute(`
-            INSERT INTO MGM_finance_summary
+            INSERT INTO mgm_finance_summary
                 (bu_no, YYYY_MM, YYYY, MM, flag, sale_amt, sale_cost_amt, sale_exp_amt)
             VALUES (?,?,?,?,?, 4000000,2500000,200000)
         `, [TEST_BU, '2098/12', '2098', '12', 'kpi-prev']);
 
         // 手工 KPI 門檻
         await pool.execute(`
-            INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type)
+            INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type)
             VALUES
                 (?, 'custom_kpi_1', '測試 KPI 1', 10.0, 20.0, '%', 'asc'),
                 (?, 'custom_kpi_2', '測試 KPI 2', 1.0, 3.0,  '',  'asc')
@@ -192,7 +192,7 @@ describe('KPI 查詢 API /api/kpi-query', () => {
     // ====== 手工 KPI 合併邏輯 ======
     describe('手工 KPI 門檻合併', () => {
 
-        test('MGM_KPI_desc 的 custom_kpi_1 應出現在 data 裡', async () => {
+        test('mgm_kpi_desc 的 custom_kpi_1 應出現在 data 裡', async () => {
             const res = await request(app).get(`/api/kpi-query/query?bu_no=${TEST_BU}&YYYY_MM=${TEST_YM}`);
             expect(res.body.data.custom_kpi_1).toBeDefined();
             expect(res.body.data.custom_kpi_1.KPI1).toBe(10);

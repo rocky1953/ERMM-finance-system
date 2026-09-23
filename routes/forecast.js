@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 預測明細路由 forecast_detail
  */
 const express = require('express');
@@ -118,7 +118,7 @@ router.get('/compare', async (req, res) => {
             if (rows.length > 0) { fc = rows; break; }
         }
 
-        // 根據命中的 forecast_type 動態選擇 MGM_finance_summary 對應的實際值欄位
+        // 根據命中的 forecast_type 動態選擇 mgm_finance_summary 對應的實際值欄位
         const fieldMap = {
             'Sales':     'sale_amt',   '銷售': 'sale_amt',
             'Cost':      'sale_cost_amt', '成本': 'sale_cost_amt',
@@ -127,7 +127,7 @@ router.get('/compare', async (req, res) => {
         const actualField = fieldMap[fcType] || 'sale_amt';
 
         const [actuals] = await pool.execute(
-            `SELECT YYYY_MM, ${actualField} as actual_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM`,
+            `SELECT YYYY_MM, ${actualField} as actual_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM`,
             [bu_no, `${year}/%`]
         );
         const actualMap = {};

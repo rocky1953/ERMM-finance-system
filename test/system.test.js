@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系統設定 API 測試 — system.js route
  *
  * 涵蓋：
@@ -194,7 +194,7 @@ describe('KPI API (system + kpi + risk)', () => {
             await request(app).post('/api/system/kpi')
                 .send({ ...TEST_KPI, KPI_name: 'KPI 名稱已更新' });
             const [rows] = await pool.execute(
-                'SELECT uid, KPI_name FROM MGM_KPI_desc WHERE bu_no=? AND KPI_id=?',
+                'SELECT uid, KPI_name FROM mgm_kpi_desc WHERE bu_no=? AND KPI_id=?',
                 [TEST_BU, 'TEST_K_001']
             );
             expect(rows).toHaveLength(1);

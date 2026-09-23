@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ERMM Excel 離線匯入工具 v2
  * 用法: node import_excel.js <xlsx_path>
  *
@@ -21,9 +21,9 @@ const DB_NAME = process.env.DB_NAME || 'ERMM_db';
 
 // Sheet 名稱 → DB 表對應表
 const SHEET_TABLE = {
-    '01_財務摘要_summary':   'MGM_finance_summary',
-    '02_現金日記帳_cash':   'MGM_casher_details',
-    '03_發票明細_invoice':  'MGM_invoice_details',
+    '01_財務摘要_summary':   'mgm_finance_summary',
+    '02_現金日記帳_cash':   'mgm_casher_details',
+    '03_發票明細_invoice':  'mgm_invoice_details',
     '04_付款明細_pay':      'pay_detail',
     '05_應收應付_arap':     'ermm_arap_detail',
     '06_銀行貸款_bank':     'mgm_bank_loan_details',
@@ -33,9 +33,9 @@ const SHEET_TABLE = {
 
 // 必填欄位檢查
 const REQUIRED = {
-    'MGM_finance_summary':    ['bu_no', 'YYYY_MM'],
-    'MGM_casher_details':     ['bu_no', 'num_vman', 'wk_date', 'DB_CR', 'sub_amt'],
-    'MGM_invoice_details':    ['bu_no', 'TX_type', 'invoice_no', 'wk_date', 'client_id', 'sub_amt'],
+    'mgm_finance_summary':    ['bu_no', 'YYYY_MM'],
+    'mgm_casher_details':     ['bu_no', 'num_vman', 'wk_date', 'DB_CR', 'sub_amt'],
+    'mgm_invoice_details':    ['bu_no', 'TX_type', 'invoice_no', 'wk_date', 'client_id', 'sub_amt'],
     'pay_detail':             ['bu_no', 'supplier_name', 'finance_type', 'should_date', 'amount'],
     'ermm_arap_detail':       ['bu_no', 'YYYY_MM'],
     'mgm_bank_loan_details':  ['bu_no', 'loan_id', 'loan_amt', 'begin_date', 'end_date'],

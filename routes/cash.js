@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 現金日記帳路由
  */
 const express = require('express');
@@ -10,7 +10,7 @@ const { ok, fail, fail500, pagination, n } = require('../utils/response');
 router.get('/', async (req, res) => {
     try {
         const { bu_no, num_vman, DB_CR, YYYY_MM, start_date, end_date } = req.query;
-        let sql = 'SELECT * FROM MGM_casher_details WHERE 1=1';
+        let sql = 'SELECT * FROM mgm_casher_details WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (num_vman) { sql += ' AND num_vman LIKE ?'; params.push(`%${num_vman}%`); }
@@ -50,7 +50,7 @@ router.post('/', async (req, res) => {
 
         // 防重複
         const [exist] = await conn.execute(
-            'SELECT uid FROM MGM_casher_details WHERE bu_no=? AND num_vman=?',
+            'SELECT uid FROM mgm_casher_details WHERE bu_no=? AND num_vman=?',
             [d.bu_no, d.num_vman]
         );
         if (exist.length > 0) {
@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
         }
 
         const [result] = await conn.execute(
-            `INSERT INTO MGM_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR,
+            `INSERT INTO mgm_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR,
                YYYY, MM, YYYY_MM, wk_date, bank_acct, remark)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
             [n(d.bu_no), n(d.amt_type), n(d.client_id), n(d.num_vman), n(d.sub_amt), n(d.DB_CR),
@@ -96,7 +96,7 @@ router.put('/:uid', async (req, res) => {
             YYYY_MM = `${YYYY}/${MM}`;
         }
         await pool.execute(
-            `UPDATE MGM_casher_details SET bu_no=?, amt_type=?, client_id=?, num_vman=?, sub_amt=?,
+            `UPDATE mgm_casher_details SET bu_no=?, amt_type=?, client_id=?, num_vman=?, sub_amt=?,
                DB_CR=?, YYYY=?, MM=?, YYYY_MM=?, wk_date=?, bank_acct=?, remark=? WHERE uid=?`,
             [n(d.bu_no), n(d.amt_type), n(d.client_id), n(d.num_vman), n(d.sub_amt), n(d.DB_CR),
              n(YYYY), n(MM), n(YYYY_MM), n(d.wk_date), n(d.bank_acct), n(d.remark), n(req.params.uid)]
@@ -108,7 +108,7 @@ router.put('/:uid', async (req, res) => {
 // 刪除
 router.delete('/:uid', async (req, res) => {
     try {
-        await pool.execute('DELETE FROM MGM_casher_details WHERE uid=?', [req.params.uid]);
+        await pool.execute('DELETE FROM mgm_casher_details WHERE uid=?', [req.params.uid]);
         ok(res, null, '已刪除');
     } catch (err) { fail500(res, err); }
 });
@@ -118,7 +118,7 @@ router.get('/summary', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no) return fail(res, '需要 bu_no');
-        let sql = 'SELECT DB_CR, SUM(sub_amt) AS total FROM MGM_casher_details WHERE bu_no=?';
+        let sql = 'SELECT DB_CR, SUM(sub_amt) AS total FROM mgm_casher_details WHERE bu_no=?';
         const params = [bu_no];
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
         sql += ' GROUP BY DB_CR';
@@ -135,7 +135,7 @@ router.get('/summary', async (req, res) => {
         if (YYYY_MM) {
             const [balRows] = await pool.execute(`
                 SELECT DB_CR, SUM(sub_amt) AS total
-                FROM MGM_casher_details
+                FROM mgm_casher_details
                 WHERE bu_no=? AND YYYY_MM<=?
                 GROUP BY DB_CR
             `, [bu_no, YYYY_MM]);

@@ -1,9 +1,9 @@
-/**
+﻿/**
  * BEP 勾稽一致性全量核查（只读，不写库）
  * 复刻 routes/bep.js 的 /detail 逻辑：
  *   booked = 现金账对应 amt_type 的 CR+DR；target = resolveTarget(门槛表)
  *   adjustment = target - booked；明细净额必须 == target
- * 覆盖：MGM_BEP_threshold 全部正式行（排除 TEST/2025/99）× 14 个勾稽 item
+ * 覆盖：mgm_bep_threshold 全部正式行（排除 TEST/2025/99）× 14 个勾稽 item
  */
 require('dotenv').config();
 const mysql = require('mysql2/promise');
@@ -42,7 +42,7 @@ function resolveTarget(key, db) {
     database: process.env.DB_NAME });
 
   const [thrs] = await c.execute(
-    `SELECT * FROM MGM_BEP_threshold
+    `SELECT * FROM mgm_bep_threshold
      WHERE bu_no IN ('HM','HN','SZ') ORDER BY bu_no, YYYY_MM`);
 
   let errors = [], negAdj = [], zeroTarget = [], nullFields = new Set();

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 銀行貸款管理路由
  * 包含匯兌損益計算、利息日期更新
  */
@@ -11,7 +11,7 @@ const { ok, fail, fail500, n } = require('../utils/response');
 router.get('/', async (req, res) => {
     try {
         const { bu_no, status1, type1 } = req.query;
-        let sql = 'SELECT * FROM MGM_bank_loan_details WHERE 1=1';
+        let sql = 'SELECT * FROM mgm_bank_loan_details WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (status1) { sql += ' AND status1=?'; params.push(status1); }
@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
         }
 
         const [result] = await pool.execute(
-            `INSERT INTO MGM_bank_loan_details (bu_no, YYYY, acct_no, type1, acct_amt, unit, loan_id,
+            `INSERT INTO mgm_bank_loan_details (bu_no, YYYY, acct_no, type1, acct_amt, unit, loan_id,
                bank_id, branch_id, loan_type, pay_terms, terms_rate, interest_rate, begin_date, end_date,
                pay_days, payback_amt, loan_amt, exchange_rate, last_paydate, next_paydate, status1, loan_desc,
                diff_amt, loss_flag)
@@ -73,7 +73,7 @@ router.put('/:uid', async (req, res) => {
     try {
         const d = req.body;
         await pool.execute(
-            `UPDATE MGM_bank_loan_details SET bu_no=?, loan_id=?, bank_id=?, loan_type=?, pay_terms=?,
+            `UPDATE mgm_bank_loan_details SET bu_no=?, loan_id=?, bank_id=?, loan_type=?, pay_terms=?,
                terms_rate=?, interest_rate=?, exchange_rate=?, last_paydate=?, next_paydate=?,
                loan_amt=?, payback_amt=?, status1=?, loan_desc=? WHERE uid=?`,
             [n(d.bu_no), n(d.loan_id), n(d.bank_id), n(d.loan_type), n(d.pay_terms), n(d.terms_rate), n(d.interest_rate),
@@ -87,7 +87,7 @@ router.put('/:uid', async (req, res) => {
 // 刪除
 router.delete('/:uid', async (req, res) => {
     try {
-        await pool.execute('DELETE FROM MGM_bank_loan_details WHERE uid=?', [req.params.uid]);
+        await pool.execute('DELETE FROM mgm_bank_loan_details WHERE uid=?', [req.params.uid]);
         ok(res, null, '已刪除');
     } catch (err) { fail500(res, err); }
 });
@@ -108,7 +108,7 @@ router.post('/recalc', async (req, res) => {
         fx.forEach(r => fxMap[r.code_value] = Number(r.value_number1));
 
         // 更新 pay_days 和匯兌損益
-        const [loans] = await conn.execute('SELECT * FROM MGM_bank_loan_details WHERE bu_no=?', [bu_no]);
+        const [loans] = await conn.execute('SELECT * FROM mgm_bank_loan_details WHERE bu_no=?', [bu_no]);
         const today = new Date();
         let total_loss = 0;
 
@@ -135,7 +135,7 @@ router.post('/recalc', async (req, res) => {
 
             if (updates.length > 0) {
                 params.push(loan.uid);
-                await conn.execute(`UPDATE MGM_bank_loan_details SET ${updates.join(',')} WHERE uid=?`, params);
+                await conn.execute(`UPDATE mgm_bank_loan_details SET ${updates.join(',')} WHERE uid=?`, params);
             }
             if (diff < 0) total_loss += Math.abs(diff);
         }

@@ -1,9 +1,9 @@
-/**
+﻿/**
  * 財務預測 forecast_detail 完整資料補全
  * 目標：HM / SZ / HN 三家公司，2024 和 2025 年度，1~12 月完整資料，
  *       涵蓋 Sales / Cost / Cash Flow 三種類型，共 3 × 2 × 12 × 3 = 216 筆
  * 策略：
- *   - 優先從 MGM_finance_summary 的 sale_amt / sale_cost_amt / net_profit_amt 取實際值
+ *   - 優先從 mgm_finance_summary 的 sale_amt / sale_cost_amt / net_profit_amt 取實際值
  *   - 預測值 = 實際值 × (0.85 ~ 1.15 浮動)
  *   - 若實際值不存在（某些月還沒錄），則用該公司該類型的年平均值作基底 + 季節性
  *   - diff_amt = forecast_amt - actual_amt（若無實際值則為 0）
@@ -17,7 +17,7 @@ const YEARS  = [2024, 2025];
 const MONTHS = Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0'));
 const FC_TYPES = ['Sales', 'Cost', 'Cash Flow'];
 
-// forecast_type → MGM_finance_summary 對應的實際值欄位
+// forecast_type → mgm_finance_summary 對應的實際值欄位
 const ACTUAL_FIELD = {
     'Sales':     'sale_amt',
     'Cost':      'sale_cost_amt',
@@ -33,7 +33,7 @@ async function main() {
     // 1. 讀取全部已有的實際值
     const [actualRows] = await pool.execute(
         `SELECT bu_no, YYYY_MM, sale_amt, sale_cost_amt, net_profit_amt 
-         FROM MGM_finance_summary 
+         FROM mgm_finance_summary 
          WHERE bu_no IN ('HM','SZ','HN') 
            AND (YYYY_MM LIKE '2024/%' OR YYYY_MM LIKE '2025/%')`
     );

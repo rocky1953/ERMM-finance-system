@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AR/AP 彙總路由
  */
 const express = require('express');
@@ -12,7 +12,7 @@ router.get('/raw', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         let sql = `SELECT uid, bu_no, YYYY, YYYY_MM,
             AR_amt, AP_amt, AR_ageing, AP_ageing, update_time
-            FROM ERMM_ARAP_detail WHERE 1=1`;
+            FROM ermm_arap_detail WHERE 1=1`;
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
         const { bu_no, YYYY_MM } = req.query;
         let sql = `SELECT uid, bu_no, YYYY_MM,
             AR_amt, AP_amt, AR_ageing, AP_ageing
-            FROM ERMM_ARAP_detail WHERE 1=1`;
+            FROM ermm_arap_detail WHERE 1=1`;
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
@@ -72,7 +72,7 @@ router.post('/', async (req, res) => {
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
         const YYYY = YYYY_MM.split('/')[0];
         await pool.execute(`
-            INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, update_time)
+            INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, update_time)
             VALUES (?,?,?,?,?,?,?,NOW())
             ON DUPLICATE KEY UPDATE
                 AR_amt=VALUES(AR_amt), AP_amt=VALUES(AP_amt),
@@ -94,7 +94,7 @@ router.put('/:uid', async (req, res) => {
         const values = Object.keys(d).filter(k => k !== 'uid' && k !== 'create_time')
             .map(k => d[k]);
         values.push(req.params.uid);
-        await pool.execute(`UPDATE ERMM_ARAP_detail SET ${updates}, update_time=NOW() WHERE uid=?`, values);
+        await pool.execute(`UPDATE ermm_arap_detail SET ${updates}, update_time=NOW() WHERE uid=?`, values);
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
@@ -102,7 +102,7 @@ router.put('/:uid', async (req, res) => {
 // 刪除
 router.delete('/:uid', async (req, res) => {
     try {
-        await pool.execute('DELETE FROM ERMM_ARAP_detail WHERE uid=?', [req.params.uid]);
+        await pool.execute('DELETE FROM ermm_arap_detail WHERE uid=?', [req.params.uid]);
         ok(res, null, '已刪除');
     } catch (err) { fail500(res, err); }
 });
@@ -117,16 +117,16 @@ router.post('/recalc', async (req, res) => {
 
         // AR = Σ(unit_price × dn_qty)
         await conn.execute(`
-            INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, update_time)
+            INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, update_time)
             SELECT ?, YYYY, YYYY_MM, SUM(unit_price * dn_qty), NOW()
-            FROM ERMM_erp_SO WHERE bu_no=? AND YYYY_MM IS NOT NULL
+            FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM IS NOT NULL
             GROUP BY YYYY, YYYY_MM
             ON DUPLICATE KEY UPDATE AR_amt=VALUES(AR_amt), update_time=NOW()
         `, [bu_no, bu_no]);
 
         // AP = Σ(po_amount + vat_amt) WHERE 審核通過 AND 交付完成
         await conn.execute(`
-            INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AP_amt, update_time)
+            INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AP_amt, update_time)
             SELECT ?, YYYY, YYYY_MM, SUM(po_amount + vat_amt), NOW()
             FROM ermm_erp_po WHERE bu_no=? AND YYYY_MM IS NOT NULL
               AND po_status='審核通過' AND po_sub_status='交付完成'
@@ -135,13 +135,13 @@ router.post('/recalc', async (req, res) => {
         `, [bu_no, bu_no]);
 
         // NULL 歸零
-        await conn.execute('UPDATE ERMM_ARAP_detail SET AR_amt=0 WHERE bu_no=? AND AR_amt IS NULL', [bu_no]);
-        await conn.execute('UPDATE ERMM_ARAP_detail SET AP_amt=0 WHERE bu_no=? AND AP_amt IS NULL', [bu_no]);
+        await conn.execute('UPDATE ermm_arap_detail SET AR_amt=0 WHERE bu_no=? AND AR_amt IS NULL', [bu_no]);
+        await conn.execute('UPDATE ermm_arap_detail SET AP_amt=0 WHERE bu_no=? AND AP_amt IS NULL', [bu_no]);
 
         await conn.commit();
 
         const [rows] = await conn.execute(
-            'SELECT * FROM ERMM_ARAP_detail WHERE bu_no=? ORDER BY YYYY_MM DESC', [bu_no]
+            'SELECT * FROM ermm_arap_detail WHERE bu_no=? ORDER BY YYYY_MM DESC', [bu_no]
         );
         ok(res, rows, 'AR/AP 重新計算完成');
     } catch (err) {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BEP 損益平衡點分析路由
  *
  * 公式:
@@ -69,20 +69,20 @@ router.get('/query', async (req, res) => {
 
     // 1. DB 可編輯欄位（先查，後續 fallback 可能覆蓋）
     let [bepRows] = await pool.execute(
-      'SELECT * FROM MGM_BEP_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+      'SELECT * FROM mgm_bep_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
       [bu_no, YYYY_MM]
     );
 
-    // 2. 銷售金額（自 MGM_finance_summary）— 若指定月份無資料則 fallback 最新
+    // 2. 銷售金額（自 mgm_finance_summary）— 若指定月份無資料則 fallback 最新
     let sale_amt = 0;
     let usedYM = YYYY_MM;
     const [sum] = await pool.execute(
-        'SELECT sale_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+        'SELECT sale_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
         [bu_no, YYYY_MM]
     );
     if (sum.length === 0) {
         const [latest] = await pool.execute(
-            'SELECT YYYY_MM, sale_amt FROM MGM_finance_summary WHERE bu_no=? ORDER BY YYYY_MM DESC LIMIT 1',
+            'SELECT YYYY_MM, sale_amt FROM mgm_finance_summary WHERE bu_no=? ORDER BY YYYY_MM DESC LIMIT 1',
             [bu_no]
         );
         if (latest.length > 0) {
@@ -91,7 +91,7 @@ router.get('/query', async (req, res) => {
             // 若指定月份的 BEP 門檻不存在，用最新月份的
             if (bepRows.length === 0) {
                 const [bepLatest] = await pool.execute(
-                    'SELECT * FROM MGM_BEP_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+                    'SELECT * FROM mgm_bep_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
                     [bu_no, usedYM]
                 );
                 if (bepLatest.length > 0) bepRows = bepLatest;
@@ -139,7 +139,7 @@ router.post('/save', async (req, res) => {
       : n(fixed_cost);
 
     await pool.execute(
-      `INSERT INTO MGM_BEP_threshold
+      `INSERT INTO mgm_bep_threshold
        (bu_no, YYYY_MM, consumable, packaging, processing, misc_purchase,
         freight, customs, service_part_comp, variable_expense,
         fixed_salary, fixed_rent, fixed_interest, fixed_cost, remark)
@@ -162,12 +162,12 @@ router.post('/save', async (req, res) => {
 
     // 保存後重算回傳最新結果
     const [sum] = await pool.execute(
-      'SELECT sale_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+      'SELECT sale_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
       [bu_no, YYYY_MM]
     );
     const sale_amt = sum[0]?.sale_amt ?? 0;
     const [br] = await pool.execute(
-      'SELECT * FROM MGM_BEP_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+      'SELECT * FROM mgm_bep_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
       [bu_no, YYYY_MM]
     );
     const result = calcBEP(sale_amt, br[0]);
@@ -190,7 +190,7 @@ router.get('/history', async (req, res) => {
     let targetYear = year;
     if (!targetYear) {
       const [latest] = await pool.execute(
-        'SELECT YYYY_MM FROM MGM_BEP_threshold WHERE bu_no=? ORDER BY YYYY_MM DESC LIMIT 1',
+        'SELECT YYYY_MM FROM mgm_bep_threshold WHERE bu_no=? ORDER BY YYYY_MM DESC LIMIT 1',
         [bu_no]
       );
       if (latest.length === 0) return ok(res, { months: [] });
@@ -204,8 +204,8 @@ router.get('/history', async (req, res) => {
               t.variable_expense,
               t.fixed_salary, t.fixed_rent, t.fixed_interest, t.fixed_cost,
               s.sale_amt
-       FROM MGM_BEP_threshold t
-       LEFT JOIN MGM_finance_summary s
+       FROM mgm_bep_threshold t
+       LEFT JOIN mgm_finance_summary s
          ON t.bu_no=s.bu_no AND t.YYYY_MM=s.YYYY_MM
        WHERE t.bu_no=? AND t.YYYY_MM LIKE ?
        ORDER BY t.YYYY_MM`,
@@ -274,7 +274,7 @@ const BEP_ITEM_MAP = {
   sale_amt:          { amt_types: ['銷貨收入','應收款收回','匯兌收益','利息收入'], label: '銷售金額 → 全部收入（DR）' }
 };
 
-// === BEP 門檻目標值解析（單一真源：MGM_BEP_threshold） ===
+// === BEP 門檻目標值解析（單一真源：mgm_bep_threshold） ===
 const MATERIAL_FIELDS = ['consumable','packaging','processing','misc_purchase',
                          'freight','customs','service_part_comp'];
 const DIRECT_THRESHOLD_FIELD = {
@@ -357,7 +357,7 @@ router.get('/detail', async (req, res) => {
     let reconcile = null;
     const noMapping = amtTypes.length === 0;
     const [thRows] = await pool.execute(
-      'SELECT * FROM MGM_BEP_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+      'SELECT * FROM mgm_bep_threshold WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
       [bu_no, YYYY_MM]
     );
     const target = resolveTarget(item_key, thRows[0]);

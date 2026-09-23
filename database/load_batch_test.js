@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 把 batch_test_202301.xlsx 的資料灌進 DB
  * 然後跑 7 步批次管線驗證
  */
@@ -21,13 +21,13 @@ const dbCfg = {
 
 // Sheet 名稱 → DB 表（與 Excel Sheet 名對應）
 const SHEET_TABLE = {
-    '01_ERP_temp_po': 'ERMM_temp_po',
-    '02_ERP_SO': 'ERMM_erp_SO',
+    '01_ERP_temp_po': 'ermm_temp_po',
+    '02_ERP_SO': 'ermm_erp_so',
     '03_庫存明細_xitems': 'e2_xitems_daily_status',
     '04_系統參數_codes': 'cams_system_codes',
-    '05_發票明細_invoice': 'MGM_invoice_details',
-    '06_現金日記_cash': 'MGM_casher_details',
-    '07_財務摘要_summary': 'MGM_finance_summary',
+    '05_發票明細_invoice': 'mgm_invoice_details',
+    '06_現金日記_cash': 'mgm_casher_details',
+    '07_財務摘要_summary': 'mgm_finance_summary',
 };
 
 // 轉換 Excel Date → MySQL 格式
@@ -55,15 +55,15 @@ async function main() {
     // 先清掉 2023/01 相關舊資料（避免重複）
     console.log('── 清除 2023/01 舊資料 ──');
     const cleans = [
-        "DELETE FROM ERMM_temp_po WHERE po_id LIKE 'PO2301%'",
+        "DELETE FROM ermm_temp_po WHERE po_id LIKE 'PO2301%'",
         "DELETE FROM ermm_erp_po WHERE po_id LIKE 'PO2301%'",
-        "DELETE FROM ERMM_erp_SO WHERE so_nbr LIKE 'SO2301%'",
+        "DELETE FROM ermm_erp_so WHERE so_nbr LIKE 'SO2301%'",
         "DELETE FROM e2_xitems_daily_status WHERE stock_date='2023-01-31'",
         "DELETE FROM cams_system_codes WHERE code_type IN ('CURRENCY','AGEING_STOCK')",
-        "DELETE FROM MGM_invoice_details WHERE invoice_no LIKE '%2301%' AND invoice_no REGEXP '^(AR|AP)2301'",
-        "DELETE FROM MGM_casher_details WHERE num_vman LIKE 'CV2301%'",
-        "DELETE FROM MGM_finance_summary WHERE YYYY_MM='2023/01'",
-        "DELETE FROM ERMM_ARAP_detail WHERE YYYY_MM='2023/01'",
+        "DELETE FROM mgm_invoice_details WHERE invoice_no LIKE '%2301%' AND invoice_no REGEXP '^(AR|AP)2301'",
+        "DELETE FROM mgm_casher_details WHERE num_vman LIKE 'CV2301%'",
+        "DELETE FROM mgm_finance_summary WHERE YYYY_MM='2023/01'",
+        "DELETE FROM ermm_arap_detail WHERE YYYY_MM='2023/01'",
     ];
     for (const q of cleans) {
         try { await conn.execute(q); } catch {}
@@ -139,7 +139,7 @@ async function main() {
         console.log(`  ${table.padEnd(32)} → ${cnt} 筆 (錯 ${errCnt})`);
     }
 
-    // 7. MGM_finance_summary — 不需要回填，原本就有 YYYY_MM
+    // 7. mgm_finance_summary — 不需要回填，原本就有 YYYY_MM
 
     // ============================================================
     // 重點：所有新灌資料的 YYYY_MM / YYYY / MM 都是 NULL（Excel 沒這些欄位）
@@ -148,11 +148,11 @@ async function main() {
     console.log('\n── 自動回填 YYYY/MM/YYYY_MM ──');
     const backfills = [
         // 表, 日期欄位, 篩選條件（只更新這次灌的）
-        { tbl: 'ERMM_temp_po',          date: 'po_date',  where: "po_id LIKE 'PO2301%'" },
+        { tbl: 'ermm_temp_po',          date: 'po_date',  where: "po_id LIKE 'PO2301%'" },
         { tbl: 'ermm_erp_po',           date: 'po_date',  where: "po_id LIKE 'PO2301%'" },
-        { tbl: 'ERMM_erp_SO',           date: 'so_date',  where: "so_nbr LIKE 'SO2301%'" },
-        { tbl: 'MGM_invoice_details',   date: 'wk_date',  where: "invoice_no REGEXP '^(AR|AP)2301'" },
-        { tbl: 'MGM_casher_details',    date: 'wk_date',  where: "num_vman LIKE 'CV2301%'" },
+        { tbl: 'ermm_erp_so',           date: 'so_date',  where: "so_nbr LIKE 'SO2301%'" },
+        { tbl: 'mgm_invoice_details',   date: 'wk_date',  where: "invoice_no REGEXP '^(AR|AP)2301'" },
+        { tbl: 'mgm_casher_details',    date: 'wk_date',  where: "num_vman LIKE 'CV2301%'" },
         { tbl: 'pay_detail',            date: 'should_date', where: "supplier_name IN ('工資','供應商A','供應商B') AND finance_type='工資'" },
         { tbl: 'ermm_arap_detail',      date: null,       where: "YYYY_MM='2023/01'" },
     ];

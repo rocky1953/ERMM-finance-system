@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 三大財務報表路由
  * 資產負債表、損益表、現金流量表
  */
@@ -11,7 +11,7 @@ const ExcelJS = require('exceljs');
 // ===== 共用資料函式（API 路由與 Excel 匯出直接調用，避免內部 HTTP 自調被 JWT 攔截）=====
 async function getSummaryRow(bu_no, YYYY_MM) {
     const [rows] = await pool.execute(
-        `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
+        `SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`,
         [bu_no, YYYY_MM]
     );
     return rows.length > 0 ? rows[0] : null;

@@ -14,7 +14,7 @@ const OUT = path.join(__dirname, 'finance_data_template.xlsx');
 const DATASHEETS = [
     {
         name: '01_財務摘要_summary',
-        table: 'MGM_finance_summary',
+        table: 'mgm_finance_summary',
         codes: [
             'bu_no','YYYY_MM','cash_amt','deposite_amt','interest_amt',
             'AR_amt','stock_P_amt','stock_M_amt','equipment_amt','acc_de_EQMT',
@@ -33,7 +33,7 @@ const DATASHEETS = [
     },
     {
         name: '02_現金日記帳_cash',
-        table: 'MGM_casher_details',
+        table: 'mgm_casher_details',
         codes: ['bu_no','num_vman','wk_date','amt_type','DB_CR','sub_amt','bank_acct','remark'],
         desc: 'DB_CR: DR=收款 / CR=付款',
         samples: [
@@ -50,7 +50,7 @@ const DATASHEETS = [
     },
     {
         name: '03_發票明細_invoice',
-        table: 'MGM_invoice_details',
+        table: 'mgm_invoice_details',
         codes: ['bu_no','TX_type','invoice_no','wk_date','client_id','sub_amt','VAT_amt','tax_rate','pay_date','payment'],
         desc: 'TX_type: AR=銷項 / AP=進項',
         samples: [

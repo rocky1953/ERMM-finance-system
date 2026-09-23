@@ -1,5 +1,5 @@
-/**
- * MGM_finance_summary 財務摘要路由 (200+ 欄位核心樞紐)
+﻿/**
+ * mgm_finance_summary 財務摘要路由 (200+ 欄位核心樞紐)
  */
 const express = require('express');
 const router = express.Router();
@@ -10,7 +10,7 @@ const { ok, fail, fail500, n } = require('../utils/response');
 router.get('/', async (req, res) => {
     try {
         const { bu_no, YYYY, YYYY_MM, limit } = req.query;
-        let sql = 'SELECT uid, bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt, AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt, debet_amt, captial_stock, captial_reserve, legal_reserve, accumulated_amt, current_PL_amt, stockholder_amt, ttl_debet_amt, sale_amt, sale_cost_amt, VAT_amt, sale_exp_amt, MGM_EXP_amt, finance_EXP_amt, BIZ_major_margin_amt, BIZ_margin_amt, operation_profit_amt, pretax_profit_amt, net_profit_amt, VAT_rate, Z_score, risk_color, create_time, update_time FROM MGM_finance_summary WHERE 1=1';
+        let sql = 'SELECT uid, bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt, AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt, debet_amt, captial_stock, captial_reserve, legal_reserve, accumulated_amt, current_PL_amt, stockholder_amt, ttl_debet_amt, sale_amt, sale_cost_amt, VAT_amt, sale_exp_amt, MGM_EXP_amt, finance_EXP_amt, BIZ_major_margin_amt, BIZ_margin_amt, operation_profit_amt, pretax_profit_amt, net_profit_amt, VAT_rate, Z_score, risk_color, create_time, update_time FROM mgm_finance_summary WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY) { sql += ' AND YYYY=?'; params.push(YYYY); }
@@ -28,7 +28,7 @@ router.get('/yearly', async (req, res) => {
         if (!bu_no) return fail(res, '需要 bu_no');
         const n = parseInt(years || '5');
         const [ys] = await pool.execute(
-            'SELECT DISTINCT YYYY FROM MGM_finance_summary WHERE bu_no=? ORDER BY YYYY DESC LIMIT ' + Math.min(n, 10),
+            'SELECT DISTINCT YYYY FROM mgm_finance_summary WHERE bu_no=? ORDER BY YYYY DESC LIMIT ' + Math.min(n, 10),
             [bu_no]
         );
         const yearList = ys.map(r => r.YYYY).reverse();
@@ -45,7 +45,7 @@ router.get('/yearly', async (req, res) => {
                    MAX(ttl_asset_amt) AS ttl_asset_end,
                    MAX(stockholder_amt) AS equity_end,
                    COUNT(*) AS months
-            FROM MGM_finance_summary
+            FROM mgm_finance_summary
             WHERE bu_no=? AND YYYY IN (${yearList.map(() => '?').join(',')})
             GROUP BY YYYY
             ORDER BY YYYY ASC
@@ -59,7 +59,7 @@ router.get('/yearly', async (req, res) => {
 router.get('/:uid', async (req, res) => {
     try {
         const [rows] = await pool.execute(
-            'SELECT * FROM MGM_finance_summary WHERE uid=?', [req.params.uid]
+            'SELECT * FROM mgm_finance_summary WHERE uid=?', [req.params.uid]
         );
         if (rows.length === 0) return fail(res, '記錄不存在', 404);
         ok(res, rows[0]);
@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
         if (d.YYYY_MM && !YYYY) { YYYY = d.YYYY_MM.split('/')[0]; }
         if (d.YYYY_MM && !MM) { MM = d.YYYY_MM.split('/')[1]; }
         await pool.execute(`
-            INSERT INTO MGM_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt,
+            INSERT INTO mgm_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt,
                AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt,
                debet_amt, captial_stock, captial_reserve, legal_reserve, accumulated_amt,
                current_PL_amt, stockholder_amt, ttl_debet_amt, sale_amt, sale_cost_amt, VAT_amt,
@@ -124,7 +124,7 @@ router.put('/:uid', async (req, res) => {
         const values = Object.keys(d).filter(k => k !== 'uid' && k !== 'create_time')
             .map(k => d[k]);
         values.push(req.params.uid);
-        await pool.execute(`UPDATE MGM_finance_summary SET ${updates} WHERE uid=?`, values);
+        await pool.execute(`UPDATE mgm_finance_summary SET ${updates} WHERE uid=?`, values);
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
@@ -132,7 +132,7 @@ router.put('/:uid', async (req, res) => {
 // 刪除
 router.delete('/:uid', async (req, res) => {
     try {
-        await pool.execute('DELETE FROM MGM_finance_summary WHERE uid=?', [req.params.uid]);
+        await pool.execute('DELETE FROM mgm_finance_summary WHERE uid=?', [req.params.uid]);
         ok(res, null, '已刪除');
     } catch (err) { fail500(res, err); }
 });
@@ -150,14 +150,14 @@ router.post('/addon', async (req, res) => {
             const mm = String(m).padStart(2, '0');
             const ym = `${year}/${mm}`;
             await conn.execute(`
-                INSERT IGNORE INTO MGM_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, batch_id)
+                INSERT IGNORE INTO mgm_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, batch_id)
                 VALUES (?,?,?,?,?,?)
             `, [bu_no, ym, String(year), mm, '', 'addon']);
         }
 
         // NULL 歸零
         await conn.execute(
-            'UPDATE MGM_finance_summary SET cash_amt=0, AR_amt=0, ttl_asset_amt=0, AP_amt=0, debet_amt=0, sale_amt=0, net_profit_amt=0 WHERE bu_no=? AND YYYY=? AND cash_amt IS NULL',
+            'UPDATE mgm_finance_summary SET cash_amt=0, AR_amt=0, ttl_asset_amt=0, AP_amt=0, debet_amt=0, sale_amt=0, net_profit_amt=0 WHERE bu_no=? AND YYYY=? AND cash_amt IS NULL',
             [bu_no, year]
         );
 
@@ -187,7 +187,7 @@ router.post('/calcPL', async (req, res) => {
 
         // 讀取當月資料
         const [rows] = await conn.execute(
-            'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
+            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
         );
         if (rows.length === 0) return fail(res, '該月摘要不存在，請先執行 /summary/addon');
 
@@ -235,7 +235,7 @@ router.post('/calcPL', async (req, res) => {
             Number(r.legal_reserve || 0) + Number(r.accumulated_amt || 0) + net_profit;
 
         await conn.execute(`
-            UPDATE MGM_finance_summary SET
+            UPDATE mgm_finance_summary SET
                 VAT_rate=?, VAT_amt=?, BIZ_major_margin_amt=?, BIZ_margin_amt=?,
                 operation_profit_amt=?, pretax_profit_amt=?, net_profit_amt=?,
                 current_PL_amt=?,

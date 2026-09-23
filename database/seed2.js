@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 種子資料產生腳本 v2
  * 日期範圍: 2024/09/01 ~ 2024/11/30 (3個月)
  * 公司別: HM, SZ, HN 各一份
@@ -134,9 +134,9 @@ async function main() {
 
     // === 0. 清理 ===
     console.log('🧹 清理舊資料...');
-    const tables = ['forecast_detail','pay_detail','check_detail','ERMM_ARAP_detail',
-                    'MGM_bank_loan_details','MGM_invoice_details','MGM_casher_details',
-                    'MGM_finance_summary','MGM_KPI_desc','BH_MGM_TX_detail'];
+    const tables = ['forecast_detail','pay_detail','check_detail','ermm_arap_detail',
+                    'mgm_bank_loan_details','mgm_invoice_details','mgm_casher_details',
+                    'mgm_finance_summary','mgm_kpi_desc','BH_MGM_TX_detail'];
     for (const t of tables) {
         try { await pool.execute(`DELETE FROM ${t} WHERE bu_no IN (?,?,?)`, BUS); } catch(e) {}
     }
@@ -150,7 +150,7 @@ async function main() {
             const cols = Object.keys(s).join(',');
             const ph = Object.keys(s).map(() => '?').join(',');
             await pool.execute(
-                `INSERT INTO MGM_finance_summary (${cols}) VALUES (${ph})
+                `INSERT INTO mgm_finance_summary (${cols}) VALUES (${ph})
                  ON DUPLICATE KEY UPDATE ${cols.split(',').map(c=>c+'=VALUES('+c+')').join(',')}`,
                 Object.values(s)
             );
@@ -174,7 +174,7 @@ async function main() {
                 const daysSince = Math.floor((new Date() - new Date(date)) / 86400000);
                 const payment = Math.round(amt * (0.3 + Math.random() * 0.6));
                 await pool.execute(
-                    `INSERT INTO MGM_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt, tax_type, tax_rate, VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
+                    `INSERT INTO mgm_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt, tax_type, tax_rate, VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                     [bu, 'AR', `SO${bu}${ym.YYYY}${ym.MM}${String(rnd(1,20)).padStart(3,'0')}`,
                      custs[rnd(0,custs.length-1)], invNo, amt, 'VAT', 13, Math.round(amt*13/113),
@@ -191,7 +191,7 @@ async function main() {
                 const daysSince = Math.floor((new Date() - new Date(date)) / 86400000);
                 const payment = Math.round(amt * (0.2 + Math.random() * 0.5));
                 await pool.execute(
-                    `INSERT INTO MGM_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt, tax_type, tax_rate, VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
+                    `INSERT INTO mgm_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt, tax_type, tax_rate, VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                     [bu, 'AP', `PO${bu}${ym.YYYY}${ym.MM}${String(rnd(1,15)).padStart(3,'0')}`,
                      sups[rnd(0,sups.length-1)], invNo, amt, 'VAT', 13, Math.round(amt*13/113),
@@ -217,7 +217,7 @@ async function main() {
                 const amt = Math.round(s.sale_amt * factor * (0.8 + Math.random()*0.4));
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
                 await pool.execute(
-                    `INSERT INTO MGM_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR, YYYY, MM, YYYY_MM, wk_date, remark)
+                    `INSERT INTO mgm_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR, YYYY, MM, YYYY_MM, wk_date, remark)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
                     [bu, cashInTypes[k][0], cashInTypes[k][1], `CV${bu}${ym.YYYY}${ym.MM}${String(k+1).padStart(2,'0')}`,
                      amt, 'DR', ym.YYYY, ym.MM, ym.YYYY_MM, date, cashInTypes[k][0]]
@@ -231,7 +231,7 @@ async function main() {
                 const amt = Math.round(base * factor * (0.8 + Math.random()*0.4));
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
                 await pool.execute(
-                    `INSERT INTO MGM_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR, YYYY, MM, YYYY_MM, wk_date, remark)
+                    `INSERT INTO mgm_casher_details (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR, YYYY, MM, YYYY_MM, wk_date, remark)
                      VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
                     [bu, cashOutTypes[k][0], cashOutTypes[k][1], `CV${bu}${ym.YYYY}${ym.MM}${String(k+10).padStart(2,'0')}`,
                      amt, 'CR', ym.YYYY, ym.MM, ym.YYYY_MM, date, cashOutTypes[k][0]]
@@ -249,7 +249,7 @@ async function main() {
         for (const ym of MONTHS) {
             const s = buildSummary(bu, ym, MONTHS.indexOf(ym));
             await pool.execute(
-                `INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, batch_id)
+                `INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, batch_id)
                  VALUES (?,?,?,?,?,?,?,?)`,
                 [bu, ym.YYYY, ym.YYYY_MM, Math.round(s.AR_amt/3), Math.round(s.AP_amt/3),
                  Math.round(s.AR_amt/10), Math.round(s.AP_amt/10), 'MANUAL']
@@ -342,7 +342,7 @@ async function main() {
         for (const l of loans) {
             const diff = Math.round(l.amt * (1 - l.rate2));
             await pool.execute(
-                `INSERT INTO MGM_bank_loan_details (bu_no, YYYY, acct_no, type1, acct_amt, unit, loan_id, bank_id, branch_id, loan_type, pay_terms, terms_rate, interest_rate, begin_date, end_date, pay_days, payback_amt, loan_amt, exchange_rate, last_paydate, next_paydate, status1, loan_desc, diff_amt, loss_flag)
+                `INSERT INTO mgm_bank_loan_details (bu_no, YYYY, acct_no, type1, acct_amt, unit, loan_id, bank_id, branch_id, loan_type, pay_terms, terms_rate, interest_rate, begin_date, end_date, pay_days, payback_amt, loan_amt, exchange_rate, last_paydate, next_paydate, status1, loan_desc, diff_amt, loss_flag)
                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
                 [bu, '2024', `ACCT${bu}${rnd(100,999)}`, '貸款', l.amt, 'RMB', l.loan_id, l.bank, '總行', l.type, l.terms, 0, l.rate,
                  l.begin, '2025-12-31', rnd(1,30), 0, l.amt, l.rate2, '2024-08-01', '2024-09-01', 'Active',
@@ -407,7 +407,7 @@ async function main() {
             if (k.v >= k.low && k.v <= k.high) color = 'GREEN';
             else if (k.v < k.low * 0.7 || k.v > k.high * 1.3) color = 'RED';
             await pool.execute(
-                `INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type, KPI_value, KPI_color, remark)
+                `INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type, KPI_value, KPI_color, remark)
                  VALUES (?,?,?,?,?,?,?,?,?,?)
                  ON DUPLICATE KEY UPDATE KPI1=VALUES(KPI1), KPI2=VALUES(KPI2), KPI_value=VALUES(KPI_value), KPI_color=VALUES(KPI_color)`,
                 [bu, k.id, k.name, k.low, k.high, k.unit, 'asc', k.v, color, `${k.name} 評估指標`]
@@ -419,8 +419,8 @@ async function main() {
 
     console.log('\n🎉 全部完成！驗證中...');
     const counts = {};
-    for (const t of ['MGM_finance_summary','MGM_invoice_details','MGM_casher_details','ERMM_ARAP_detail',
-                     'pay_detail','check_detail','MGM_bank_loan_details','forecast_detail','MGM_KPI_desc']) {
+    for (const t of ['mgm_finance_summary','mgm_invoice_details','mgm_casher_details','ermm_arap_detail',
+                     'pay_detail','check_detail','mgm_bank_loan_details','forecast_detail','mgm_kpi_desc']) {
         const [r] = await pool.execute(`SELECT COUNT(*) as cnt FROM ${t} WHERE bu_no IN (?,?,?)`, BUS);
         counts[t] = r[0].cnt;
     }

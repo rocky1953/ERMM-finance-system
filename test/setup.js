@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ERMM API 測試設定 — Jest + Supertest
  *
  * 測試策略：
@@ -20,14 +20,14 @@ const TEST_YEAR = '2099';
 // 工具：清理測試資料
 async function cleanupTestData() {
     const tables = [
-        'MGM_bank_loan_details',
-        'MGM_finance_summary',
+        'mgm_bank_loan_details',
+        'mgm_finance_summary',
         'forecast_detail',
-        'MGM_KPI_desc',
-        'MGM_casher_details',
+        'mgm_kpi_desc',
+        'mgm_casher_details',
         'pay_detail',
         'check_detail',
-        'MGM_invoice_details'
+        'mgm_invoice_details'
     ];
     for (const t of tables) {
         try {
@@ -39,7 +39,7 @@ async function cleanupTestData() {
 // 工具：寫入測試摘要
 async function seedTestSummary(overrides = {}) {
     await pool.execute(`
-        INSERT INTO MGM_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, batch_id,
+        INSERT INTO mgm_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, batch_id,
             sale_amt, sale_cost_amt, sale_exp_amt, MGM_EXP_amt, finance_EXP_amt,
             cash_amt, deposite_amt, AR_amt, AP_amt, loan_amt,
             stock_P_amt, stock_M_amt, captial_stock, captial_reserve, accumulated_amt,

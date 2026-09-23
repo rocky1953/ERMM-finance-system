@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 批次管線 7 步導入後驗證報告生成器
  * 用法: node database/gen_verify_report.js [YYYY/MM]
  * 預設: 2023/01
@@ -51,14 +51,14 @@ async function main() {
     // 1. 資料來源彙總（所有 BU × 7 張表）
     // =========================================================
     const srcTables = [
-        { name: '01_ERP_temp_po',          tbl: 'ERMM_temp_po',           dateCol: 'po_date',    seqCol: 'po_id',    filter: `po_id LIKE 'PO${YYYY}${MM}%'` },
+        { name: '01_ERP_temp_po',          tbl: 'ermm_temp_po',           dateCol: 'po_date',    seqCol: 'po_id',    filter: `po_id LIKE 'PO${YYYY}${MM}%'` },
         { name: '02_ERP_erp_po',           tbl: 'ermm_erp_po',            dateCol: 'po_date',    seqCol: 'po_id',    filter: `po_id LIKE 'PO${YYYY}${MM}%'` },
-        { name: '03_ERP_erp_SO',           tbl: 'ERMM_erp_SO',            dateCol: 'so_date',    seqCol: 'so_nbr',   filter: `so_nbr LIKE 'SO${YYYY}${MM}%'` },
+        { name: '03_ERP_erp_SO',           tbl: 'ermm_erp_so',            dateCol: 'so_date',    seqCol: 'so_nbr',   filter: `so_nbr LIKE 'SO${YYYY}${MM}%'` },
         { name: '04_庫存明細',             tbl: 'e2_xitems_daily_status', dateCol: 'stock_date', seqCol: 'uid',      filter: `stock_date='${STOCK_LAST_DAY}'` },
-        { name: '05_發票明細',             tbl: 'MGM_invoice_details',     dateCol: 'wk_date',    seqCol: 'invoice_no', filter: `invoice_no REGEXP '^(AR|AP)${YYYY}${MM}'` },
-        { name: '06_現金日記',             tbl: 'MGM_casher_details',      dateCol: 'wk_date',    seqCol: 'num_vman',  filter: `num_vman LIKE 'CV${YYYY}${MM}%'` },
-        { name: '07_ARAP_detail',          tbl: 'ERMM_ARAP_detail',       dateCol: null,         seqCol: 'uid',      filter: `YYYY_MM='${YYYY_MM}'` },
-        { name: '08_財務摘要(目標)',       tbl: 'MGM_finance_summary',     dateCol: null,         seqCol: 'uid',      filter: `YYYY_MM='${YYYY_MM}'` },
+        { name: '05_發票明細',             tbl: 'mgm_invoice_details',     dateCol: 'wk_date',    seqCol: 'invoice_no', filter: `invoice_no REGEXP '^(AR|AP)${YYYY}${MM}'` },
+        { name: '06_現金日記',             tbl: 'mgm_casher_details',      dateCol: 'wk_date',    seqCol: 'num_vman',  filter: `num_vman LIKE 'CV${YYYY}${MM}%'` },
+        { name: '07_ARAP_detail',          tbl: 'ermm_arap_detail',       dateCol: null,         seqCol: 'uid',      filter: `YYYY_MM='${YYYY_MM}'` },
+        { name: '08_財務摘要(目標)',       tbl: 'mgm_finance_summary',     dateCol: null,         seqCol: 'uid',      filter: `YYYY_MM='${YYYY_MM}'` },
     ];
 
     let srcTableHtml = '';
@@ -92,9 +92,9 @@ async function main() {
     // =========================================================
     let ymCheckHtml = '';
     const ymTables = [
-        { tbl: 'ERMM_erp_SO', filter: `so_nbr LIKE 'SO${YYYY}${MM}%'`, dateCol: 'so_date' },
-        { tbl: 'MGM_invoice_details', filter: `invoice_no REGEXP '^(AR|AP)${YYYY}${MM}'`, dateCol: 'wk_date' },
-        { tbl: 'MGM_casher_details', filter: `num_vman LIKE 'CV${YYYY}${MM}%'`, dateCol: 'wk_date' },
+        { tbl: 'ermm_erp_so', filter: `so_nbr LIKE 'SO${YYYY}${MM}%'`, dateCol: 'so_date' },
+        { tbl: 'mgm_invoice_details', filter: `invoice_no REGEXP '^(AR|AP)${YYYY}${MM}'`, dateCol: 'wk_date' },
+        { tbl: 'mgm_casher_details', filter: `num_vman LIKE 'CV${YYYY}${MM}%'`, dateCol: 'wk_date' },
     ];
     for (const t of ymTables) {
         const [r] = await conn.execute(
@@ -126,12 +126,12 @@ async function main() {
     let sumHtml = '';
     for (const bu of BU_LIST) {
         const [rows] = await conn.execute(
-            `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, YYYY_MM]
+            `SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, YYYY_MM]
         );
         const r = rows[0];
         if (!r) {
             sumHtml += `<tr><td style="font-weight:700">${bu} (${BU_NAME[bu]})</td>
-              <td colspan="10" style="text-align:center;color:#dc2626">❌ MGM_finance_summary 無此月份資料</td></tr>`;
+              <td colspan="10" style="text-align:center;color:#dc2626">❌ mgm_finance_summary 無此月份資料</td></tr>`;
             continue;
         }
         // 公式驗證
@@ -213,14 +213,14 @@ async function main() {
     // Step 6 ARAP 驗證
     const [arapRows] = await conn.execute(`
         SELECT YYYY_MM, FORMAT(AR_amt,0) AR, FORMAT(AP_amt,0) AP
-          FROM ERMM_ARAP_detail WHERE bu_no=? AND YYYY_MM=?
+          FROM ermm_arap_detail WHERE bu_no=? AND YYYY_MM=?
     `, [bu, YYYY_MM]);
     const arap = arapRows[0] || {};
 
     // SO → AR 驗證
     const [soAR] = await conn.execute(`
         SELECT FORMAT(SUM(unit_price * dn_qty),0) so_total
-          FROM ERMM_erp_SO WHERE bu_no=? AND YYYY_MM=?
+          FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?
     `, [bu, YYYY_MM]);
     // PO → AP 驗證
     const [poAP] = await conn.execute(`
@@ -232,7 +232,7 @@ async function main() {
     // Step 7 發票彙總驗證
     const [invSum] = await conn.execute(`
         SELECT TX_type, FORMAT(SUM(sub_amt),0) total, FORMAT(SUM(VAT_amt),0) vat
-          FROM MGM_invoice_details WHERE bu_no=? AND YYYY_MM=?
+          FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?
          GROUP BY TX_type
     `, [bu, YYYY_MM]);
     const invMap = {};
@@ -241,7 +241,7 @@ async function main() {
     // Step 7 現金流驗證
     const [cashSum] = await conn.execute(`
         SELECT DB_CR, FORMAT(SUM(sub_amt),0) total, COUNT(*) cnt
-          FROM MGM_casher_details WHERE bu_no=? AND YYYY_MM=?
+          FROM mgm_casher_details WHERE bu_no=? AND YYYY_MM=?
          GROUP BY DB_CR
     `, [bu, YYYY_MM]);
     const cashMap = {};
@@ -259,7 +259,7 @@ async function main() {
             <td style="text-align:right">${fmt(soAR[0].so_total)}</td>
             <td style="text-align:right">${fmt(poAP[0].po_total)}</td>
             <td style="text-align:right">${fmt(invMap['AR']?.total)} / ${fmt(invMap['AP']?.total)}</td></tr>
-        <tr><td style="font-weight:600">寫入 ERMM_ARAP_detail</td>
+        <tr><td style="font-weight:600">寫入 ermm_arap_detail</td>
             <td style="text-align:right;color:#059669">${fmt(arap.AR_amt || 0)}</td>
             <td style="text-align:right;color:#059669">${fmt(arap.AP_amt || 0)}</td>
             <td style="text-align:right">—</td></tr>
@@ -325,23 +325,23 @@ async function main() {
       ${BU_LIST.map(b => `<td>${check(!noReduceMap[b], '0', noReduceMap[b]+' 筆')}</td>`).join('')}</tr>`;
 
     // 5c. summary 有資料但核心欄位 NULL
-    const [nullAR] = await conn.execute(`SELECT bu_no, COUNT(*) cnt FROM MGM_finance_summary WHERE YYYY_MM=? AND AR_amt IS NULL GROUP BY bu_no`, [YYYY_MM]);
+    const [nullAR] = await conn.execute(`SELECT bu_no, COUNT(*) cnt FROM mgm_finance_summary WHERE YYYY_MM=? AND AR_amt IS NULL GROUP BY bu_no`, [YYYY_MM]);
     const nullARMap = {}; nullAR.forEach(r => nullARMap[r.bu_no] = r.cnt);
     qcHtml += `<tr><td>Step 7 summary AR 為 NULL</td>
       ${BU_LIST.map(b => `<td>${check(!nullARMap[b], '0', nullARMap[b]+' 筆')}</td>`).join('')}</tr>`;
 
-    const [nullCash] = await conn.execute(`SELECT bu_no, COUNT(*) cnt FROM MGM_finance_summary WHERE YYYY_MM=? AND cash_amt IS NULL GROUP BY bu_no`, [YYYY_MM]);
+    const [nullCash] = await conn.execute(`SELECT bu_no, COUNT(*) cnt FROM mgm_finance_summary WHERE YYYY_MM=? AND cash_amt IS NULL GROUP BY bu_no`, [YYYY_MM]);
     const nullCashMap = {}; nullCash.forEach(r => nullCashMap[r.bu_no] = r.cnt);
     qcHtml += `<tr><td>Step 7 summary cash 為 NULL</td>
       ${BU_LIST.map(b => `<td>${check(!nullCashMap[b], '0', nullCashMap[b]+' 筆')}</td>`).join('')}</tr>`;
 
-    // 5d. ERMM_ARAP_detail UNIQUE KEY 檢查（不應有重複月份+BU）
+    // 5d. ermm_arap_detail UNIQUE KEY 檢查（不應有重複月份+BU）
     const [dups] = await conn.execute(`
-        SELECT bu_no, COUNT(*) cnt FROM ERMM_ARAP_detail
+        SELECT bu_no, COUNT(*) cnt FROM ermm_arap_detail
          WHERE YYYY_MM=? GROUP BY bu_no, YYYY_MM HAVING cnt > 1
     `, [YYYY_MM]);
     const dupMap = {}; dups.forEach(r => dupMap[r.bu_no] = r.cnt);
-    qcHtml += `<tr><td>ERMM_ARAP_detail 重複月份+BU</td>
+    qcHtml += `<tr><td>ermm_arap_detail 重複月份+BU</td>
       ${BU_LIST.map(b => `<td>${check(!dupMap[b], '0', dupMap[b]+' 筆重複')}</td>`).join('')}</tr>`;
 
     // 5e. 資產平衡檢查

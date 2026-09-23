@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 7 步批次管線路由
  * Step1 erp2ermm_po → Step2 proc_po → Step3 proc_supplier → Step4 proc_xitems_link_lawbook
  * → Step5 cal_daily_stock_balance → Step6 batch_ARAP_upd → Step7 batch_finance_summary
@@ -37,7 +37,7 @@ router.post('/step1', async (req, res) => {
         await conn.beginTransaction();
 
         const [src] = await conn.execute(
-            'SELECT COUNT(*) AS cnt FROM ERMM_temp_po WHERE bu_no=?',
+            'SELECT COUNT(*) AS cnt FROM ermm_temp_po WHERE bu_no=?',
             sanitizeParams([bu_no])
         );
         if (!src[0].cnt) {
@@ -55,7 +55,7 @@ router.post('/step1', async (req, res) => {
                    YEAR(po_date), LPAD(MONTH(po_date),2,'0'),
                    CONCAT(YEAR(po_date),'/',LPAD(MONTH(po_date),2,'0')),
                    '審核通過', '交付完成', ?
-            FROM ERMM_temp_po WHERE bu_no=?
+            FROM ermm_temp_po WHERE bu_no=?
             ON DUPLICATE KEY UPDATE
                 unit_price=VALUES(unit_price),
                 po_amount=VALUES(po_amount),
@@ -235,14 +235,14 @@ router.post('/step6', async (req, res) => {
                   FROM (
                     SELECT COALESCE(YYYY_MM, DATE_FORMAT(so_date,'%Y/%m')) AS ym,
                            unit_price, dn_qty
-                      FROM ERMM_erp_SO WHERE bu_no=? AND dn_qty > 0
+                      FROM ermm_erp_so WHERE bu_no=? AND dn_qty > 0
                   ) t
                  GROUP BY ym
             `, sanitizeParams([bu_no]));
-            // 逐筆 upsert 到 ERMM_ARAP_detail（保留另一欄位既有值）
+            // 逐筆 upsert 到 ermm_arap_detail（保留另一欄位既有值）
             for (const row of soAR) {
                 await conn.execute(`
-                    INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
+                    INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
                     VALUES (?,?,?,?,0,NOW())
                     ON DUPLICATE KEY UPDATE
                         AR_amt=VALUES(AR_amt), update_time=NOW()
@@ -259,13 +259,13 @@ router.post('/step6', async (req, res) => {
                 const [invAR] = await conn.execute(`
                     SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y/%m')) AS ym,
                            ROUND(SUM(sub_amt),2) AS AR_amt
-                      FROM MGM_invoice_details
+                      FROM mgm_invoice_details
                      WHERE bu_no=? AND TX_type='AR'
                      GROUP BY ym
                 `, sanitizeParams([bu_no]));
                 for (const row of invAR) {
                     await conn.execute(`
-                        INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
+                        INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
                         VALUES (?,?,?,?,0,NOW())
                         ON DUPLICATE KEY UPDATE AR_amt=VALUES(AR_amt), update_time=NOW()
                     `, sanitizeParams([bu_no, row.ym.substring(0,4), row.ym, row.AR_amt]));
@@ -285,7 +285,7 @@ router.post('/step6', async (req, res) => {
         `, sanitizeParams([bu_no]));
         for (const row of poAP) {
             await conn.execute(`
-                INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
+                INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
                 VALUES (?,?,?,0,?,NOW())
                 ON DUPLICATE KEY UPDATE
                     AP_amt=VALUES(AP_amt), update_time=NOW()
@@ -299,13 +299,13 @@ router.post('/step6', async (req, res) => {
                 const [invAP] = await conn.execute(`
                     SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y/%m')) AS ym,
                            ROUND(SUM(sub_amt),2) AS AP_amt
-                      FROM MGM_invoice_details
+                      FROM mgm_invoice_details
                      WHERE bu_no=? AND TX_type='AP'
                      GROUP BY ym
                 `, sanitizeParams([bu_no]));
                 for (const row of invAP) {
                     await conn.execute(`
-                        INSERT INTO ERMM_ARAP_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
+                        INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, update_time)
                         VALUES (?,?,?,0,?,NOW())
                         ON DUPLICATE KEY UPDATE AP_amt=VALUES(AP_amt), update_time=NOW()
                     `, sanitizeParams([bu_no, row.ym.substring(0,4), row.ym, row.AP_amt]));
@@ -313,12 +313,12 @@ router.post('/step6', async (req, res) => {
             } catch {}
         }
 
-        await conn.execute('UPDATE ERMM_ARAP_detail SET AR_amt=0 WHERE bu_no=? AND AR_amt IS NULL', sanitizeParams([bu_no]));
-        await conn.execute('UPDATE ERMM_ARAP_detail SET AP_amt=0 WHERE bu_no=? AND AP_amt IS NULL', sanitizeParams([bu_no]));
+        await conn.execute('UPDATE ermm_arap_detail SET AR_amt=0 WHERE bu_no=? AND AR_amt IS NULL', sanitizeParams([bu_no]));
+        await conn.execute('UPDATE ermm_arap_detail SET AP_amt=0 WHERE bu_no=? AND AP_amt IS NULL', sanitizeParams([bu_no]));
 
         await conn.commit();
         const [rows] = await conn.execute(
-            'SELECT COUNT(*) AS cnt FROM ERMM_ARAP_detail WHERE bu_no=?',
+            'SELECT COUNT(*) AS cnt FROM ermm_arap_detail WHERE bu_no=?',
             sanitizeParams([bu_no])
         );
         ok(res, { row_count: rows[0].cnt }, `Step6 AR/AP 彙算完成 (${rows[0].cnt} 筆月份)`);
@@ -338,7 +338,7 @@ router.post('/step7', async (req, res) => {
 
         // 從 ARAP 讀取所有月份
         const [arap] = await conn.execute(
-            'SELECT YYYY_MM, AR_amt, AP_amt FROM ERMM_ARAP_detail WHERE bu_no=?',
+            'SELECT YYYY_MM, AR_amt, AP_amt FROM ermm_arap_detail WHERE bu_no=?',
             sanitizeParams([bu_no])
         );
 
@@ -347,7 +347,7 @@ router.post('/step7', async (req, res) => {
             // 發票彙總（同時支援 YYYY_MM 和 wk_date）
             const [inv] = await conn.execute(`
                 SELECT TX_type, SUM(sub_amt) AS total
-                  FROM MGM_invoice_details
+                  FROM mgm_invoice_details
                  WHERE bu_no=?
                    AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y/%m')=?)
                  GROUP BY TX_type
@@ -358,7 +358,7 @@ router.post('/step7', async (req, res) => {
             // 現金日記彙總（同時支援 YYYY_MM 和 wk_date）
             const [cashRows] = await conn.execute(`
                 SELECT DB_CR, SUM(sub_amt) AS total
-                  FROM MGM_casher_details
+                  FROM mgm_casher_details
                  WHERE bu_no=?
                    AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y/%m')=?)
                  GROUP BY DB_CR
@@ -387,7 +387,7 @@ router.post('/step7', async (req, res) => {
             const AP_inv = invMap['AP'] || 0;
 
             await conn.execute(`
-                UPDATE MGM_finance_summary SET
+                UPDATE mgm_finance_summary SET
                     AR_amt       = ?,
                     AP_amt       = ?,
                     AR_bill_amt  = ?,

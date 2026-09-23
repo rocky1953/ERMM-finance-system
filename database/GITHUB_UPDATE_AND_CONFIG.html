@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — GitHub 更新與系統配置操作手冊</title>
+<style>
+  :root{
+    --primary:#6d28d9; --primary-2:#7c3aed; --accent:#db2777;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --code-bg:#f1f5f9; --code-border:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.7;
+  }
+  .page{
+    max-width:1080px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+  .cover{
+    border-bottom:3px solid var(--primary);
+    background:linear-gradient(135deg,#4338ca,#7c3aed,#db2777); color:#fff;
+    margin:-40px -48px 40px; padding:48px;
+  }
+  .cover h1{font-size:30px; margin:0 0 8px; letter-spacing:1px}
+  .cover .sub{opacity:.92; font-size:15px}
+  .cover .meta{margin-top:20px; font-size:13px; opacity:.88}
+  .cover .meta span{margin-right:20px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:3px 14px;margin:14px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:var(--code-bg); border-left:4px solid var(--primary);
+    padding:16px 24px; margin:32px 0 40px; border-radius:0 8px 8px 0;
+  }
+  .toc h3{margin:0 0 10px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:20px}
+  .toc li{margin:4px 0; font-size:14px}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:22px; color:var(--primary); margin:48px 0 20px;
+    padding-bottom:8px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:17px; color:var(--text); margin:28px 0 12px}
+  h4{font-size:15px; color:var(--primary-2); margin:20px 0 8px}
+  p{margin:10px 0}
+
+  .call{padding:12px 18px; border-radius:8px; margin:16px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call code{background:rgba(0,0,0,.08); padding:1px 6px; border-radius:3px; font-size:13px}
+
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:16px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:10px 14px 10px 56px;
+    background:var(--surface); border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:28px; font-size:13px; font-weight:700;
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#ede9fe,#ddd6fe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#f5f3ff}
+  td code, th code{
+    background:var(--code-bg); border:1px solid var(--code-border);
+    padding:1px 6px; border-radius:3px; font-size:12.5px; color:var(--primary);
+    font-family:"SF Mono","Cascadia Code","Consolas",monospace; white-space:nowrap;
+  }
+
+  pre{
+    background:#0f172a; color:#e2e8f0; padding:16px 20px; border-radius:8px;
+    overflow-x:auto; font-size:13px; line-height:1.55; margin:14px 0;
+  }
+  pre code{font-family:"SF Mono","Cascadia Code","Consolas",monospace}
+  pre .c{color:#64748b}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+  pre .h{color:#f472b6}
+  pre .p{color:#c4b5fd}
+  pre .v{color:#e2e8f0}
+
+  .flow{display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap}
+  .flow-step{
+    flex:1; min-width:130px; text-align:center; padding:16px 12px;
+    border:2px solid var(--border); border-radius:10px; background:var(--surface);
+  }
+  .flow-step .num{
+    width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:32px; font-size:14px; font-weight:700; margin:0 auto 8px;
+  }
+  .flow-step .ttl{font-size:14px; font-weight:700; color:var(--primary); margin-bottom:4px}
+  .flow-step .desc{font-size:12px; color:var(--text-soft); line-height:1.5}
+  .flow-arrow{
+    display:flex; align-items:center; color:var(--primary); font-size:24px;
+    padding:0 4px;
+  }
+
+  .badge{
+    display:inline-block; padding:2px 10px; border-radius:999px;
+    font-size:12px; font-weight:700; margin-left:6px;
+  }
+  .badge.ok{background:#dcfce7; color:#065f46; border:1px solid #86efac}
+  .badge.warn{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+  .badge.err{background:#fee2e2; color:#991b1b; border:1px solid #fca5a5}
+
+  .footer{
+    margin-top:60px; padding-top:20px; border-top:2px solid var(--border);
+    font-size:13px; color:var(--text-mute); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — GitHub 更新與系統配置操作手冊</h1>
+  <div class="sub">從 GitHub 克隆/拉取最新程式碼到 Ubuntu 正式環境，配置並驗證 MySQL 資料庫與 Node.js 服務</div>
+  <div class="meta">
+    <span>📦 倉庫：rocky1953/ERMM-finance-system</span>
+    <span>🖥️ 部署目錄：/root/Project/ERMM-finance-system</span>
+    <span>🔌 服務端口：3008</span>
+  </div>
+  <span class="tag">Git</span>
+  <span class="tag">Ubuntu 22.04</span>
+  <span class="tag">MySQL 8.0+</span>
+  <span class="tag">Node.js 18+</span>
+  <span class="tag">PM2</span>
+</div>
+
+<!-- ===== 目錄 ===== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#sec1">Part A：GitHub 更新操作（Windows → GitHub → Ubuntu）</a></li>
+    <li><a href="#sec1a">A-1. Windows 本機提交並推送到 GitHub</a></li>
+    <li><a href="#sec1b">A-2. Ubuntu 從 GitHub 拉取最新程式碼</a></li>
+    <li><a href="#sec1c">A-3. 安裝/更新 npm 依賴</a></li>
+    <li><a href="#sec2">Part B：系統配置更新（MySQL + Node.js + 環境變數）</a></li>
+    <li><a href="#sec2a">B-1. MySQL 資料庫配置</a></li>
+    <li><a href="#sec2b">B-2. 新增登入認證資料表（cams_xuser 相關欄位遷移）</a></li>
+    <li><a href="#sec2c">B-3. 環境變數 .env 配置</a></li>
+    <li><a href="#sec2d">B-4. PM2 服務管理與啟動</a></li>
+    <li><a href="#sec2e">B-5. Nginx 反向代理確認</a></li>
+    <li><a href="#sec3">Part C：驗證步驟</a></li>
+    <li><a href="#sec3a">C-1. 服務健康檢查</a></li>
+    <li><a href="#sec3b">C-2. 登入功能驗證</a></li>
+    <li><a href="#sec3c">C-3. 管理員權限驗證</a></li>
+    <li><a href="#sec3d">C-4. 使用者管理功能驗證</a></li>
+    <li><a href="#sec3e">C-5. 資料庫連線與資料驗證</a></li>
+    <li><a href="#sec4">附錄：故障排除</a></li>
+  </ol>
+</div>
+
+<!-- ============================== -->
+<!-- Part A：GitHub 更新操作 -->
+<!-- ============================== -->
+<h2 id="sec1">Part A：GitHub 更新操作（Windows → GitHub → Ubuntu）</h2>
+
+<div class="call info">
+  <b>流程概覽</b>：Windows 開發機 <code>git push</code> → GitHub 倉庫 → Ubuntu 伺服器 <code>git pull</code> → 安裝依賴 → 重啟服務
+</div>
+
+<div class="flow">
+  <div class="flow-step"><div class="num">1</div><div class="ttl">Windows 提交</div><div class="desc">git add + commit + push</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">2</div><div class="ttl">GitHub</div><div class="desc">rocky1953/ERMM-finance-system</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">3</div><div class="ttl">Ubuntu 拉取</div><div class="desc">git pull origin main</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">4</div><div class="ttl">安裝依賴</div><div class="desc">npm install --production</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">5</div><div class="ttl">重啟服務</div><div class="desc">pm2 restart ermm-finance</div></div>
+</div>
+
+<!-- ===== A-1 ===== -->
+<h3 id="sec1a">A-1. Windows 本機提交並推送到 GitHub</h3>
+
+<p>在 Windows 開發環境（<code>e:\finance</code>）中，將修改後的程式碼提交並推送到 GitHub：</p>
+
+<pre><code><span class="c"># 1. 進入專案目錄</span>
+<span class="k">cd</span> <span class="v">e:\finance</span>
+
+<span class="c"># 2. 查看修改的檔案</span>
+<span class="k">git</span> status
+
+<span class="c"># 3. 暫存所有修改的檔案（排除敏感資料）</span>
+<span class="k">git</span> add app.js package.json package-lock.json \
+  public/css/style.css public/index.html \
+  public/js/app.js public/js/i18n.js \
+  public/js/pages/*.js \
+  routes/*.js middleware/*.js \
+  database/*.js database/*.html
+
+<span class="c"># 4. 提交（撰寫有意義的 commit message）</span>
+<span class="k">git</span> commit -m <span class="s">"feat(auth,user): login authentication + admin role + user profile fields"</span>
+
+<span class="c"># 5. 推送到 GitHub</span>
+<span class="k">git</span> push origin main</code></pre>
+
+<div class="call warn">
+  <b>注意</b>：不要提交 <code>.env</code>、<code>ERMM_db_full.sql</code> 等含敏感資料的檔案。<code>.gitignore</code> 應已排除這些檔案，但每次提交前仍需確認 <code>git status</code> 未列出它們。
+</div>
+
+<div class="call ok">
+  <b>驗證</b>：推送成功後，到 GitHub 頁面 <code>https://github.com/rocky1953/ERMM-finance-system</code> 確認最新 commit 出現在 main 分支頂部。
+</div>
+
+<!-- ===== A-2 ===== -->
+<h3 id="sec1b">A-2. Ubuntu 從 GitHub 拉取最新程式碼</h3>
+
+<p>SSH 登入 Ubuntu 伺服器後，執行以下操作：</p>
+
+<pre><code><span class="c"># 1. 進入部署目錄</span>
+<span class="k">cd</span> <span class="v">/root/Project/ERMM-finance-system</span>
+
+<span class="c"># 2. 確認目前分支與遠端狀態</span>
+<span class="k">git</span> branch -vv
+<span class="k">git</span> remote -v
+
+<span class="c"># 3. 拉取最新程式碼</span>
+<span class="k">git</span> pull origin main
+
+<span class="c"># 4. 確認更新後的檔案清單</span>
+<span class="k">git</span> log --oneline -5</code></pre>
+
+<div class="call info">
+  <b>首次部署（全新機器）</b>：如果伺服器上還沒有專案目錄，需先克隆：
+  <pre style="margin-top:8px"><code><span class="k">git</span> clone https://github.com/rocky1953/ERMM-finance-system.git <span class="v">/root/Project/ERMM-finance-system</span></code></pre>
+</div>
+
+<div class="call warn">
+  <b>如果 git pull 出現衝突</b>：表示伺服器上有本地修改（如 .env 被手動改過），先暫存：
+  <pre style="margin-top:8px"><code><span class="k">git</span> stash
+<span class="k">git</span> pull origin main
+<span class="k">git</span> stash pop  <span class="c"># 恢復本地修改，如有衝突需手動解決</span></code></pre>
+</div>
+
+<!-- ===== A-3 ===== -->
+<h3 id="sec1c">A-3. 安裝/更新 npm 依賴</h3>
+
+<p>如果 <code>package.json</code> 有變動（新增了 <code>jsonwebtoken</code>、<code>bcryptjs</code> 等依賴），必須重新安裝：</p>
+
+<pre><code><span class="c"># 1. 進入專案目錄</span>
+<span class="k">cd</span> <span class="v">/root/Project/ERMM-finance-system</span>
+
+<span class="c"># 2. 安裝依賴（生產環境用 --production，不含 devDependencies）</span>
+<span class="k">npm</span> install --production
+
+<span class="c"># 3. 確認新增的依賴已安裝</span>
+<span class="k">node</span> -e <span class="s">"require('jsonwebtoken'); require('bcryptjs'); console.log('✅ auth deps OK')"</span></code></pre>
+
+<div class="call ok">
+  <b>驗證</b>：執行 <code>npm ls jsonwebtoken bcryptjs</code> 確認兩個套件已安裝。
+</div>
+
+<!-- ============================== -->
+<!-- Part B：系統配置更新 -->
+<!-- ============================== -->
+<h2 id="sec2">Part B：系統配置更新（MySQL + Node.js + 環境變數）</h2>
+
+<!-- ===== B-1 ===== -->
+<h3 id="sec2a">B-1. MySQL 資料庫配置</h3>
+
+<h4>確認 MySQL 服務運行</h4>
+<pre><code><span class="c"># 檢查 MySQL 服務狀態</span>
+<span class="k">systemctl</span> status mysql
+
+<span class="c"># 如果未運行，啟動 MySQL</span>
+<span class="k">systemctl</span> start mysql
+
+<span class="c"># 設定開機自動啟動</span>
+<span class="k">systemctl</span> enable mysql</code></pre>
+
+<h4>登入 MySQL 並確認資料庫</h4>
+<h4>建立專用資料庫使用者（ermm_user）</h4>
+<p>基於安全考量，不使用 root 帳號連線應用程式，而是建立專用使用者 <code>ermm_user</code>：</p>
+<pre><code><span class="c"># 以 root 登入 MySQL</span>
+<span class="k">mysql</span> -u root -p
+
+<span class="c"># 在 MySQL 提示字元下執行：</span>
+
+<span class="c"># 建立專用使用者並設定密碼</span>
+<span class="k">CREATE USER</span> <span class="s">'ermm_user'</span>@<span class="s">'localhost'</span> IDENTIFIED BY <span class="s">'LD*6835755'</span>;
+
+<span class="c"># 授予 ermm_db 資料庫完整權限</span>
+<span class="k">GRANT ALL PRIVILEGES ON</span> ermm_db.* <span class="k">TO</span> <span class="s">'ermm_user'</span>@<span class="s">'localhost'</span>;
+
+<span class="c"># 立即生效</span>
+<span class="k">FLUSH PRIVILEGES</span>;
+
+<span class="c"># 驗證使用者已建立</span>
+<span class="k">SELECT</span> user, host <span class="k">FROM</span> mysql.user <span class="k">WHERE</span> user=<span class="s">'ermm_user'</span>;
+
+<span class="c"># 確認資料庫</span>
+<span class="k">SHOW</span> DATABASES;
+<span class="k">USE</span> ermm_db;
+<span class="k">SHOW</span> TABLES;
+<span class="k">SELECT</span> COUNT(*) <span class="k">FROM</span> cams_xuser;</code></pre>
+
+<div class="call warn">
+  <b>驗證 ermm_user 連線</b>：退出 root 後，用 ermm_user 登入測試：
+  <pre style="margin-top:8px"><code><span class="k">mysql</span> -u ermm_user -p ermm_db
+<span class="c"># 輸入密碼：LD*6835755</span>
+<span class="c"># 應成功進入 mysql&gt; 提示字元</span></code></pre>
+</div>
+
+<div class="call info">
+  <b>正式環境參數</b>：
+  <table>
+    <tr><th>項目</th><th>值</th></tr>
+    <tr><td>資料庫名稱</td><td><code>ermm_db</code></td></tr>
+    <tr><td>應用程式使用者</td><td><code>ermm_user</code></td></tr>
+    <tr><td>應用程式密碼</td><td><code>LD*6835755</code></td></tr>
+    <tr><td>字集</td><td><code>utf8mb4</code> / <code>utf8mb4_unicode_ci</code></td></tr>
+  </table>
+</div>
+
+<!-- ===== B-2 ===== -->
+<h3 id="sec2b">B-2. 新增登入認證欄位（cams_xuser 表遷移）</h3>
+
+<div class="call warn">
+  <b>重要</b>：本次更新新增了登入認證功能，需要在 <code>cams_xuser</code> 表增加 <code>admin</code>、<code>email</code>、<code>tel_no</code>、<code>xuser_type</code> 四個欄位。執行以下遷移腳本即可自動完成。
+</div>
+
+<h4>執行欄位遷移腳本</h4>
+<pre><code><span class="c"># 1. 進入專案目錄</span>
+<span class="k">cd</span> <span class="v">/root/Project/ERMM-finance-system</span>
+
+<span class="c"># 2. 確保環境變數已載入（USE_DB_CONFIG=true 才會使用正式環境資料庫）</span>
+<span class="k">export</span> USE_DB_CONFIG=true
+
+<span class="c"># 3. 執行 admin 欄位遷移</span>
+<span class="k">node</span> database/add_admin_column.js
+
+<span class="c"># 4. 執行 email/tel_no/xuser_type 欄位遷移</span>
+<span class="k">node</span> database/add_user_cols.js</code></pre>
+
+<div class="call ok">
+  <b>預期輸出</b>：
+  <pre style="margin-top:8px"><code>✅ 已新增欄位: admin
+✅ 已新增欄位: email
+✅ 已新增欄位: tel_no
+✅ 已新增欄位: xuser_type
+目前分布: 管理員=1, 普通者=29
+目前分布: 一般員工=30</code></pre>
+</div>
+
+<h4>驗證欄位結構</h4>
+<pre><code><span class="c"># 用 MySQL 命令列確認欄位已加入</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"DESCRIBE cams_xuser"</span>
+
+<span class="c"># 確認 U0001 為管理員</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"SELECT xuser_id, xuser_name, admin, xuser_type FROM cams_xuser WHERE xuser_id='U0001'"</span></code></pre>
+
+<h4>設定管理員帳號（如需調整）</h4>
+<pre><code><span class="c"># 將指定帳號設為管理員</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET admin='管理員' WHERE xuser_id='U0001'"</span>
+
+<span class="c"># 設定使用者類別</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET xuser_type='部門經理' WHERE xuser_id='U0002'"</span></code></pre>
+
+<table>
+  <tr><th>欄位</th><th>類型</th><th>合法值</th><th>預設值</th></tr>
+  <tr><td><code>admin</code></td><td>VARCHAR(10)</td><td>管理員 / 普通者</td><td>普通者</td></tr>
+  <tr><td><code>email</code></td><td>VARCHAR(100)</td><td>—</td><td>NULL</td></tr>
+  <tr><td><code>tel_no</code></td><td>VARCHAR(30)</td><td>—</td><td>NULL</td></tr>
+  <tr><td><code>xuser_type</code></td><td>VARCHAR(20)</td><td>一般員工 / 部門經理 / 高階主管</td><td>一般員工</td></tr>
+</table>
+
+<!-- ===== B-3 ===== -->
+<h3 id="sec2c">B-3. 環境變數 .env 配置</h3>
+
+<p>在專案根目錄建立或更新 <code>.env</code> 檔案：</p>
+
+<pre><code><span class="c"># /root/Project/ERMM-finance-system/.env</span>
+
+<span class="c"># 服務端口</span>
+PORT=3008
+
+<span class="c"># 資料庫連線</span>
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=ermm_user
+DB_PASSWORD=LD*6835755
+DB_NAME=ermm_db
+
+<span class="c"># 使用正式環境資料庫配置（非本地開發環境）</span>
+USE_DB_CONFIG=true
+
+<span class="c"># JWT 認證密鑰</span>
+JWT_SECRET=ermm_finance_secret_key_2026
+
+<span class="c"># Session 密鑰</span>
+SESSION_SECRET=e41a01bcd94eff9a96fb501d64e5b9bdf252ac1b6d21baa8660b485ae0b4e61c
+
+<span class="c"># Redis 配置</span>
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=1
+
+<span class="c"># Node 環境</span>
+NODE_ENV=production</code></pre>
+
+<div class="call err">
+  <b>安全提醒</b>：<code>.env</code> 檔案包含資料庫密碼與 JWT 密鑰，<b>絕不可提交到 GitHub</code>。確認 <code>.gitignore</code> 中已包含 <code>.env</code>。
+</div>
+
+<div class="call warn">
+  <b>權限設定</b>：限制 .env 檔案讀取權限：<code>chmod 600 /root/Project/ERMM-finance-system/.env</code>
+</div>
+
+<!-- ===== B-4 ===== -->
+<h3 id="sec2d">B-4. PM2 服務管理與啟動</h3>
+
+<h4>首次安裝 PM2</h4>
+<pre><code><span class="k">npm</span> install -g pm2</code></pre>
+
+<h4>啟動/重啟服務</h4>
+<pre><code><span class="c"># 進入專案目錄</span>
+<span class="k">cd</span> <span class="v">/root/Project/ERMM-finance-system</span>
+
+<span class="c"># 首次啟動（指定 app.js 並命名為 ermm-finance）</span>
+<span class="k">pm2</span> start app.js --name ermm-finance
+
+<span class="c"># 更新程式碼後重啟</span>
+<span class="k">pm2</span> restart ermm-finance
+
+<span class="c"># 設定開機自動啟動</span>
+<span class="k">pm2</span> save
+<span class="k">pm2</span> startup</code></pre>
+
+<h4>PM2 服務管理指令</h4>
+<table>
+  <tr><th>操作</th><th>指令</th><th>說明</th></tr>
+  <tr><td>查看狀態</td><td><code>pm2 status</code></td><td>列出所有 PM2 管理的服務</td></tr>
+  <tr><td>查看日誌</td><td><code>pm2 logs ermm-finance --lines 50</code></td><td>即時查看最近 50 行日誌</td></tr>
+  <tr><td>停止服務</td><td><code>pm2 stop ermm-finance</code></td><td>停止服務但不從 PM2 移除</td></tr>
+  <tr><td>重新啟動</td><td><code>pm2 restart ermm-finance</code></td><td>重啟服務（更新程式碼後執行）</td></tr>
+  <tr><td>刪除服務</td><td><code>pm2 delete ermm-finance</code></td><td>從 PM2 列表中移除</td></tr>
+  <tr><td>監控面板</td><td><code>pm2 monit</code></td><td>即時 CPU/記憶體監控</td></tr>
+</table>
+
+<div class="call info">
+  <b>服務 systemd 單元檔（替代方案）</b>：如果不用 PM2，也可建立 systemd 服務：
+  <pre style="margin-top:8px"><code><span class="c"># /etc/systemd/system/ermm-finance.service</span>
+[Unit]
+Description=ERMM Finance Module
+After=network.target mysql.service redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/Project/ERMM-finance-system
+EnvironmentFile=/root/Project/ERMM-finance-system/.env
+ExecStart=/usr/bin/node /root/Project/ERMM-finance-system/app.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+  啟用方式：<code>systemctl daemon-reload && systemctl enable ermm-finance && systemctl start ermm-finance</code>
+</div>
+
+<!-- ===== B-5 ===== -->
+<h3 id="sec2e">B-5. Nginx 反向代理確認</h3>
+
+<p>確認 Nginx 將外部請求轉發到 Node.js 服務（端口 3008）：</p>
+
+<pre><code><span class="c"># 檢查 Nginx 服務狀態</span>
+<span class="k">systemctl</span> status nginx
+
+<span class="c"># 確認設定檔中的 proxy_pass 指向 3008</span>
+<span class="k">cat</span> /etc/nginx/sites-available/default | grep proxy_pass
+
+<span class="c"># 應看到類似：</span>
+<span class="c"># proxy_pass http://localhost:3008;</span>
+
+<span class="c"># 如有修改，測試設定檔語法</span>
+<span class="k">nginx</span> -t
+
+<span class="c"># 重新載入 Nginx</span>
+<span class="k">systemctl</span> reload nginx</code></pre>
+
+<div class="call ok">
+  <b>Nginx 不需額外配置</b>：所有路由分發邏輯都在 Node.js <code>app.js</code> 中處理，Nginx 僅作為反向代理轉發到 <code>localhost:3008</code>。新增功能只需更新 Node.js 路由檔案，無需修改 Nginx 配置。
+</div>
+
+<!-- ============================== -->
+<!-- Part C：驗證步驟 -->
+<!-- ============================== -->
+<h2 id="sec3">Part C：驗證步驟</h2>
+
+<!-- ===== C-1 ===== -->
+<h3 id="sec3a">C-1. 服務健康檢查</h3>
+
+<pre><code><span class="c"># 1. 確認服務進程在運行</span>
+<span class="k">pm2</span> status
+
+<span class="c"># 2. 確認端口 3008 正在監聽</span>
+<span class="k">ss</span> -tlnp | grep 3008
+
+<span class="c"># 3. 健康檢查 API（不需登入）</span>
+<span class="k">curl</span> http://localhost:3008/api/health</code></pre>
+
+<div class="call ok">
+  <b>預期回應</b>：
+  <pre style="margin-top:8px"><code>{
+  "success": true,
+  "service": "ERMM Finance Module",
+  "version": "1.0.0",
+  "timestamp": "2026-09-21T...",
+  ...
+}</code></pre>
+</div>
+
+<!-- ===== C-2 ===== -->
+<h3 id="sec3b">C-2. 登入功能驗證</h3>
+
+<pre><code><span class="c"># 1. 測試正確帳號登入（U0001 / 68315711）</span>
+<span class="k">curl</span> -X POST http://localhost:3008/api/auth/login \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"user_id":"U0001","password":"68315711"}'</span>
+
+<span class="c"># 2. 測試錯誤密碼（應回傳 401）</span>
+<span class="k">curl</span> -X POST http://localhost:3008/api/auth/login \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"user_id":"U0001","password":"wrongpwd"}'</span>
+
+<span class="c"># 3. 測試不存在的帳號（應回傳 401）</span>
+<span class="k">curl</span> -X POST http://localhost:3008/api/auth/login \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"user_id":"NOEXIST","password":"123456"}'</span></code></pre>
+
+<div class="call ok">
+  <b>正確登入的預期回應</b>：
+  <pre style="margin-top:8px"><code>{
+  "success": true,
+  "message": "登入成功",
+  "data": {
+    "token": "eyJhbGciOi...",
+    "user": {
+      "user_id": "U0001",
+      "user_name": "黃惠君",
+      "admin": "管理員"
+    }
+  }
+}</code></pre>
+</div>
+
+<table>
+  <tr><th>測試場景</th><th>預期 HTTP 狀態</th><th>預期訊息</th></tr>
+  <tr><td>正確帳密</td><td>200</td><td><code>登入成功</code> + 回傳 token</td></tr>
+  <tr><td>錯誤密碼</td><td>401</td><td><code>使用者 ID 或密碼錯誤</code></td></tr>
+  <tr><td>不存在帳號</td><td>401</td><td><code>使用者 ID 或密碼錯誤</code></td></tr>
+  <tr><td>停用帳號（inuse_flag=NOUSE）</td><td>403</td><td><code>此帳號已停用，請聯絡系統管理員</code></td></tr>
+  <tr><td>無 token 存取受保護 API</td><td>401</td><td><code>尚未登入，請先登入系統</code></td></tr>
+</table>
+
+<!-- ===== C-3 ===== -->
+<h3 id="sec3c">C-3. 管理員權限驗證</h3>
+
+<pre><code><span class="c"># 1. 登入取得 token</span>
+<span class="k">TOKEN</span>=$(curl -s -X POST http://localhost:3008/api/auth/login \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"user_id":"U0001","password":"68315711"}'</span> | <span class="k">jq</span> -r .data.token)
+
+<span class="c"># 2. 管理員存取使用者管理 API（應回傳 200）</span>
+<span class="k">curl</span> -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  http://localhost:3008/api/user | <span class="k">jq</span> .success
+
+<span class="c"># 3. 一般使用者登入並嘗試存取使用者管理（應回傳 403）</span>
+<span class="k">TOKEN2</span>=$(curl -s -X POST http://localhost:3008/api/auth/login \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"user_id":"U0003","password":"123456"}'</span> | <span class="k">jq</span> -r .data.token)
+
+<span class="k">curl</span> -H <span class="s">"Authorization: Bearer $TOKEN2"</span> \
+  http://localhost:3008/api/user
+
+<span class="c"># 預期回應：{"success":false,"code":"FORBIDDEN","message":"你的權限不足，無法進入該功能"}</span></code></pre>
+
+<div class="call ok">
+  <b>驗證重點</b>：
+  <ul>
+    <li>管理員（admin='管理員'）可存取 <code>/api/user</code> → 200</li>
+    <li>普通者（admin='普通者'）存取 <code>/api/user</code> → 403</li>
+    <li>普通者存取其他業務 API（如 /api/bep/query）→ 200（不受限制）</li>
+  </ul>
+</div>
+
+<!-- ===== C-4 ===== -->
+<h3 id="sec3d">C-4. 使用者管理功能驗證（瀏覽器）</h3>
+
+<ol class="steps">
+  <li>開啟瀏覽器前往 <code>http://&lt;伺服器IP&gt;:3008</code>（或 Nginx 網址）</li>
+  <li>登入畫面輸入 <code>U0001</code> / <code>68315711</code>，點擊「登入」</li>
+  <li>登入成功後，頂欄應顯示「👤 黃惠君」與「登出」按鈕</li>
+  <li>點擊左側選單「使用者管理」→ 應看到 30 個帳號的列表</li>
+  <li>列表應包含以下欄位：帳號、姓名、部門、使用者類別、身分、狀態、建立時間、操作</li>
+  <li>點擊任一行「✏️」編輯按鈕 → 彈窗標題應為「編輯使用者」，帳號欄為唯讀</li>
+  <li>彈窗應包含：帳號、密碼、狀態、身分（管理員/普通者）、姓名、部門、客戶ID、郵箱、電話、使用者類別（一般員工/部門經理/高階主管）</li>
+  <li>修改任一欄位後點擊「儲存」→ 應顯示綠色 toast「已儲存」</li>
+  <li>登出後以普通者帳號（如 U0003）登入，點擊「使用者管理」→ 應顯示「🔒 你的權限不足，無法進入該功能」</li>
+</ol>
+
+<!-- ===== C-5 ===== -->
+<h3 id="sec3e">C-5. 資料庫連線與資料驗證</h3>
+
+<pre><code><span class="c"># 1. 確認資料庫連線</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"SELECT 1 AS test"</span>
+
+<span class="c"># 2. 確認 cams_xuser 新欄位存在</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"DESCRIBE cams_xuser"</span> | grep -E <span class="s">'admin|email|tel_no|xuser_type'</span>
+
+<span class="c"># 3. 確認帳號資料完整</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"SELECT xuser_id, xuser_name, admin, email, tel_no, xuser_type, inuse_flag FROM cams_xuser LIMIT 5"</span>
+
+<span class="c"># 4. 確認 Redis 服務運行</span>
+<span class="k">systemctl</span> status redis-server
+<span class="k">redis-cli</span> -n 1 ping  <span class="c"># 應回傳 PONG</span>
+
+<span class="c"># 5. 確認 JWT 密鑰與 .env 一致</span>
+<span class="k">grep</span> JWT_SECRET /root/Project/ERMM-finance-system/.env</code></pre>
+
+<div class="call ok">
+  <b>全部驗證通過的標準</b>：
+  <ul>
+    <li>✅ <code>/api/health</code> 回傳 200 + success:true</li>
+    <li>✅ 正確帳密登入回傳 200 + JWT token</li>
+    <li>✅ 錯誤帳密登入回傳 401</li>
+    <li>✅ 管理員可存取 /api/user（200）</li>
+    <li>✅ 普通者存取 /api/user 被拒（403）</li>
+    <li>✅ 普通者可存取其他業務 API（200）</li>
+    <li>✅ 瀏覽器登入/登出/權限攔截均正常</li>
+    <li>✅ cams_xuser 表含 admin/email/tel_no/xuser_type 欄位</li>
+    <li>✅ Redis 服務運行中（PONG）</li>
+  </ul>
+</div>
+
+<!-- ============================== -->
+<!-- 附錄 -->
+<!-- ============================== -->
+<h2 id="sec4">附錄：故障排除</h2>
+
+<h3>問題：git pull 時出現 "Permission denied"</h3>
+<pre><code><span class="c"># 確認 SSH 金鑰已設定（如果用 SSH 方式）</span>
+<span class="k">ssh</span> -T git@github.com
+
+<span class="c"># 或改用 HTTPS 方式</span>
+<span class="k">git</span> remote set-url origin https://github.com/rocky1953/ERMM-finance-system.git</code></pre>
+
+<h3>問題：npm install 失敗（網路問題）</h3>
+<pre><code><span class="c"># 使用淘寶鏡像</span>
+<span class="k">npm</span> install --production --registry=https://registry.npmmirror.com</code></pre>
+
+<h3>問題：服務啟動後立即 crash</h3>
+<pre><code><span class="c"># 查看 PM2 錯誤日誌</span>
+<span class="k">pm2</span> logs ermm-finance --lines 30 --err
+
+<span class="c"># 常見原因：</span>
+<span class="c"># 1. .env 檔案缺失或密碼錯誤 → 檢查 DB_PASSWORD（ermm_user / LD*6835755）</span>
+<span class="c"># 2. MySQL 未啟動 → systemctl start mysql</span>
+<span class="c"># 3. 端口 3008 被佔用 → ss -tlnp | grep 3008</span></code></pre>
+
+<h3>問題：登入回傳 500 內部錯誤</h3>
+<pre><code><span class="c"># 1. 確認 cams_xuser 表結構完整</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"DESCRIBE cams_xuser"</span>
+
+<span class="c"># 2. 確認 admin 欄位已遷移</span>
+<span class="k">node</span> database/add_admin_column.js
+
+<span class="c"># 3. 確認 email/tel_no/xuser_type 欄位已遷移</span>
+<span class="k">node</span> database/add_user_cols.js
+
+<span class="c"># 4. 重啟服務</span>
+<span class="k">pm2</span> restart ermm-finance</code></pre>
+
+<h3>問題：瀏覽器顯示舊版頁面（快取問題）</h3>
+<div class="call info">
+  Node.js 已設定 <code>Cache-Control: no-store</code>，但 Nginx 可能仍有快取。解決方式：
+  <ul>
+    <li>瀏覽器按 <code>Ctrl+Shift+F5</code>（或 <code>Cmd+Shift+R</code>）強制刷新</li>
+    <li>Nginx 設定加上：<code>add_header Cache-Control "no-store";</code></li>
+    <li>清除 Nginx 快取：<code>rm -rf /var/cache/nginx/*</code></li>
+  </ul>
+</div>
+
+<div class="footer">
+  ERMM 財務模組管理系統 — GitHub 更新與系統配置操作手冊<br>
+  倉庫：https://github.com/rocky1953/ERMM-finance-system ｜ 部署目錄：/root/Project/ERMM-finance-system ｜ 端口：3008
+</div>
+
+</div>
+</body>
+</html>

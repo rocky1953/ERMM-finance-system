@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Summary API 測試
  *
  * 修復內容回顧：
@@ -60,7 +60,7 @@ describe('Summary API', () => {
             expect(res.status).toBe(200);
 
             const [rows] = await pool.execute(
-                'SELECT YYYY, MM FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT YYYY, MM FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
                 [TEST_BU, '2099/02']
             );
             expect(rows[0].YYYY).toBe(TEST_YEAR);
@@ -82,7 +82,7 @@ describe('Summary API', () => {
 
             // 驗證 DB 中是最新的值
             const [rows] = await pool.execute(
-                'SELECT sale_amt, cash_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT sale_amt, cash_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
                 [TEST_BU, '2099/03']
             );
             expect(Number(rows[0].sale_amt)).toBe(8000000);
@@ -100,7 +100,7 @@ describe('Summary API', () => {
             expect(res.body.message).toContain('12');
 
             const [rows] = await pool.execute(
-                'SELECT COUNT(*) as cnt FROM MGM_finance_summary WHERE bu_no=? AND YYYY=?',
+                'SELECT COUNT(*) as cnt FROM mgm_finance_summary WHERE bu_no=? AND YYYY=?',
                 [TEST_BU, '2098']
             );
             expect(Number(rows[0].cnt)).toBeGreaterThanOrEqual(12);
@@ -159,7 +159,7 @@ describe('Summary API', () => {
 
             // 驗證 DB 中有匯總值
             const [rows] = await pool.execute(
-                'SELECT ttl_asset_amt, ttl_debet_amt, stockholder_amt, current_asset_amt, current_debet_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+                'SELECT ttl_asset_amt, ttl_debet_amt, stockholder_amt, current_asset_amt, current_debet_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
                 [TEST_BU, TEST_YM]
             );
             const r = rows[0];

@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- ERMM 財務模組資料庫 DDL
 -- Database: ERMM_db (MySQL 8.3, utf8mb4)
 -- Generated: 2026-09-02
@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS login_user_record (
 
 -- ==================== 7 張核心財務表 ====================
 
--- ERMM_ARAP_detail: 應收應付彙總表
-CREATE TABLE IF NOT EXISTS ERMM_ARAP_detail (
+-- ermm_arap_detail: 應收應付彙總表
+CREATE TABLE IF NOT EXISTS ermm_arap_detail (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL COMMENT '業務單位/公司別',
     YYYY VARCHAR(10) NOT NULL COMMENT '年度',
@@ -108,8 +108,8 @@ CREATE TABLE IF NOT EXISTS ERMM_ARAP_detail (
     INDEX idx_bu (bu_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='應收應付彙總表';
 
--- MGM_invoice_details: 發票明細表
-CREATE TABLE IF NOT EXISTS MGM_invoice_details (
+-- mgm_invoice_details: 發票明細表
+CREATE TABLE IF NOT EXISTS mgm_invoice_details (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     TX_type VARCHAR(10) NOT NULL COMMENT 'AR/AP',
@@ -134,8 +134,8 @@ CREATE TABLE IF NOT EXISTS MGM_invoice_details (
     INDEX idx_bu_ym (bu_no, YYYY_MM)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='發票明細表';
 
--- MGM_casher_details: 現金日記帳
-CREATE TABLE IF NOT EXISTS MGM_casher_details (
+-- mgm_casher_details: 現金日記帳
+CREATE TABLE IF NOT EXISTS mgm_casher_details (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     amt_type VARCHAR(20) DEFAULT NULL COMMENT '收支類型',
@@ -174,8 +174,8 @@ CREATE TABLE IF NOT EXISTS MGM_account_details (
     INDEX idx_bu_ym (bu_no, YYYY_MM)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帳戶明細表';
 
--- MGM_bank_loan_details: 銀行貸款明細表
-CREATE TABLE IF NOT EXISTS MGM_bank_loan_details (
+-- mgm_bank_loan_details: 銀行貸款明細表
+CREATE TABLE IF NOT EXISTS mgm_bank_loan_details (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     YYYY VARCHAR(10) DEFAULT NULL,
@@ -208,8 +208,8 @@ CREATE TABLE IF NOT EXISTS MGM_bank_loan_details (
     INDEX idx_bu_acct (bu_no, acct_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='銀行貸款明細表';
 
--- MGM_KPI_desc: KPI 門檻定義表
-CREATE TABLE IF NOT EXISTS MGM_KPI_desc (
+-- mgm_kpi_desc: KPI 門檻定義表
+CREATE TABLE IF NOT EXISTS mgm_kpi_desc (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     KPI_id VARCHAR(50) NOT NULL,
@@ -226,8 +226,8 @@ CREATE TABLE IF NOT EXISTS MGM_KPI_desc (
     UNIQUE KEY uk_bu_kpi (bu_no, KPI_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='KPI 門檻定義表';
 
--- MGM_finance_summary: 財務摘要/報表主表 (200+ 欄位)
-CREATE TABLE IF NOT EXISTS MGM_finance_summary (
+-- mgm_finance_summary: 財務摘要/報表主表 (200+ 欄位)
+CREATE TABLE IF NOT EXISTS mgm_finance_summary (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     YYYY_MM VARCHAR(10) NOT NULL COMMENT '年月 2026/09',
@@ -553,8 +553,8 @@ CREATE TABLE IF NOT EXISTS monthly_items (
 
 -- ==================== 關聯資料表 (ERP 模擬) ====================
 
--- ERMM_erp_SO: 銷售訂單 (AR 來源)
-CREATE TABLE IF NOT EXISTS ERMM_erp_SO (
+-- ermm_erp_so: 銷售訂單 (AR 來源)
+CREATE TABLE IF NOT EXISTS ermm_erp_so (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     so_nbr VARCHAR(50) DEFAULT NULL,
@@ -610,8 +610,8 @@ CREATE TABLE IF NOT EXISTS ermm_erp_po (
     INDEX idx_status (po_status, po_sub_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='採購訂單(AP來源)';
 
--- ERMM_temp_po: PO 暫存表 (ERP 同步用)
-CREATE TABLE IF NOT EXISTS ERMM_temp_po (
+-- ermm_temp_po: PO 暫存表 (ERP 同步用)
+CREATE TABLE IF NOT EXISTS ermm_temp_po (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     po_id VARCHAR(50) DEFAULT NULL,
@@ -714,8 +714,8 @@ CREATE TABLE IF NOT EXISTS BH_MGM_TX_detail (
     INDEX idx_event (bu_no, event_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易明細表';
 
--- ERMM_erp_documents: 文件管理表
-CREATE TABLE IF NOT EXISTS ERMM_erp_documents (
+-- ermm_erp_documents: 文件管理表
+CREATE TABLE IF NOT EXISTS ermm_erp_documents (
     uid INT AUTO_INCREMENT PRIMARY KEY,
     bu_no VARCHAR(20) NOT NULL,
     doc_type VARCHAR(30) DEFAULT NULL COMMENT '銀行貸款/採購合約/其他',

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 系統管理路由 - 碼表/公司別/匯率/KPI
  */
 const express = require('express');
@@ -87,7 +87,7 @@ router.get('/kpi', async (req, res) => {
     try {
         const { bu_no } = req.query;
         const [rows] = await pool.execute(
-            'SELECT * FROM MGM_KPI_desc WHERE bu_no=? ORDER BY KPI_id',
+            'SELECT * FROM mgm_kpi_desc WHERE bu_no=? ORDER BY KPI_id',
             [bu_no || 'HM']
         );
         ok(res, rows);
@@ -98,7 +98,7 @@ router.post('/kpi', async (req, res) => {
     try {
         const data = req.body;
         await pool.execute(
-            `INSERT INTO MGM_KPI_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type)
+            `INSERT INTO mgm_kpi_desc (bu_no, KPI_id, KPI_name, KPI1, KPI2, unit, pct_type)
              VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE KPI_name=VALUES(KPI_name), KPI1=VALUES(KPI1), KPI2=VALUES(KPI2)`,
             [data.bu_no, data.KPI_id, data.KPI_name, data.KPI1, data.KPI2, data.unit, data.pct_type]
         );

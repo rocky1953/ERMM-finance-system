@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 發票明細路由 (AR/AP Invoice)
  */
 const express = require('express');
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
             sub_amt AS amt, VAT_amt AS tax_amt,
             CASE WHEN pay_date IS NOT NULL THEN 'paid' ELSE 'unpaid' END AS status1,
             wk_date, pay_date, DB_CR, YYYY_MM, remark, create_time, update_time
-            FROM MGM_invoice_details WHERE 1=1`;
+            FROM mgm_invoice_details WHERE 1=1`;
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (filterType) { sql += ' AND TX_type=?'; params.push(filterType); }
@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
     try {
         const d = req.body;
         const [result] = await pool.execute(
-            `INSERT INTO MGM_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt,
+            `INSERT INTO mgm_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no, sub_amt,
                tax_type, tax_rate, VAT_amt, wk_date, pay_date, payment, ageing_days, DB_CR, YYYY_MM, remark)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [n(d.bu_no), n(d.TX_type), n(d.order_id), n(d.client_id), n(d.invoice_no), n(d.sub_amt),
@@ -52,7 +52,7 @@ router.put('/:uid', async (req, res) => {
     try {
         const d = req.body;
         await pool.execute(
-            `UPDATE MGM_invoice_details SET bu_no=?, TX_type=?, order_id=?, client_id=?, invoice_no=?,
+            `UPDATE mgm_invoice_details SET bu_no=?, TX_type=?, order_id=?, client_id=?, invoice_no=?,
                sub_amt=?, tax_type=?, tax_rate=?, VAT_amt=?, wk_date=?, pay_date=?, payment=?,
                ageing_days=?, DB_CR=?, YYYY_MM=?, remark=? WHERE uid=?`,
             [n(d.bu_no), n(d.TX_type), n(d.order_id), n(d.client_id), n(d.invoice_no),
@@ -66,7 +66,7 @@ router.put('/:uid', async (req, res) => {
 // 刪除
 router.delete('/:uid', async (req, res) => {
     try {
-        await pool.execute('DELETE FROM MGM_invoice_details WHERE uid=?', [req.params.uid]);
+        await pool.execute('DELETE FROM mgm_invoice_details WHERE uid=?', [req.params.uid]);
         ok(res, null, '發票已刪除');
     } catch (err) { fail500(res, err); }
 });
@@ -78,14 +78,14 @@ router.post('/genAR', async (req, res) => {
         if (!bu_no || !so_nbr) return fail(res, '需要 bu_no 和 so_nbr');
 
         const [sos] = await pool.execute(
-            'SELECT * FROM ERMM_erp_SO WHERE bu_no=? AND so_nbr=?', [bu_no, so_nbr]
+            'SELECT * FROM ermm_erp_so WHERE bu_no=? AND so_nbr=?', [bu_no, so_nbr]
         );
         if (sos.length === 0) return fail(res, 'SO 不存在');
 
         for (const so of sos) {
             const sub_amt = Number(so.unit_price) * Number(so.dn_qty);
             await pool.execute(
-                `INSERT INTO MGM_invoice_details (bu_no, TX_type, order_id, client_id, client_name,
+                `INSERT INTO mgm_invoice_details (bu_no, TX_type, order_id, client_id, client_name,
                    invoice_no, sub_amt, wk_date, YYYY_MM)
                  VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE sub_amt=VALUES(sub_amt)`,
                 [n(bu_no), 'AR', n(so_nbr), n(so.client_id), n(so.client_name), n(so.so_nbr), n(sub_amt), n(so.so_date), n(so.YYYY_MM)]
@@ -109,7 +109,7 @@ router.post('/genAP', async (req, res) => {
         for (const po of pos) {
             const sub_amt = Number(po.po_amount) + Number(po.vat_amt);
             await pool.execute(
-                `INSERT INTO MGM_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no,
+                `INSERT INTO mgm_invoice_details (bu_no, TX_type, order_id, client_id, invoice_no,
                    sub_amt, VAT_amt, wk_date, YYYY_MM)
                  VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE sub_amt=VALUES(sub_amt)`,
                 [n(bu_no), 'AP', n(po_id), n(po.supplier_name), n(po.po_id), n(sub_amt), n(po.vat_amt), n(po.po_date), n(po.YYYY_MM)]

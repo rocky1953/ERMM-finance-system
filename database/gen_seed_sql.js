@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 產生種子資料 SQL 檔案
  * 獨立執行：node database/gen_seed_sql.js
  * 輸出：database/seed_data.sql
@@ -161,24 +161,24 @@ async function main() {
 
     // === 1. 清理 ===
     sql += `-- === 清理舊資料 ===\n`;
-    for (const t of ['forecast_detail','pay_detail','check_detail','ERMM_ARAP_detail',
-                    'MGM_bank_loan_details','MGM_invoice_details','MGM_casher_details',
-                    'MGM_finance_summary','MGM_KPI_desc']) {
+    for (const t of ['forecast_detail','pay_detail','check_detail','ermm_arap_detail',
+                    'mgm_bank_loan_details','mgm_invoice_details','mgm_casher_details',
+                    'mgm_finance_summary','mgm_kpi_desc']) {
         sql += `DELETE FROM ${t} WHERE bu_no IN ('HM','SZ','HN');\n`;
     }
     sql += `\n`;
 
     // === 2. 財務摘要 ===
-    sql += `-- === 財務摘要 (MGM_finance_summary) ===\n`;
+    sql += `-- === 財務摘要 (mgm_finance_summary) ===\n`;
     for (const bu of BUS) {
         for (let i = 0; i < MONTHS.length; i++) {
-            sql += insertSQL('MGM_finance_summary', buildSummary(bu, MONTHS[i], i)) + '\n';
+            sql += insertSQL('mgm_finance_summary', buildSummary(bu, MONTHS[i], i)) + '\n';
         }
     }
     sql += `\n`;
 
     // === 3. 發票 ===
-    sql += `-- === 發票明細 (MGM_invoice_details) ===\n`;
+    sql += `-- === 發票明細 (mgm_invoice_details) ===\n`;
     const custs = ['華東經銷商','華南經銷商','出口日本','出口歐洲','香港總公司'];
     const sups = ['鋼材供應商A','塑膠原料B','電子零組件C','包裝材料D','能源供應E'];
     for (const bu of BUS) {
@@ -187,7 +187,7 @@ async function main() {
             for (let i = 0; i < 8 + rnd(0,2); i++) {
                 const amt = Math.round(s.sale_amt * (0.04 + Math.random()*0.10) / 10000) * 10000;
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
-                sql += insertSQL('MGM_invoice_details', {
+                sql += insertSQL('mgm_invoice_details', {
                     bu_no: bu, TX_type: 'AR', order_id: `SO${bu}${ym.YYYY}${ym.MM}${String(rnd(1,20)).padStart(3,'0')}`,
                     client_id: custs[rnd(0,custs.length-1)], invoice_no: `AR${bu}${ym.YYYY}${ym.MM}${String(i+1).padStart(3,'0')}`,
                     sub_amt: amt, tax_type: 'VAT', tax_rate: 13, VAT_amt: Math.round(amt*13/113),
@@ -199,7 +199,7 @@ async function main() {
             for (let i = 0; i < 5 + rnd(0,2); i++) {
                 const amt = Math.round(s.sale_cost_amt * (0.05 + Math.random()*0.10) / 10000) * 10000;
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
-                sql += insertSQL('MGM_invoice_details', {
+                sql += insertSQL('mgm_invoice_details', {
                     bu_no: bu, TX_type: 'AP', order_id: `PO${bu}${ym.YYYY}${ym.MM}${String(rnd(1,15)).padStart(3,'0')}`,
                     client_id: sups[rnd(0,sups.length-1)], invoice_no: `AP${bu}${ym.YYYY}${ym.MM}${String(i+1).padStart(3,'0')}`,
                     sub_amt: amt, tax_type: 'VAT', tax_rate: 13, VAT_amt: Math.round(amt*13/113),
@@ -213,7 +213,7 @@ async function main() {
     sql += `\n`;
 
     // === 4. 現金 ===
-    sql += `-- === 現金日記帳 (MGM_casher_details) ===\n`;
+    sql += `-- === 現金日記帳 (mgm_casher_details) ===\n`;
     const cashIn = [['銷貨收入','現金',0.06],['應收款收回','銀行',0.12],['匯兌收益','銀行',0.008],['利息收入','銀行',0.005]];
     const cashOut = [['原料採購','銀行',0.08],['工資','銀行',0.05],['房租水電','銀行',0.025],['差旅費','現金',0.012],['廣告費','銀行',0.015],['設備維修','銀行',0.01]];
     for (const bu of BUS) {
@@ -223,7 +223,7 @@ async function main() {
             for (const [name, client, factor] of cashIn) {
                 const amt = Math.round(s.sale_amt * factor * (0.8 + Math.random()*0.4));
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
-                sql += insertSQL('MGM_casher_details', {
+                sql += insertSQL('mgm_casher_details', {
                     bu_no: bu, amt_type: name, client_id: client,
                     num_vman: `CV${bu}${ym.YYYY}${ym.MM}${String(seq++).padStart(2,'0')}`,
                     sub_amt: amt, DB_CR: 'DR', YYYY: ym.YYYY, MM: ym.MM,
@@ -234,7 +234,7 @@ async function main() {
                 const base = ['原料採購','工資','房租水電'].includes(name) ? s.sale_cost_amt : s.sale_amt;
                 const amt = Math.round(base * factor * (0.8 + Math.random()*0.4));
                 const date = `${ym.YYYY}-${ym.MM}-${String(rnd(1,ym.days)).padStart(2,'0')}`;
-                sql += insertSQL('MGM_casher_details', {
+                sql += insertSQL('mgm_casher_details', {
                     bu_no: bu, amt_type: name, client_id: client,
                     num_vman: `CV${bu}${ym.YYYY}${ym.MM}${String(seq++).padStart(2,'0')}`,
                     sub_amt: amt, DB_CR: 'CR', YYYY: ym.YYYY, MM: ym.MM,
@@ -246,11 +246,11 @@ async function main() {
     sql += `\n`;
 
     // === 5. AR/AP 彙總 ===
-    sql += `-- === AR/AP 彙總 (ERMM_ARAP_detail) ===\n`;
+    sql += `-- === AR/AP 彙總 (ermm_arap_detail) ===\n`;
     for (const bu of BUS) {
         for (const ym of MONTHS) {
             const s = buildSummary(bu, ym, MONTHS.indexOf(ym));
-            sql += insertSQL('ERMM_ARAP_detail', {
+            sql += insertSQL('ermm_arap_detail', {
                 bu_no: bu, YYYY: ym.YYYY, YYYY_MM: ym.YYYY_MM,
                 AR_amt: Math.round(s.AR_amt/3), AP_amt: Math.round(s.AP_amt/3),
                 AR_ageing: Math.round(s.AR_amt/10), AP_ageing: Math.round(s.AP_amt/10), batch_id: 'MANUAL'
@@ -318,7 +318,7 @@ async function main() {
     sql += `\n`;
 
     // === 8. 貸款 ===
-    sql += `-- === 銀行貸款 (MGM_bank_loan_details) ===\n`;
+    sql += `-- === 銀行貸款 (mgm_bank_loan_details) ===\n`;
     for (const bu of BUS) {
         const s0 = buildSummary(bu, MONTHS[0], 0);
         const loans = [
@@ -328,7 +328,7 @@ async function main() {
         ];
         for (const l of loans) {
             const diff = Math.round(l.amt * (1 - l.rate2));
-            sql += insertSQL('MGM_bank_loan_details', {
+            sql += insertSQL('mgm_bank_loan_details', {
                 bu_no: bu, YYYY: '2024', acct_no: `ACCT${bu}${rnd(100,999)}`,
                 type1: '貸款', acct_amt: l.amt, unit: 'RMB',
                 loan_id: l.loan_id, bank_id: l.bank, branch_id: '總行',
@@ -362,7 +362,7 @@ async function main() {
     sql += `\n`;
 
     // === 10. KPI ===
-    sql += `-- === KPI 門檻 (MGM_KPI_desc) ===\n`;
+    sql += `-- === KPI 門檻 (mgm_kpi_desc) ===\n`;
     for (const bu of BUS) {
         const s = buildSummary(bu, MONTHS[2], 2);
         const totalAsset = Math.max(s.ttl_asset_amt, 1);
@@ -382,7 +382,7 @@ async function main() {
             let color = 'YELLOW';
             if (val >= low && val <= high) color = 'GREEN';
             else if (val < low*0.7 || val > high*1.3) color = 'RED';
-            sql += insertSQL('MGM_KPI_desc', {
+            sql += insertSQL('mgm_kpi_desc', {
                 bu_no: bu, KPI_id: id, KPI_name: name,
                 KPI1: low, KPI2: high, unit: unit, pct_type: 'asc',
                 KPI_value: val, KPI_color: color, remark: `${name} 評估指標`

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 資產負債表平衡修復腳本
  * 問題：第三方匯入資料未維護會計恆等式（資產 ≠ 負債 + 權益），全部 75 筆都不平衡。
  * 修復：調整 accumulated_amt（保留盈餘，標準平衡科目）使 資產 = 負債 + 權益，
@@ -18,7 +18,7 @@ const mysql = require('mysql2/promise');
 
     const v = (r, k) => Number(r[k] || 0);
 
-    const [rows] = await c.query(`SELECT * FROM MGM_finance_summary ORDER BY bu_no, YYYY_MM`);
+    const [rows] = await c.query(`SELECT * FROM mgm_finance_summary ORDER BY bu_no, YYYY_MM`);
     let fixed = 0;
 
     for (const r of rows) {
@@ -46,7 +46,7 @@ const mysql = require('mysql2/promise');
         const old_diff = ttl_asset - ttl_debet - other_equity - v(r,'accumulated_amt');
 
         await c.execute(`
-            UPDATE MGM_finance_summary SET
+            UPDATE mgm_finance_summary SET
                 accumulated_amt=?,
                 ttl_asset_amt=?, ttl_debet_amt=?, stockholder_amt=?,
                 current_asset_amt=?, non_current_asset_amt=?,

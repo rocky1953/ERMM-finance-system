@@ -1,5 +1,5 @@
-/**
- * 擴展 MGM_BEP_threshold：固定成本明細拆分
+﻿/**
+ * 擴展 mgm_bep_threshold：固定成本明細拆分
  *
  * 新增 3 個固定成本明細欄位（對應 mgm_casher_details 支出類型）：
  *   fixed_salary   工資
@@ -48,7 +48,7 @@ async function main() {
   // Step 1: 檢查欄位是否已存在，不存在則 ALTER TABLE
   const [cols] = await pool.execute(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'MGM_BEP_threshold'
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'mgm_bep_threshold'
        AND COLUMN_NAME IN ('fixed_salary','fixed_rent','fixed_interest')`,
     [process.env.DB_NAME || 'ERMM_db']
   );
@@ -61,7 +61,7 @@ async function main() {
   ];
   const toAdd = addCols.filter(([name]) => !existing.has(name)).map(([, sql]) => sql);
   if (toAdd.length > 0) {
-    await pool.execute('ALTER TABLE MGM_BEP_threshold ' + toAdd.join(', '));
+    await pool.execute('ALTER TABLE mgm_bep_threshold ' + toAdd.join(', '));
     console.log('Step 1 新增欄位:', toAdd.length, '個 →', toAdd.length === 3 ? 'fixed_salary/fixed_rent/fixed_interest' : '部分新增');
   } else {
     console.log('Step 1 欄位已存在，略過 ALTER TABLE');
@@ -70,7 +70,7 @@ async function main() {
   // Step 2: 找出需要回填的列（fixed_cost > 0 且三個明細合計為 0/NULL）
   const [rows] = await pool.execute(
     `SELECT uid, bu_no, YYYY_MM, fixed_cost
-     FROM MGM_BEP_threshold
+     FROM mgm_bep_threshold
      WHERE fixed_cost > 0
        AND IFNULL(fixed_salary,0) + IFNULL(fixed_rent,0) + IFNULL(fixed_interest,0) = 0`
   );
@@ -111,7 +111,7 @@ async function main() {
     salary = round2(total - rent - interest);
 
     await pool.execute(
-      `UPDATE MGM_BEP_threshold
+      `UPDATE mgm_bep_threshold
        SET fixed_salary=?, fixed_rent=?, fixed_interest=?
        WHERE uid=?`,
       [salary, rent, interest, r.uid]
@@ -126,7 +126,7 @@ async function main() {
   const [verify] = await pool.execute(
     `SELECT bu_no, YYYY_MM, fixed_cost,
             IFNULL(fixed_salary,0) AS s, IFNULL(fixed_rent,0) AS r, IFNULL(fixed_interest,0) AS i
-     FROM MGM_BEP_threshold
+     FROM mgm_bep_threshold
      ORDER BY bu_no, YYYY_MM`
   );
   let mismatch = 0;

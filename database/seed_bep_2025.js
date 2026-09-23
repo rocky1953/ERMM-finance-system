@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BEP 損益平衡分析 - 正式測試資料種子腳本
  *
  * 基準來源: CW397 [2014/11] 損益平衡試算分析圖片 (HM 公司原始值)
@@ -94,28 +94,28 @@ function genBEP(bu_no, sale_amt) {
 
     // Step 1: 清除垃圾數據（測試殘留 + 2026/09 無效月份）
     const [del] = await conn.execute(
-        `DELETE FROM MGM_BEP_threshold
+        `DELETE FROM mgm_bep_threshold
          WHERE YYYY_MM >= '2026/01' OR YYYY_MM < '2024/09'`
     );
     console.log(`Step 1 清除垃圾數據: 刪除 ${del.affectedRows} 筆 (2026年+2023年)`);
 
     // 把 2025/02 那筆垃圾（fx=25億）也清掉，之後重新用 HM 基準生成
     const [del2] = await conn.execute(
-        `DELETE FROM MGM_BEP_threshold WHERE bu_no='HM' AND YYYY_MM='2025/02' AND fixed_cost > 100000000`
+        `DELETE FROM mgm_bep_threshold WHERE bu_no='HM' AND YYYY_MM='2025/02' AND fixed_cost > 100000000`
     );
     console.log(`Step 1b 清除 HM 2025/02 垃圾 fx>1億: 刪除 ${del2.affectedRows} 筆`);
 
     // Step 2: 取出所有有 sale_amt 的月份
     const [summary] = await conn.execute(
         `SELECT bu_no, YYYY_MM, sale_amt
-         FROM MGM_finance_summary
+         FROM mgm_finance_summary
          WHERE sale_amt > 0
          ORDER BY bu_no, YYYY_MM`
     );
     console.log(`\nStep 2 找出 sale_amt > 0 的記錄: ${summary.length} 筆`);
 
     // Step 3: 批量 upsert
-    const upsertSql = `INSERT INTO MGM_BEP_threshold
+    const upsertSql = `INSERT INTO mgm_bep_threshold
         (bu_no, YYYY_MM, consumable, packaging, processing, misc_purchase,
          freight, customs, service_part_comp, variable_expense, fixed_cost, remark)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
@@ -149,12 +149,12 @@ function genBEP(bu_no, sale_amt) {
     const [verify] = await conn.execute(
         `SELECT t.bu_no, t.YYYY_MM, t.consumable, t.fixed_cost,
                 s.sale_amt
-         FROM MGM_BEP_threshold t
-         LEFT JOIN MGM_finance_summary s
+         FROM mgm_bep_threshold t
+         LEFT JOIN mgm_finance_summary s
            ON t.bu_no=s.bu_no AND t.YYYY_MM=s.YYYY_MM
          ORDER BY t.bu_no, t.YYYY_MM`
     );
-    console.log(`\nStep 4 驗證 — MGM_BEP_threshold 共 ${verify.length} 筆:`);
+    console.log(`\nStep 4 驗證 — mgm_bep_threshold 共 ${verify.length} 筆:`);
     for (const r of verify) {
         const mat = Number(r.consumable) > 0 ? 'OK' : '⚠️ 零';
         console.log(`  ${r.bu_no} ${r.YYYY_MM}  fx=${Number(r.fixed_cost).toLocaleString()}  sale=${Number(r.sale_amt||0).toLocaleString()}  ${mat}`);

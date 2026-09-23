@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 生成批次管線 7 步測試資料 Excel (2023/01)
  * 直接灌 DB 而不是走 import_excel.js（因為那些表不在原模板涵蓋範圍）
  * 輸出: database/batch_test_202301.xlsx
@@ -23,7 +23,7 @@ async function main() {
   wb.created = new Date();
 
   // ============================================================
-  // Sheet 1: ERMM_temp_po — Step1 原始採購單（ERP 匯入暫存）
+  // Sheet 1: ermm_temp_po — Step1 原始採購單（ERP 匯入暫存）
   // ============================================================
   const s1 = wb.addWorksheet('01_ERP_temp_po', { headerRowStyle: { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } } });
   s1.columns = [
@@ -75,7 +75,7 @@ async function main() {
   console.log(`  temp_po: ${s1.rowCount - 1} rows`);
 
   // ============================================================
-  // Sheet 2: ERMM_erp_SO — Step6 銷售訂單（算 AR）
+  // Sheet 2: ermm_erp_so — Step6 銷售訂單（算 AR）
   // ============================================================
   const s2 = wb.addWorksheet('02_ERP_SO', { headerRowStyle: { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } } });
   s2.columns = [
@@ -200,7 +200,7 @@ async function main() {
   console.log(`  system_codes: ${s4.rowCount - 1} rows`);
 
   // ============================================================
-  // Sheet 5: MGM_invoice_details — Step7 發票彙總
+  // Sheet 5: mgm_invoice_details — Step7 發票彙總
   // ============================================================
   const s5 = wb.addWorksheet('05_發票明細_invoice', { headerRowStyle: { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } } });
   s5.columns = [
@@ -250,7 +250,7 @@ async function main() {
   console.log(`  invoice: ${s5.rowCount - 1} rows`);
 
   // ============================================================
-  // Sheet 6: MGM_casher_details — Step7 現金日記
+  // Sheet 6: mgm_casher_details — Step7 現金日記
   // ============================================================
   const s6 = wb.addWorksheet('06_現金日記_cash', { headerRowStyle: { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } } });
   s6.columns = [
@@ -305,7 +305,7 @@ async function main() {
   console.log(`  cash: ${s6.rowCount - 1} rows`);
 
   // ============================================================
-  // Sheet 7: MGM_finance_summary — Step7 目標表（先給初始值）
+  // Sheet 7: mgm_finance_summary — Step7 目標表（先給初始值）
   // ============================================================
   const s7 = wb.addWorksheet('07_財務摘要_summary', { headerRowStyle: { font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E40AF' } } } });
   s7.columns = [

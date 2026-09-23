@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 擴展 mgm_casher_details（現金日記賬）從 2024/11 外推到 2024/12 ~ 2025/12
  * 每個 BU 每個 amt_type 從 2024/11 複製金額，按月 7% 複利成長
  */
@@ -36,7 +36,7 @@ async function main() {
     for (const bu_no of BUS) {
         // 讀取 2024/11 基準現金账
         const [baseRows] = await pool.execute(
-            'SELECT * FROM MGM_casher_details WHERE bu_no=? AND YYYY_MM=?',
+            'SELECT * FROM mgm_casher_details WHERE bu_no=? AND YYYY_MM=?',
             [bu_no, BASE_MONTH]
         );
         if (baseRows.length === 0) { console.error(`找不到 ${bu_no} ${BASE_MONTH} 現金账`); continue; }
@@ -48,7 +48,7 @@ async function main() {
 
             // 檢查是否已存在
             const [exist] = await pool.execute(
-                'SELECT uid FROM MGM_casher_details WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
+                'SELECT uid FROM mgm_casher_details WHERE bu_no=? AND YYYY_MM=? LIMIT 1',
                 [bu_no, ym]
             );
             if (exist.length > 0) { console.log(`  [跳過] ${bu_no} ${ym} 已存在`); continue; }
@@ -61,7 +61,7 @@ async function main() {
                 const newNum = `${b.num_vman.replace(BASE_MONTH.replace('/',''), ym.replace('/',''))}`;
 
                 await pool.execute(`
-                    INSERT INTO MGM_casher_details
+                    INSERT INTO mgm_casher_details
                     (bu_no, amt_type, client_id, num_vman, sub_amt, DB_CR,
                      YYYY, MM, YYYY_MM, wk_date, bank_acct, remark)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
@@ -82,7 +82,7 @@ async function main() {
                SUM(CASE WHEN DB_CR='DR' THEN sub_amt ELSE 0 END) AS dr_total,
                SUM(CASE WHEN DB_CR='CR' THEN sub_amt ELSE 0 END) AS cr_total,
                COUNT(*) cnt
-        FROM MGM_casher_details
+        FROM mgm_casher_details
         WHERE YYYY_MM>='2024/09' AND YYYY_MM<='2025/12'
         GROUP BY bu_no, YYYY_MM
         ORDER BY bu_no, YYYY_MM
@@ -90,7 +90,7 @@ async function main() {
     let ok = true;
     for (const r of rows) {
         const [sm] = await pool.execute(
-            'SELECT AR_amt, AP_amt FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+            'SELECT AR_amt, AP_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
             [r.bu_no, r.YYYY_MM]
         );
         if (sm.length > 0) {

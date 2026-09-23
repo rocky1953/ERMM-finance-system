@@ -1,8 +1,8 @@
-const { pool } = require('../config/db');
+﻿const { pool } = require('../config/db');
 
 (async () => {
   try {
-    await pool.execute(`CREATE TABLE IF NOT EXISTS MGM_BEP_threshold (
+    await pool.execute(`CREATE TABLE IF NOT EXISTS mgm_bep_threshold (
       uid INT AUTO_INCREMENT PRIMARY KEY,
       bu_no VARCHAR(10) NOT NULL,
       YYYY_MM VARCHAR(8) NOT NULL,
@@ -23,16 +23,16 @@ const { pool } = require('../config/db');
       update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uq_bu_ym (bu_no, YYYY_MM)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-    console.log('✅ MGM_BEP_threshold 建立成功');
+    console.log('✅ mgm_bep_threshold 建立成功');
 
     const [s] = await pool.execute(
-      "SELECT YYYY_MM, sale_amt FROM MGM_finance_summary WHERE bu_no='HM' ORDER BY YYYY_MM DESC LIMIT 1"
+      "SELECT YYYY_MM, sale_amt FROM mgm_finance_summary WHERE bu_no='HM' ORDER BY YYYY_MM DESC LIMIT 1"
     );
     console.log('HM 最近月份 sale:', s[0]?.YYYY_MM, s[0]?.sale_amt);
 
     const ym = s[0]?.YYYY_MM || '202412';
     await pool.execute(
-      `INSERT INTO MGM_BEP_threshold
+      `INSERT INTO mgm_bep_threshold
        (bu_no, YYYY_MM, consumable, packaging, processing, misc_purchase,
         freight, customs, service_part_comp, variable_expense,
         fixed_salary, fixed_rent, fixed_interest, fixed_cost)
@@ -52,7 +52,7 @@ const { pool } = require('../config/db');
     );
     console.log('✅ Seed HM', ym, '完成');
 
-    const [b] = await pool.execute('SELECT * FROM MGM_BEP_threshold');
+    const [b] = await pool.execute('SELECT * FROM mgm_bep_threshold');
     console.log('目前筆數:', b.length);
     pool.end();
   } catch (e) { console.error(e.message); process.exit(1); }

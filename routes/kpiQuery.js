@@ -1,7 +1,7 @@
-/**
+﻿/**
  * 財務 KPI 查詢路由（YG001~YG004）
  *
- * 從 MGM_finance_summary 動態計算財務比率
+ * 從 mgm_finance_summary 動態計算財務比率
  * 回傳格式：{ target, lower, upper, current, color, formula }
  */
 const express = require('express');
@@ -9,7 +9,7 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 
-// ===== 公式庫（使用 MGM_finance_summary 現成欄位）=====
+// ===== 公式庫（使用 mgm_finance_summary 現成欄位）=====
 // s = summary row, p = prev month row
 // ★ 關鍵：current_debet_amt = 流動負債總額, ttl_debet_amt = 負債總額, stockholder_amt = 股東權益
 const FORMULAS = {
@@ -258,18 +258,18 @@ router.get('/query', async (req, res) => {
 
         // 取當月 summary
         const [cur] = await pool.execute(
-            'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
+            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
         );
         if (cur.length === 0) return fail(res, '該月無財務摘要資料', 404);
 
         // 取上月（成長率用）
         const [prev] = await pool.execute(
-            `SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM = DATE_FORMAT(DATE_SUB(STR_TO_DATE(?, '%Y/%m'), INTERVAL 1 MONTH), '%Y/%m')`,
+            `SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM = DATE_FORMAT(DATE_SUB(STR_TO_DATE(?, '%Y/%m'), INTERVAL 1 MONTH), '%Y/%m')`,
             [bu_no, YYYY_MM]
         );
 
         // 取 KPI 門檻
-        const [kpis] = await pool.execute('SELECT * FROM MGM_KPI_desc WHERE bu_no=?', [bu_no]);
+        const [kpis] = await pool.execute('SELECT * FROM mgm_kpi_desc WHERE bu_no=?', [bu_no]);
         const kpiMap = {};
         kpis.forEach(k => kpiMap[k.KPI_id] = k);
 
@@ -296,7 +296,7 @@ router.get('/query', async (req, res) => {
             };
         }
 
-        // 合併 MGM_KPI_desc 的門檻（DB id 已改成公式同名，直接 merge）
+        // 合併 mgm_kpi_desc 的門檻（DB id 已改成公式同名，直接 merge）
         for (const [id, kpi] of Object.entries(kpiMap)) {
             if (results[id]) {
                 results[id].uid  = kpi.uid;   // 給前端點目標值時知道調哪筆
@@ -334,7 +334,7 @@ router.post('/calc', async (req, res) => {
         if (!bu_no || !YYYY_MM) return fail(res, '缺少 bu_no 或 YYYY_MM');
 
         const [cur] = await pool.execute(
-            'SELECT * FROM MGM_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
+            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
         );
         if (cur.length === 0) return fail(res, '該月無資料', 404);
 
