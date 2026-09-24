@@ -56,11 +56,11 @@ async function loadXitems() {
                 return `
                 <tr>
                     <td>${r.bu_no}</td><td>${r.xitems||'-'}</td><td>${r.item_name||'-'}</td>
-                    <td class="num">${UI.fmt(r.qty_balance, 4)}</td><td class="num">${UI.fmt(r.unit_price, 6)}</td>
-                    <td class="num">${UI.fmt(r.exchange_rate, 4)}</td>
+                    <td class="num">${UI.fmt(r.qty_balance)}</td><td class="num">${UI.fmt(r.unit_price)}</td>
+                    <td class="num">${UI.fmt(r.exchange_rate)}</td>
                     <td class="num">${UI.fmt(r.stock_value)}</td>
                     <td>${labelAgeing}</td>
-                    <td class="num" style="color:${lose>0?'#e74c3c':'#27ae60'}">${r.reduce_percentage||0}%</td>
+                    <td class="num" style="color:${lose>0?'#e74c3c':'#27ae60'}">${UI.fmt(r.reduce_percentage||0)}%</td>
                     <td class="num">${UI.fmt(r.current_value)}</td>
                     <td class="num" style="color:${lose>0?'#e74c3c':'#27ae60'}">${UI.fmt(lose)}</td>
                     <td>

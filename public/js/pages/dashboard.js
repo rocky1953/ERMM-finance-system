@@ -375,18 +375,19 @@ registerPage('dashboard', async (c) => {
                         <div class="kpi-label">${t('dash.current_ratio')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
                         <div class="kpi-badge ${crZone}">${crLabel}</div>
-                        <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
+                        <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)} ${crZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'current_ratio\')" style="color:#2563eb;">🔍診斷</a>' : ''}</div>
                     </div>
                     <div class="kpi-card ${drZone} clickable" id="drCard" title="${t('dash.zmodal.hint')}">
                         <div class="kpi-label">${t('dash.debt_ratio_label')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
                         <div class="kpi-badge ${drZone}">${drLabel}</div>
+                        <div class="kpi-sub">${drZone !== 'green' ? '<a href="#" onclick="event.stopPropagation();Diagnosis.open(\'debt_ratio\')" style="color:#2563eb;">🔍 異常診斷</a>' : ''}</div>
                     </div>
                     <div class="kpi-card ${roeZone} clickable" id="roeCard" title="${t('dash.zmodal.hint')}">
                         <div class="kpi-label">${t('dash.roe')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
                         <div class="kpi-badge ${roeZone}">${roeLabel}</div>
-                        <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}%</div>
+                        <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}% ${roeZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'roe\')" style="color:#2563eb;">🔍診斷</a>' : ''}</div>
                     </div>
                 </div>
             `;

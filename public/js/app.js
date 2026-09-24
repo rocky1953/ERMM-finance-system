@@ -185,6 +185,42 @@ const UI = {
     }
 };
 
+// ===== 異常診斷（點擊 KPI 紅燈展開 Top3 原因）=====
+const Diagnosis = {
+    async open(kpi_id) {
+        UI.modal('🔍 異常自動診斷', '<div style="text-align:center;padding:30px;">分析中...</div>', '');
+        try {
+            const res = await API.get(`/api/diagnosis/kpi?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}&kpi_id=${kpi_id}`);
+            const d = res.data;
+            const lvlColor = d.level === 'danger' ? '#e74c3c' : d.level === 'warning' ? '#f39c12' : '#27ae60';
+            const reasonsHtml = (d.top_reasons || []).map(r => `
+                <div style="display:flex;gap:12px;padding:12px;border:1px solid #eee;border-radius:8px;margin-bottom:10px;background:#fafafa;">
+                    <div style="width:30px;height:30px;border-radius:50%;background:${r.rank===1?'#e74c3c':r.rank===2?'#f39c12':'#3498db'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${r.rank}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${r.dim}：${r.desc}</div>
+                        <div style="font-size:12px;color:#555;margin-bottom:4px;">📊 影響：${r.impact}</div>
+                        <div style="font-size:12px;color:#2980b9;background:#eaf2f8;padding:5px 8px;border-radius:5px;">💡 ${r.suggestion}</div>
+                    </div>
+                </div>
+            `).join('');
+            UI.modal(`🔍 ${d.kpi_name} 異常診斷`, `
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:12px;color:#7f8c8d;">當期值</div>
+                    <div style="font-size:28px;font-weight:800;color:${lvlColor};">${d.current_value}${d.unit} 
+                        <span style="font-size:14px;color:#95a5a6;">／ 門檻 ${d.threshold}${d.unit}</span>
+                    </div>
+                    ${d.change !== null ? `<div style="font-size:13px;color:${d.change>=0?'#27ae60':'#e74c3c'};">較上期 ${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}${d.unit}</div>` : ''}
+                </div>
+                <div style="font-weight:700;margin-bottom:10px;">Top 3 拖累原因</div>
+                ${reasonsHtml}
+            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">關閉</button>
+                <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">建立行動任務 →</button>`);
+        } catch (e) {
+            UI.modal('診斷失敗', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">關閉</button>');
+        }
+    }
+};
+
 // ===== 頁面管理 =====
 const pages = {};
 function registerPage(id, fn) { pages[id] = fn; }

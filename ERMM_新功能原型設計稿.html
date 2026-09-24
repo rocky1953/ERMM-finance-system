@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 新功能原型設計稿</title>
+<style>
+  :root{
+    --primary:#1e3a8a; --primary-2:#2563eb; --accent:#db2777;
+    --bg:#f1f5f9; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#64748b; --text-mute:#94a3b8;
+    --green:#16a34a; --red:#dc2626; --yellow:#ca8a04;
+    --green-bg:#dcfce7; --red-bg:#fee2e2; --yellow-bg:#fef9c3;
+    --sidebar-w:230px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+  .app{display:flex;min-height:100vh}
+
+  /* ===== 側邊欄 ===== */
+  .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1e3a8a,#312e81);color:#fff;position:fixed;height:100vh;overflow-y:auto;z-index:10}
+  .logo{padding:20px 22px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;align-items:center;gap:10px}
+  .logo .ic{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#db2777,#f59e0b);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800}
+  .logo .tx{font-size:15px;font-weight:700;letter-spacing:.5px}
+  .logo .tx small{display:block;font-size:10px;font-weight:400;opacity:.7;letter-spacing:0}
+  .nav{padding:12px 0}
+  .nav-group{padding:8px 22px 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;opacity:.5;color:#a5b4fc}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 22px;cursor:pointer;color:#cbd5e1;font-size:13.5px;transition:all .15s;border-left:3px solid transparent}
+  .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+  .nav-item.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#f59e0b;font-weight:600}
+  .nav-item .icn{width:18px;text-align:center;font-size:15px}
+  .nav-item .badge-dot{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#f59e0b}
+
+  /* ===== 主區 ===== */
+  .main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{height:60px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
+  .topbar .ttl{font-size:18px;font-weight:700;color:var(--primary)}
+  .topbar .ttl small{font-size:12px;font-weight:400;color:var(--text-mute);margin-left:8px}
+  .topbar .right{display:flex;align-items:center;gap:18px}
+  .topbar .search{background:#f1f5f9;border:1px solid var(--border);border-radius:8px;padding:7px 14px;width:240px;font-size:13px;color:var(--text-soft)}
+  .topbar .bell{position:relative;font-size:18px;cursor:pointer;color:var(--text-soft)}
+  .topbar .bell .dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;background:#dc2626;border-radius:50%;border:2px solid #fff}
+  .topbar .user{display:flex;align-items:center;gap:9px;cursor:pointer}
+  .topbar .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .topbar .uname{font-size:13px;font-weight:600}
+  .topbar .urole{font-size:11px;color:var(--text-mute)}
+
+  .content{padding:24px 28px 40px;flex:1}
+  .view{display:none}
+  .view.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+  /* ===== 通用元件 ===== */
+  .card{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .card-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .card-hd .ct{font-size:15px;font-weight:700}
+  .card-hd .ct .sub{font-size:12px;font-weight:400;color:var(--text-mute);margin-left:8px}
+  .card-bd{padding:18px 20px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .pill.green{background:var(--green-bg);color:#166534}
+  .pill.red{background:var(--red-bg);color:#991b1b}
+  .pill.yellow{background:var(--yellow-bg);color:#854d0e}
+  .pill.blue{background:#dbeafe;color:#1e40af}
+  .btn{padding:7px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+  .btn-primary{background:var(--primary-2);color:#fff}
+  .btn-primary:hover{background:#1d4ed8}
+  .btn-ghost{background:#f1f5f9;color:var(--text)}
+  .btn-ghost:hover{background:#e2e8f0}
+  .btn-outline{border:1px solid var(--border);background:#fff;color:var(--text)}
+  .btn-outline:hover{background:#f8fafc}
+
+  /* ===== KPI 卡片網格 ===== */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+  @media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+  .kpi-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.1)}
+  .kpi-card .lbl{font-size:12.5px;color:var(--text-soft);display:flex;align-items:center;justify-content:space-between}
+  .kpi-card .val{font-size:26px;font-weight:800;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+  .kpi-card .chg{font-size:12px;font-weight:600}
+  .kpi-card .chg.up{color:var(--green)}
+  .kpi-card .chg.down{color:var(--red)}
+  .kpi-card .light{width:10px;height:10px;border-radius:50%}
+  .kpi-card .light.green{background:var(--green);box-shadow:0 0 6px rgba(22,163,74,.5)}
+  .kpi-card .light.yellow{background:var(--yellow);box-shadow:0 0 6px rgba(202,138,4,.5)}
+  .kpi-card .light.red{background:var(--red);box-shadow:0 0 6px rgba(220,38,38,.5)}
+  .kpi-card .hint{position:absolute;bottom:10px;right:14px;font-size:11px;color:var(--primary-2);font-weight:600;opacity:0;transition:opacity .15s}
+  .kpi-card:hover .hint{opacity:1}
+
+  /* ===== 儀表板圖表區 ===== */
+  .charts-row{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:20px}
+  @media(max-width:1100px){.charts-row{grid-template-columns:1fr}}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:12.5px}
+  .bar-row .nm{width:80px;color:var(--text-soft)}
+  .bar-row .bar-bg{flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden;position:relative}
+  .bar-row .bar-fg{height:100%;border-radius:4px}
+  .bar-row .bar-fg.pos{background:linear-gradient(to right,#16a34a,#4ade80)}
+  .bar-row .bar-fg.neg{background:linear-gradient(to right,#dc2626,#f87171)}
+  .bar-row .bar-fg.neu{background:linear-gradient(to right,#2563eb,#60a5fa)}
+  .bar-row .amt{width:90px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .bar-row .pct{width:55px;text-align:right;font-weight:700}
+
+  /* ===== 風險面板 ===== */
+  .risk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .risk-card{padding:14px;border-radius:10px;text-align:center}
+  .risk-card .rk{font-size:11px;color:var(--text-soft);margin-bottom:4px}
+  .risk-card .rv{font-size:22px;font-weight:800}
+  .risk-card .rs{font-size:11px;font-weight:700;margin-top:2px}
+  .risk-card.safe{background:#ecfdf5;border:1px solid #a7f3d0}
+  .risk-card.safe .rv{color:#059669}
+  .risk-card.warn{background:#fffbeb;border:1px solid #fde68a}
+  .risk-card.warn .rv{color:#d97706}
+  .risk-card.danger{background:#fef2f2;border:1px solid #fecaca}
+  .risk-card.danger .rv{color:#dc2626}
+
+  /* ===== 彈窗（異常診斷） ===== */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:100}
+  .modal-overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;width:90%;max-width:720px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3);overflow:hidden}
+  .modal-hd{padding:16px 22px;background:linear-gradient(135deg,#1e3a8a,#312e81);color:#fff;display:flex;justify-content:space-between;align-items:center}
+  .modal-hd .mt{font-size:16px;font-weight:700}
+  .modal-hd .x{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.8}
+  .modal-hd .x:hover{opacity:1}
+  .modal-bd{padding:20px 22px;overflow-y:auto}
+  .modal-ft{padding:14px 22px;border-top:1px solid var(--border);text-align:right;background:#f8fafc}
+  .diag-summary{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;margin-bottom:18px}
+  .diag-summary .q{font-size:14px;font-weight:700;color:#991b1b;margin-bottom:6px}
+  .diag-summary .a{font-size:13px;color:#7f1d1d;line-height:1.7}
+
+  /* ===== 行動看板 ===== */
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:1100px){.kanban{grid-template-columns:1fr}}
+  .kb-col{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:14px;min-height:400px}
+  .kb-col-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--border)}
+  .kb-col-hd .ct{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+  .kb-col-hd .cnt{background:#fff;border:1px solid var(--border);border-radius:10px;padding:1px 9px;font-size:12px;font-weight:700;color:var(--text-soft)}
+  .kb-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .kb-card:hover{box-shadow:0 6px 14px rgba(0,0,0,.08);transform:translateY(-1px)}
+  .kb-card .ttl{font-size:13.5px;font-weight:700;margin-bottom:6px}
+  .kb-card .desc{font-size:12px;color:var(--text-soft);margin-bottom:10px;line-height:1.5}
+  .kb-card .meta{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--text-mute)}
+  .kb-card .meta .av{display:flex;align-items:center;gap:5px}
+  .kb-card .av-mini{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+  .kb-card .prg{height:4px;background:#f1f5f9;border-radius:2px;margin-top:8px;overflow:hidden}
+  .kb-card .prg-fg{height:100%;border-radius:2px;background:var(--primary-2)}
+  .kb-card.overdue .ttl::after{content:"逾期";background:var(--red-bg);color:#991b1b;padding:1px 7px;border-radius:4px;font-size:10px;margin-left:6px;font-weight:700}
+
+  /* ===== 預警通知 ===== */
+  .alert-list{display:flex;flex-direction:column;gap:10px}
+  .alert-item{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 20px;display:flex;gap:16px;align-items:flex-start;transition:all .15s}
+  .alert-item:hover{box-shadow:0 4px 12px rgba(0,0,0,.06)}
+  .alert-item.unread{border-left:4px solid var(--red);background:#fffafa}
+  .alert-ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .alert-ic.red{background:var(--red-bg)}
+  .alert-ic.yellow{background:var(--yellow-bg)}
+  .alert-ic.blue{background:#dbeafe}
+  .alert-bd{flex:1;min-width:0}
+  .alert-bd .at{font-size:14px;font-weight:700;margin-bottom:3px}
+  .alert-bd .ad{font-size:12.5px;color:var(--text-soft);line-height:1.6}
+  .alert-bd .ameta{font-size:11px;color:var(--text-mute);margin-top:6px}
+  .alert-act{display:flex;gap:8px;flex-shrink:0}
+
+  /* ===== 多維下鑽 ===== */
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+  .tab{padding:10px 20px;font-size:13.5px;font-weight:600;color:var(--text-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+  .tab.active{color:var(--primary-2);border-bottom-color:var(--primary-2)}
+  .rank-row{display:grid;grid-template-columns:40px 1fr 140px 120px 90px;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--border);font-size:13px}
+  .rank-row:hover{background:#f8fafc}
+  .rank-row.hd{background:#f1f5f9;font-weight:700;color:var(--text-soft);font-size:12px}
+  .rank-no{width:28px;height:28px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--text-soft)}
+  .rank-no.top1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#fff}
+  .rank-no.top2{background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff}
+  .rank-no.top3{background:linear-gradient(135deg,#d97706,#b45309);color:#fff}
+  .rank-name{font-weight:600}
+  .rank-name .sub{font-size:11px;color:var(--text-mute);font-weight:400}
+  .rank-bar{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+  .rank-bar-fg{height:100%;border-radius:4px;background:linear-gradient(to right,#2563eb,#60a5fa)}
+  .rank-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .rank-num.neg{color:var(--red)}
+
+  /* ===== 現金預測 ===== */
+  .forecast-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+  @media(max-width:1100px){.forecast-summary{grid-template-columns:repeat(2,1fr)}}
+  .fs-card{padding:16px;border-radius:10px;border:1px solid var(--border)}
+  .fs-card .fl{font-size:12px;color:var(--text-soft)}
+  .fs-card .fv{font-size:22px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+  .fs-card .fc{font-size:11px;margin-top:2px}
+  .fs-card.green{background:#ecfdf5;border-color:#a7f3d0}
+  .fs-card.green .fv{color:#059669}
+  .fs-card.red{background:#fef2f2;border-color:#fecaca}
+  .fs-card.red .fv{color:#dc2626}
+  .fs-card.blue{background:#eff6ff;border-color:#bfdbfe}
+  .fs-card.blue .fv{color:#2563eb}
+
+  /* SVG 圖表 */
+  .chart-container{width:100%;overflow-x:auto}
+  .chart-svg{width:100%;min-width:600px;height:280px}
+
+  /* 頁籤通用 */
+  .view-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .view-hd h2{font-size:20px;font-weight:700;color:var(--text)}
+  .view-hd h2 small{font-size:13px;font-weight:400;color:var(--text-mute);margin-left:10px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== 側邊欄 ===== -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="ic">E</div>
+      <div class="tx">ERMM 財務模組<small>Enterprise Risk & Money Mgmt</small></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">經營決策</div>
+      <div class="nav-item active" data-view="dashboard"><span class="icn">📊</span>儀表板<span class="badge-dot"></span></div>
+      <div class="nav-item" data-view="actions"><span class="icn">✅</span>行動追蹤</div>
+      <div class="nav-item" data-view="alerts"><span class="icn">🔔</span>預警中心</div>
+
+      <div class="nav-group">分析工具</div>
+      <div class="nav-item" data-view="drilldown"><span class="icn">🔍</span>多維下鑽</div>
+      <div class="nav-item" data-view="cashforecast"><span class="icn">💧</span>現金預測</div>
+
+      <div class="nav-group">基礎模組</div>
+      <div class="nav-item"><span class="icn">📈</span>KPI 查詢</div>
+      <div class="nav-item"><span class="icn">⚠️</span>風險預警</div>
+      <div class="nav-item"><span class="icn">⚖️</span>BEP 分析</div>
+      <div class="nav-item"><span class="icn">🔮</span>財務預測</div>
+    </nav>
+  </aside>
+
+  <!-- ===== 主區 ===== -->
+  <main class="main">
+    <header class="topbar">
+      <div class="ttl" id="pageTitle">儀表板<small>即時經營體溫</small></div>
+      <div class="right">
+        <input class="search" placeholder="🔍 搜尋指標、客戶、產品..." readonly>
+        <div class="bell" onclick="switchView('alerts')">🔔<span class="dot"></span></div>
+        <div class="user">
+          <div class="avatar">黃</div>
+          <div>
+            <div class="uname">黃惠君</div>
+            <div class="urole">高階主管</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ 視圖 1：儀表板（異常診斷） ============ -->
+      <section class="view active" id="view-dashboard">
+        <!-- KPI 卡片 -->
+        <div class="kpi-grid">
+          <div class="kpi-card" onclick="openDiag('gross')">
+            <div class="lbl"><span>銷售毛利率</span><span class="light red"></span></div>
+            <div class="val" style="color:var(--red)">18.2%</div>
+            <div class="chg down">▼ 4.3% 較上月</div>
+            <div class="hint">🔍 為什麼紅燈？</div>
+          </div>
+          <div class="kpi-card">
+            <div class="lbl"><span>流動比率</span><span class="light yellow"></span></div>
+            <div class="val" style="color:var(--yellow)">1.28</div>
+            <div class="chg down">▼ 0.15 較上月</div>
+            <div class="hint">同業中位數 1.8</div>
+          </div>
+          <div class="kpi-card">
+            <div class="lbl"><span>負債比率</span><span class="light yellow"></span></div>
+            <div class="val" style="color:var(--yellow)">62.5%</div>
+            <div class="chg up">▲ 3.2% 較上月</div>
+            <div class="hint">同業中位數 48%</div>
+          </div>
+          <div class="kpi-card">
+            <div class="lbl"><span>Z-Score</span><span class="light green"></span></div>
+            <div class="val" style="color:var(--green)">3.12</div>
+            <div class="chg up">▲ 安全區</div>
+            <div class="hint">破產風險低</div>
+          </div>
+        </div>
+
+        <!-- 圖表區 -->
+        <div class="charts-row">
+          <div class="card">
+            <div class="card-hd">
+              <div class="ct">損益結構分析<span class="sub">2026 年 9 月 · HM 公司</span></div>
+              <span class="pill red">毛利率異常下滑</span>
+            </div>
+            <div class="card-bd">
+              <div class="bar-row"><span class="nm">銷售收入</span><div class="bar-bg"><div class="bar-fg neu" style="width:100%"></div></div><span class="amt">12,680K</span><span class="pct">100%</span></div>
+              <div class="bar-row"><span class="nm">銷貨成本</span><div class="bar-bg"><div class="bar-fg neg" style="width:81.8%"></div></div><span class="amt">10,373K</span><span class="pct">81.8%</span></div>
+              <div class="bar-row"><span class="nm">毛利</span><div class="bar-bg"><div class="bar-fg pos" style="width:18.2%"></div></div><span class="amt">2,307K</span><span class="pct" style="color:var(--red)">18.2%</span></div>
+              <div class="bar-row"><span class="nm">營業費用</span><div class="bar-bg"><div class="bar-fg neg" style="width:8.1%"></div></div><span class="amt">1,027K</span><span class="pct">8.1%</span></div>
+              <div class="bar-row"><span class="nm">營業淨利</span><div class="bar-bg"><div class="bar-fg pos" style="width:10.1%"></div></div><span class="amt">1,280K</span><span class="pct" style="color:var(--green)">10.1%</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd">
+              <div class="ct">風險預警面板</div>
+              <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px">查看全部</button>
+            </div>
+            <div class="card-bd">
+              <div class="risk-grid">
+                <div class="risk-card safe"><div class="rk">Z-Score</div><div class="rv">3.12</div><div class="rs" style="color:#059669">安全</div></div>
+                <div class="risk-card warn"><div class="rk">流動比率</div><div class="rv">1.28</div><div class="rs" style="color:#d97706">灰色地帶</div></div>
+                <div class="risk-card warn"><div class="rk">負債比</div><div class="rv">62.5%</div><div class="rs" style="color:#d97706">偏高</div></div>
+                <div class="risk-card safe"><div class="rk">ROE</div><div class="rv">9.8%</div><div class="rs" style="color:#059669">正常</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BEP 卡片 -->
+        <div class="card">
+          <div class="card-hd">
+            <div class="ct">損益平衡點 (BEP)<span class="sub">2026 年 9 月 · HM 公司</span></div>
+            <span class="pill red">不足訂單 1,850K</span>
+          </div>
+          <div class="card-bd">
+            <div class="bar-row"><span class="nm">實際銷售</span><div class="bar-bg"><div class="bar-fg neu" style="width:100%"></div></div><span class="amt">12,680K</span><span class="pct">—</span></div>
+            <div class="bar-row"><span class="nm">BEP 銷售</span><div class="bar-bg"><div class="bar-fg neg" style="width:85.4%"></div></div><span class="amt">10,830K</span><span class="pct">85.4%</span></div>
+            <div class="bar-row"><span class="nm">缺口</span><div class="bar-bg"><div class="bar-fg pos" style="width:14.6%"></div></div><span class="amt" style="color:var(--green)">+1,850K</span><span class="pct" style="color:var(--green)">安全</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 視圖 2：行動追蹤看板 ============ -->
+      <section class="view" id="view-actions">
+        <div class="view-hd">
+          <h2>行動追蹤看板<small>從紅燈到行動的閉環管理</small></h2>
+          <button class="btn btn-primary">+ 新建行動</button>
+        </div>
+        <div class="kanban">
+          <!-- 待處理 -->
+          <div class="kb-col">
+            <div class="kb-col-hd"><div class="ct">⏳ 待處理 <span class="cnt">3</span></div></div>
+            <div class="kb-card overdue">
+              <div class="ttl">提升 HM 公司毛利率</div>
+              <div class="desc">毛利率從 18.2% 拉回 22% 目標，需檢討產品組合與定價策略。</div>
+              <div class="meta"><div class="av"><div class="av-mini">陳</div>陳經理</div><div>📅 2026-09-15</div></div>
+            </div>
+            <div class="kb-card">
+              <div class="ttl">催收逾期應收帳款</div>
+              <div class="desc">3 筆超過 60 天逾期，總金額 480K，需聯繫客戶加速回款。</div>
+              <div class="meta"><div class="av"><div class="av-mini">林</div>林課長</div><div>📅 2026-10-05</div></div>
+            </div>
+            <div class="kb-card">
+              <div class="ttl">降低流動負債</div>
+              <div class="desc">流動比率偏低 (1.28)，規劃償還部分短期借款。</div>
+              <div class="meta"><div class="av"><div class="av-mini">王</div>王財務</div><div>📅 2026-10-20</div></div>
+            </div>
+          </div>
+          <!-- 進行中 -->
+          <div class="kb-col">
+            <div class="kb-col-hd"><div class="ct">🔄 進行中 <span class="cnt">2</span></div></div>
+            <div class="kb-card">
+              <div class="ttl">優化產品毛利結構</div>
+              <div class="desc">砍掉毛利率低於 10% 的 3 項產品，聚焦高毛利產品線。</div>
+              <div class="prg"><div class="prg-fg" style="width:60%"></div></div>
+              <div class="meta" style="margin-top:8px"><div class="av"><div class="av-mini">陳</div>陳經理</div><div>進度 60%</div></div>
+            </div>
+            <div class="kb-card">
+              <div class="ttl">建立應收帳款管理制度</div>
+              <div class="desc">制訂客戶信用額度與帳齡管理 SOP。</div>
+              <div class="prg"><div class="prg-fg" style="width:35%"></div></div>
+              <div class="meta" style="margin-top:8px"><div class="av"><div class="av-mini">林</div>林課長</div><div>進度 35%</div></div>
+            </div>
+          </div>
+          <!-- 已完成 -->
+          <div class="kb-col">
+            <div class="kb-col-hd"><div class="ct">✅ 已完成 <span class="cnt">2</span></div></div>
+            <div class="kb-card" style="opacity:.75">
+              <div class="ttl">核對 9 月銀行貸款餘額</div>
+              <div class="desc">確認 3 筆貸款餘額與銀行對帳單一致。</div>
+              <div class="meta"><div class="av"><div class="av-mini">王</div>王財務</div><div>✅ 2026-09-20</div></div>
+            </div>
+            <div class="kb-card" style="opacity:.75">
+              <div class="ttl">更新同業標竿區間</div>
+              <div class="desc">匯入 2026 Q2 製造業財務比率中位數。</div>
+              <div class="meta"><div class="av"><div class="av-mini">財</div>財務顧問</div><div>✅ 2026-09-18</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 視圖 3：預警中心 ============ -->
+      <section class="view" id="view-alerts">
+        <div class="view-hd">
+          <h2>預警通知中心<small>觸閾值即自動推播</small></h2>
+          <div>
+            <button class="btn btn-outline" style="margin-right:6px">全部已讀</button>
+            <button class="btn btn-ghost">篩選</button>
+          </div>
+        </div>
+        <div class="alert-list">
+          <div class="alert-item unread">
+            <div class="alert-ic red">🔴</div>
+            <div class="alert-bd">
+              <div class="at">毛利率跌破門檻</div>
+              <div class="ad">HM 公司 2026/09 銷售毛利率 18.2%，低於門檻 20%。<b>可能原因：</b>低毛利產品佔比上升 8%、原物料成本上漲 5%。<b>建議：</b>檢討產品定價與組合。</div>
+              <div class="ameta">⏰ 2026-09-23 09:00 · Email + LINE 已發送 · 陳經理</div>
+            </div>
+            <div class="alert-act"><button class="btn btn-primary" onclick="switchView('actions')">建立行動</button></div>
+          </div>
+          <div class="alert-item unread">
+            <div class="alert-ic red">🔴</div>
+            <div class="alert-bd">
+              <div class="at">應收帳款逾期預警</div>
+              <div class="ad">3 筆應收帳款逾期超過 60 天，總金額 480K。最大客戶：華南經銷商 220K。<b>建議：</b>立即聯繫催收並檢討信用額度。</div>
+              <div class="ameta">⏰ 2026-09-23 09:00 · Email 已發送 · 林課長</div>
+            </div>
+            <div class="alert-act"><button class="btn btn-primary" onclick="switchView('actions')">建立行動</button></div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-ic yellow">🟡</div>
+            <div class="alert-bd">
+              <div class="at">流動比率偏低</div>
+              <div class="ad">流動比率 1.28，低於安全值 1.5。同業中位數 1.8。<b>建議：</b>償還短期借款或增加現金部位。</div>
+              <div class="ameta">⏰ 2026-09-22 09:00 · Email 已發送 · 王財務</div>
+            </div>
+            <div class="alert-act"><button class="btn btn-outline">已處理</button></div>
+          </div>
+          <div class="alert-item">
+            <div class="alert-ic blue">🔵</div>
+            <div class="alert-bd">
+              <div class="at">現金水位預測提醒</div>
+              <div class="ad">未來第 4 週現金餘額預計降至 180K，低於安全水位 300K。<b>建議：</b>提前安排融資或加速催收。</div>
+              <div class="ameta">⏰ 2026-09-22 09:00 · LINE 已發送 · 黃惠君</div>
+            </div>
+            <div class="alert-act"><button class="btn btn-outline">查看預測</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 視圖 4：多維下鑽 ============ -->
+      <section class="view" id="view-drilldown">
+        <div class="view-hd">
+          <h2>多維度下鑽分析<small>找出吃利潤的產品、客戶、部門</small></h2>
+          <div>
+            <select class="btn btn-outline" style="margin-right:6px"><option>HM 公司</option><option>SZ 公司</option><option>HN 公司</option></select>
+            <select class="btn btn-outline"><option>2026/09</option><option>2026/08</option></select>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-bd">
+            <div class="tabs">
+              <div class="tab active" data-tab="product">產品毛利排行</div>
+              <div class="tab" data-tab="customer">客戶貢獻度</div>
+              <div class="tab" data-tab="dept">部門費用分析</div>
+            </div>
+
+            <div id="tab-product">
+              <div class="rank-row hd"><div>排名</div><div>產品名稱</div><div>毛利佔比</div><div class="rank-num">毛利率</div><div class="rank-num">毛利額</div></div>
+              <div class="rank-row"><div class="rank-no top1">1</div><div class="rank-name">精密塑膠件 A 系列<div class="sub">主力產品 · 營收佔 32%</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:95%"></div></div></div><div class="rank-num">28.5%</div><div class="rank-num">1,240K</div></div>
+              <div class="rank-row"><div class="rank-no top2">2</div><div class="rank-name">電子零組件 B 系列<div class="sub">營收佔 24%</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:72%"></div></div></div><div class="rank-num">22.1%</div><div class="rank-num">780K</div></div>
+              <div class="rank-row"><div class="rank-no top3">3</div><div class="rank-name">包裝材料 C 系列<div class="sub">營收佔 18%</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:30%"></div></div></div><div class="rank-num neg">8.2%</div><div class="rank-num">180K</div></div>
+              <div class="rank-row"><div class="rank-no">4</div><div class="rank-name">加工服務 D<div class="sub">營收佔 12%</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:5%"></div></div></div><div class="rank-num neg" style="color:var(--red)">-2.1%</div><div class="rank-num neg">-35K</div></div>
+              <div class="rank-row"><div class="rank-no">5</div><div class="rank-name">雜項購置 E<div class="sub">營收佔 14%</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:0%"></div></div></div><div class="rank-num neg" style="color:var(--red)">-8.5%</div><div class="rank-num neg">-160K</div></div>
+            </div>
+
+            <div id="tab-customer" style="display:none">
+              <div class="rank-row hd"><div>排名</div><div>客戶名稱</div><div>貢獻度</div><div class="rank-num">毛利額</div><div class="rank-num">應收餘額</div></div>
+              <div class="rank-row"><div class="rank-no top1">1</div><div class="rank-name">華東經銷商<div class="sub">合作 5 年 · 信用 A</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:100%"></div></div></div><div class="rank-num">980K</div><div class="rank-num">1,200K</div></div>
+              <div class="rank-row"><div class="rank-no top2">2</div><div class="rank-name">香港總公司<div class="sub">關係企業</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:65%"></div></div></div><div class="rank-num">640K</div><div class="rank-num">800K</div></div>
+              <div class="rank-row"><div class="rank-no top3">3</div><div class="rank-name">出口日本客戶<div class="sub">外銷 · 信用 A</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:48%"></div></div></div><div class="rank-num">470K</div><div class="rank-num">560K</div></div>
+              <div class="rank-row"><div class="rank-no">4</div><div class="rank-name">華南經銷商<div class="sub">逾期 60 天 · 降為 B</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:8%"></div></div></div><div class="rank-num neg">-120K</div><div class="rank-num" style="color:var(--red)">220K</div></div>
+            </div>
+
+            <div id="tab-dept" style="display:none">
+              <div class="rank-row hd"><div>排名</div><div>部門</div><div>費用佔比</div><div class="rank-num">費用額</div><div class="rank-num">邊際利潤</div></div>
+              <div class="rank-row"><div class="rank-no top1">1</div><div class="rank-name">生產部<div class="sub">直接人工 + 製造費用</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:100%"></div></div></div><div class="rank-num">2,100K</div><div class="rank-num">1,850K</div></div>
+              <div class="rank-row"><div class="rank-no top2">2</div><div class="rank-name">業務部<div class="sub">薪資 + 業務推廣</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:45%"></div></div></div><div class="rank-num">950K</div><div class="rank-num">3,200K</div></div>
+              <div class="rank-row"><div class="rank-no top3">3</div><div class="rank-name">管理部<div class="sub">行政 + 總務</div></div><div><div class="rank-bar"><div class="rank-bar-fg" style="width:22%"></div></div></div><div class="rank-num">460K</div><div class="rank-num">—</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 視圖 5：現金預測 ============ -->
+      <section class="view" id="view-cashforecast">
+        <div class="view-hd">
+          <h2>現金流量預測<small>未來 13 週滾動預測</small></h2>
+          <div>
+            <select class="btn btn-outline" style="margin-right:6px"><option>HM 公司</option><option>SZ 公司</option></select>
+            <button class="btn btn-ghost">匯出 Excel</button>
+          </div>
+        </div>
+
+        <div class="forecast-summary">
+          <div class="fs-card blue"><div class="fl">當前現金餘額</div><div class="fv">1,250K</div><div class="fc" style="color:#2563eb">安全水位 300K 以上</div></div>
+          <div class="fs-card green"><div class="fl">13 週預計流入</div><div class="fv">8,640K</div><div class="fc" style="color:#059669">應收到期 + 其他收入</div></div>
+          <div class="fs-card red"><div class="fl">13 週預計流出</div><div class="fv">9,120K</div><div class="fc" style="color:#dc2626">應付 + 貸款還本付息</div></div>
+          <div class="fs-card red"><div class="fl">最低現金水位</div><div class="fv">180K</div><div class="fc" style="color:#dc2626">第 4 週 · 低於安全值</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">
+            <div class="ct">13 週現金水位曲線</div>
+            <span class="pill red">⚠️ 第 4 週資金缺口</span>
+          </div>
+          <div class="card-bd">
+            <div class="chart-container">
+              <svg class="chart-svg" viewBox="0 0 800 280" preserveAspectRatio="none">
+                <!-- 網格線 -->
+                <g stroke="#e2e8f0" stroke-width="1">
+                  <line x1="60" y1="40" x2="780" y2="40"/>
+                  <line x1="60" y1="100" x2="780" y2="100"/>
+                  <line x1="60" y1="160" x2="780" y2="160"/>
+                  <line x1="60" y1="220" x2="780" y2="220"/>
+                </g>
+                <!-- 安全水位線 -->
+                <line x1="60" y1="175" x2="780" y2="175" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6,4"/>
+                <text x="62" y="170" font-size="10" fill="#ca8a04">安全水位 300K</text>
+                <!-- 缺口區域 -->
+                <rect x="300" y="175" width="90" height="45" fill="#fee2e2" opacity=".5"/>
+                <!-- 折線 -->
+                <polyline fill="none" stroke="#2563eb" stroke-width="2.5" points="60,50 115,70 170,90 225,110 280,130 345,200 410,160 465,140 520,120 575,100 630,90 685,80 740,70"/>
+                <!-- 資料點 -->
+                <g fill="#2563eb">
+                  <circle cx="60" cy="50" r="4"/><circle cx="115" cy="70" r="4"/><circle cx="170" cy="90" r="4"/>
+                  <circle cx="225" cy="110" r="4"/><circle cx="280" cy="130" r="4"/><circle cx="345" cy="200" r="5" fill="#dc2626"/>
+                  <circle cx="410" cy="160" r="4"/><circle cx="465" cy="140" r="4"/><circle cx="520" cy="120" r="4"/>
+                  <circle cx="575" cy="100" r="4"/><circle cx="630" cy="90" r="4"/><circle cx="685" cy="80" r="4"/>
+                  <circle cx="740" cy="70" r="4"/>
+                </g>
+                <!-- X 軸標籤 -->
+                <g font-size="10" fill="#94a3b8" text-anchor="middle">
+                  <text x="60" y="250">W1</text><text x="115" y="250">W2</text><text x="170" y="250">W3</text>
+                  <text x="225" y="250">W4</text><text x="280" y="250">W5</text><text x="345" y="250">W6</text>
+                  <text x="410" y="250">W7</text><text x="465" y="250">W8</text><text x="520" y="250">W9</text>
+                  <text x="575" y="250">W10</text><text x="630" y="250">W11</text><text x="685" y="250">W12</text>
+                  <text x="740" y="250">W13</text>
+                </g>
+                <!-- Y 軸標籤 -->
+                <g font-size="10" fill="#94a3b8" text-anchor="end">
+                  <text x="55" y="44">1,500</text><text x="55" y="104">1,000</text>
+                  <text x="55" y="164">500</text><text x="55" y="224">0</text>
+                </g>
+                <!-- 缺口標註 -->
+                <g>
+                  <line x1="345" y1="200" x2="345" y2="245" stroke="#dc2626" stroke-dasharray="3,3"/>
+                  <text x="345" y="265" font-size="11" fill="#dc2626" text-anchor="middle" font-weight="700">缺口 180K</text>
+                </g>
+              </svg>
+            </div>
+            <div style="display:flex;gap:20px;margin-top:10px;font-size:12px;color:var(--text-soft)">
+              <span><span style="display:inline-block;width:14px;height:3px;background:#2563eb;vertical-align:middle;margin-right:5px"></span>預計現金餘額</span>
+              <span><span style="display:inline-block;width:14px;height:3px;background:#ca8a04;vertical-align:middle;margin-right:5px;border-top:1px dashed #ca8a04;background:none"></span>安全水位</span>
+              <span><span style="display:inline-block;width:14px;height:10px;background:#fee2e2;vertical-align:middle;margin-right:5px"></span>資金缺口區</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ===== 異常診斷彈窗 ===== -->
+<div class="modal-overlay" id="diagModal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="mt">🔍 異常診斷：銷售毛利率下滑</div>
+      <button class="x" onclick="closeDiag()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <div class="diag-summary">
+        <div class="q">毛利率從 22.5% 下滑至 18.2%（↓4.3%），系統自動分析 Top3 拖累原因：</div>
+        <div class="a">
+          ① <b>低毛利產品「雜項購置 E」佔比上升</b>：該產品毛利率 -8.5%，營收佔比從 8% 升至 14%，拖累整體毛利率約 <b>3.1%</b><br>
+          ② <b>原物料成本上漲</b>：主要原料 7 月起漲幅 5%，影響毛利率約 <b>0.8%</b><br>
+          ③ <b>產品組合惡化</b>：高毛利 A 系列銷售佔比從 38% 降至 32%，影響約 <b>0.4%</b>
+        </div>
+      </div>
+      <h4 style="font-size:14px;margin:0 0 10px;color:var(--primary-2)">📋 各公司別貢獻度</h4>
+      <div class="bar-row"><span class="nm">HM</span><div class="bar-bg"><div class="bar-fg neg" style="width:72%"></div></div><span class="amt" style="color:var(--red)">-3.1%</span><span class="pct" style="color:var(--red)">72%</span></div>
+      <div class="bar-row"><span class="nm">SZ</span><div class="bar-bg"><div class="bar-fg neg" style="width:21%"></div></div><span class="amt" style="color:var(--red)">-0.9%</span><span class="pct" style="color:var(--red)">21%</span></div>
+      <div class="bar-row"><span class="nm">HN</span><div class="bar-bg"><div class="bar-fg neg" style="width:7%"></div></div><span class="amt" style="color:var(--red)">-0.3%</span><span class="pct" style="color:var(--red)">7%</span></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeDiag()" style="margin-right:8px">關閉</button>
+      <button class="btn btn-primary" onclick="closeDiag();switchView('actions')">建立行動任務</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 視圖切換 =====
+  const titleMap = {
+    dashboard:['儀表板','即時經營體溫'],
+    actions:['行動追蹤看板','從紅燈到行動的閉環管理'],
+    alerts:['預警通知中心','觸閾值即自動推播'],
+    drilldown:['多維度下鑽分析','找出吃利潤的產品、客戶、部門'],
+    cashforecast:['現金流量預測','未來 13 週滾動預測']
+  };
+  function switchView(name){
+    document.querySelectorAll('.nav-item[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+    const t=titleMap[name];
+    if(t) document.getElementById('pageTitle').innerHTML=t[0]+'<small>'+t[1]+'</small>';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.querySelectorAll('.nav-item[data-view]').forEach(n=>{
+    n.addEventListener('click',()=>switchView(n.dataset.view));
+  });
+
+  // ===== 異常診斷彈窗 =====
+  function openDiag(type){ document.getElementById('diagModal').classList.add('show'); }
+  function closeDiag(){ document.getElementById('diagModal').classList.remove('show'); }
+
+  // ===== 多維下鑽頁籤 =====
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      ['product','customer','dept'].forEach(id=>{
+        document.getElementById('tab-'+id).style.display = (id===t.dataset.tab)?'block':'none';
+      });
+    });
+  });
+
+  // ===== 點擊彈窗背景關閉 =====
+  document.getElementById('diagModal').addEventListener('click',e=>{
+    if(e.target.id==='diagModal') closeDiag();
+  });
+</script>
+</body>
+</html>

@@ -55,6 +55,16 @@ const tempPoRoutes = require('./routes/tempPo');
 const xitemsRoutes = require('./routes/xitems');
 const kpiQueryRoutes = require('./routes/kpiQuery');
 const bepRoutes = require('./routes/bep');
+const actionRoutes = require('./routes/action');
+const alertRoutes = require('./routes/alert');
+const analysisRoutes = require('./routes/analysis');
+const cashForecastRoutes = require('./routes/cashForecast');
+const diagnosisRoutes = require('./routes/diagnosis');
+const budgetRoutes = require('./routes/budget');
+const consolidationRoutes = require('./routes/consolidation');
+const mgmtAccountingRoutes = require('./routes/mgmtAccounting');
+const aiqaRoutes = require('./routes/aiqa');
+const scenarioRoutes = require('./routes/scenario');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -89,6 +99,16 @@ app.use('/api/temp-po', tempPoRoutes);
 app.use('/api/xitems', xitemsRoutes);
 app.use('/api/kpi-query', kpiQueryRoutes);
 app.use('/api/bep', bepRoutes);
+app.use('/api/action', actionRoutes);
+app.use('/api/alert', alertRoutes);
+app.use('/api/analysis', analysisRoutes);
+app.use('/api/cash-forecast', cashForecastRoutes);
+app.use('/api/diagnosis', diagnosisRoutes);
+app.use('/api/budget', budgetRoutes);
+app.use('/api/consolidation', consolidationRoutes);
+app.use('/api/mgmt-accounting', mgmtAccountingRoutes);
+app.use('/api/aiqa', aiqaRoutes);
+app.use('/api/scenario', scenarioRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {

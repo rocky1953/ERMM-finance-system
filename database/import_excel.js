@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * ERMM Excel 離線匯入工具 v2
  * 用法: node import_excel.js <xlsx_path>
  *

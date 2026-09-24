@@ -44,6 +44,36 @@
         </div>
     </div>
     <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.decision">經營決策</div>
+        <div class="nav-item" data-page="actions" onclick="navigate('actions')">
+            <span class="nav-icon">✅</span><span data-i18n="nav.actions">行動追蹤</span>
+        </div>
+        <div class="nav-item" data-page="alerts" onclick="navigate('alerts')">
+            <span class="nav-icon">🔔</span><span data-i18n="nav.alerts">預警通知</span>
+        </div>
+        <div class="nav-item" data-page="drilldown" onclick="navigate('drilldown')">
+            <span class="nav-icon">🔍</span><span data-i18n="nav.drilldown">多維下鑽</span>
+        </div>
+        <div class="nav-item" data-page="cashForecast" onclick="navigate('cashForecast')">
+            <span class="nav-icon">💧</span><span data-i18n="nav.cashForecast">現金預測</span>
+        </div>
+        <div class="nav-item" data-page="mgmtAccounting" onclick="navigate('mgmtAccounting')">
+            <span class="nav-icon">🏢</span><span data-i18n="nav.mgmtAccounting">管理會計</span>
+        </div>
+        <div class="nav-item" data-page="budget" onclick="navigate('budget')">
+            <span class="nav-icon">📊</span><span data-i18n="nav.budget">預算編制</span>
+        </div>
+        <div class="nav-item" data-page="consolidation" onclick="navigate('consolidation')">
+            <span class="nav-icon">📋</span><span data-i18n="nav.consolidation">合併報表</span>
+        </div>
+        <div class="nav-item" data-page="aiqa" onclick="navigate('aiqa')">
+            <span class="nav-icon">🤖</span><span data-i18n="nav.aiqa">AI 問答</span>
+        </div>
+        <div class="nav-item" data-page="scenario" onclick="navigate('scenario')">
+            <span class="nav-icon">🎯</span><span data-i18n="nav.scenario">情景模擬</span>
+        </div>
+    </div>
+    <div class="nav-group">
         <div class="nav-group-title" data-i18n="nav.erp_raw">ERP 原始單據</div>
         <div class="nav-item" data-page="po" onclick="navigate('po')">
             <span class="nav-icon">🛒</span><span data-i18n="nav.po">採購單 PO</span>
@@ -211,6 +241,15 @@
 <script src="/js/pages/xitems.js"></script>
 <script src="/js/pages/kpiQuery.js"></script>
 <script src="/js/pages/bep.js"></script>
+<script src="/js/pages/actions.js"></script>
+<script src="/js/pages/alerts.js"></script>
+<script src="/js/pages/drilldown.js"></script>
+<script src="/js/pages/cashForecast.js"></script>
+<script src="/js/pages/mgmtAccounting.js"></script>
+<script src="/js/pages/budget.js"></script>
+<script src="/js/pages/consolidation.js"></script>
+<script src="/js/pages/aiqa.js"></script>
+<script src="/js/pages/scenario.js"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 待補全功能實施計劃</title>
+<style>
+  :root{
+    --primary:#1e3a8a; --primary-2:#2563eb; --accent:#db2777; --gold:#b45309;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --p0:#dc2626; --p1:#d97706; --p2:#2563eb;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.75;
+  }
+  .page{
+    max-width:1180px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+
+  .cover{
+    border-bottom:4px solid var(--primary);
+    background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 50%,#db2777 100%); color:#fff;
+    margin:-40px -48px 40px; padding:52px 48px;
+  }
+  .cover h1{font-size:32px; margin:0 0 10px; letter-spacing:1.5px}
+  .cover .sub{opacity:.95; font-size:16px; max-width:860px}
+  .cover .meta{margin-top:24px; font-size:13px; opacity:.92}
+  .cover .meta span{margin-right:24px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
+    border-radius:999px;padding:4px 16px;margin:16px 10px 0 0;font-size:13px}
+
+  .toc{
+    background:#f1f5f9; border-left:4px solid var(--primary);
+    padding:18px 26px; margin:32px 0 44px; border-radius:0 10px 10px 0;
+  }
+  .toc h3{margin:0 0 12px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:22px; columns:2; column-gap:40px}
+  .toc li{margin:5px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:24px; color:var(--primary); margin:52px 0 22px;
+    padding-bottom:10px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:18px; color:var(--text); margin:30px 0 14px}
+  h4{font-size:15.5px; color:var(--primary-2); margin:22px 0 10px}
+  p{margin:10px 0}
+
+  .call{padding:14px 20px; border-radius:10px; margin:18px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call b{display:block; margin-bottom:4px}
+
+  table{
+    width:100%; border-collapse:collapse; margin:16px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#dbeafe,#bfdbfe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#eff6ff}
+  td code{background:#f1f5f9; border:1px solid #cbd5e1; padding:1px 7px; border-radius:4px; font-size:12.5px}
+  .num{text-align:right; font-variant-numeric:tabular-nums}
+  .center{text-align:center}
+
+  .grid{display:grid; gap:18px; margin:20px 0}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:900px){ .grid.cols-3{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:600px){ .grid.cols-2,.grid.cols-3{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:20px; box-shadow:0 4px 16px rgba(15,23,42,.08);
+  }
+  .card .icon{font-size:26px; margin-bottom:6px}
+  .card .ttl{font-size:16px; font-weight:700; color:var(--primary); margin-bottom:6px}
+  .card .desc{font-size:13.5px; color:var(--text-soft); line-height:1.65}
+
+  /* 功能區塊 */
+  .feature{
+    border:2px solid var(--border); border-radius:14px; margin:28px 0; overflow:hidden;
+  }
+  .feature-head{
+    padding:14px 22px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .feature-head.p0{background:linear-gradient(to right,#fef2f2,#fee2e2)}
+  .feature-head.p1{background:linear-gradient(to right,#fffbeb,#fef3c7)}
+  .feature-head.p2{background:linear-gradient(to right,#eff6ff,#dbeafe)}
+  .feature-head .fname{font-size:17px; font-weight:700}
+  .feature-head.p0 .fname{color:#991b1b}
+  .feature-head.p1 .fname{color:#92400e}
+  .feature-head.p2 .fname{color:#1e40af}
+  .feature-body{padding:20px 22px}
+
+  .badge{
+    display:inline-block; padding:3px 12px; border-radius:999px;
+    font-size:12px; font-weight:700;
+  }
+  .badge.p0{background:#fee2e2; color:#991b1b; border:1px solid #fca5a5}
+  .badge.p1{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+  .badge.p2{background:#dbeafe; color:#1e40af; border:1px solid #93c5fd}
+  .badge.ok{background:#dcfce7; color:#065f46; border:1px solid #86efac}
+  .badge.warn{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+  .badge.err{background:#fee2e2; color:#991b1b; border:1px solid #fca5a5}
+
+  /* 步驟清單 */
+  .steps{counter-reset:step; padding-left:0; list-style:none; margin:14px 0}
+  .steps li{
+    counter-increment:step; margin:10px 0; padding:12px 16px 12px 58px;
+    background:#f8fafc; border:1px solid var(--border); border-radius:8px;
+    position:relative; font-size:14px; line-height:1.6;
+  }
+  .steps li::before{
+    content:counter(step); position:absolute; left:14px; top:14px;
+    width:30px; height:30px; border-radius:50%; background:var(--primary-2); color:#fff;
+    text-align:center; line-height:30px; font-size:13px; font-weight:700;
+  }
+  .steps li b{color:var(--primary)}
+
+  /* 甘特圖 */
+  .gantt{margin:20px 0; overflow-x:auto}
+  .gantt table{min-width:900px}
+  .gantt td.bar{padding:4px 6px; position:relative}
+  .gantt .bar-bg{background:#f1f5f9; border-radius:4px; height:24px; position:relative; overflow:hidden}
+  .gantt .bar-fill{
+    position:absolute; top:0; bottom:0; border-radius:4px;
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px; font-weight:700;
+  }
+  .gantt .bar-fill.p0{background:linear-gradient(to right,#dc2626,#ef4444)}
+  .gantt .bar-fill.p1{background:linear-gradient(to right,#d97706,#f59e0b)}
+  .gantt .bar-fill.p2{background:linear-gradient(to right,#2563eb,#3b82f6)}
+  .gantt th.q{background:linear-gradient(to bottom,#f1f5f9,#e2e8f0); color:var(--text); text-align:center}
+  .gantt td.q-col{border-left:1px dashed #cbd5e1}
+
+  /* 資源卡片 */
+  .res-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:14px 0}
+  .res-item{background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:12px 14px}
+  .res-item .rt{font-size:12px; color:var(--text-mute); text-transform:uppercase; letter-spacing:.5px}
+  .res-item .rv{font-size:15px; font-weight:700; color:var(--primary); margin-top:2px}
+
+  .kv{display:flex; gap:8px; margin:6px 0; font-size:13.5px}
+  .kv .k{color:var(--text-mute); min-width:90px; flex-shrink:0}
+  .kv .v{color:var(--text)}
+
+  .footer{
+    margin-top:60px; padding-top:20px; border-top:2px solid var(--border);
+    font-size:13px; color:var(--text-mute); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — 待補全功能實施計劃</h1>
+  <div class="sub">針對「異常診斷、行動閉環、主動預警、多維下鑽、現金預測、管理會計、合併報表、預算編制、AI 問答」10 項功能的分階段實施方案，含具體步驟、資源需求與預期效果。</div>
+  <div class="meta">
+    <span>📅 計劃週期：2026 Q4 — 2027 Q3（共 4 季）</span>
+    <span>👥 團隊：後端 2 人 + 前端 1 人 + DBA 1 人 + PM 1 人</span>
+    <span>🎯 對應文件：高階主管財務分析總覽 Part 3</span>
+  </div>
+  <span class="tag">P0 緊急</span>
+  <span class="tag">P1 重要</span>
+  <span class="tag">P2 優化</span>
+  <span class="tag">4 季路線圖</span>
+</div>
+
+<!-- ===== 目錄 ===== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#sec1">Part 1：專案總覽</a></li>
+    <li><a href="#sec1a">1.1 專案背景與目標</a></li>
+    <li><a href="#sec1b">1.2 實施範圍（10 項功能）</a></li>
+    <li><a href="#sec1c">1.3 總體時間線（甘特圖）</a></li>
+    <li><a href="#sec1d">1.4 總體資源需求</a></li>
+    <li><a href="#sec2">Part 2：P0 功能實施計劃（第 1 季）</a></li>
+    <li><a href="#sec2a">2.1 異常自動診斷與原因歸因</a></li>
+    <li><a href="#sec2b">2.2 行動方案與追蹤閉環</a></li>
+    <li><a href="#sec2c">2.3 主動推播與預警通知</a></li>
+    <li><a href="#sec3">Part 3：P1 功能實施計劃（第 2 季）</a></li>
+    <li><a href="#sec3a">3.1 同業標竿與區間比較</a></li>
+    <li><a href="#sec3b">3.2 多維度下鑽（產品/客戶/部門）</a></li>
+    <li><a href="#sec3c">3.3 現金流量預測與資金排程</a></li>
+    <li><a href="#sec4">Part 4：P2 功能實施計劃（第 3-4 季）</a></li>
+    <li><a href="#sec4a">4.1 管理會計（責任中心利潤）</a></li>
+    <li><a href="#sec4b">4.2 集團合併報表與匯率</a></li>
+    <li><a href="#sec4c">4.3 預算編制與彈性預算</a></li>
+    <li><a href="#sec4d">4.4 AI 智能問答與解讀</a></li>
+    <li><a href="#sec5">Part 5：風險管理與驗收</a></li>
+    <li><a href="#sec5a">5.1 風險評估與緩解策略</a></li>
+    <li><a href="#sec5b">5.2 驗收標準</a></li>
+    <li><a href="#sec5c">5.3 交付物清單</a></li>
+  </ol>
+</div>
+
+<!-- ============================== -->
+<!-- Part 1 總覽 -->
+<!-- ============================== -->
+<h2 id="sec1">Part 1：專案總覽</h2>
+
+<h3 id="sec1a">1.1 專案背景與目標</h3>
+<p>ERMM 財務模組已完成「數據彙整 → 指標計算 → 風險預警」的基礎建設，讓高階主管能即時看到企業體溫。但要真正實現「<strong>一眼看出問題 → 立即落實行動 → 持續驗證成效</strong>」的閉環，需補強 10 項功能。</p>
+
+<div class="call info">
+  <b>專案總目標</b>
+  將系統從「報表工具」升級為「<strong>經營決策中樞</strong>」，讓高階主管無需等待月底報表、無需人工找原因，登入即可看到問題、系統自動給原因、一鍵派任務並追蹤成效。
+</div>
+
+<h3 id="sec1b">1.2 實施範圍（10 項功能）</h3>
+
+<table>
+  <thead>
+    <tr><th>等級</th><th>功能名稱</th><th>核心產出</th><th>建議時程</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="badge p0">P0</span></td><td>異常自動診斷與原因歸因</td><td>紅燈指標自動展開 Top3 原因</td><td>第 1 季</td></tr>
+    <tr><td><span class="badge p0">P0</span></td><td>行動方案與追蹤閉環</td><td>任務指派 / 進度追蹤 / 成效驗證</td><td>第 1 季</td></tr>
+    <tr><td><span class="badge p0">P0</span></td><td>主動推播與預警通知</td><td>Email / LINE / 簡訊自動通知</td><td>第 1 季</td></tr>
+    <tr><td><span class="badge p1">P1</span></td><td>同業標竿與區間比較</td><td>KPI 旁標示優於/劣於同業</td><td>第 2 季</td></tr>
+    <tr><td><span class="badge p1">P1</span></td><td>多維度下鑽</td><td>產品 / 客戶 / 部門毛利排行</td><td>第 2 季</td></tr>
+    <tr><td><span class="badge p1">P1</span></td><td>現金流量預測與資金排程</td><td>未來 13 週現金滾動預測</td><td>第 2 季</td></tr>
+    <tr><td><span class="badge p2">P2</span></td><td>管理會計</td><td>部門邊際利潤 / 產品貢獻利潤</td><td>第 3 季</td></tr>
+    <tr><td><span class="badge p2">P2</span></td><td>集團合併報表與匯率</td><td>內部沖銷 / 匯率換算 / 合併報表</td><td>第 3 季</td></tr>
+    <tr><td><span class="badge p2">P2</span></td><td>預算編制與彈性預算</td><td>年度預算版本 / 彈性預算</td><td>第 3 季</td></tr>
+    <tr><td><span class="badge p2">P2</span></td><td>AI 智能問答與解讀</td><td>自然語言問答 / 淺白解讀</td><td>第 4 季</td></tr>
+  </tbody>
+</table>
+
+<h3 id="sec1c">1.3 總體時間線（甘特圖）</h3>
+
+<div class="gantt">
+<table>
+  <thead>
+    <tr>
+      <th style="width:240px">功能</th>
+      <th class="q" colspan="3">2026 Q4</th>
+      <th class="q" colspan="3">2027 Q1</th>
+      <th class="q" colspan="3">2027 Q2</th>
+      <th class="q" colspan="3">2027 Q3</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="badge p0">P0</span> 異常自動診斷</td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p0" style="left:0%;width:33%">M1</div></div></td><td colspan="9"></td></tr>
+    <tr><td><span class="badge p0">P0</span> 行動閉環</td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p0" style="left:33%;width:33%">M2</div></div></td><td colspan="9"></td></tr>
+    <tr><td><span class="badge p0">P0</span> 主動推播</td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p0" style="left:66%;width:33%">M3</div></div></td><td colspan="9"></td></tr>
+    <tr><td><span class="badge p1">P1</span> 同業標竿</td><td colspan="3"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p1" style="left:0%;width:33%">M1</div></div></td><td colspan="6"></td></tr>
+    <tr><td><span class="badge p1">P1</span> 多維下鑽</td><td colspan="3"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p1" style="left:33%;width:33%">M2</div></div></td><td colspan="6"></td></tr>
+    <tr><td><span class="badge p1">P1</span> 現金預測</td><td colspan="3"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p1" style="left:66%;width:33%">M3</div></div></td><td colspan="6"></td></tr>
+    <tr><td><span class="badge p2">P2</span> 管理會計</td><td colspan="6"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p2" style="left:0%;width:33%">M1</div></div></td><td colspan="3"></td></tr>
+    <tr><td><span class="badge p2">P2</span> 合併報表</td><td colspan="6"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p2" style="left:33%;width:34%">M2</div></div></td><td colspan="3"></td></tr>
+    <tr><td><span class="badge p2">P2</span> 預算編制</td><td colspan="6"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p2" style="left:66%;width:34%">M3</div></div></td><td colspan="3"></td></tr>
+    <tr><td><span class="badge p2">P2</span> AI 問答</td><td colspan="9"></td><td class="q-col" colspan="3"><div class="bar-bg"><div class="bar-fill p2" style="left:0%;width:100%">全季</div></div></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3 id="sec1d">1.4 總體資源需求</h3>
+
+<table>
+  <thead>
+    <tr><th>角色</th><th>人數</th><th>投入比例</th><th>主要職責</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>專案經理 (PM)</td><td class="num">1</td><td class="num">50%</td><td>進度管控、需求澄清、跨部門協調、驗收</td></tr>
+    <tr><td>後端工程師</td><td class="num">2</td><td class="num">100%</td><td>API 開發、數據邏輯、資料庫設計、排程任務</td></tr>
+    <tr><td>前端工程師</td><td class="num">1</td><td class="num">100%</td><td>儀表板、下鑽頁面、任務追蹤 UI、圖表</td></tr>
+    <tr><td>DBA / 資料工程師</td><td class="num">1</td><td class="num">60%</td><td>資料表設計、效能優化、數據遷移、標竿數據導入</td></tr>
+    <tr><td>財務顧問 (兼職)</td><td class="num">1</td><td class="num">20%</td><td>指標口徑確認、標竿區間制定、會計規則審核</td></tr>
+  </tbody>
+</table>
+
+<div class="call warn">
+  <b>技術棧（沿用現有）</b>
+  後端：Node.js + Express + mysql2 ｜ 前端：原生 JS + Chart.js ｜ 資料庫：MySQL 8.0 ｜ 快取：Redis ｜ 排程：node-cron ｜ 部署：PM2 + Nginx（Ubuntu）
+</div>
+
+<!-- ============================== -->
+<!-- Part 2 P0 -->
+<!-- ============================== -->
+<h2 id="sec2">Part 2：P0 功能實施計劃（第 1 季 · 2026 Q4）</h2>
+
+<!-- ===== 2.1 異常自動診斷 ===== -->
+<div class="feature">
+  <div class="feature-head p0">
+    <span class="badge p0">P0</span>
+    <span class="fname">2.1 異常自動診斷與原因歸因</span>
+    <span class="badge err">影響力：高</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：4 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 0.5</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">4 週（20 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">貢獻度分解算法</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>當任一 KPI 指標（毛利率、負債比、應收周轉等）顯示紅燈或異常波動時，系統自動分析並回傳「<strong>前 3 大拖累原因</strong>」（哪個公司別、哪個月份、哪個科目貢獻度最高），主管無需手動查帳。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>定義異常規則</b>：確認哪些指標需觸發診斷（毛利率↓>5%、負債比↑>10%、應收周轉↓>15%、Z-Score 進入紅區等），建立 <code>anomaly_rule</code> 設定表。</li>
+      <li><b>設計貢獻度分解算法</b>：對異常指標，沿「公司別 → 月份 → 會計科目」三層拆解，計算每個維度對總變動的貢獻百分比（如：毛利率下滑 8%，其中 HM 公司貢獻 -5%、SZ 貢獻 -3%）。</li>
+      <li><b>後端 API 開發</b>：新增 <code>GET /api/kpi-query/diagnosis?bu_no&YYYY_MM&kpi_id</code>，回傳 <code>{ anomaly: true, top_reasons: [{dim, value, contribution_pct}], summary }</code>。</li>
+      <li><b>前端整合</b>：在 Dashboard / KPI 頁面的紅燈卡片旁加「🔍 為什麼紅燈？」按鈕，點擊彈窗顯示 Top3 原因與貢獻度橫條圖。</li>
+      <li><b>快取與排程</b>：對熱門查詢結果做 Redis 快取（TTL 1 小時）；每月結帳後用 node-cron 預先計算異常報告。</li>
+      <li><b>驗收測試</b>：準備 3 組測試數據（毛利率下滑、負債比攀升、應收逾期暴增），驗證診斷結果與人工查帳一致。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">資料庫</span><span class="v">新增 <code>anomaly_rule</code> 表 + <code>anomaly_log</code> 日誌表</span></div>
+    <div class="kv"><span class="k">後端</span><span class="v">新增 1 個路由檔 <code>routes/diagnosis.js</code>，約 300 行</span></div>
+    <div class="kv"><span class="k">前端</span><span class="v">新增診斷彈窗元件，整合至 <code>dashboard.js</code> 與 <code>kpiQuery.js</code></span></div>
+    <div class="kv"><span class="k">財務顧問</span><span class="v">確認 6~8 個核心異常規則的門檻值</span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      主管看到紅燈後，<strong>點擊 1 次即可知道 Top3 原因</strong>，不再需要召集會議、請財務部人工查帳。問題定位時間從「數小時」縮短為「數秒」。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2.2 行動閉環 ===== -->
+<div class="feature">
+  <div class="feature-head p0">
+    <span class="badge p0">P0</span>
+    <span class="fname">2.2 行動方案與追蹤閉環</span>
+    <span class="badge err">影響力：高</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：5 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">5 週（25 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">工作流狀態機</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>從紅燈指標「一鍵建立行動任務」，支援指派負責人、設定截止日與改善目標，並在儀表板追蹤進度，形成「<strong>發現問題 → 派任務 → 執行 → 驗證成效</strong>」的閉環。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>資料表設計</b>：新增 <code>action_task</code> 表（uid, source_kpi, bu_no, title, description, assignee, due_date, target_value, status, progress, created_by, created_at），狀態：待處理 / 進行中 / 已完成 / 已驗收。</li>
+      <li><b>後端 CRUD API</b>：<code>POST /api/action</code>（從紅燈建立）、<code>GET /api/action?assignee&status</code>、<code>PUT /api/action/:uid</code>（更新進度）、<code>POST /api/action/:uid/verify</code>（驗收）。</li>
+      <li><b>一鍵建立任務</b>：在紅燈卡片加「📋 建立行動」按鈕，預帶入指標名稱、公司別、異常值與建議改善目標。</li>
+      <li><b>任務追蹤頁面</b>：新增「行動追蹤」頁籤，以看板視覺呈現任務狀態（待處理/進行中/已完成），支援拖曳改狀態。</li>
+      <li><b>成效驗證</b>：任務到期後，系統自動抓取該指標最新值，與目標值比對，自動標示「✅ 達成 / ❌ 未達成」。</li>
+      <li><b>通知整合</b>：任務指派、即將到期、已驗收時發送通知（與 2.3 推播模組整合）。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">資料庫</span><span class="v">新增 <code>action_task</code> + <code>action_comment</code> 表</span></div>
+    <div class="kv"><span class="k">後端</span><span class="v">新增 <code>routes/action.js</code>，約 350 行</span></div>
+    <div class="kv"><span class="k">前端</span><span class="v">新增 <code>public/js/pages/action.js</code> 看板頁面</span></div>
+    <div class="kv"><span class="k">app.js</span><span class="v">註冊 <code>app.use('/api/action', actionRoutes)</code></span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      每個紅燈都能轉為可追蹤的任務，<strong>決策不再是空談</strong>。主管可在儀表板看到「本月 5 個紅燈 → 3 個已派任務 → 2 個已完成 → 1 個逾期」，管理閉環清晰可見。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2.3 主動推播 ===== -->
+<div class="feature">
+  <div class="feature-head p0">
+    <span class="badge p0">P0</span>
+    <span class="fname">2.3 主動推播與預警通知</span>
+    <span class="badge err">影響力：高</span>
+    <span class="badge ok">難度：低</span>
+    <span class="badge info">工期：3 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">3 週（12 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">node-cron + Email/LINE API</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>當指標觸發預警條件時（Z-Score 進入破產區、負債比超過 70%、應收逾期超過 60 天等），<strong>自動發送 Email / LINE / 簡訊</strong>給對應主管，並附帶建議處置，讓主管被動變主動。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>預警規則配置</b>：建立 <code>alert_rule</code> 表（指標、條件、閾值、通知管道、通知對象、冷卻時間），支援 UI 配置。</li>
+      <li><b>定時掃描任務</b>：用 node-cron 每日 09:00 掃描 <code>mgm_finance_summary</code> 最新月份，比對 <code>alert_rule</code>，觸發的寫入 <code>alert_log</code>。</li>
+      <li><b>Email 發送</b>：整合 <code>nodemailer</code>，發送 HTML 格式預警郵件（含指標值、閾值、建議處置連結）。</li>
+      <li><b>LINE 推播</b>：整合 LINE Messaging API（需申請 Channel Access Token），發送文字 + 圖片卡片。</li>
+      <li><b>簡訊備援</b>：整合簡訊業者 API（如台灣大簡訊），作為 Email/LINE 未讀時的備援通知。</li>
+      <li><b>通知紀錄頁面</b>：新增「預警紀錄」頁面，主管可查看歷史通知與確認已讀。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">npm 套件</span><span class="v"><code>nodemailer</code>、<code>node-cron</code>、<code>axios</code>（LINE/簡訊 API）</span></div>
+    <div class="kv"><span class="k">外部服務</span><span class="v">SMTP 郵件伺服器、LINE Business Account、簡訊業者帳號</span></div>
+    <div class="kv"><span class="k">資料庫</span><span class="v">新增 <code>alert_rule</code> + <code>alert_log</code> 表</span></div>
+    <div class="kv"><span class="k">環境變數</span><span class="v"><code>SMTP_HOST</code>、<code>LINE_TOKEN</code>、<code>SMS_API_KEY</code></span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      主管<strong>不必每天登入系統</strong>，風險一出現即刻在手機收到通知。把「事後善後」變為「事前預防」，財務危機在萌芽階段就被處理。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Part 3 P1 -->
+<!-- ============================== -->
+<h2 id="sec3">Part 3：P1 功能實施計劃（第 2 季 · 2027 Q1）</h2>
+
+<!-- ===== 3.1 同業標竿 ===== -->
+<div class="feature">
+  <div class="feature-head p1">
+    <span class="badge p1">P1</span>
+    <span class="fname">3.1 同業標竿與區間比較</span>
+    <span class="badge warn">影響力：中高</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：3 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + DBA 0.5</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">3 週（12 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">標竿區間資料維護</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>在 KPI 指標旁標示「<strong>優於/劣於同業</strong>」與業界合理區間，讓主管判斷指標異常是個案還是產業趨勢。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>標竿數據來源</b>：由財務顧問整理「台灣經濟新報 / TEJ」同業財務比率中位數與四分位區間（製造業、批發零售業等分產業）。</li>
+      <li><b>建立標竿表</b>：新增 <code>industry_benchmark</code> 表（kpi_id, industry, p25, median, p75, year），每年更新一次。</li>
+      <li><b>後端 API</b>：<code>GET /api/kpi-query/benchmark?kpi_id&industry</code> 回傳區間；在現有 KPI API 合併回傳 <code>{ current, benchmark_p25, median, p75, vs_industry }</code>。</li>
+      <li><b>前端呈現</b>：在 KPI 卡片加區間標示條（P25~P75），當前值用箭頭標示位置；顯示「優於 65% 同業」等文字。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">資料庫</span><span class="v">新增 <code>industry_benchmark</code> 表，約 200 筆標竿數據</span></div>
+    <div class="kv"><span class="k">外部資料</span><span class="v">TEJ 同業財務比率（需訂閱或財政部公開資料）</span></div>
+    <div class="kv"><span class="k">財務顧問</span><span class="v">確認產業分類與區間合理性</span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      主管不再只跟自己比，而是<strong>跟同業比</strong>。避免把「產業普遍下滑」誤判為「公司營運惡化」，決策更精準。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 3.2 多維下鑽 ===== -->
+<div class="feature">
+  <div class="feature-head p1">
+    <span class="badge p1">P1</span>
+    <span class="fname">3.2 多維度下鑽（產品/客戶/部門）</span>
+    <span class="badge warn">影響力：中高</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：5 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">5 週（25 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">多維度聚合查詢</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>從銷售金額、毛利等指標可下鑽到「<strong>產品毛利排行 / 客戶貢獻度 / 部門費用</strong>」，協助主管做資源配置決策，找出吃利潤的產品與客戶。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>數據源盤點</b>：確認 <code>ermm_erp_so</code>（銷售訂單含產品、客戶）、<code>mgm_invoice_details</code>（含成本）、<code>mgm_finance_summary</code>（部門費用）的欄位完整性。</li>
+      <li><b>產品維度彙總</b>：新增 <code>GET /api/analysis/product?bu_no&YYYY_MM</code>，回傳每個產品的銷售額、成本、毛利、毛利率排行。</li>
+      <li><b>客戶維度彙總</b>：新增 <code>GET /api/analysis/customer</code>，回傳每個客戶的銷售額、毛利、應收餘額、帳齡。</li>
+      <li><b>部門維度彙總</b>：新增 <code>GET /api/analysis/department</code>，回傳每個部門的費用、收入、邊際貢獻。</li>
+      <li><b>前端下鑽頁面</b>：從 Dashboard 點擊「銷售額」卡片 → 彈窗顯示產品/客戶/部門三個標籤頁，含排行表格與長條圖。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">資料庫</span><span class="v">可能需新增 <code>product_dim</code>、<code>customer_dim</code> 維度表（若 ERP 無對應）</span></div>
+    <div class="kv"><span class="k">後端</span><span class="v">新增 <code>routes/analysis.js</code>，約 400 行</span></div>
+    <div class="kv"><span class="k">效能</span><span class="v">大量聚合查詢需建立複合索引 (bu_no, YYYY_MM, product_id)</span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      主管能一眼看出「<strong>哪 20% 產品貢獻 80% 利潤</strong>」、「哪些客戶在虧錢」、「哪個部門費用超標」，資源配置有數據依據。
+    </div>
+  </div>
+</div>
+
+<!-- ===== 3.3 現金預測 ===== -->
+<div class="feature">
+  <div class="feature-head p1">
+    <span class="badge p1">P1</span>
+    <span class="fname">3.3 現金流量預測與資金排程</span>
+    <span class="badge err">影響力：高</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：4 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 0.5</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">4 週（18 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">現金滾動預測算法</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>結合應收到期日、應付到期日、貸款還本計畫，產出<strong>未來 13 週現金滾動預測</strong>，提前預警資金缺口，協助主管安排融資或催收。</p>
+
+    <h4>具體實施步驟</h4>
+    <ol class="steps">
+      <li><b>現金流入預測</b>：從 <code>ermm_arap_detail</code> 抓應收餘額與預計收款日，依帳齡與歷史回收率估算每週現金流入。</li>
+      <li><b>現金流出預測</b>：從 <code>mgm_invoice_details</code>（AP）與 <code>mgm_bank_loan_details</code>（還本付息）抓預計付款日。</li>
+      <li><b>滾動預測算法</b>：以當前現金餘額為起點，逐週加流入減流出，產出 13 週現金水位曲線；標示低於安全水位的週次。</li>
+      <li><b>後端 API</b>：<code>GET /api/cash/forecast?bu_no&weeks=13</code> 回傳每週期初、流入、流出、期末、安全標記。</li>
+      <li><b>前端圖表</b>：在現金日記頁面加「未來 13 週現金預測」折線圖，紅色標示資金缺口週。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">資料庫</span><span class="v">可能需新增 <code>cash_forecast_log</code> 記錄歷史預測準確度</span></div>
+    <div class="kv"><span class="k">財務顧問</span><span class="v">確認安全現金水位門檻與回收率假設</span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">
+      主管<strong>提前 3 個月知道何時缺錢</strong>，主動安排融資或加速催收，避免臨時周轉危機。現金管理從被動變主動。
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Part 4 P2 -->
+<!-- ============================== -->
+<h2 id="sec4">Part 4：P2 功能實施計劃（第 3-4 季 · 2027 Q2-Q3）</h2>
+
+<!-- ===== 4.1 管理會計 ===== -->
+<div class="feature">
+  <div class="feature-head p2">
+    <span class="badge p2">P2</span>
+    <span class="fname">4.1 管理會計（責任中心利潤）</span>
+    <span class="badge info">影響力：中</span>
+    <span class="badge err">難度：高</span>
+    <span class="badge info">工期：6 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + DBA 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">6 週（30 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">費用分攤引擎</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>建立費用分攤規則（按營業額、人數、面積等），計算<strong>部門邊際利潤 / 產品貢獻利潤</strong>，做為部門考核與資源分配依據。</p>
+
+    <h4>實施步驟重點</h4>
+    <ol class="steps">
+      <li><b>分攤規則引擎</b>：建立 <code>allocation_rule</code> 表，支援按比例、按人數、按面積、按營業額等分攤方式；可對單一費用科目設定多階段分攤。</li>
+      <li><b>責任中心利潤表</b>：每月結帳後自動跑分攤，產出 <code>responsibility_profit</code> 表（部門、收入、直接成本、分攤費用、邊際利潤）。</li>
+      <li><b>前端報表</b>：新增「管理會計」頁面，呈現部門利潤排行、產品貢獻利潤、費用分攤明細。</li>
+    </ol>
+
+    <h4>預期效果</h4>
+    <div class="call ok">部門考核有量化依據，獎懲公平；資源向高利潤部門傾斜，整體獲利率提升。</div>
+  </div>
+</div>
+
+<!-- ===== 4.2 合併報表 ===== -->
+<div class="feature">
+  <div class="feature-head p2">
+    <span class="badge p2">P2</span>
+    <span class="fname">4.2 集團合併報表與匯率</span>
+    <span class="badge info">影響力：中</span>
+    <span class="badge err">難度：高</span>
+    <span class="badge info">工期：7 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + DBA 1 + 財務顧問</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">7 週（35 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">內部交易沖銷 + 匯率換算</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>支援多公司<strong>內部交易沖銷、匯率自動換算、合併資產負債表與損益表</strong>，滿足集團管理需求。</p>
+
+    <h4>實施步驟重點</h4>
+    <ol class="steps">
+      <li><b>匯率管理</b>：新增 <code>exchange_rate</code> 表（幣別、日期、匯率），每月結帳時自動帶入；支援資產負債表日匯率與損益表平均匯率。</li>
+      <li><b>內部交易識別</b>：在發票/訂單標記 <code>intercompany_flag</code>，集團內部銷售/採購自動辨識。</li>
+      <li><b>沖銷規則</b>：建立內部應收應付、內部銷售成本、未實現銷貨毛利的沖銷分錄。</li>
+      <li><b>合併報表產出</b>：各公司報表換算為功能貨幣後相加，扣除沖銷分錄，產出合併三大報表。</li>
+    </ol>
+
+    <h4>預期效果</h4>
+    <div class="call ok">集團高層不必再彙整十幾份 Excel，登入即見整體營運體溫；跨幣別免人工換算。</div>
+  </div>
+</div>
+
+<!-- ===== 4.3 預算編制 ===== -->
+<div class="feature">
+  <div class="feature-head p2">
+    <span class="badge p2">P2</span>
+    <span class="fname">4.3 預算編制與彈性預算</span>
+    <span class="badge info">影響力：中</span>
+    <span class="badge warn">難度：中</span>
+    <span class="badge info">工期：5 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">5 週（22 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">預算版本管理</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>支援<strong>年度預算版本管理、部門預算編制、彈性預算（按實際產量調整）</strong>，讓預算管理從形式變實質，差異可追溯。</p>
+
+    <h4>實施步驟重點</h4>
+    <ol class="steps">
+      <li><b>預算版本表</b>：新增 <code>budget_version</code>（年度、版本、狀態：草稿/審核中/已核准），支援多版本並存。</li>
+      <li><b>部門預算編制</b>：各部門線上填寫收入、成本、費用預算，逐級審核。</li>
+      <li><b>彈性預算</b>：依實際產量/營業額自動調整變動成本預算，與實際比較更合理。</li>
+      <li><b>預算 vs 實際</b>：在現有預測頁面擴充，支援預算、彈性預算、實際三線比較。</li>
+    </ol>
+
+    <h4>預期效果</h4>
+    <div class="call ok">預算差異分析更準確，排除「產量變動」干擾，真正反映管理效率。</div>
+  </div>
+</div>
+
+<!-- ===== 4.4 AI 問答 ===== -->
+<div class="feature">
+  <div class="feature-head p2">
+    <span class="badge p2">P2</span>
+    <span class="fname">4.4 AI 智能問答與解讀</span>
+    <span class="badge info">影響力：中</span>
+    <span class="badge err">難度：高</span>
+    <span class="badge info">工期：8 週</span>
+  </div>
+  <div class="feature-body">
+
+    <div class="res-grid">
+      <div class="res-item"><div class="rt">人力</div><div class="rv">後端 1 + 前端 1</div></div>
+      <div class="res-item"><div class="rt">工期</div><div class="rv">8 週（32 人日）</div></div>
+      <div class="res-item"><div class="rt">關鍵技術</div><div class="rv">LLM API + RAG</div></div>
+    </div>
+
+    <h4>功能目標</h4>
+    <p>導入<strong>自然語言問答</strong>，主管可用淺白語言提問（如「為什麼這個月毛利率下滑？」「哪個部門費用最高？」），系統自動解讀數據並給建議，降低財務門檻。</p>
+
+    <h4>實施步驟重點</h4>
+    <ol class="steps">
+      <li><b>LLM 接入</b>：整合 OpenAI / Azure OpenAI / 本地 LLM API，建立 <code>/api/ai/chat</code> 介面。</li>
+      <li><b>RAG 檢索</b>：將 KPI 公式、財務指標定義、歷史數據摘要建立向量索引，提問時檢索相關上下文。</li>
+      <li><b>提示詞工程</b>：設計財務分析專用 Prompt，約束 LLM 只基於系統數據回答，不得虛構。</li>
+      <li><b>前端對話介面</b>：在儀表板加 AI 助理側邊欄，支援提問歷史與上下文記憶。</li>
+    </ol>
+
+    <h4>所需資源</h4>
+    <div class="kv"><span class="k">外部服務</span><span class="v">LLM API（OpenAI gpt-4o-mini 或同等）、向量資料庫（Redis Vector 或 pgvector）</span></div>
+    <div class="kv"><span class="k">環境變數</span><span class="v"><code>OPENAI_API_KEY</code>、<code>LLM_MODEL</code></span></div>
+    <div class="kv"><span class="k">安全</span><span class="v">敏感財務數據需脫敏後再送 LLM，建議用本地模型或 Azure 合規方案</span></div>
+
+    <h4>預期效果</h4>
+    <div class="call ok">非財務背景的主管也能輕鬆讀懂財務數據，決策不再依賴財務部翻譯，大幅提升決策效率。</div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- Part 5 風險與驗收 -->
+<!-- ============================== -->
+<h2 id="sec5">Part 5：風險管理與驗收</h2>
+
+<h3 id="sec5a">5.1 風險評估與緩解策略</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:22%">風險</th><th style="width:10%">機率</th><th style="width:10%">影響</th><th>緩解策略</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>資料口徑不一致導致診斷結果有誤</td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td class="center"><span class="badge err">高</span></td>
+      <td>上線前由財務顧問逐項驗證 6~8 個核心指標的計算口徑；異常診斷結果需與人工查帳比對通過才能驗收。</td>
+    </tr>
+    <tr>
+      <td>大量聚合查詢導致資料庫效能下降</td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td class="center"><span class="badge err">高</span></td>
+      <td>對熱門查詢建複合索引；用 Redis 快取結果（TTL 1 小時）；離峰時段用 node-cron 預先計算彙總表。</td>
+    </tr>
+    <tr>
+      <td>LINE/簡訊 API 費用超預算</td>
+      <td class="center"><span class="badge ok">低</span></td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td>設定冷卻時間（同一規則 24 小時內不重複通知）；優先 Email，LINE/簡訊僅用於 P0 級預警。</td>
+    </tr>
+    <tr>
+      <td>同業標竿數據取得不易或過時</td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td>先用財政部公開資料 + 財務顧問經驗值上線；每年 Q1 更新一次標竿區間。</td>
+    </tr>
+    <tr>
+      <td>LLM 回答虛構或不準確</td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td class="center"><span class="badge err">高</span></td>
+      <td>Prompt 約束「只基於檢索數據回答」；回答附帶數據來源；初期開啟人工審核，確認準確率達 90% 以上再開放。</td>
+    </tr>
+    <tr>
+      <td>跨部門協調導致進度延誤</td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td class="center"><span class="badge warn">中</span></td>
+      <td>PM 每週召開進度會議；每個功能設明確驗收日期；財務顧問預留固定時段支援口徑確認。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="sec5b">5.2 驗收標準</h3>
+
+<h4>功能驗收</h4>
+<table>
+  <thead>
+    <tr><th>功能</th><th>驗收標準</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>異常自動診斷</td><td>紅燈指標點擊後 3 秒內回傳 Top3 原因；與人工查帳一致率 ≥ 90%</td></tr>
+    <tr><td>行動閉環</td><td>可從紅燈一鍵建立任務；任務狀態可更新；到期自動比對目標值並標示達成與否</td></tr>
+    <tr><td>主動推播</td><td>指標觸閾值後 5 分鐘內發送 Email/LINE；通知內容含指標值、閾值、建議處置</td></tr>
+    <tr><td>同業標竿</td><td>KPI 卡片顯示業界區間與「優於/劣於同業」標示；標竿數據可每年更新</td></tr>
+    <tr><td>多維下鑽</td><td>可從銷售額下鑽到產品/客戶/部門排行；數據與 ERP 原始數據一致</td></tr>
+    <tr><td>現金預測</td><td>可產出未來 13 週現金水位曲線；資金缺口週次以紅色標示</td></tr>
+    <tr><td>管理會計</td><td>可產出部門邊際利潤與產品貢獻利潤；分攤規則可配置</td></tr>
+    <tr><td>合併報表</td><td>多公司報表可自動合併；內部交易已沖銷；匯率正確換算</td></tr>
+    <tr><td>預算編制</td><td>支援多版本預算；可產出彈性預算；預算 vs 實際差異可分析</td></tr>
+    <tr><td>AI 問答</td><td>可用自然語言提問並獲得數據支撐的回答；回答附帶來源；準確率 ≥ 90%</td></tr>
+  </tbody>
+</table>
+
+<h4>非功能驗收</h4>
+<div class="grid cols-3">
+  <div class="card"><div class="icon">⚡</div><div class="ttl">效能</div><div class="desc">Dashboard 載入 ≤ 3 秒；異常診斷 API ≤ 3 秒；現金預測 ≤ 5 秒</div></div>
+  <div class="card"><div class="icon">🔒</div><div class="ttl">安全</div><div class="desc">所有 API 需 JWT 驗證；敏感數據傳輸加密；LLM 數據脫敏</div></div>
+  <div class="card"><div class="icon">📱</div><div class="ttl">相容性</div><div class="desc">支援 Chrome / Edge / Safari；手機平板可正常瀏覽儀表板</div></div>
+</div>
+
+<h3 id="sec5c">5.3 交付物清單</h3>
+
+<table>
+  <thead>
+    <tr><th>類別</th><th>交付物</th><th>數量</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>後端程式</td><td>diagnosis.js / action.js / alert.js / analysis.js / cash-forecast.js / management.js / consolidate.js / budget.js / ai.js</td><td class="num">9 個路由檔</td></tr>
+    <tr><td>前端程式</td><td>診斷彈窗、行動追蹤看板、預警紀錄、多維下鑽、現金預測圖、管理會計報表、合併報表、預算編制、AI 助理</td><td class="num">9 個頁面/元件</td></tr>
+    <tr><td>資料庫</td><td>anomaly_rule / action_task / alert_rule / industry_benchmark / exchange_rate / budget_version 等遷移腳本</td><td class="num">8+ 張表</td></tr>
+    <tr><td>文件</td><td>API 文件、資料表結構文件、使用者操作手冊、驗收測試報告</td><td class="num">4 份</td></tr>
+    <tr><td>測試</td><td>每個功能的單元測試 + 整合測試（與現有 test/ 目錄一致）</td><td class="num">9 個測試檔</td></tr>
+  </tbody>
+</table>
+
+<div class="call info">
+  <b>部署與上線</b>
+  每個功能完成後按「開發 → 單元測試 → 整合測試 → UAT → 正式上線」流程推進。正式環境沿用 <code>/root/Project/ermm-finance-system</code> + PM2 + MySQL，透過 <code>git pull && pm2 restart ermm-finance</code> 部署。
+</div>
+
+<div class="footer">
+  ERMM 財務模組管理系統 — 待補全功能實施計劃<br>
+  對應文件：ERMM_高階主管財務分析總覽.html ｜ 計劃週期：2026 Q4 — 2027 Q3 ｜ 文件日期：2026-09-23
+</div>
+
+</div>
+</body>
+</html>

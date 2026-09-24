@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 財務模組 — 高階主管財務分析總覽</title>
+<style>
+  :root{
+    --primary:#1e3a8a; --primary-2:#2563eb; --accent:#db2777; --gold:#b45309;
+    --bg:#f8fafc; --surface:#ffffff; --border:#e2e8f0; --text:#1e293b;
+    --text-soft:#475569; --text-mute:#94a3b8;
+    --ok:#059669; --warn:#d97706; --err:#dc2626; --info:#0891b2;
+    --green:#16a34a; --red:#dc2626; --yellow:#ca8a04;
+    --card-shadow:0 4px 16px rgba(15,23,42,.08);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:0;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC",
+                 "Microsoft JhengHei", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    color:var(--text); background:var(--bg); line-height:1.75;
+  }
+  .page{
+    max-width:1180px; margin:0 auto; padding:40px 48px 80px;
+    background:var(--surface); box-shadow:0 0 40px rgba(15,23,42,.08);
+    min-height:100vh;
+  }
+
+  /* ===== 封面 ===== */
+  .cover{
+    border-bottom:4px solid var(--primary);
+    background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 50%,#db2777 100%); color:#fff;
+    margin:-40px -48px 40px; padding:52px 48px;
+  }
+  .cover h1{font-size:32px; margin:0 0 10px; letter-spacing:1.5px}
+  .cover .sub{opacity:.95; font-size:16px; max-width:820px}
+  .cover .meta{margin-top:24px; font-size:13px; opacity:.92}
+  .cover .meta span{margin-right:24px}
+  .cover .tag{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
+    border-radius:999px;padding:4px 16px;margin:16px 10px 0 0;font-size:13px}
+
+  /* ===== 目錄 ===== */
+  .toc{
+    background:#f1f5f9; border-left:4px solid var(--primary);
+    padding:18px 26px; margin:32px 0 44px; border-radius:0 10px 10px 0;
+  }
+  .toc h3{margin:0 0 12px; font-size:15px; color:var(--primary); text-transform:uppercase; letter-spacing:.5px}
+  .toc ol{margin:0; padding-left:22px; columns:2; column-gap:40px}
+  .toc li{margin:5px 0; font-size:14px; break-inside:avoid}
+  .toc a{color:var(--text); text-decoration:none}
+  .toc a:hover{color:var(--primary-2); text-decoration:underline}
+
+  h2{
+    font-size:24px; color:var(--primary); margin:52px 0 22px;
+    padding-bottom:10px; border-bottom:2px solid var(--border); scroll-margin-top:20px;
+  }
+  h3{font-size:18px; color:var(--text); margin:30px 0 14px}
+  h4{font-size:15.5px; color:var(--primary-2); margin:22px 0 10px}
+  p{margin:10px 0}
+
+  /* ===== 提示框 ===== */
+  .call{padding:14px 20px; border-radius:10px; margin:18px 0; font-size:14px}
+  .call.info{background:#eff6ff; border-left:4px solid var(--primary-2); color:#1e3a8a}
+  .call.ok{background:#ecfdf5; border-left:4px solid var(--ok); color:#065f46}
+  .call.warn{background:#fffbeb; border-left:4px solid var(--warn); color:#92400e}
+  .call.err{background:#fef2f2; border-left:4px solid var(--err); color:#991b1b}
+  .call b{display:block; margin-bottom:4px}
+
+  /* ===== 表格 ===== */
+  table{
+    width:100%; border-collapse:collapse; margin:16px 0; font-size:13.5px;
+    font-variant-numeric:tabular-nums;
+  }
+  th,td{padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+  th{
+    background:linear-gradient(to bottom,#dbeafe,#bfdbfe);
+    color:var(--primary); font-weight:700; font-size:13px;
+    border-bottom:2px solid var(--primary-2); white-space:nowrap;
+  }
+  tr:hover td{background:#f8fafc}
+  tr:nth-child(even) td{background:#fafbfc}
+  tr:nth-child(even):hover td{background:#eff6ff}
+  td code{background:#f1f5f9; border:1px solid #cbd5e1; padding:1px 7px; border-radius:4px; font-size:12.5px}
+  .num{text-align:right; font-variant-numeric:tabular-nums}
+  .center{text-align:center}
+
+  /* ===== 卡片網格 ===== */
+  .grid{display:grid; gap:18px; margin:20px 0}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr)}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:900px){ .grid.cols-3,.grid.cols-4{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:600px){ .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr} }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:20px; box-shadow:var(--card-shadow); transition:transform .15s, box-shadow .15s;
+  }
+  .card:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(15,23,42,.12)}
+  .card .icon{font-size:28px; margin-bottom:8px}
+  .card .ttl{font-size:16px; font-weight:700; color:var(--primary); margin-bottom:6px}
+  .card .desc{font-size:13.5px; color:var(--text-soft); line-height:1.65}
+
+  .card.pain{border-top:4px solid var(--err)}
+  .card.gain{border-top:4px solid var(--ok)}
+  .card.gap{border-top:4px solid var(--warn)}
+
+  /* ===== 徽章 ===== */
+  .badge{
+    display:inline-block; padding:2px 11px; border-radius:999px;
+    font-size:12px; font-weight:700; margin-left:6px;
+  }
+  .badge.ok{background:#dcfce7; color:#065f46; border:1px solid #86efac}
+  .badge.warn{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+  .badge.err{background:#fee2e2; color:#991b1b; border:1px solid #fca5a5}
+  .badge.info{background:#dbeafe; color:#1e40af; border:1px solid #93c5fd}
+
+  .priority-p0{color:#dc2626; font-weight:700}
+  .priority-p1{color:#d97706; font-weight:700}
+  .priority-p2{color:#2563eb; font-weight:700}
+
+  /* ===== 流程圖 ===== */
+  .flow{display:flex; align-items:stretch; gap:0; margin:24px 0; flex-wrap:wrap}
+  .flow-step{
+    flex:1; min-width:150px; text-align:center; padding:18px 14px;
+    border:2px solid var(--border); border-radius:12px; background:var(--surface);
+  }
+  .flow-step .num{
+    width:34px; height:34px; border-radius:50%; background:var(--primary); color:#fff;
+    text-align:center; line-height:34px; font-size:14px; font-weight:700; margin:0 auto 10px;
+  }
+  .flow-step .ttl{font-size:14.5px; font-weight:700; color:var(--primary); margin-bottom:5px}
+  .flow-step .desc{font-size:12.5px; color:var(--text-soft); line-height:1.55}
+  .flow-arrow{display:flex; align-items:center; color:var(--primary-2); font-size:26px; padding:0 6px}
+
+  /* ===== 架構圖（分層） ===== */
+  .arch{margin:24px 0}
+  .arch-layer{
+    border:2px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden;
+  }
+  .arch-layer-title{
+    padding:10px 18px; font-weight:700; color:#fff; font-size:14px; letter-spacing:.5px;
+  }
+  .arch-layer.l1 .arch-layer-title{background:linear-gradient(to right,#1e3a8a,#2563eb)}
+  .arch-layer.l2 .arch-layer-title{background:linear-gradient(to right,#7c3aed,#a855f7)}
+  .arch-layer.l3 .arch-layer-title{background:linear-gradient(to right,#db2777,#ec4899)}
+  .arch-layer.l4 .arch-layer-title{background:linear-gradient(to right,#059669,#10b981)}
+  .arch-layer.l5 .arch-layer-title{background:linear-gradient(to right,#b45309,#d97706)}
+  .arch-body{padding:14px 18px; background:#fafbfc; display:flex; gap:10px; flex-wrap:wrap}
+  .arch-node{
+    background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px;
+    font-size:13px; font-weight:600; color:var(--text); min-width:120px; text-align:center;
+  }
+  .arch-node.hot{border-color:#fca5a5; background:#fef2f2; color:#991b1b}
+  .arch-node.warm{border-color:#fde68a; background:#fffbeb; color:#92400e}
+  .arch-connector{text-align:center; color:var(--text-mute); font-size:18px; margin:2px 0}
+
+  /* ===== 模組關係圖 ===== */
+  .rel{position:relative; margin:24px 0; min-height:520px}
+  .rel-svg{width:100%; height:520px}
+
+  /* ===== 數據流圖 ===== */
+  .dataflow{margin:24px 0}
+  .df-source{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+  .df-source .arch-node{flex:1; min-width:100px}
+
+  /* ===== 優先級矩陣 ===== */
+  .matrix{display:grid; grid-template-columns:80px 1fr 1fr; gap:2px; margin:20px 0; background:var(--border); border:1px solid var(--border); border-radius:10px; overflow:hidden}
+  .matrix-cell{background:#fff; padding:14px; font-size:13px}
+  .matrix-cell.h{background:linear-gradient(to bottom,#dbeafe,#bfdbfe); font-weight:700; color:var(--primary); text-align:center}
+  .matrix-cell.q1{background:#fef2f2}
+  .matrix-cell.q2{background:#fffbeb}
+  .matrix-cell.q3{background:#eff6ff}
+  .matrix-cell.q4{background:#f0fdf4}
+
+  .footer{
+    margin-top:60px; padding-top:20px; border-top:2px solid var(--border);
+    font-size:13px; color:var(--text-mute); text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ===== 封面 ===== -->
+<div class="cover">
+  <h1>ERMM 財務模組 — 高階主管財務分析總覽</h1>
+  <div class="sub">從「數據彙整 → 指標計算 → 風險預警 → 預測對比 → 行動落實」的全鏈路財務經營分析平台，協助高階主管一頁看懂問題、即時決策。</div>
+  <div class="meta">
+    <span>📊 系統版本：v1.0</span>
+    <span>🗓️ 文件日期：2026-09-23</span>
+    <span>🎯 適用對象：高階主管 / 財務長 / 營運主管</span>
+  </div>
+  <span class="tag">財務分析</span>
+  <span class="tag">風險預警</span>
+  <span class="tag">損益平衡</span>
+  <span class="tag">預測管理</span>
+  <span class="tag">營運決策</span>
+</div>
+
+<!-- ===== 目錄 ===== -->
+<div class="toc">
+  <h3>目錄</h3>
+  <ol>
+    <li><a href="#sec1">Part 1：系統對高階主管的價值與解決的困擾</a></li>
+    <li><a href="#sec1a">1.1 高階主管的核心困擾</a></li>
+    <li><a href="#sec1b">1.2 系統帶來的優點</a></li>
+    <li><a href="#sec1c">1.3 困擾 ↔ 解決方案對照表</a></li>
+    <li><a href="#sec2">Part 2：財務分析架構圖與流程圖</a></li>
+    <li><a href="#sec2a">2.1 系統整體架構圖（五層）</a></li>
+    <li><a href="#sec2b">2.2 財務分析數據流圖</a></li>
+    <li><a href="#sec2c">2.3 模組關聯關係圖</a></li>
+    <li><a href="#sec2d">2.4 核心分析流程圖</a></li>
+    <li><a href="#sec3">Part 3：待補全功能（讓主管直接看出問題並落實行動）</a></li>
+    <li><a href="#sec3a">3.1 現有功能一覽</a></li>
+    <li><a href="#sec3b">3.2 缺口分析與待補全功能清單</a></li>
+    <li><a href="#sec3c">3.3 優先級矩陣與建議時程</a></li>
+    <li><a href="#sec3d">3.4 補全後預期成效</a></li>
+  </ol>
+</div>
+
+<!-- ============================== -->
+<!-- Part 1 -->
+<!-- ============================== -->
+<h2 id="sec1">Part 1：系統對高階主管的價值與解決的困擾</h2>
+
+<div class="call info">
+  <b>核心定位</b>
+  ERMM 財務模組不是「傳統報表系統」，而是一個以 <code>mgm_finance_summary</code>（200+ 欄位）為核心樞紐的「經營決策支援平台」。
+  它把散落在 ERP（銷售/採購/發票/現金/銀行/應收應付）的數據自動彙整，即時計算 22+ 項財務比率、5 套風險預警模型、損益平衡點與年度預測，讓高階主管<strong>不必再等月底報表、不必再人工拆帳</strong>，登入就能看到企業體溫。
+</div>
+
+<!-- ===== 1.1 困擾 ===== -->
+<h3 id="sec1a">1.1 高階主管的核心困擾</h3>
+
+<div class="grid cols-2">
+  <div class="card pain">
+    <div class="icon">😫</div>
+    <div class="ttl">數據分散、看不到全貌</div>
+    <div class="desc">銷售在 ERP、採購在另一套、現金在 Excel、銀行貸款在紙本，要拼出一張完整的經營地圖往往要等 3~5 天，決策永遠慢半拍。</div>
+  </div>
+  <div class="card pain">
+    <div class="icon">📉</div>
+    <div class="ttl">利潤去哪了？說不清楚</div>
+    <div class="desc">明明有營收，帳上卻沒錢。毛利、邊際貢獻、固定成本、變動成本混在一起，看不出是哪個產品、哪個客戶、哪個環節在吃掉利潤。</div>
+  </div>
+  <div class="card pain">
+    <div class="icon">⚠️</div>
+    <div class="ttl">風險來了才知道</div>
+    <div class="desc">應收帳款暴增、存貨周轉變慢、負債比攀升，往往等到資金緊繃或銀行預警才發現，沒有即時的紅黃綠燈機制。</div>
+  </div>
+  <div class="card pain">
+    <div class="icon">🎯</div>
+    <div class="ttl">預測與實際永遠對不上</div>
+    <div class="desc">年度預測做了，但每月實際出來後無法快速比對差異、無法即時調整後續月份預算，預測淪為形式。</div>
+  </div>
+  <div class="card pain">
+    <div class="icon">⏱️</div>
+    <div class="ttl">結帳慢、報表慢</div>
+    <div class="desc">每月結帳要 5~7 天，資產負債表、損益表、現金流量表人工編製，數字還可能對不上（資產≠負債+權益）。</div>
+  </div>
+  <div class="card pain">
+    <div class="icon">🗂️</div>
+    <div class="ttl">跨公司比較困難</div>
+    <div class="desc">集團有 HM / SZ / HN 等多個公司別，口徑不一致、匯率不同，要做合併分析或個別診斷非常耗時。</div>
+  </div>
+</div>
+
+<!-- ===== 1.2 優點 ===== -->
+<h3 id="sec1b">1.2 系統帶來的優點</h3>
+
+<div class="grid cols-2">
+  <div class="card gain">
+    <div class="icon">🔭</div>
+    <div class="ttl">一頁儀表板，即時看體溫</div>
+    <div class="desc">Dashboard 整合 KPI 卡片、損益表趨勢、資產負債結構、風險面板，<strong>點擊任一卡片即可下鑽明細</strong>，從摘要一路追到單筆發票/現金流水。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">📐</div>
+    <div class="ttl">22+ 財務比率自動計算</div>
+    <div class="desc">償債能力（流動比率、速動比率、負債比）、營運能力（存貨周轉、應收周轉、現金周轉天數）、獲利能力（毛利率、ROA、ROE）、成長能力（銷售/淨利成長率），全部即時算出並標紅黃綠燈。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">🚨</div>
+    <div class="ttl">5 套風險預警模型</div>
+    <div class="desc">Altman Z-Score（上市公司）、Z2-Score（私人公司）、Z3-Score（非製造業）、BZ 破產概率、JZ 營運能力，搭配 Wolf 模型，<strong>自動判定安全/灰色地帶/破產區</strong>。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">⚖️</div>
+    <div class="ttl">損益平衡點（BEP）精算</div>
+    <div class="desc">把成本拆成材料（7 項）、變動費用、固定成本（薪資/租金/利息），算出邊際貢獻率與 BEP，<strong>直接告訴你「這個月還差多少訂單就損益兩平」</strong>。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">🔮</div>
+    <div class="ttl">預測 vs 實際對比</div>
+    <div class="desc">支持銷售/成本/現金流三種預測類型，12 個月逐月輸入，實際入帳後自動比對差異，<strong>預測線（紫）vs 實際線（綠）同圖呈現</strong>。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">📑</div>
+    <div class="ttl">三大報表一鍵匯出</div>
+    <div class="desc">資產負債表、損益表、現金流量表（間接法）自動產生，並可匯出標準 Excel，<strong>解決人工編製與帳不平的問題</strong>。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">🏢</div>
+    <div class="ttl">多公司別統一口徑</div>
+    <div class="desc">HM / SZ / HN 等公司別使用同一套欄位與公式，支援單公司分析與跨公司比較，集團管理一目了然。</div>
+  </div>
+  <div class="card gain">
+    <div class="icon">🔐</div>
+    <div class="ttl">權限分級，安全可控</div>
+    <div class="desc">基於 <code>cams_xuser</code> 的身分驗證（JWT），管理員才能存取使用者管理，一般員工僅能看業務數據，符合內控要求。</div>
+  </div>
+</div>
+
+<!-- ===== 1.3 對照表 ===== -->
+<h3 id="sec1c">1.3 困擾 ↔ 解決方案對照表</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:26%">高階主管的困擾</th><th style="width:30%">系統解決方案</th><th style="width:18%">對應模組</th><th style="width:26%">主管獲得的價值</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>數據分散、看不到全貌</td>
+      <td>自動彙整 ERP 銷售/採購/發票/現金/銀行/ARAP 至財務摘要</td>
+      <td><code>summary</code> / <code>dashboard</code></td>
+      <td>登入即見全貌，不再等報表</td>
+    </tr>
+    <tr>
+      <td>利潤去哪了說不清楚</td>
+      <td>BEP 將成本拆為材料/變動/固定，算出邊際貢獻與 BEP</td>
+      <td><code>bep</code></td>
+      <td>知道要衝多少業績才不會虧</td>
+    </tr>
+    <tr>
+      <td>風險來了才知道</td>
+      <td>5 套 Z/BZ/JZ 模型 + 紅黃綠燈即時預警</td>
+      <td><code>risk</code> / <code>kpiQuery</code></td>
+      <td>提前發現破產風險與營運異常</td>
+    </tr>
+    <tr>
+      <td>預測與實際對不上</td>
+      <td>12 月預測輸入 + 自動比對差異 + 雙線圖</td>
+      <td><code>forecast</code></td>
+      <td>及時調整預算，預測不淪為形式</td>
+    </tr>
+    <tr>
+      <td>結帳慢、報表慢</td>
+      <td>三大報表自動產生 + Excel 匯出</td>
+      <td><code>report</code></td>
+      <td>結帳從 5 天縮到 1 天內</td>
+    </tr>
+    <tr>
+      <td>跨公司比較困難</td>
+      <td>多公司別統一欄位與公式，支援切換與比較</td>
+      <td><code>dashboard</code> / <code>kpiQuery</code></td>
+      <td>集團診斷，快速定位弱勢公司</td>
+    </tr>
+    <tr>
+      <td>應收帳款管理盲點</td>
+      <td>ARAP 明細 + 帳齡分析 + 逾期預警</td>
+      <td><code>arap</code> / <code>invoice</code></td>
+      <td>掌握資金回籠，降低壞帳風險</td>
+    </tr>
+    <tr>
+      <td>現金流量無法預判</td>
+      <td>現金日記自動結餘 + 現金流報表（間接法）</td>
+      <td><code>cash</code> / <code>report</code></td>
+      <td>提前規劃資金，避免周轉危機</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================== -->
+<!-- Part 2 -->
+<!-- ============================== -->
+<h2 id="sec2">Part 2：財務分析架構圖與流程圖</h2>
+
+<!-- ===== 2.1 架構圖 ===== -->
+<h3 id="sec2a">2.1 系統整體架構圖（五層）</h3>
+
+<div class="arch">
+  <!-- L5 決策層 -->
+  <div class="arch-layer l5">
+    <div class="arch-layer-title">第 5 層｜決策輸出層（高階主管視角）</div>
+    <div class="arch-body">
+      <div class="arch-node">儀表板 Dashboard</div>
+      <div class="arch-node">KPI 紅黃綠燈</div>
+      <div class="arch-node">風險預警面板</div>
+      <div class="arch-node">預測 vs 實際</div>
+      <div class="arch-node">三大報表匯出</div>
+      <div class="arch-node">行動建議</div>
+    </div>
+  </div>
+  <div class="arch-connector">▲</div>
+
+  <!-- L4 分析引擎層 -->
+  <div class="arch-layer l4">
+    <div class="arch-layer-title">第 4 層｜分析引擎層（財務分析核心）</div>
+    <div class="arch-body">
+      <div class="arch-node hot">22+ 財務比率</div>
+      <div class="arch-node hot">Z / Z2 / Z3 模型</div>
+      <div class="arch-node hot">BZ 破產概率</div>
+      <div class="arch-node hot">JZ 營運能力</div>
+      <div class="arch-node">BEP 損益平衡</div>
+      <div class="arch-node">預測差異分析</div>
+      <div class="arch-node">趨勢/同比/環比</div>
+    </div>
+  </div>
+  <div class="arch-connector">▲</div>
+
+  <!-- L3 樞紐層 -->
+  <div class="arch-layer l3">
+    <div class="arch-layer-title">第 3 層｜數據樞紐層（200+ 欄位核心）</div>
+    <div class="arch-body">
+      <div class="arch-node" style="flex:2; min-width:260px; border-color:#a855f7; background:#faf5ff">
+        <strong>mgm_finance_summary</strong><br>
+        <span style="font-size:11px;color:#7c3aed">資產 / 負債 / 權益 / 損益 / 現金 / 風險欄位</span>
+      </div>
+      <div class="arch-node">mgm_kpi_desc</div>
+      <div class="arch-node">mgm_bep_threshold</div>
+      <div class="arch-node">forecast_detail</div>
+    </div>
+  </div>
+  <div class="arch-connector">▲</div>
+
+  <!-- L2 業務數據層 -->
+  <div class="arch-layer l2">
+    <div class="arch-layer-title">第 2 層｜業務明細層（ERP 原始數據）</div>
+    <div class="arch-body">
+      <div class="arch-node">ermm_erp_so<br><span style="font-size:10px">銷售訂單</span></div>
+      <div class="arch-node">ermm_erp_po<br><span style="font-size:10px">採購訂單</span></div>
+      <div class="arch-node">mgm_invoice_details<br><span style="font-size:10px">發票(AR/AP)</span></div>
+      <div class="arch-node">mgm_casher_details<br><span style="font-size:10px">現金日記</span></div>
+      <div class="arch-node">mgm_bank_loan_details<br><span style="font-size:10px">銀行貸款</span></div>
+      <div class="arch-node">ermm_arap_detail<br><span style="font-size:10px">應收應付</span></div>
+      <div class="arch-node">pay_detail<br><span style="font-size:10px">付款</span></div>
+      <div class="arch-node">check_detail<br><span style="font-size:10px">票據</span></div>
+    </div>
+  </div>
+  <div class="arch-connector">▲</div>
+
+  <!-- L1 資料來源層 -->
+  <div class="arch-layer l1">
+    <div class="arch-layer-title">第 1 層｜資料來源層（輸入）</div>
+    <div class="arch-body">
+      <div class="arch-node">ERP 系統匯入</div>
+      <div class="arch-node">Excel 批次匯入</div>
+      <div class="arch-node">人工線上登錄</div>
+      <div class="arch-node">銀行對帳單</div>
+      <div class="arch-node">發票系統</div>
+    </div>
+  </div>
+</div>
+
+<div class="call info">
+  <b>架構關鍵</b>
+  第 3 層 <code>mgm_finance_summary</code> 是整個系統的「數據心臟」。所有上層分析（KPI、風險、BEP、預測、報表）都從這張 200+ 欄位的大表取值，確保口徑一致、計算可追溯。
+</div>
+
+<!-- ===== 2.2 數據流圖 ===== -->
+<h3 id="sec2b">2.2 財務分析數據流圖</h3>
+
+<div class="dataflow">
+  <div class="df-source">
+    <div class="arch-node warm">ERP 銷售訂單<br>ermm_erp_so</div>
+    <div class="arch-node warm">ERP 採購訂單<br>ermm_erp_po</div>
+    <div class="arch-node warm">發票明細<br>mgm_invoice_details</div>
+    <div class="arch-node warm">現金流水<br>mgm_casher_details</div>
+    <div class="arch-node warm">銀行貸款<br>mgm_bank_loan_details</div>
+    <div class="arch-node warm">應收應付<br>ermm_arap_detail</div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step" style="flex:1;min-width:180px">
+      <div class="num">1</div>
+      <div class="ttl">彙整與分錄</div>
+      <div class="desc">將 ERP 與明細表自動彙總為月度財務摘要<br>(bu_no + YYYY_MM)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="flex:1;min-width:180px">
+      <div class="num">2</div>
+      <div class="ttl">寫入核心樞紐</div>
+      <div class="desc">mgm_finance_summary<br>資產 / 負債 / 權益 / 損益</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="flex:1;min-width:180px">
+      <div class="num">3</div>
+      <div class="ttl">指標與模型計算</div>
+      <div class="desc">22+ 比率 / Z·BZ·JZ / BEP / 預測差異</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="flex:1;min-width:180px">
+      <div class="num">4</div>
+      <div class="ttl">燈號與預警</div>
+      <div class="desc">紅 / 黃 / 綠 + 安全/灰色/破產區判定</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="flex:1;min-width:180px">
+      <div class="num">5</div>
+      <div class="ttl">主管儀表板</div>
+      <div class="desc">可視化圖表 + 下鑽明細 + 匯出報表</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2.3 模組關係圖 ===== -->
+<h3 id="sec2c">2.3 模組關聯關係圖</h3>
+
+<svg class="rel-svg" viewBox="0 0 1100 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8"/>
+    </marker>
+  </defs>
+
+  <!-- 中心樞紐 -->
+  <g>
+    <rect x="400" y="200" width="300" height="100" rx="14" fill="#faf5ff" stroke="#a855f7" stroke-width="2.5"/>
+    <text x="550" y="240" text-anchor="middle" font-size="16" font-weight="bold" fill="#7c3aed">mgm_finance_summary</text>
+    <text x="550" y="265" text-anchor="middle" font-size="12" fill="#7c3aed">財務摘要 · 200+ 欄位 · 系統心臟</text>
+    <text x="550" y="285" text-anchor="middle" font-size="11" fill="#94a3b8">bu_no + YYYY_MM 為主鍵</text>
+  </g>
+
+  <!-- 上層輸入（明細表） -->
+  <g font-size="12.5" font-weight="600">
+    <rect x="40" y="40" width="160" height="56" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="120" y="70" text-anchor="middle" fill="#92400e">ermm_erp_so / po</text>
+    <text x="120" y="88" text-anchor="middle" font-size="10.5" fill="#a16207">銷售 / 採購訂單</text>
+
+    <rect x="230" y="40" width="170" height="56" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="315" y="70" text-anchor="middle" fill="#92400e">mgm_invoice_details</text>
+    <text x="315" y="88" text-anchor="middle" font-size="10.5" fill="#a16207">發票 (AR/AP)</text>
+
+    <rect x="430" y="40" width="170" height="56" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="515" y="70" text-anchor="middle" fill="#92400e">mgm_casher_details</text>
+    <text x="515" y="88" text-anchor="middle" font-size="10.5" fill="#a16207">現金日記</text>
+
+    <rect x="630" y="40" width="180" height="56" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="720" y="70" text-anchor="middle" fill="#92400e">mgm_bank_loan_details</text>
+    <text x="720" y="88" text-anchor="middle" font-size="10.5" fill="#a16207">銀行貸款</text>
+
+    <rect x="840" y="40" width="160" height="56" rx="8" fill="#fffbeb" stroke="#fde68a"/>
+    <text x="920" y="70" text-anchor="middle" fill="#92400e">ermm_arap_detail</text>
+    <text x="920" y="88" text-anchor="middle" font-size="10.5" fill="#a16207">應收應付</text>
+  </g>
+
+  <!-- 輸入 → 中心 的連線 -->
+  <g stroke="#fbbf24" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M120,96 C120,150 440,160 480,200"/>
+    <path d="M315,96 C315,150 490,160 510,200"/>
+    <path d="M515,96 L540,200"/>
+    <path d="M720,96 C720,150 610,160 590,200"/>
+    <path d="M920,96 C920,150 660,160 620,200"/>
+  </g>
+
+  <!-- 右層分析模組 -->
+  <g font-size="12.5" font-weight="600">
+    <rect x="800" y="180" width="170" height="56" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="885" y="205" text-anchor="middle" fill="#065f46">kpiQuery</text>
+    <text x="885" y="224" text-anchor="middle" font-size="10.5" fill="#047857">22+ 財務比率</text>
+
+    <rect x="800" y="260" width="170" height="56" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="885" y="285" text-anchor="middle" fill="#065f46">risk</text>
+    <text x="885" y="304" text-anchor="middle" font-size="10.5" fill="#047857">Z/BZ/JZ 風險</text>
+
+    <rect x="800" y="340" width="170" height="56" rx="8" fill="#f0fdf4" stroke="#86efac"/>
+    <text x="885" y="365" text-anchor="middle" fill="#065f46">bep</text>
+    <text x="885" y="384" text-anchor="middle" font-size="10.5" fill="#047857">損益平衡點</text>
+  </g>
+  <g stroke="#16a34a" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M700,230 L800,208"/>
+    <path d="M700,250 L800,288"/>
+    <path d="M700,270 L800,368"/>
+  </g>
+
+  <!-- 左層輔助 -->
+  <g font-size="12.5" font-weight="600">
+    <rect x="40" y="180" width="160" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="120" y="205" text-anchor="middle" fill="#1e40af">forecast</text>
+    <text x="120" y="224" text-anchor="middle" font-size="10.5" fill="#1d4ed8">預測 vs 實際</text>
+
+    <rect x="40" y="260" width="160" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="120" y="285" text-anchor="middle" fill="#1e40af">report</text>
+    <text x="120" y="304" text-anchor="middle" font-size="10.5" fill="#1d4ed8">三大報表匯出</text>
+
+    <rect x="40" y="340" width="160" height="56" rx="8" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="120" y="365" text-anchor="middle" fill="#1e40af">mgm_kpi_desc</text>
+    <text x="120" y="384" text-anchor="middle" font-size="10.5" fill="#1d4ed8">KPI 門檻設定</text>
+  </g>
+  <g stroke="#3b82f6" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M200,208 L400,230"/>
+    <path d="M200,288 L400,250"/>
+    <path d="M200,368 L400,270"/>
+  </g>
+
+  <!-- 下層呈現 -->
+  <g>
+    <rect x="300" y="410" width="180" height="60" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+    <text x="390" y="438" text-anchor="middle" font-size="13" font-weight="bold" fill="#991b1b">dashboard</text>
+    <text x="390" y="458" text-anchor="middle" font-size="11" fill="#b91c1c">主管儀表板（下鑽）</text>
+
+    <rect x="520" y="410" width="180" height="60" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+    <text x="610" y="438" text-anchor="middle" font-size="13" font-weight="bold" fill="#991b1b">Excel 匯出</text>
+    <text x="610" y="458" text-anchor="middle" font-size="11" fill="#b91c1c">資產負債/損益/現金流</text>
+
+    <rect x="740" y="410" width="180" height="60" rx="10" fill="#fef2f2" stroke="#fca5a5"/>
+    <text x="830" y="438" text-anchor="middle" font-size="13" font-weight="bold" fill="#991b1b">風險預警通知</text>
+    <text x="830" y="458" text-anchor="middle" font-size="11" fill="#b91c1c">紅燈自動推播</text>
+  </g>
+  <g stroke="#dc2626" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M470,300 L420,410"/>
+    <path d="M550,300 L600,410"/>
+    <path d="M630,300 L790,410"/>
+  </g>
+</svg>
+
+<div class="call ok">
+  <b>關係閱讀方式</b>
+  上方黃色方塊是<strong>業務明細來源</strong>，匯入中央紫色樞紐（mgm_finance_summary）；右側綠色是<strong>分析引擎</strong>，左側藍色是<strong>輔助模組</strong>；下方紅色是<strong>主管可見的輸出</strong>。
+</div>
+
+<!-- ===== 2.4 核心流程圖 ===== -->
+<h3 id="sec2d">2.4 核心分析流程圖</h3>
+
+<div class="flow">
+  <div class="flow-step"><div class="num">1</div><div class="ttl">數據入帳</div><div class="desc">ERP / Excel / 人工<br>登入明細表</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">2</div><div class="ttl">月度結帳</div><div class="desc">自動彙總至<br>finance_summary</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">3</div><div class="ttl">指標計算</div><div class="desc">22+ 比率 +<br>Z/BZ/JZ 模型</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">4</div><div class="ttl">燈號判定</div><div class="desc">紅/黃/綠 +<br>安全區判定</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">5</div><div class="ttl">儀表板呈現</div><div class="desc">圖表 + 下鑽 +<br>異常標註</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">6</div><div class="ttl">主管決策</div><div class="desc">發現問題 →<br>落實行動</div></div>
+</div>
+
+<h4>BEP 損益平衡分析子流程</h4>
+<div class="flow">
+  <div class="flow-step"><div class="num">①</div><div class="ttl">輸入銷售金額</div><div class="desc">sale_amt</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">②</div><div class="ttl">拆解材料成本</div><div class="desc">7 項材料合計</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">③</div><div class="ttl">變動成本</div><div class="desc">材料 + 變動費用</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">④</div><div class="ttl">邊際貢獻</div><div class="desc">銷售 − 變動成本</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">⑤</div><div class="ttl">BEP</div><div class="desc">固定成本 / 邊際貢獻率</div></div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step"><div class="num">⑥</div><div class="ttl">缺口訂單</div><div class="desc">銷售 − BEP<br>正=超額 / 負=不足</div></div>
+</div>
+
+<!-- ============================== -->
+<!-- Part 3 -->
+<!-- ============================== -->
+<h2 id="sec3">Part 3：待補全功能（讓主管直接看出問題並落實行動）</h2>
+
+<div class="call warn">
+  <b>現況評價</b>
+  系統在「數據彙整 → 指標計算 → 風險預警」已相當完整，但要讓高階主管<strong>「一眼看出問題、立即落實行動」</strong>，仍需補強「異常診斷 → 原因歸因 → 行動追蹤」的閉環能力。以下為缺口分析與優先級建議。
+</div>
+
+<!-- ===== 3.1 現有功能 ===== -->
+<h3 id="sec3a">3.1 現有功能一覽</h3>
+
+<table>
+  <thead>
+    <tr><th>模組</th><th>已具備能力</th><th>主管使用情境</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Dashboard 儀表板</td><td>KPI 卡片、損益/資產負債圖、風險面板、點擊下鑽明細</td><td>登入即看企業體溫</td></tr>
+    <tr><td>KPI 查詢</td><td>22+ 比率自動計算、紅黃綠燈、公式可查</td><td>診斷償債/營運/獲利/成長</td></tr>
+    <tr><td>風險預警</td><td>Z/Z2/Z3/BZ/JZ 五模型、破產概率、安全區判定</td><td>提前識別財務危機</td></tr>
+    <tr><td>BEP 損益平衡</td><td>材料/變動/固定成本拆解、邊際貢獻率、缺口訂單</td><td>知道要衝多少業績</td></tr>
+    <tr><td>財務預測</td><td>銷售/成本/現金流 12 月預測、預測 vs 實際雙線圖</td><td>追蹤預算達成</td></tr>
+    <tr><td>報表匯出</td><td>資產負債表、損益表、現金流量表 Excel 匯出</td><td>對內對外報告</td></tr>
+    <tr><td>現金日記</td><td>收支流水、自動結餘、總收入/總支出/淨流量</td><td>掌握現金水位</td></tr>
+    <tr><td>ARAP 應收應付</td><td>帳齡分析、逾期明細</td><td>管理應收回收</td></tr>
+    <tr><td>發票管理</td><td>AR/AP 發票、稅額、付款狀態</td><td>發票與付款追蹤</td></tr>
+    <tr><td>銀行貸款</td><td>貸款餘額、利率、到期日</td><td>負債管理</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== 3.2 待補全功能 ===== -->
+<h3 id="sec3b">3.2 缺口分析與待補全功能清單</h3>
+
+<div class="grid cols-2">
+
+  <div class="card gap">
+    <div class="icon">🔴</div>
+    <div class="ttl">異常自動診斷與原因歸因 <span class="priority-p0">P0</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：系統能標紅燈，但不會告訴主管「為什麼紅」。例如毛利率下滑，主管仍需手動查是哪個產品/客戶/月份造成。<br><br>
+      <strong>建議補全</strong>：當指標異常時，自動展開<strong>貢獻度分析</strong>（哪個 bu_no、哪個月份、哪個科目拖累最多），並提供「前 3 大原因」摘要。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🔴</div>
+    <div class="ttl">行動方案與追蹤閉環 <span class="priority-p0">P0</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：看到問題後，主管需另外開會、派任務，無法在系統內閉環。<br><br>
+      <strong>建議補全</strong>：新增「<strong>行動任務</strong>」模組，從紅燈指標一鍵建立任務（指派負責人、截止日、改善目標），並在儀表板追蹤進度，讓「發現問題 → 落實行動 → 驗證成效」一氣呵成。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🔴</div>
+    <div class="ttl">主動推播與預警通知 <span class="priority-p0">P0</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：需主管主動登入才看得到紅燈，被動等待。<br><br>
+      <strong>建議補全</strong>：當 Z-Score 進入破產區、負債比超標、應收逾期超過 X 天時，<strong>自動發送 Email / LINE / 簡訊</strong>給對應主管，並附帶建議處置。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟠</div>
+    <div class="ttl">同業標竿與區間比較 <span class="priority-p1">P1</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：只有自身歷史數據，不知道業界水位。<br><br>
+      <strong>建議補全</strong>：導入產業標竿區間（如製造業流動比率合理值 1.5~2.5），在 KPI 旁標示「<strong>優於/劣於同業</strong>」，讓主管判斷是個案還是趨勢。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟠</div>
+    <div class="ttl">多維度下鑽（產品/客戶/部門） <span class="priority-p1">P1</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：目前下鑽多停留在「單筆發票/現金」，缺乏產品別、客戶別、部門別的彙總視角。<br><br>
+      <strong>建議補全</strong>：從銷售金額可下鑽到「<strong>產品毛利排行 / 客戶貢獻度 / 部門費用</strong>」，協助主管做資源配置決策。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟠</div>
+    <div class="ttl">現金流量預測與資金排程 <span class="priority-p1">P1</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：現金日記是歷史帳，無法預測未來 3 個月現金水位。<br><br>
+      <strong>建議補全</strong>：結合應收到期、應付到期、貸款還本，產出<strong>未來 13 週現金滾動預測</strong>，提前預警資金缺口。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟡</div>
+    <div class="ttl">管理會計（責任中心利潤） <span class="priority-p2">P2</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：只有財務會計口徑，缺乏部門/產品的責任利潤。<br><br>
+      <strong>建議補全</strong>：新增費用分攤規則，計算<strong>部門邊際利潤 / 產品貢獻利潤</strong>，做為考核與資源分配依據。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟡</div>
+    <div class="ttl">集團合併報表與匯率 <span class="priority-p2">P2</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：多公司可切換但無法自動合併，跨幣別需人工換算。<br><br>
+      <strong>建議補全</strong>：支援<strong>內部交易沖銷、匯率自動換算、合併資產負債表與損益表</strong>，滿足集團管理需求。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟡</div>
+    <div class="ttl">預算編制與彈性預算 <span class="priority-p2">P2</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：預測模組只做金額預估，缺乏預算版本管理與彈性預算。<br><br>
+      <strong>建議補全</strong>：支援<strong>年度預算版本、部門預算編制、彈性預算（按實際產量調整）</strong>，讓預算管理更精準。
+    </div>
+  </div>
+
+  <div class="card gap">
+    <div class="icon">🟡</div>
+    <div class="ttl">AI 智能問答與解讀 <span class="priority-p2">P2</span></div>
+    <div class="desc">
+      <strong>現況缺口</strong>：主管需理解財務術語才能讀懂指標。<br><br>
+      <strong>建議補全</strong>：導入<strong>自然語言問答</strong>，主管可問「為什麼這個月毛利率下滑？」系統自動用淺白語言解讀數據並給建議。
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== 3.3 優先級矩陣 ===== -->
+<h3 id="sec3c">3.3 優先級矩陣與建議時程</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:6%">等級</th>
+      <th style="width:26%">功能</th>
+      <th style="width:14%">影響力</th>
+      <th style="width:14%">實作難度</th>
+      <th style="width:14%">建議時程</th>
+      <th>核心價值</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="priority-p0">P0</span></td>
+      <td>異常自動診斷與原因歸因</td>
+      <td><span class="badge err">高</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 1 季</td>
+      <td>主管不用再自己找原因，系統直接點名「誰拖累了毛利」</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p0">P0</span></td>
+      <td>行動方案與追蹤閉環</td>
+      <td><span class="badge err">高</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 1 季</td>
+      <td>從「看到問題」到「解決問題」無縫接軌，決策可落地</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p0">P0</span></td>
+      <td>主動推播與預警通知</td>
+      <td><span class="badge err">高</span></td>
+      <td><span class="badge ok">低</span></td>
+      <td>第 1 季</td>
+      <td>主管被動變主動，風險一出現即刻收到通知</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p1">P1</span></td>
+      <td>同業標竿與區間比較</td>
+      <td><span class="badge warn">中高</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 2 季</td>
+      <td>判斷是個案問題還是產業趨勢，避免誤判</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p1">P1</span></td>
+      <td>多維度下鑽（產品/客戶/部門）</td>
+      <td><span class="badge warn">中高</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 2 季</td>
+      <td>資源配置有依據，砍掉虧損產品/客戶</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p1">P1</span></td>
+      <td>現金流量預測與資金排程</td>
+      <td><span class="badge err">高</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 2 季</td>
+      <td>提前 3 個月預知資金缺口，杜絕周轉危機</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p2">P2</span></td>
+      <td>管理會計（責任中心利潤）</td>
+      <td><span class="badge info">中</span></td>
+      <td><span class="badge err">高</span></td>
+      <td>第 3 季</td>
+      <td>部門考核有量化依據，獎懲公平</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p2">P2</span></td>
+      <td>集團合併報表與匯率</td>
+      <td><span class="badge info">中</span></td>
+      <td><span class="badge err">高</span></td>
+      <td>第 3 季</td>
+      <td>集團層級一頁掌握，跨幣別免人工</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p2">P2</span></td>
+      <td>預算編制與彈性預算</td>
+      <td><span class="badge info">中</span></td>
+      <td><span class="badge warn">中</span></td>
+      <td>第 3 季</td>
+      <td>預算管理從形式變實質，差異可追溯</td>
+    </tr>
+    <tr>
+      <td><span class="priority-p2">P2</span></td>
+      <td>AI 智能問答與解讀</td>
+      <td><span class="badge info">中</span></td>
+      <td><span class="badge err">高</span></td>
+      <td>第 4 季</td>
+      <td>降低財務門檻，非財務主管也能讀懂數據</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ===== 3.4 預期成效 ===== -->
+<h3 id="sec3d">3.4 補全後預期成效</h3>
+
+<div class="grid cols-3">
+  <div class="card">
+    <div class="icon">🎯</div>
+    <div class="ttl">決策速度提升</div>
+    <div class="desc">從「月底等報表 → 開會找原因 → 派任務」縮短為「<strong>即時看紅燈 → 系統告訴原因 → 一鍵派任務</strong>」，決策週期從週級壓到日級。</div>
+  </div>
+  <div class="card">
+    <div class="icon">🛡️</div>
+    <div class="ttl">風險提前預防</div>
+    <div class="desc">被動善後變主動預防，Z-Score、負債比、應收逾期等指標<strong>觸閾值即推播</strong>，把財務危機消滅在萌芽階段。</div>
+  </div>
+  <div class="card">
+    <div class="icon">💰</div>
+    <div class="ttl">利潤精準管理</div>
+    <div class="desc">透過 BEP + 多維度下鑽，<strong>找出吃利潤的產品/客戶/部門</strong>，果斷調整資源配置，提升整體獲利率。</div>
+  </div>
+  <div class="card">
+    <div class="icon">💧</div>
+    <div class="ttl">現金無虞</div>
+    <div class="desc">13 週現金滾動預測讓主管<strong>提前知道何時缺錢</strong>，主動安排融資或催收，避免資金斷鏈。</div>
+  </div>
+  <div class="card">
+    <div class="icon">📋</div>
+    <div class="ttl">行動可追蹤</div>
+    <div class="desc">每個紅燈都能轉為任務，指派到人、設截止日、追進度，<strong>決策不再是空談</strong>，成效可驗證。</div>
+  </div>
+  <div class="card">
+    <div class="icon">🌐</div>
+    <div class="ttl">集團一頁掌握</div>
+    <div class="desc">合併報表 + 跨公司比較，集團高層<strong>不必再彙整十幾份 Excel</strong>，登入即見整體營運體溫。</div>
+  </div>
+</div>
+
+<div class="call ok">
+  <b>結語</b>
+  現有系統已完成「<strong>數據彙整 → 指標計算 → 風險預警</strong>」的基礎建設，讓高階主管能即時看到企業體溫。接下來補強「<strong>異常診斷 → 行動閉環 → 主動推播</strong>」三大 P0 功能後，系統就能真正從「報表工具」升級為「<strong>經營決策中樞</strong>」，協助主管一眼看出問題、即時落實行動、持續驗證成效。
+</div>
+
+<div class="footer">
+  ERMM 財務模組管理系統 — 高階主管財務分析總覽<br>
+  倉庫：https://github.com/rocky1953/ERMM-finance-system ｜ 文件日期：2026-09-23
+</div>
+
+</div>
+</body>
+</html>

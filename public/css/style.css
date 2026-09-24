@@ -237,6 +237,50 @@ table.data-table tr:hover { background: #e8f4fd; }
 .empty-state { text-align: center; padding: 40px; color: var(--text-light); }
 .empty-state .icon { font-size: 3em; margin-bottom: 10px; }
 
+/* ===== 行動追蹤看板 ===== */
+.kanban-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.kanban-col { background: #f8f9fa; border: 1px solid var(--border); border-radius: 10px; padding: 14px; min-height: 400px; }
+.kanban-col-hd { display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid var(--border); font-weight: 700; font-size: 14px; }
+.kb-cnt { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1px 9px; font-size: 12px; color: var(--text-light); }
+.kb-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all .15s; }
+.kb-card:hover { box-shadow: 0 6px 14px rgba(0,0,0,.08); transform: translateY(-1px); }
+.kb-card.overdue { border-left: 4px solid var(--danger); }
+.kb-card-ttl { font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
+.kb-card-desc { font-size: 12px; color: var(--text-light); margin-bottom: 10px; line-height: 1.5; }
+.kb-prg { height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.kb-prg-fg { height: 100%; background: var(--accent); border-radius: 3px; }
+.kb-card-meta { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--text-light); }
+.kb-av { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg,#2563eb,#7c3aed); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+.kb-empty { text-align: center; color: var(--text-light); padding: 30px; font-size: 13px; }
+.form-row { margin-bottom: 12px; }
+.form-row label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+
+/* ===== 預警通知 ===== */
+.alert-item { display: flex; gap: 14px; padding: 14px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.alert-item:hover { background: #f8f9fa; }
+.alert-ic { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.alert-bd { flex: 1; min-width: 0; }
+.alert-at { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.alert-ad { font-size: 12.5px; color: var(--text-light); line-height: 1.6; }
+.alert-sg { font-size: 12px; color: #2980b9; margin-top: 4px; background: #eaf2f8; padding: 6px 10px; border-radius: 6px; }
+.alert-meta { font-size: 11px; color: var(--text-light); margin-top: 6px; }
+.alert-act { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ===== 多維下鑽排行 ===== */
+.rank-no { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; background: #f1f5f9; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: var(--text-light); }
+.rank-no.top1 { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #fff; }
+.rank-no.top2 { background: linear-gradient(135deg,#94a3b8,#64748b); color: #fff; }
+.rank-no.top3 { background: linear-gradient(135deg,#d97706,#b45309); color: #fff; }
+.rank-bar { height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.rank-bar-fg { height: 100%; border-radius: 4px; background: linear-gradient(to right,#2563eb,#60a5fa); }
+
+/* ===== 通用徽章 ===== */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.bg-success { background: #d4edda; color: #155724; }
+.bg-warning { background: #fff3cd; color: #856404; }
+.bg-danger { background: #f8d7da; color: #721c24; }
+.bg-info { background: #d1ecf1; color: #0c5460; }
+
 /* ===== 响应式 ===== */
 @media (max-width: 768px) {
     #sidebar { width: 60px; }

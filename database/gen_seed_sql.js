@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * 產生種子資料 SQL 檔案
  * 獨立執行：node database/gen_seed_sql.js
  * 輸出：database/seed_data.sql

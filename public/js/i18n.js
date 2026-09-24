@@ -55,6 +55,15 @@ const I18N = {
             'page.trend': '年度趨勢分析',
             'page.batch': '批次管線',
             'page.system': '系統設定',
+            'page.actions': '行動追蹤看板',
+            'page.alerts': '預警通知中心',
+            'page.drilldown': '多維度下鑽分析',
+            'page.cashForecast': '現金流量預測',
+            'page.mgmtAccounting': '管理會計',
+            'page.budget': '預算編制',
+            'page.consolidation': '合併報表',
+            'page.aiqa': 'AI 財務問答',
+            'page.scenario': '財務情景模擬',
 
             // 導航項目
             'nav.dashboard.item': '財務儀表板',
@@ -998,7 +1007,19 @@ const I18N = {
             'trend.month.9': '9月',
             'trend.month.10': '10月',
             'trend.month.11': '11月',
-            'trend.month.12': '12月'
+            'trend.month.12': '12月',
+
+            // 經營決策新功能
+            'nav.decision': '經營決策',
+            'nav.actions': '行動追蹤',
+            'nav.alerts': '預警通知',
+            'nav.drilldown': '多維下鑽',
+            'nav.cashForecast': '現金預測',
+            'nav.mgmtAccounting': '管理會計',
+            'nav.budget': '預算編制',
+            'nav.consolidation': '合併報表',
+            'nav.aiqa': 'AI 問答',
+            'nav.scenario': '情景模擬'
         },
 
         'zh-CN': {
@@ -1050,6 +1071,15 @@ const I18N = {
             'page.trend': '年度趋势分析',
             'page.batch': '批次管线',
             'page.system': '系统设置',
+            'page.actions': '行动追踪看板',
+            'page.alerts': '预警通知中心',
+            'page.drilldown': '多维度下钻分析',
+            'page.cashForecast': '现金流量预测',
+            'page.mgmtAccounting': '管理会计',
+            'page.budget': '预算编制',
+            'page.consolidation': '合并报表',
+            'page.aiqa': 'AI 财务问答',
+            'page.scenario': '财务情景模拟',
 
             // 导航项目
             'nav.dashboard.item': '财务仪表板',
@@ -1988,7 +2018,19 @@ const I18N = {
             'trend.month.9': '9月',
             'trend.month.10': '10月',
             'trend.month.11': '11月',
-            'trend.month.12': '12月'
+            'trend.month.12': '12月',
+
+            // 经营决策新功能
+            'nav.decision': '经营决策',
+            'nav.actions': '行动追踪',
+            'nav.alerts': '预警通知',
+            'nav.drilldown': '多维下钻',
+            'nav.cashForecast': '现金预测',
+            'nav.mgmtAccounting': '管理会计',
+            'nav.budget': '预算编制',
+            'nav.consolidation': '合并报表',
+            'nav.aiqa': 'AI 问答',
+            'nav.scenario': '情景模拟'
         },
 
         'en': {
@@ -2040,6 +2082,15 @@ const I18N = {
             'page.trend': 'Annual Trend Analysis',
             'page.batch': 'Batch Pipeline',
             'page.system': 'System Settings',
+            'page.actions': 'Action Tracking',
+            'page.alerts': 'Alert Center',
+            'page.drilldown': 'Drill-down Analysis',
+            'page.cashForecast': 'Cash Flow Forecast',
+            'page.mgmtAccounting': 'Management Accounting',
+            'page.budget': 'Budget Management',
+            'page.consolidation': 'Consolidated Reports',
+            'page.aiqa': 'AI Financial Q&A',
+            'page.scenario': 'Scenario Simulation',
 
             // Nav items
             'nav.dashboard.item': 'Financial Dashboard',
@@ -2978,7 +3029,19 @@ const I18N = {
             'trend.month.9': 'Sep',
             'trend.month.10': 'Oct',
             'trend.month.11': 'Nov',
-            'trend.month.12': 'Dec'
+            'trend.month.12': 'Dec',
+
+            // Decision-making new features
+            'nav.decision': 'Decision',
+            'nav.actions': 'Action Tracking',
+            'nav.alerts': 'Alert Center',
+            'nav.drilldown': 'Drill-down',
+            'nav.cashForecast': 'Cash Forecast',
+            'nav.mgmtAccounting': 'Mgmt Accounting',
+            'nav.budget': 'Budget',
+            'nav.consolidation': 'Consolidation',
+            'nav.aiqa': 'AI Q&A',
+            'nav.scenario': 'Scenario'
         }
     },
 

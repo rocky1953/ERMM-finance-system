@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * BEP 勾稽一致性全量核查（只读，不写库）
  * 复刻 routes/bep.js 的 /detail 逻辑：
  *   booked = 现金账对应 amt_type 的 CR+DR；target = resolveTarget(门槛表)
