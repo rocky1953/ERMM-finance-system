@@ -22,6 +22,17 @@ router.post('/ask', async (req, res) => {
             if (!PROVIDERS[pvd]) return fail(res, '請選擇 LLM 服務商（Kimi 或 DeepSeek）');
             try {
                 const result = await askLLM(question, bu, mm, pvd, lang);
+                // 回覆前先落庫（主鏈路確保記錄不遺失）
+                try {
+                    await saveAIRecord({
+                        bu_no: bu, question, answer: result.answer,
+                        remark: `${result.provider || ''} · ${result.detail || ''}`,
+                        user: req.user,
+                        xuser_name: req.body.xuser_name
+                    });
+                } catch (saveErr) {
+                    console.error('[aiqa] 對談記錄落庫失敗：', saveErr.message);
+                }
                 return ok(res, result);
             } catch (e) {
                 // Key 未設定 / 無財務資料等可預期情況回 400，其餘回 500
@@ -73,6 +84,56 @@ const SUGGESTIONS = {
 router.get('/suggestions', (req, res) => {
     const lang = normalizeLang(req.query.lang);
     ok(res, SUGGESTIONS[lang] || SUGGESTIONS['zh-TW']);
+});
+
+// 對談記錄查詢（分頁 + 公司/關鍵字篩選）
+// 一般使用者僅能查自己的記錄；管理員可查全部或指定 xuser_id
+router.get('/records', async (req, res) => {
+    try {
+        const isAdmin = req.user && req.user.admin === '管理員';
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+        const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
+        const offset = (page - 1) * pageSize;
+
+        const where = ['1=1'];
+        const params = [];
+        if (req.query.bu_no) { where.push('bu_no=?'); params.push(String(req.query.bu_no).toUpperCase()); }
+        if (req.query.keyword) {
+            where.push("(JSON_UNQUOTE(JSON_EXTRACT(ai_records, '$.question')) LIKE ? OR JSON_UNQUOTE(JSON_EXTRACT(ai_records, '$.answer')) LIKE ?)");
+            const kw = `%${req.query.keyword}%`;
+            params.push(kw, kw);
+        }
+        if (isAdmin && req.query.xuser_id) {
+            where.push('xuser_id=?');
+            params.push(String(req.query.xuser_id));
+        } else if (!isAdmin) {
+            // 非管理員強制只能看自己（測試環境 req.user 為空時不限制）
+            if (req.user && req.user.user_id) { where.push('xuser_id=?'); params.push(req.user.user_id); }
+        }
+        const whereSql = where.join(' AND ');
+
+        const [[cntRow]] = await pool.query(
+            `SELECT COUNT(*) AS total FROM ermm_ai_records WHERE ${whereSql}`, params
+        );
+        const [rows] = await pool.query(
+            `SELECT uid, bu_no, xuser_id, xuser_name, ai_records, remark,
+                    DATE_FORMAT(created_time, '%Y/%m/%d %H:%i:%s') AS created_time
+             FROM ermm_ai_records WHERE ${whereSql}
+             ORDER BY uid DESC LIMIT ? OFFSET ?`,
+            [...params, pageSize, offset]
+        );
+        const list = rows.map(r => {
+            let rec = r.ai_records;
+            if (typeof rec === 'string') { try { rec = JSON.parse(rec); } catch (e) { rec = { question: '', answer: rec }; } }
+            return {
+                uid: r.uid, bu_no: r.bu_no, xuser_id: r.xuser_id, xuser_name: r.xuser_name,
+                question: (rec && rec.question) || '',
+                answer: (rec && rec.answer) || '',
+                remark: r.remark || '', created_time: r.created_time
+            };
+        });
+        ok(res, { list, total: cntRow.total, page, pageSize });
+    } catch (err) { fail500(res, err); }
 });
 
 // 語言歸一化：支援 zh-TW/zh-HK/zh-CN/zh/en 等寫法，輸出 zh-TW / zh-CN / en
@@ -130,6 +191,27 @@ function normalizeYYYYMM(input) {
         return `${s.slice(0, 4)}/${s.slice(4, 6)}`;
     }
     return null;
+}
+
+// 保存一次 LLM 問答到 ermm_ai_records
+async function saveAIRecord({ bu_no, question, answer, remark, user, xuser_name }) {
+    const xuserId = (user && user.user_id) || 'unknown';
+    let xuserName = String(xuser_name || '').trim();
+    if (!xuserName && xuserId !== 'unknown') {
+        const [rows] = await pool.execute(
+            'SELECT xuser_name FROM cams_xuser WHERE xuser_id=? LIMIT 1', [xuserId]
+        );
+        xuserName = (rows[0] && rows[0].xuser_name) || xuserId;
+    }
+    await pool.execute(
+        `INSERT INTO ermm_ai_records (bu_no, xuser_id, xuser_name, ai_records, remark)
+         VALUES (?, ?, ?, CAST(? AS JSON), ?)`,
+        [
+            bu_no, xuserId, xuserName,
+            JSON.stringify({ question: String(question), answer: String(answer) }),
+            String(remark || '').slice(0, 255)
+        ]
+    );
 }
 
 // 取得指定公司+月份的財務摘要；無資料或未指定月份時回退最新一期

@@ -34,8 +34,11 @@ registerPage('aiqa', async (c) => {
             <div id="aiSuggest" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
         <div class="card" style="margin-top:16px;min-height:300px;">
-            <div class="card-title">${t('aiqa.chat_log')}</div>
-            <div id="aiChat" style="max-height:500px;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div class="card-title" style="margin:0;">${t('aiqa.chat_log')}</div>
+                <button type="button" class="btn btn-sm" onclick="AIRecords.open()">📋 ${t('airecords.title')}</button>
+            </div>
+            <div id="aiChat" style="max-height:500px;overflow-y:auto;margin-top:10px;">
                 <div style="text-align:center;color:#95a5a6;padding:40px;">
                     <div style="font-size:3em;margin-bottom:10px;">💬</div>
                     <div>${t('aiqa.welcome')}</div>
@@ -131,7 +134,8 @@ const AIQA = {
             const res = await API.post('/api/aiqa/ask', {
                 question: q, bu_no: bu, YYYY_MM: mm,
                 useLLM: useLLM, provider: provider,
-                lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW'
+                lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW',
+                xuser_name: (Auth.getUser() && Auth.getUser().user_name) || ''
             });
             if (thinkingEl) thinkingEl.remove();
             const a = res.data;
@@ -230,5 +234,97 @@ const LLMKeyMgr = {
             const res = await API.post('/api/llm/test', { provider, api_key });
             UI.toast(`${t('llm.test_ok')}：${(res.data && res.data.reply) || 'OK'}`, 'success');
         } catch (e) { UI.toast(e.message, 'error'); }
+    }
+};
+
+// ====== AI 對談記錄查詢 ======
+const AIRecords = {
+    page: 1,
+    pageSize: 10,
+
+    async open() {
+        UI.modal(`📋 ${t('airecords.title')}`, `
+            <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+                <select id="airBu" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">
+                    <option value="">${t('airecords.all_bu')}</option>
+                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                </select>
+                <input type="text" id="airKw" placeholder="${t('airecords.kw_ph')}" style="flex:1;min-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;" onkeydown="if(event.key==='Enter')AIRecords.search()">
+                <button class="btn btn-primary btn-sm" onclick="AIRecords.search()">🔍 ${t('airecords.search')}</button>
+            </div>
+            <div id="airList" style="max-height:55vh;overflow-y:auto;">
+                <div style="text-align:center;color:#95a5a6;padding:30px;">${t('airecords.loading')}</div>
+            </div>
+            <div id="airPager" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;"></div>
+        `, `<button class="btn" onclick="UI.closeModal()">${t('llm.close')}</button>`);
+        // 加寬彈窗
+        const m = document.querySelector('#modalOverlay .modal');
+        if (m) { m.style.width = '820px'; m.style.maxWidth = '94vw'; }
+        document.getElementById('airBu').value = State.bu_no || '';
+        this.page = 1;
+        await this.load();
+    },
+
+    search() { this.page = 1; this.load(); },
+
+    async load() {
+        const listEl = document.getElementById('airList');
+        const bu = document.getElementById('airBu').value;
+        const kw = document.getElementById('airKw').value.trim();
+        try {
+            const qs = new URLSearchParams({ page: this.page, pageSize: this.pageSize });
+            if (bu) qs.set('bu_no', bu);
+            if (kw) qs.set('keyword', kw);
+            const res = await API.get(`/api/aiqa/records?${qs.toString()}`);
+            const { list, total, page } = res.data;
+            if (!list.length) {
+                listEl.innerHTML = `<div style="text-align:center;color:#95a5a6;padding:30px;">${t('airecords.empty')}</div>`;
+            } else {
+                const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                listEl.innerHTML = list.map(r => `
+                    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+                        <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#7f8c8d;margin-bottom:6px;flex-wrap:wrap;">
+                            <span>🕒 ${esc(r.created_time)} ｜ ${esc(r.bu_no)} ｜ 👤 ${esc(r.xuser_name || r.xuser_id)}</span>
+                            <button class="btn btn-sm" style="padding:2px 10px;" onclick="AIRecords.copy(${r.uid})">📄 ${t('airecords.copy')}</button>
+                        </div>
+                        <div style="background:#eff6ff;color:#1e40af;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:600;margin-bottom:6px;">Q：${esc(r.question)}</div>
+                        <div style="background:#f8fafc;padding:8px 10px;border-radius:6px;font-size:13px;color:#334155;white-space:pre-wrap;max-height:200px;overflow-y:auto;line-height:1.6;">${esc(r.answer)}</div>
+                        ${r.remark ? `<div style="font-size:11px;color:#95a5a6;margin-top:6px;">${esc(r.remark)}</div>` : ''}
+                    </div>`).join('');
+            }
+            const totalPages = Math.max(1, Math.ceil(total / this.pageSize));
+            document.getElementById('airPager').innerHTML = `
+                <span>${t('airecords.total')}：${total}</span>
+                <span style="display:flex;gap:8px;align-items:center;">
+                    <button class="btn btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="AIRecords.go(${page - 1})">‹ ${t('airecords.prev')}</button>
+                    ${page} / ${totalPages}
+                    <button class="btn btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="AIRecords.go(${page + 1})">${t('airecords.next')} ›</button>
+                </span>`;
+            // 快取當前頁資料供複製使用
+            this._cache = {};
+            (list || []).forEach(r => { this._cache[r.uid] = r; });
+        } catch (e) {
+            listEl.innerHTML = `<div style="color:#e74c3c;padding:20px;">❌ ${e.message}</div>`;
+        }
+    },
+
+    go(p) { this.page = p; this.load(); },
+
+    async copy(uid) {
+        const r = this._cache && this._cache[uid];
+        if (!r) return;
+        const text = `[${r.created_time}] ${r.bu_no} · ${r.xuser_name || r.xuser_id}\n`
+            + `Q：${r.question}\nA：${r.answer}` + (r.remark ? `\n（${r.remark}）` : '');
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta);
+            }
+            UI.toast(t('airecords.copied'), 'success');
+        } catch (e) { UI.toast(t('airecords.copy_fail'), 'error'); }
     }
 };

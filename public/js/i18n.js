@@ -1047,7 +1047,21 @@ const I18N = {
             'llm.saved': '儲存成功',
             'llm.testing': '測試連線中…',
             'llm.test_ok': '連線成功',
-            'llm.key_placeholder': '留空表示不變更（目前：{mask}）'
+            'llm.key_placeholder': '留空表示不變更（目前：{mask}）',
+
+            // AI 對談記錄
+            'airecords.title': '對談記錄查詢',
+            'airecords.all_bu': '全部公司',
+            'airecords.kw_ph': '搜尋問題或回答內容…',
+            'airecords.search': '查詢',
+            'airecords.loading': '載入中…',
+            'airecords.empty': '尚無 LLM 對談記錄',
+            'airecords.copy': '複製',
+            'airecords.total': '總筆數',
+            'airecords.prev': '上一頁',
+            'airecords.next': '下一頁',
+            'airecords.copied': '已複製到剪貼簿',
+            'airecords.copy_fail': '複製失敗，請手動選取複製'
         },
 
         'zh-CN': {
@@ -2086,7 +2100,21 @@ const I18N = {
             'llm.saved': '保存成功',
             'llm.testing': '测试连接中…',
             'llm.test_ok': '连接成功',
-            'llm.key_placeholder': '留空表示不变更（当前：{mask}）'
+            'llm.key_placeholder': '留空表示不变更（当前：{mask}）',
+
+            // AI 对谈记录
+            'airecords.title': '对谈记录查询',
+            'airecords.all_bu': '全部公司',
+            'airecords.kw_ph': '搜索问题或回答内容…',
+            'airecords.search': '查询',
+            'airecords.loading': '加载中…',
+            'airecords.empty': '暂无 LLM 对谈记录',
+            'airecords.copy': '复制',
+            'airecords.total': '总笔数',
+            'airecords.prev': '上一页',
+            'airecords.next': '下一页',
+            'airecords.copied': '已复制到剪贴板',
+            'airecords.copy_fail': '复制失败，请手动选取复制'
         },
 
         'en': {
@@ -3125,7 +3153,21 @@ const I18N = {
             'llm.saved': 'Saved successfully',
             'llm.testing': 'Testing connection…',
             'llm.test_ok': 'Connection OK',
-            'llm.key_placeholder': 'Leave blank to keep current ({mask})'
+            'llm.key_placeholder': 'Leave blank to keep current ({mask})',
+
+            // AI conversation records
+            'airecords.title': 'Conversation Records',
+            'airecords.all_bu': 'All companies',
+            'airecords.kw_ph': 'Search questions or answers…',
+            'airecords.search': 'Search',
+            'airecords.loading': 'Loading…',
+            'airecords.empty': 'No LLM conversation records yet',
+            'airecords.copy': 'Copy',
+            'airecords.total': 'Total',
+            'airecords.prev': 'Prev',
+            'airecords.next': 'Next',
+            'airecords.copied': 'Copied to clipboard',
+            'airecords.copy_fail': 'Copy failed, please select and copy manually'
         }
     },
 
