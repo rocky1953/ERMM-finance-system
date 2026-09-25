@@ -65,6 +65,7 @@ const consolidationRoutes = require('./routes/consolidation');
 const mgmtAccountingRoutes = require('./routes/mgmtAccounting');
 const aiqaRoutes = require('./routes/aiqa');
 const scenarioRoutes = require('./routes/scenario');
+const llmRoutes = require('./routes/llm');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -109,6 +110,7 @@ app.use('/api/consolidation', consolidationRoutes);
 app.use('/api/mgmt-accounting', mgmtAccountingRoutes);
 app.use('/api/aiqa', aiqaRoutes);
 app.use('/api/scenario', scenarioRoutes);
+app.use('/api/llm', llmRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {
