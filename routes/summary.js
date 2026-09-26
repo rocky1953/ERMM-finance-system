@@ -1,4 +1,4 @@
-﻿/**
+/**
  * mgm_finance_summary 財務摘要路由 (200+ 欄位核心樞紐)
  */
 const express = require('express');
@@ -10,7 +10,7 @@ const { ok, fail, fail500, n } = require('../utils/response');
 router.get('/', async (req, res) => {
     try {
         const { bu_no, YYYY, YYYY_MM, limit } = req.query;
-        let sql = 'SELECT uid, bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt, AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt, debet_amt, captial_stock, captial_reserve, legal_reserve, accumulated_amt, current_PL_amt, stockholder_amt, ttl_debet_amt, sale_amt, sale_cost_amt, VAT_amt, sale_exp_amt, MGM_EXP_amt, finance_EXP_amt, BIZ_major_margin_amt, BIZ_margin_amt, operation_profit_amt, pretax_profit_amt, net_profit_amt, VAT_rate, Z_score, risk_color, create_time, update_time FROM mgm_finance_summary WHERE 1=1';
+        let sql = 'SELECT uid, bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt, AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt, debet_amt, captial_stock, captial_reserve, legal_reserve, accumulated_amt, current_PL_amt, stockholder_amt, ttl_debet_amt, sale_amt, sale_cost_amt, VAT_amt, sale_exp_amt, MGM_EXP_amt, finance_EXP_amt, BIZ_major_margin_amt, BIZ_margin_amt, operation_profit_amt, pretax_profit_amt, net_profit_amt, VAT_rate, Z_score, risk_color, current_asset_amt, non_current_asset_amt, current_debet_amt, long_term_debet_amt, create_time, update_time FROM mgm_finance_summary WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY) { sql += ' AND YYYY=?'; params.push(YYYY); }
