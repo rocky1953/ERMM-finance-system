@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
         }
 
         const [rows] = await pool.execute(
-            'SELECT xuser_id, xuser_name, xuser_password, inuse_flag, admin FROM cams_xuser WHERE xuser_id=? LIMIT 1',
+            'SELECT xuser_id, xuser_name, xuser_password, inuse_flag, admin, xuser_type FROM cams_xuser WHERE xuser_id=? LIMIT 1',
             [user_id]
         );
 
@@ -57,7 +57,8 @@ router.post('/login', async (req, res) => {
             user: {
                 user_id: user.xuser_id,
                 user_name: user.xuser_name || user.xuser_id,
-                admin: user.admin || '普通者'
+                admin: user.admin || '普通者',
+                user_type: user.xuser_type || '一般員工'
             }
         }, '登入成功');
     } catch (err) {
@@ -70,7 +71,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authRequired, async (req, res) => {
     try {
         const [rows] = await pool.execute(
-            'SELECT xuser_id, xuser_name, inuse_flag, admin FROM cams_xuser WHERE xuser_id=? LIMIT 1',
+            'SELECT xuser_id, xuser_name, inuse_flag, admin, xuser_type FROM cams_xuser WHERE xuser_id=? LIMIT 1',
             [req.user.user_id]
         );
         if (rows.length === 0) return fail(res, '使用者不存在', 404);
@@ -81,7 +82,8 @@ router.get('/me', authRequired, async (req, res) => {
         ok(res, {
             user_id: u.xuser_id,
             user_name: u.xuser_name || u.xuser_id,
-            admin: u.admin || '普通者'
+            admin: u.admin || '普通者',
+            user_type: u.xuser_type || '一般員工'
         });
     } catch (err) {
         res.status(500).json({ success: false, message: '服務異常' });

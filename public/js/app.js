@@ -19,6 +19,11 @@ const Auth = {
         const u = this.getUser();
         return !!(u && u.admin === '管理員');
     },
+    // 是否為部門主管或高階主管（可操作 CRUD 功能模組）
+    isManager() {
+        const u = this.getUser();
+        return !!(u && (u.user_type === '部門主管' || u.user_type === '高階主管'));
+    },
 
     showLogin() {
         document.body.classList.add('locked');

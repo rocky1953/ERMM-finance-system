@@ -143,12 +143,12 @@ const UserForm = {
                 <div class="form-group"><label>${t('user.col.email')}</label><input id="uf_email" type="email" value="${u.email||''}"></div>
                 <div class="form-group"><label>${t('user.col.tel_no')}</label><input id="uf_tel" value="${u.tel_no||''}"></div>
                 <div class="form-group"><label>${t('user.col.xuser_type')}</label>
-                    <select id="uf_type"><option value="一般員工">${t('user.type.staff')}</option><option value="部門經理">${t('user.type.manager')}</option><option value="高階主管">${t('user.type.executive')}</option></select></div>
+                    <select id="uf_type"><option value="一般員工">${t('user.type.staff')}</option><option value="部門主管">${t('user.type.manager')}</option><option value="高階主管">${t('user.type.executive')}</option></select></div>
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">${t('save')}</button>`);
         if (u.inuse_flag) document.getElementById('uf_stat').value = u.inuse_flag;
         document.getElementById('uf_admin').value = (u.admin === '管理員') ? '管理員' : '普通者';
-        document.getElementById('uf_type').value = (u.xuser_type === '部門經理' || u.xuser_type === '高階主管') ? u.xuser_type : '一般員工';
+        document.getElementById('uf_type').value = (u.xuser_type === '部門主管' || u.xuser_type === '部門經理' || u.xuser_type === '高階主管') ? u.xuser_type : '一般員工';
     },
     async save(id) {
         const body = {

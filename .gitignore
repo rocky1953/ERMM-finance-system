@@ -24,6 +24,8 @@ Thumbs.db
 *.bak
 _cache/
 migrations/_*.sql
+_tmp_*.js
+.trae/
 
 # 匯入產物
 public/data/import*/
