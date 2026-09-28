@@ -2,11 +2,12 @@
  * 系統設定頁面（碼表 CRUD + KPI）
  */
 registerPage('system', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="card-title">🔧 ${t('sys.codes')}</div>
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="CodeForm.open()">➕ ${t('sys.add_code')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="CodeForm.open()">➕ ${t('sys.add_code')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadCodes()">🔄 ${t('refresh')}</button>
                 <div class="spacer"></div>
                 <select id="codeType" onchange="loadCodes()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
@@ -22,8 +23,8 @@ registerPage('system', async (c) => {
         <div class="card">
             <div class="card-title">🎯 ${t('sys.kpi')}</div>
             <div class="toolbar">
-                <button class="btn btn-warning" onclick="kpiLight()">🔔 ${t('sys.kpi_light')}</button>
-                <button class="btn btn-primary" onclick="KpiForm.open()">➕ ${t('kpi.add')}</button>
+                ${_mgr ? `<button class="btn btn-warning" onclick="kpiLight()">🔔 ${t('sys.kpi_light')}</button>
+                <button class="btn btn-primary" onclick="KpiForm.open()">➕ ${t('kpi.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadSysKPI()">🔄 ${t('refresh')}</button>
             </div>
             <div id="kpiTable" style="margin-top:15px">${t('loading')}</div>
@@ -35,20 +36,18 @@ registerPage('system', async (c) => {
 
 // ============ 系統碼表 ============
 async function loadCodes() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('codeTable');
-    if (!el) return;
     try {
-        const tp = document.getElementById('codeType')?.value || '';
-        let url = '/api/system/codes';
-        if (tp) url += `?code_type=${tp}`;
-        const res = await API.get(url);
+        const type = document.getElementById('codeType').value;
+        const res = await API.get(`/api/system/codes?code_type=${encodeURIComponent(type)}&bu_no=${State.bu_no}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">📋 ${t('sys.no_codes')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.type')}</th><th>${t('sys.code')}</th><th>${t('sys.name')}</th>
                 <th>${t('sys.val1')}</th><th>${t('sys.val2')}</th><th>${t('sys.val3')}</th>
-                <th>${t('system.col.sort')}</th><th>${t('system.col.status')}</th><th>${t('system.col.action')}</th>
+                <th>${t('system.col.sort')}</th><th>${t('system.col.status')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -58,10 +57,10 @@ async function loadCodes() {
                     <td class="num">${UI.fmt(r.value_number3,4)}</td>
                     <td>${r.sort_order||0}</td>
                     <td>${r.inuse_flag==='USE'?'<span style="color:#27ae60">● '+t('system.status.active')+'</span>':'<span style="color:#e74c3c">○ '+t('system.status.inactive')+'</span>'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="CodeForm.open(${r.id})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delCode(${r.id})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
@@ -133,16 +132,16 @@ async function delCode(id) {
 
 // ============ KPI ============
 async function loadSysKPI() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('kpiTable');
-    if (!el) return;
     try {
-        const res = await API.get(`/api/system/kpi?bu_no=${State.bu_no}`);
+        const res = await API.get('/api/system/kpi');
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">🎯 ${t('sys.no_kpi')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('sys.kpi_id')}</th><th>${t('sys.kpi_name')}</th><th>${t('system.col.unit')}</th>
-                <th>${t('sys.cur_val')}</th><th>${t('sys.low')}</th><th>${t('sys.high')}</th><th>${t('system.col.direction')}</th><th>${t('sys.light')}</th><th>${t('system.col.action')}</th>
+                <th>${t('sys.cur_val')}</th><th>${t('sys.low')}</th><th>${t('sys.high')}</th><th>${t('system.col.direction')}</th><th>${t('sys.light')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => {
                 const c = (r.KPI_color || '').toUpperCase();
@@ -156,10 +155,10 @@ async function loadSysKPI() {
                     <td class="num">${UI.fmt(r.KPI2,4)}</td>
                     <td>${r.pct_type==='desc'?'↓ '+t('system.kpi.high_better'):'↑ '+t('system.kpi.low_better')}</td>
                     <td><span style="color:${dotColor};font-size:1.2em;">●</span> ${c||'-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="KpiForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delSysKPI(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`;
             }).join('')}</tbody>
         </table>`;

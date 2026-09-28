@@ -3,6 +3,7 @@
  * ageing_days × reduce_percentage → 自動算 current_value / current_lose
  */
 registerPage('xitems', async (c) => {
+    const _mgr = Auth.isManager();
     const ageingOpts = [
         { value: '',  label: t('sys.all') },
         { value: 'A 正常',     label: t('xi.aging_A') },
@@ -18,8 +19,8 @@ registerPage('xitems', async (c) => {
                 <label>${t('xi.aging_label')}：<select id="xiAge" onchange="loadXitems()">
                     ${ageingOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
                 </select></label>
-                <button class="btn btn-primary" onclick="XitemsForm.open()">➕ ${t('xi.add')}</button>
-                <button class="btn btn-warning" onclick="recalcXitems()">🔄 ${t('xi.recalc')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="XitemsForm.open()">➕ ${t('xi.add')}</button>
+                <button class="btn btn-warning" onclick="recalcXitems()">🔄 ${t('xi.recalc')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadXitems()">🔄</button>
             </div>
             <div id="xitemsTable">${t('loading')}</div>
@@ -30,6 +31,7 @@ registerPage('xitems', async (c) => {
 });
 
 async function loadXitems() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('xitemsTable');
     try {
         const res = await API.get(`/api/xitems?bu_no=${document.getElementById('xiBU').value}&ageing_category=${encodeURIComponent(document.getElementById('xiAge').value)}`);
@@ -46,7 +48,7 @@ async function loadXitems() {
             <table class="data-table">
             <thead><tr>
                 <th>${t('xi.col.bu')}</th><th>${t('xi.col.xitems')}</th><th>${t('xi.col.name')}</th><th>${t('xi.col.qty')}</th><th>${t('xi.col.price')}</th><th>${t('xi.col.rate')}</th>
-                <th>${t('xi.col.orig')}</th><th>${t('xi.col.ageing')}</th><th>${t('xi.col.discount')}</th><th>${t('xi.col.disc_amt')}</th><th>${t('xi.col.gain')}</th><th>${t('xi.col.action')}</th>
+                <th>${t('xi.col.orig')}</th><th>${t('xi.col.ageing')}</th><th>${t('xi.col.discount')}</th><th>${t('xi.col.disc_amt')}</th><th>${t('xi.col.gain')}</th>${_mgr ? `<th>${t('xi.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => {
                 const lose = Number(r.current_lose||0);
@@ -63,10 +65,10 @@ async function loadXitems() {
                     <td class="num" style="color:${lose>0?'#e74c3c':'#27ae60'}">${UI.fmt(r.reduce_percentage||0)}%</td>
                     <td class="num">${UI.fmt(r.current_value)}</td>
                     <td class="num" style="color:${lose>0?'#e74c3c':'#27ae60'}">${UI.fmt(lose)}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="XitemsForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delXitems(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`;
             }).join('')}</tbody>
         </table>`;

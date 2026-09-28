@@ -2,6 +2,7 @@
  * 往來對象 relation_detail CRUD（客戶 / 供應商 / 關係人主檔）
  */
 registerPage('relation', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
@@ -11,7 +12,7 @@ registerPage('relation', async (c) => {
                     <option value="客戶">${t('relation.type.customer')}</option><option value="供應商">${t('relation.type.supplier')}</option><option value="關係人">${t('relation.type.related')}</option></select></label>
                 <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
                     <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
-                <button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadRelation()">🔄 ${t('refresh')}</button>
             </div>
             <div id="relationTable">${t('loading')}</div>
@@ -22,6 +23,7 @@ registerPage('relation', async (c) => {
 });
 
 async function loadRelation() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('relationTable');
     try {
         const bu = document.getElementById('relBU').value;
@@ -33,7 +35,7 @@ async function loadRelation() {
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('relation.th.type')}</th><th>${t('relation.th.id')}</th><th>${t('relation.th.name')}</th>
-                <th>${t('relation.th.contact')}</th><th>${t('relation.th.phone')}</th><th>${t('relation.th.tax')}</th><th>${t('system.col.status')}</th><th>${t('system.col.action')}</th>
+                <th>${t('relation.th.contact')}</th><th>${t('relation.th.phone')}</th><th>${t('relation.th.tax')}</th><th>${t('system.col.status')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -45,10 +47,10 @@ async function loadRelation() {
                     <td>${r.contact_person||'-'}</td><td>${r.contact_phone||'-'}</td>
                     <td>${r.tax_id||'-'}</td>
                     <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">●</span>' : '<span style="color:#95a5a6">○</span>'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="RelationForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delRelation(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')}</tbody>
         </table>`;

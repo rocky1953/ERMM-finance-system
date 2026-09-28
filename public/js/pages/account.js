@@ -2,13 +2,14 @@
  * 帳戶明細 mgm_account_details CRUD
  */
 registerPage('account', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
                 <label>${t('sys.business')}：<select id="aBU" onchange="loadAccount()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
                 <label>${t('monthly.ym')}：<input type="month" id="aYM" onchange="loadAccount()"></label>
-                <button class="btn btn-primary" onclick="AccountForm.open()">➕ ${t('account.btn.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="AccountForm.open()">➕ ${t('account.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadAccount()">🔄 ${t('refresh')}</button>
             </div>
             <div id="accountTable">${t('loading')}</div>
@@ -19,6 +20,7 @@ registerPage('account', async (c) => {
     loadAccount();
 });
 async function loadAccount() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('accountTable');
     try {
         const res = await API.get(`/api/account?bu_no=${document.getElementById('aBU').value}&YYYY_MM=${document.getElementById('aYM').value.replace('-','/')}`);
@@ -27,7 +29,7 @@ async function loadAccount() {
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('monthly.ym')}</th><th>${t('account.th.type')}</th><th>${t('account.th.group')}</th><th>${t('account.th.sub_group')}</th>
-                <th>${t('account.th.name')}</th><th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.remark')}</th><th>${t('system.col.action')}</th>
+                <th>${t('account.th.name')}</th><th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.remark')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -35,10 +37,10 @@ async function loadAccount() {
                     <td>${r.group_id||'-'}</td><td>${r.sub_group||'-'}</td>
                     <td>${r.acct_name||'-'}</td><td class="num">${UI.fmt(r.sub_amt)}</td>
                     <td>${r.DB_CR||'-'}</td><td>${r.remark||'-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="AccountForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delAccount(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

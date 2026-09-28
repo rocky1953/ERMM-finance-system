@@ -2,6 +2,7 @@
  * 月度項目 monthly_items CRUD
  */
 registerPage('monthly', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
@@ -10,7 +11,7 @@ registerPage('monthly', async (c) => {
                 <label>${t('monthly.ym')}：<input type="month" id="mYM" onchange="loadMonthly()"></label>
                 <label>${t('relation.th.type')}：<select id="mType" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
                     <option>租金</option><option>水電</option><option>薪資</option><option>保險</option><option>其他</option></select></label>
-                <button class="btn btn-primary" onclick="MonthlyForm.open()">➕ ${t('monthly.btn.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="MonthlyForm.open()">➕ ${t('monthly.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadMonthly()">🔄 ${t('refresh')}</button>
             </div>
             <div id="monthlyTable">${t('loading')}</div>
@@ -22,6 +23,7 @@ registerPage('monthly', async (c) => {
 });
 
 async function loadMonthly() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('monthlyTable');
     try {
         const bu = document.getElementById('mBU').value;
@@ -33,7 +35,7 @@ async function loadMonthly() {
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('monthly.ym')}</th><th>${t('relation.th.type')}</th><th>${t('monthly.th.name')}</th>
-                <th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.pay_date')}</th><th>${t('monthly.th.remark')}</th><th>${t('system.col.action')}</th>
+                <th>${t('monthly.th.amount')}</th><th>${t('monthly.th.drcr')}</th><th>${t('monthly.th.pay_date')}</th><th>${t('monthly.th.remark')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -41,10 +43,10 @@ async function loadMonthly() {
                     <td>${r.item_name||'-'}</td><td class="num">${UI.fmt(r.item_amt)}</td>
                     <td style="color:${r.DB_CR==='DR'?'#27ae60':r.DB_CR==='CR'?'#e74c3c':'#95a5a6'}">${r.DB_CR||'-'}</td>
                     <td>${r.pay_date||'-'}</td><td>${r.remark||'-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="MonthlyForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delMonthly(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

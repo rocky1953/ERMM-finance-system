@@ -2,12 +2,13 @@
  * 財務摘要頁面
  */
 registerPage('summary', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="SumForm.open()">➕ ${t('sum.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="SumForm.open()">➕ ${t('sum.add')}</button>
                 <button class="btn btn-success" onclick="SumForm.addon()">📋 ${t('sum.addon')}</button>
-                <button class="btn btn-warning" onclick="calcPL()">🔢 ${t('sum.calcPL')}</button>
+                <button class="btn btn-warning" onclick="calcPL()">🔢 ${t('sum.calcPL')}</button>` : ''}
                 <button class="btn btn-info" onclick="loadSummary()">🔄 ${t('refresh')}</button>
             </div>
             <div id="sumTable">${t('loading')}</div>
@@ -18,13 +19,14 @@ registerPage('summary', async (c) => {
 });
 
 async function loadSummary() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('sumTable');
     try {
         const res = await API.get(`/api/summary?bu_no=${State.bu_no}&YYYY=${State.YYYY_MM.split('/')[0]}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('📋', t('sum.no_data')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('sum.month')}</th><th>${t('sum.sale')}</th><th>${t('sum.cost')}</th><th>${t('sum.gross')}</th><th>${t('sum.op_income')}</th><th>${t('sum.net')}</th><th>${t('sum.total_asset')}</th><th>${t('sum.total_debt')}</th><th>${t('sum.equity')}</th><th>${t('po.col.action')}</th></tr></thead>
+            <thead><tr><th>${t('sum.month')}</th><th>${t('sum.sale')}</th><th>${t('sum.cost')}</th><th>${t('sum.gross')}</th><th>${t('sum.op_income')}</th><th>${t('sum.net')}</th><th>${t('sum.total_asset')}</th><th>${t('sum.total_debt')}</th><th>${t('sum.equity')}</th>${_mgr ? `<th>${t('po.col.action')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => `<tr>
                 <td>${r.YYYY_MM}</td>
                 <td class="num">${UI.fmt(r.sale_amt)}</td>
@@ -35,10 +37,10 @@ async function loadSummary() {
                 <td class="num">${UI.fmt(r.ttl_asset_amt)}</td>
                 <td class="num">${UI.fmt(r.ttl_debet_amt)}</td>
                 <td class="num">${UI.fmt(r.stockholder_amt)}</td>
-                <td>
+                ${_mgr ? `<td>
                     <button class="btn btn-sm btn-primary" onclick="SumForm.edit(${r.uid})">✏️ ${t('edit')}</button>
                     <button class="btn btn-sm btn-danger" onclick="delSum(${r.uid})">🗑</button>
-                </td>
+                </td>` : ''}
             </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

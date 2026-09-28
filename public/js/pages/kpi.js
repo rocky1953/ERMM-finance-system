@@ -2,6 +2,7 @@
  * KPI 門檻定義頁面
  */
 registerPage('kpi', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
@@ -9,7 +10,7 @@ registerPage('kpi', async (c) => {
                     <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
                 <label>${t('kpi.form.pct_type')}：<select id="kpiPct" onchange="loadKPI()"><option value="">${t('sys.all')}</option>
                     <option value="asc">asc（${t('kpiQuery.threshold_asc')}）</option><option value="desc">desc（${t('kpiQuery.threshold_desc')}）</option></select></label>
-                <button class="btn btn-primary" onclick="KpiThresholdForm.open()">➕ ${t('kpi.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="KpiThresholdForm.open()">➕ ${t('kpi.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadKPI()">🔄 ${t('kpi.recalc')}</button>
             </div>
             <div id="kpiTable">${t('loading')}</div>
@@ -20,17 +21,18 @@ registerPage('kpi', async (c) => {
 });
 
 async function loadKPI() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('kpiTable');
     try {
         const bu = document.getElementById('kpiBU').value;
         const pct = document.getElementById('kpiPct').value;
-        const res = await API.get(`/api/kpi?bu_no=${bu}&pct_type=${pct}`);
+        const res = await API.get(`/api/kpi?bu_no=${bu}&pct_type=${encodeURIComponent(pct)}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">🎯 ${t('kpi.title')} — ${t('sys.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('kpi.form.bu')}</th><th>KPI ID</th><th>${t('kpi.col.name')}</th><th>${t('kpi.form.threshold_low')}</th><th>${t('kpi.form.threshold_high')}</th><th>${t('kpi.col.unit')}</th>
-                <th>${t('kpi.form.pct_type')}</th><th>${t('kpi.col.current')}</th><th>${t('kpi.col.color')}</th><th>${t('kpi.form.remark')}</th><th>${t('kpi.col.action')}</th>
+                <th>${t('kpi.form.pct_type')}</th><th>${t('kpi.col.current')}</th><th>${t('kpi.col.color')}</th><th>${t('kpi.form.remark')}</th>${_mgr ? `<th>${t('kpi.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => {
                 const colorMap = { RED: '#e74c3c', YELLOW: '#f39c12', GREEN: '#27ae60' };
@@ -41,10 +43,10 @@ async function loadKPI() {
                     <td>${r.unit||'-'}</td><td>${r.pct_type||'-'}</td>
                     <td class="num">${UI.fmt(r.KPI_value)}</td><td>${badge}</td>
                     <td>${r.remark||'-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="KpiThresholdForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delKPI(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`;
             }).join('')}</tbody>
         </table>`;
