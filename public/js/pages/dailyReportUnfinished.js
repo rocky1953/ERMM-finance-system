@@ -150,6 +150,10 @@
                             if (!els || els.length === 0) return;
                             const p = this.persons[els[0].index];
                             if (p) this.openDetail(p.user_id, p.user_name, y, m);
+                        },
+                        onHover: (evt, els) => {
+                            const canvas = document.getElementById('druChart');
+                            if (canvas) canvas.style.cursor = els && els.length > 0 ? 'pointer' : 'default';
                         }
                     }
                 });
@@ -399,6 +403,10 @@
                             if (!els || els.length === 0) return;
                             const r = rows[els[0].index];
                             if (r) this.loadMonthlyDetail(r.YYYY_MM, r.label);
+                        },
+                        onHover: (evt, els) => {
+                            const canvas = document.getElementById('drumChart');
+                            if (canvas) canvas.style.cursor = els && els.length > 0 ? 'pointer' : 'default';
                         }
                     }
                 }));
