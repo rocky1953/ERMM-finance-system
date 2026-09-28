@@ -110,6 +110,15 @@
         </div>
     </div>
     <div class="nav-group">
+        <div class="nav-group-title" data-i18n="nav.work_report">工作日报</div>
+        <div class="nav-item" data-page="dailyReport" onclick="navigate('dailyReport')">
+            <span class="nav-icon">📝</span><span data-i18n="nav.dailyReport">工作日報表</span>
+        </div>
+        <div class="nav-item" data-page="dailyReportUnfinished" onclick="navigate('dailyReportUnfinished')">
+            <span class="nav-icon">📊</span><span data-i18n="nav.dailyReportUnfinished">工作未完成分析</span>
+        </div>
+    </div>
+    <div class="nav-group">
         <div class="nav-group-title" data-i18n="nav.analysis">財務分析</div>
         <div class="nav-item" data-page="summary" onclick="navigate('summary')">
             <span class="nav-icon">📋</span><span data-i18n="nav.summary">財務摘要</span>
@@ -250,6 +259,8 @@
 <script src="/js/pages/consolidation.js"></script>
 <script src="/js/pages/aiqa.js"></script>
 <script src="/js/pages/scenario.js"></script>
+<script src="/js/pages/dailyReport.js"></script>
+<script src="/js/pages/dailyReportUnfinished.js"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;
