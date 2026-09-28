@@ -21,9 +21,16 @@ const { ok, fail, fail500, pagination, n } = require('../utils/response');
 const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
 // 生命平衡轮八大模块（生活类）
 const LIFE_TYPES = WK_TYPES.slice(1);
-// 经理级身份：生产库存繁体（部門主管/高階主管），兼容历史值与简体测试种子
-const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高价主管'];
+// 经理级身份：兼容繁简体（部門主管/部门主管、高階主管/高阶主管、部門經理/部门经理）及历史错别字
+const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
 const ADMIN_MANAGER_VALUES = ['管理員', '管理员'];
+// 经理身份归一化：先做简→繁关键映射，再判断，避免 DB 中简繁体混杂导致漏判
+function isManagerRole(admin, xuserType) {
+    const norm = (s) => String(s || '')
+        .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
+        .replace(/管理员/g, '管理員').replace(/高价/g, '高階');
+    return ADMIN_MANAGER_VALUES.includes(norm(admin)) || MANAGER_TYPES.includes(norm(xuserType));
+}
 
 const DAY_START_MIN = 8 * 60;   // 08:00
 const DAY_END_MIN = 18 * 60;    // 18:00
@@ -107,7 +114,7 @@ async function resolveActor(req) {
         xuser_dept: u.xuser_dept || null,
         xuser_type: u.xuser_type || '一般員工',
         admin: u.admin || '普通者',
-        isManager: ADMIN_MANAGER_VALUES.includes(u.admin) || MANAGER_TYPES.includes(u.xuser_type)
+        isManager: isManagerRole(u.admin, u.xuser_type)
     };
 }
 
@@ -199,12 +206,15 @@ router.get('/', async (req, res) => {
 
         const listParams = [...params, String(pageSize), String(offset)];
         const [rows] = await pool.execute(`
-            SELECT r.id, r.bu_no, r.depart_id, r.user_id, r.user_name, r.report_date,
+            SELECT r.id, r.bu_no, r.depart_id, r.user_id,
+                   COALESCE(u.xuser_name, r.user_name) AS user_name,
+                   r.report_date,
                    r.projects1, r.projects2, r.status1, r.YYYY, r.YYYY_MM, r.ruid,
                    r.create_time, r.update_time,
                    ROUND(COALESCE(d.total_hours,0),2) AS total_hours,
                    d.work_text
               FROM daily_report r
+              LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
               LEFT JOIN (
                     SELECT ruid, SUM(use_time) AS total_hours,
                            GROUP_CONCAT(projects SEPARATOR '；') AS work_text
@@ -278,7 +288,11 @@ router.get('/:id', async (req, res) => {
         const id = Number(req.params.id);
         if (!id) return fail(res, 'id 不正确', 400);
 
-        const [masters] = await pool.execute('SELECT * FROM daily_report WHERE id=? LIMIT 1', [id]);
+        const [masters] = await pool.execute(
+            `SELECT r.*, COALESCE(u.xuser_name, r.user_name) AS user_name
+               FROM daily_report r
+               LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
+              WHERE r.id=? LIMIT 1`, [id]);
         if (masters.length === 0) return fail(res, '日报不存在', 404);
         const master = masters[0];
         if (!actor.isManager && master.user_id !== actor.user_id) return fail(res, '权限不足', 403);
@@ -525,12 +539,13 @@ router.get('/analysis/unfinished', async (req, res) => {
         if (target) { where.push('user_id=?'); params.push(target); }
 
         const [rows] = await pool.execute(`
-            SELECT user_id, MAX(user_name) AS user_name, MAX(depart_id) AS depart_id,
+            SELECT r.user_id, MAX(COALESCE(u.xuser_name, r.user_name)) AS user_name, MAX(r.depart_id) AS depart_id,
                    COUNT(*) AS unfinished_cnt
-              FROM daily_report
+              FROM daily_report r
+              LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
              WHERE ${where.join(' AND ')}
-             GROUP BY user_id
-             ORDER BY unfinished_cnt DESC, user_id
+             GROUP BY r.user_id
+             ORDER BY unfinished_cnt DESC, r.user_id
         `, params);
         ok(res, rows.map(r => ({
             user_id: r.user_id, user_name: r.user_name, depart_id: r.depart_id,
@@ -565,10 +580,12 @@ router.get('/analysis/delays', async (req, res) => {
             `SELECT COUNT(*) AS total FROM daily_report WHERE ${whereSql}`, params
         );
         const [rows] = await pool.execute(`
-            SELECT id, report_date, projects1, projects2, user_id, user_name, depart_id, YYYY_MM
-              FROM daily_report
+            SELECT r.id, r.report_date, r.projects1, r.projects2, r.user_id,
+                   COALESCE(u.xuser_name, r.user_name) AS user_name, r.depart_id, r.YYYY_MM
+              FROM daily_report r
+              LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
              WHERE ${whereSql}
-             ORDER BY report_date DESC, id DESC
+             ORDER BY r.report_date DESC, r.id DESC
              LIMIT ? OFFSET ?
         `, [...params, String(pageSize), String(offset)]);
 

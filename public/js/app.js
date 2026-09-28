@@ -14,15 +14,22 @@ const Auth = {
         try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }
         catch (e) { return null; }
     },
-    // 是否為管理員（cams_xuser.admin === '管理員'）
+    // 簡繁體歸一化（避免 DB 中簡繁體混雜導致權限漏判）
+    _normRole(s) {
+        return String(s || '')
+            .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
+            .replace(/管理员/g, '管理員');
+    },
+    // 是否為管理員（cams_xuser.admin === '管理員'，兼容簡體）
     isAdmin() {
         const u = this.getUser();
-        return !!(u && u.admin === '管理員');
+        return !!(u && this._normRole(u.admin) === '管理員');
     },
-    // 是否為部門主管或高階主管（可操作 CRUD 功能模組）
+    // 是否為部門主管或高階主管（可操作 CRUD 功能模組，兼容簡繁體）
     isManager() {
         const u = this.getUser();
-        return !!(u && (u.user_type === '部門主管' || u.user_type === '高階主管'));
+        const t = this._normRole(u && u.user_type);
+        return !!(u && (t === '部門主管' || t === '高階主管'));
     },
 
     showLogin() {
