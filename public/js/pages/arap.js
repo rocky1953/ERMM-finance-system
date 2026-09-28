@@ -2,6 +2,7 @@
  * 應收應付頁面（真實 DB 結構：每月一行，AR_amt + AP_amt 兩欄）
  */
 registerPage('arap', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="kpi-grid">
             <div class="kpi-card green"><div class="kpi-label">${t('arap.ar')}</div><div class="kpi-value" id="arTotal">-</div></div>
@@ -10,8 +11,8 @@ registerPage('arap', async (c) => {
         </div>
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="ARAPForm.open()">➕ ${t('arap.btn.add_month')}</button>
-                <button class="btn btn-warning" onclick="recalcARAP()">📊 ${t('arap.recalc')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="ARAPForm.open()">➕ ${t('arap.btn.add_month')}</button>
+                <button class="btn btn-warning" onclick="recalcARAP()">📊 ${t('arap.recalc')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadARAP()">🔄 ${t('refresh')}</button>
             </div>
             <div id="arapTable">${t('loading')}</div>
@@ -21,6 +22,7 @@ registerPage('arap', async (c) => {
 });
 
 async function loadARAP() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('arapTable');
     try {
         const res = await API.get(`/api/arap/raw?bu_no=${State.bu_no}`);
@@ -46,7 +48,7 @@ async function loadARAP() {
                 <th>${t('arap.th.ar')}</th><th>${t('arap.th.ar_ageing')}</th>
                 <th>${t('arap.th.ap')}</th><th>${t('arap.th.ap_ageing')}</th>
                 <th>${t('arap.th.update_time')}</th>
-                <th style="width:140px">${t('arap.th.action')}</th>
+                ${_mgr ? `<th style="width:140px">${t('arap.th.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -56,10 +58,10 @@ async function loadARAP() {
                     <td class="num negative">${UI.fmt(r.AP_amt)}</td>
                     <td class="num">${UI.fmt(r.AP_ageing)}</td>
                     <td>${r.update_time ? r.update_time.substring(0,16).replace('T',' ') : '-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-primary btn-sm" onclick='editARAP(${JSON.stringify(r)})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delARAP(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')}</tbody>
         </table>`;

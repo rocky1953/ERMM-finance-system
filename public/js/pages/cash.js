@@ -3,10 +3,11 @@
  */
 registerPage('cash', async (c) => {
     const { bu_no } = State;
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="CashForm.open()">➕ ${t('cash.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="CashForm.open()">➕ ${t('cash.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadCash()">🔄 ${t('refresh')}</button>
                 <div class="spacer"></div>
                 <input type="month" id="cashMonth" value="${State.YYYY_MM.replace('/','-')}" onchange="loadCash()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
@@ -23,6 +24,7 @@ registerPage('cash', async (c) => {
 });
 
 async function loadCash() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('cashTable');
     try {
         const ym = document.getElementById('cashMonth')?.value.replace('-', '/') || State.YYYY_MM;
@@ -30,7 +32,7 @@ async function loadCash() {
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('💵', t('cash.no_records')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('cash.date')}</th><th>${t('cash.voucher')}</th><th>${t('cash.remark')}</th><th>${t('cash.income')}</th><th>${t('cash.expense')}</th><th>${t('cash.balance')}</th><th>${t('delete')}</th></tr></thead>
+            <thead><tr><th>${t('cash.date')}</th><th>${t('cash.voucher')}</th><th>${t('cash.remark')}</th><th>${t('cash.income')}</th><th>${t('cash.expense')}</th><th>${t('cash.balance')}</th>${_mgr ? `<th>${t('delete')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => `<tr>
                 <td>${UI.fmtDate(r.wk_date)}</td>
                 <td>${r.num_vman || '-'}</td>
@@ -38,7 +40,7 @@ async function loadCash() {
                 <td class="num positive">${Number(r.in_amt)>0 ? UI.fmt(r.in_amt):''}</td>
                 <td class="num negative">${Number(r.out_amt)>0 ? UI.fmt(r.out_amt):''}</td>
                 <td class="num">${UI.fmt(r.balance_amt)}</td>
-                <td><button class="btn btn-danger btn-sm" onclick="delCash(${r.uid})">${t('delete')}</button></td>
+                ${_mgr ? `<td><button class="btn btn-danger btn-sm" onclick="delCash(${r.uid})">${t('delete')}</button></td>` : ''}
             </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

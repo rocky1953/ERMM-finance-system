@@ -2,10 +2,11 @@
  * 銷售訂單 SO 頁面
  */
 registerPage('so', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="SOForm.open()">➕ ${t('so.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="SOForm.open()">➕ ${t('so.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadSO()">🔄 ${t('so.refresh')}</button>
             </div>
             <div id="soTable">${t('loading')}</div>
@@ -15,6 +16,7 @@ registerPage('so', async (c) => {
 });
 
 async function loadSO() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('soTable');
     try {
         const res = await API.get(`/api/so?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`);
@@ -24,7 +26,7 @@ async function loadSO() {
             <thead><tr>
                 <th>${t('so.col.so_nbr')}</th><th>${t('so.col.date')}</th><th>${t('so.col.client')}</th><th>${t('so.col.xitems')}</th>
                 <th>${t('so.col.qty')}</th><th>${t('so.col.dn')}</th><th>${t('so.col.price')}</th><th>${t('so.col.amount')}</th>
-                <th>${t('so.col.status')}</th><th style="width:140px">${t('so.col.action')}</th>
+                <th>${t('so.col.status')}</th>${_mgr ? `<th style="width:140px">${t('so.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => {
                 const total = Number(r.dn_qty || 0) * Number(r.unit_price || 0);
@@ -38,10 +40,10 @@ async function loadSO() {
                     <td class="num">${UI.fmt(r.unit_price, 2)}</td>
                     <td class="num positive">${UI.fmt(total)}</td>
                     <td><span style="padding:2px 8px;border-radius:10px;background:#dcfce7;color:#166534;font-size:12px">${I18N.statusLabel('so_status', r.status || '新單')}</span></td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-primary btn-sm" onclick='editSO(${JSON.stringify(r)})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delSO(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`;
             }).join('')}</tbody>
         </table>`;

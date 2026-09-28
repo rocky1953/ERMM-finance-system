@@ -2,10 +2,11 @@
  * 採購單 PO 頁面
  */
 registerPage('po', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="POForm.open()">➕ ${t('po.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="POForm.open()">➕ ${t('po.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadPO()">🔄 ${t('po.refresh')}</button>
             </div>
             <div id="poTable">${t('loading')}</div>
@@ -15,6 +16,7 @@ registerPage('po', async (c) => {
 });
 
 async function loadPO() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('poTable');
     try {
         const res = await API.get(`/api/po?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`);
@@ -29,7 +31,7 @@ async function loadPO() {
                 <th>${t('po.col.po_id')}</th><th>${t('po.col.date')}</th><th>${t('po.col.supplier')}</th><th>${t('po.col.xitems')}</th>
                 <th>${t('po.col.qty')}</th><th>${t('po.col.price')}</th><th>${t('po.col.amount')}</th><th>${t('po.col.local')}</th>
                 <th>${t('po.col.status')}</th><th>${t('po.col.sub_status')}</th>
-                <th style="width:140px">${t('po.col.action')}</th>
+                ${_mgr ? `<th style="width:140px">${t('po.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -43,10 +45,10 @@ async function loadPO() {
                     <td class="num">${UI.fmt(r.po_amount_local)}</td>
                     <td><span style="padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-size:12px">${I18N.statusLabel('po_status', r.po_status || '未審核')}</span></td>
                     <td>${I18N.statusLabel('po_sub_status', r.po_sub_status || '未交付')}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-primary btn-sm" onclick='editPO(${JSON.stringify(r)})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delPO(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')}</tbody>
         </table>`;

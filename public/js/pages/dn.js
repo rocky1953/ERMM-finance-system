@@ -2,13 +2,14 @@
  * SO 交貨單 ermm_erp_so_dn CRUD
  */
 registerPage('dn', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
                 <label>${t('sys.business')}：<select id="dnBU" onchange="loadDN()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
                 <label>${t('dn.so_nbr')}：<input id="dnSO" onchange="loadDN()"></label>
-                <button class="btn btn-primary" onclick="DNForm.open()">➕ ${t('dn.btn.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="DNForm.open()">➕ ${t('dn.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadDN()">🔄 ${t('refresh')}</button>
             </div>
             <div id="dnTable">${t('loading')}</div>
@@ -18,6 +19,7 @@ registerPage('dn', async (c) => {
     loadDN();
 });
 async function loadDN() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('dnTable');
     try {
         const res = await API.get(`/api/dn?bu_no=${document.getElementById('dnBU').value}&so_nbr=${document.getElementById('dnSO').value}`);
@@ -26,17 +28,17 @@ async function loadDN() {
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('dn.so_nbr')}</th><th>${t('po.col.xitems')}</th><th>${t('so.col.client')}</th>
-                <th>${t('dn.th.dn_date')}</th><th>${t('dn.th.dn_qty')}</th><th>${t('dn.th.so_qty')}</th><th>${t('system.col.action')}</th>
+                <th>${t('dn.th.dn_date')}</th><th>${t('dn.th.dn_qty')}</th><th>${t('dn.th.so_qty')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
                     <td>${r.bu_no}</td><td>${r.so_nbr||'-'}</td><td>${r.xitems||'-'}</td>
                     <td>${r.client_name||'-'}</td><td>${r.DN_date||'-'}</td>
                     <td class="num">${UI.fmt(r.DN_qty)}</td><td class="num">${UI.fmt(r.so_qty)}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="DNForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delDN(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

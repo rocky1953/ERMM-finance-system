@@ -2,10 +2,11 @@
  * 付款明細頁面
  */
 registerPage('pay', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="PayForm.open()">➕ ${t('pay.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="PayForm.open()">➕ ${t('pay.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadPay()">🔄 ${t('refresh')}</button>
             </div>
             <div id="payTable">${t('loading')}</div>
@@ -15,13 +16,14 @@ registerPage('pay', async (c) => {
 });
 
 async function loadPay() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('payTable');
     try {
         const res = await API.get(`/api/pay?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('💳', t('pay.no_data')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('pay.date')}</th><th>${t('pay.payee')}</th><th>${t('pay.amount')}</th><th>${t('pay.currency')}</th><th>${t('pay.method')}</th><th>${t('pay.status')}</th><th>${t('delete')}</th></tr></thead>
+            <thead><tr><th>${t('pay.date')}</th><th>${t('pay.payee')}</th><th>${t('pay.amount')}</th><th>${t('pay.currency')}</th><th>${t('pay.method')}</th><th>${t('pay.status')}</th>${_mgr ? `<th>${t('delete')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => `<tr>
                 <td>${UI.fmtDate(r.pay_date)}</td>
                 <td>${r.payee || '-'}</td>
@@ -29,10 +31,10 @@ async function loadPay() {
                 <td>${r.currency || 'RMB'}</td>
                 <td>${r.pay_method || '-'}</td>
                 <td>${r.status1 === 'paid' ? t('pay.paid') : t('pay.unpaid')}</td>
-                <td>
+                ${_mgr ? `<td>
                     ${r.status1 !== 'paid' ? `<button class="btn btn-success btn-sm" onclick="markPaid(${r.uid})">${t('pay.confirm_paid')}</button>` : ''}
                     <button class="btn btn-danger btn-sm" onclick="delPay(${r.uid})">${t('delete')}</button>
-                </td>
+                </td>` : ''}
             </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

@@ -2,6 +2,7 @@
  * 分公司 branch_detail CRUD
  */
 registerPage('branch', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
@@ -9,7 +10,7 @@ registerPage('branch', async (c) => {
                     <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
                 <label>${t('system.col.status')}：<select id="brFlag" onchange="loadBranch()"><option value="">${t('sys.all')}</option>
                     <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
-                <button class="btn btn-primary" onclick="BranchForm.open()">➕ ${t('branch.btn.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="BranchForm.open()">➕ ${t('branch.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadBranch()">🔄 ${t('refresh')}</button>
             </div>
             <div id="branchTable">${t('loading')}</div>
@@ -20,6 +21,7 @@ registerPage('branch', async (c) => {
 });
 
 async function loadBranch() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('branchTable');
     try {
         const bu = document.getElementById('brBU').value;
@@ -30,7 +32,7 @@ async function loadBranch() {
         el.innerHTML = `<table class="data-table">
             <thead><tr>
                 <th>${t('sys.business')}</th><th>${t('branch.th.id')}</th><th>${t('branch.th.name')}</th><th>${t('branch.th.address')}</th>
-                <th>${t('branch.th.phone')}</th><th>${t('branch.th.manager')}</th><th>${t('system.col.status')}</th><th>${t('system.col.action')}</th>
+                <th>${t('branch.th.phone')}</th><th>${t('branch.th.manager')}</th><th>${t('system.col.status')}</th>${_mgr ? `<th>${t('system.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -38,10 +40,10 @@ async function loadBranch() {
                     <td>${r.branch_address||'-'}</td><td>${r.branch_phone||'-'}</td>
                     <td>${r.manager||'-'}</td>
                     <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● '+t('system.status.active')+'</span>' : '<span style="color:#95a5a6">○ '+t('system.status.inactive')+'</span>'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="BranchForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delBranch(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>
             `).join('')}</tbody>
         </table>`;

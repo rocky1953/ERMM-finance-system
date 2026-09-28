@@ -2,10 +2,11 @@
  * 發票管理頁面
  */
 registerPage('invoice', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="InvForm.open()">➕ ${t('inv.add')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="InvForm.open()">➕ ${t('inv.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadInv()">🔄 ${t('refresh')}</button>
                 <div class="spacer"></div>
                 <select id="invType" onchange="loadInv()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
@@ -21,6 +22,7 @@ registerPage('invoice', async (c) => {
 });
 
 async function loadInv() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('invTable');
     try {
         const tp = document.getElementById('invType')?.value || '';
@@ -30,7 +32,7 @@ async function loadInv() {
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('🧾', t('inv.no_data')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('inv.date')}</th><th>${t('inv.no')}</th><th>${t('inv.type')}</th><th>${t('inv.customer')}</th><th>${t('inv.amount')}</th><th>${t('inv.tax')}</th><th>${t('inv.status')}</th><th>${t('delete')}</th></tr></thead>
+            <thead><tr><th>${t('inv.date')}</th><th>${t('inv.no')}</th><th>${t('inv.type')}</th><th>${t('inv.customer')}</th><th>${t('inv.amount')}</th><th>${t('inv.tax')}</th><th>${t('inv.status')}</th>${_mgr ? `<th>${t('delete')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => `<tr>
                 <td>${UI.fmtDate(r.inv_date)}</td>
                 <td>${r.inv_no || '-'}</td>
@@ -39,7 +41,7 @@ async function loadInv() {
                 <td class="num">${UI.fmt(r.amt)}</td>
                 <td class="num">${UI.fmt(r.tax_amt)}</td>
                 <td>${r.status1 || '-'}</td>
-                <td><button class="btn btn-danger btn-sm" onclick="delInv(${r.uid})">${t('delete')}</button></td>
+                ${_mgr ? `<td><button class="btn btn-danger btn-sm" onclick="delInv(${r.uid})">${t('delete')}</button></td>` : ''}
             </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

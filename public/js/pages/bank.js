@@ -2,11 +2,12 @@
  * 銀行貸款頁面
  */
 registerPage('bank', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <button class="btn btn-primary" onclick="BankForm.open()">➕ ${t('bank.add')}</button>
-                <button class="btn btn-warning" onclick="recalcBank()">💱 ${t('bank.recalc')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="BankForm.open()">➕ ${t('bank.add')}</button>
+                <button class="btn btn-warning" onclick="recalcBank()">💱 ${t('bank.recalc')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadBank()">🔄 ${t('refresh')}</button>
             </div>
             <div id="bankTable">${t('loading')}</div>
@@ -16,13 +17,14 @@ registerPage('bank', async (c) => {
 });
 
 async function loadBank() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('bankTable');
     try {
         const res = await API.get(`/api/bank?bu_no=${State.bu_no}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('🏦', t('bank.no_data')); return; }
         el.innerHTML = `<table class="data-table">
-            <thead><tr><th>${t('bank.loan_id')}</th><th>${t('bank.bank')}</th><th>${t('bank.loan_type')}</th><th>${t('bank.loan_amt')}</th><th>${t('bank.exchange_rate')}</th><th>${t('bank.interest_rate')}</th><th>${t('bank.terms')}</th><th>${t('bank.fx_diff')}</th><th>${t('bank.status')}</th><th>${t('delete')}</th></tr></thead>
+            <thead><tr><th>${t('bank.loan_id')}</th><th>${t('bank.bank')}</th><th>${t('bank.loan_type')}</th><th>${t('bank.loan_amt')}</th><th>${t('bank.exchange_rate')}</th><th>${t('bank.interest_rate')}</th><th>${t('bank.terms')}</th><th>${t('bank.fx_diff')}</th><th>${t('bank.status')}</th>${_mgr ? `<th>${t('delete')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => {
                 const diff = Number(r.diff_amt || 0);
                 return `<tr>
@@ -35,7 +37,7 @@ async function loadBank() {
                     <td class="text-center">${r.pay_terms || '-'}</td>
                     <td class="num ${diff < 0 ? 'negative' : diff > 0 ? 'positive' : ''}">${diff !== 0 ? UI.fmt(diff) : '-'}</td>
                     <td>${r.status1 || '-'}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="delBank(${r.uid})">${t('delete')}</button></td>
+                    ${_mgr ? `<td><button class="btn btn-danger btn-sm" onclick="delBank(${r.uid})">${t('delete')}</button></td>` : ''}
                 </tr>`;
             }).join('')}</tbody>
         </table>`;

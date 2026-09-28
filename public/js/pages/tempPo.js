@@ -2,14 +2,15 @@
  * PO 暫存 ermm_temp_po CRUD
  */
 registerPage('tempPo', async (c) => {
+    const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
                 <label>${t('topbar.bu')}：<select id="tpBU" onchange="loadTempPo()"><option value="">${t('sys.all')}</option>
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
                 <label>${t('tp.form.batch')}：<input id="tpBatch" onchange="loadTempPo()" placeholder="batch_id"></label>
-                <button class="btn btn-primary" onclick="TempPoForm.open()">➕ ${t('tp.add')}</button>
-                <button class="btn btn-warning" onclick="batchStep1()">▶ ${t('tp.run_step1')}</button>
+                ${_mgr ? `<button class="btn btn-primary" onclick="TempPoForm.open()">➕ ${t('tp.add')}</button>
+                <button class="btn btn-warning" onclick="batchStep1()">▶ ${t('tp.run_step1')}</button>` : ''}
                 <button class="btn btn-info" onclick="TempPoHelp.open()">📖 ${t('tp.help')}</button>
                 <button class="btn btn-success" onclick="loadTempPo()">🔄</button>
             </div>
@@ -21,6 +22,7 @@ registerPage('tempPo', async (c) => {
 });
 
 async function loadTempPo() {
+    const _mgr = Auth.isManager();
     const el = document.getElementById('tempPoTable');
     try {
         const res = await API.get(`/api/temp-po?bu_no=${document.getElementById('tpBU').value}&batch_id=${document.getElementById('tpBatch').value}`);
@@ -30,7 +32,7 @@ async function loadTempPo() {
             <thead><tr>
                 <th>${t('tp.col.bu')}</th><th>${t('tp.col.po_id')}</th><th>${t('tp.col.supplier')}</th><th>${t('tp.col.xitems')}</th>
                 <th>${t('tp.col.date')}</th><th>${t('tp.col.qty')}</th><th>${t('tp.col.price')}</th><th>${t('tp.col.rate')}</th>
-                <th>${t('tp.col.amount')}</th><th>${t('tp.col.vat')}</th><th>${t('tp.col.batch')}</th><th>${t('tp.col.action')}</th>
+                <th>${t('tp.col.amount')}</th><th>${t('tp.col.vat')}</th><th>${t('tp.col.batch')}</th>${_mgr ? `<th>${t('tp.col.action')}</th>` : ''}
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
@@ -39,10 +41,10 @@ async function loadTempPo() {
                     <td class="num">${UI.fmt(r.po_qty, 4)}</td><td class="num">${UI.fmt(r.unit_price, 6)}</td>
                     <td class="num">${UI.fmt(r.exchange_rate, 4)}</td><td class="num">${UI.fmt(r.po_amount)}</td>
                     <td class="num">${UI.fmt(r.vat_amt)}</td><td>${r.batch_id||'-'}</td>
-                    <td>
+                    ${_mgr ? `<td>
                         <button class="btn btn-sm" onclick="TempPoForm.open(${r.uid})">✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delTempPo(${r.uid})">🗑</button>
-                    </td>
+                    </td>` : ''}
                 </tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
