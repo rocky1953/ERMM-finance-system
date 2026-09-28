@@ -628,4 +628,42 @@ router.get('/analysis/monthly-hours', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ 分析：某月明细（点击月柱后展开，可选 wk_type 过滤） ============
+router.get('/analysis/monthly-detail', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const year = Number(q.year);
+        const mo = normalizeMonth(year, q.month || q.YYYY_MM);
+        if (!year || !mo) return fail(res, '年度/月份格式不正确', 400);
+
+        const where = ['bu_no=?', 'YYYY_MM=?'];
+        const params = [trimOrNull(q.bu_no) || 'HM', mo.ym];
+        const target = resolveTarget(actor, trimOrNull(q.user_id));
+        if (target) { where.push('user_id=?'); params.push(target); }
+        const wk = trimOrNull(q.wk_type);
+        if (wk) { where.push('wk_type=?'); params.push(wk); }
+
+        const [rows] = await pool.execute(`
+            SELECT id, report_date, from_time, to_time, use_time, projects,
+                   wk_type, client_id, items_id
+              FROM daily_report_detail
+             WHERE ${where.join(' AND ')}
+             ORDER BY report_date ASC, from_time ASC, id ASC
+        `, params);
+        ok(res, rows.map(r => ({
+            id: r.id,
+            report_date: r.report_date,
+            from_time: r.from_time,
+            to_time: r.to_time,
+            use_time: Number(r.use_time) || 0,
+            projects: r.projects,
+            wk_type: r.wk_type,
+            client_id: r.client_id,
+            items_id: r.items_id
+        })));
+    } catch (err) { fail500(res, err); }
+});
+
 module.exports = router;

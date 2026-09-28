@@ -341,6 +341,7 @@
                         <button class="btn" style="margin-left:auto;" onclick="DRUnfin.backDetail()">↩️ ${t('dr.btn.back')}</button>
                     </div>
                     <div style="margin-top:14px;position:relative;height:380px;"><canvas id="drumChart"></canvas></div>
+                    <div id="drumDetail" style="margin-top:18px;"></div>
                 </div>`;
             if (!mgr) {
                 document.getElementById('drumUser').innerHTML =
@@ -393,12 +394,71 @@
                         scales: {
                             y: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } },
                             x: { title: { display: true, text: t('dr.axis.month') } }
+                        },
+                        onClick: (evt, els) => {
+                            if (!els || els.length === 0) return;
+                            const r = rows[els[0].index];
+                            if (r) this.loadMonthlyDetail(r.YYYY_MM, r.label);
                         }
                     }
                 }));
                 void de;
             } catch (e) {
                 UI.toast(e.message, 'error');
+            }
+        },
+
+        // 点击月柱 → 显示该月明细（依勾选的时间类别过滤）
+        async loadMonthlyDetail(YYYY_MM, label) {
+            const u = document.getElementById('drumUser').value;
+            const y = document.getElementById('drumYear').value;
+            const byType = document.getElementById('drumByType').checked;
+            const wk = document.getElementById('drumWk');
+            const detailEl = document.getElementById('drumDetail');
+            const qs = new URLSearchParams({ bu_no: State.bu_no, year: y, YYYY_MM });
+            if (u) qs.set('user_id', u);
+            if (byType && wk && wk.value) qs.set('wk_type', wk.value);
+            const catLabel = byType && wk && wk.value ? ' \u00b7 ' + this.wkLabel(wk.value) : '';
+            detailEl.innerHTML = '<p style="color:#7f8c8d;">' + t('loading') + '</p>';
+            try {
+                const res = await API.get('/api/daily-report/analysis/monthly-detail?' + qs.toString());
+                const rows = res.data || [];
+                if (rows.length === 0) {
+                    detailEl.innerHTML = UI.empty('\u{1F4CB}', t('dr.empty'));
+                    return;
+                }
+                const total = rows.reduce((s, r) => s + Number(r.use_time || 0), 0);
+                const that = this;
+                const bodyRows = rows.map(function(r) {
+                    return '<tr>' +
+                        '<td>' + esc(r.report_date) + '</td>' +
+                        '<td>' + esc(r.from_time || '') + (r.to_time ? ' ~ ' + esc(r.to_time) : '') + '</td>' +
+                        '<td>' + esc(that.wkLabel(r.wk_type)) + '</td>' +
+                        '<td style="max-width:320px;" title="' + esc(r.projects || '') + '">' + esc(r.projects || '-') + '</td>' +
+                        '<td>' + esc(r.client_id || '-') + '</td>' +
+                        '<td>' + esc(r.items_id || '-') + '</td>' +
+                        '<td class="num">' + UI.fmt(r.use_time) + '</td>' +
+                        '</tr>';
+                }).join('');
+                const header = '<h4 style="margin:0 0 10px 0;color:#2c3e50;">' +
+                    '\u{1F4C5} ' + esc(label) + esc(catLabel) +
+                    '<span style="font-size:0.85em;color:#7f8c8d;font-weight:normal;">' +
+                    '(' + rows.length + ' ' + t('dr.an.detail_count') + ', ' +
+                    t('dr.an.total_hours') + ': ' + UI.fmt(total) + ' ' +
+                    t('dr.axis.hours') + ')</span></h4>';
+                const tbl = '<table class="data-table">' +
+                    '<thead><tr>' +
+                    '<th>' + t('dr.col.date') + '</th>' +
+                    '<th>' + t('dr.an.time_range') + '</th>' +
+                    '<th>' + t('dr.an.wk_type') + '</th>' +
+                    '<th>' + t('dr.col.work') + '</th>' +
+                    '<th>' + t('dr.an.client') + '</th>' +
+                    '<th>' + t('dr.an.items') + '</th>' +
+                    '<th>' + t('dr.col.hours') + '</th>' +
+                    '</tr></thead><tbody>' + bodyRows + '</tbody></table>';
+                detailEl.innerHTML = header + tbl;
+            } catch (e) {
+                detailEl.innerHTML = '<p style="color:#e74c3c;">' + t('dr.msg.load_fail') + ': ' + e.message + '</p>';
             }
         }
     };
