@@ -371,13 +371,14 @@
             return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
         },
 
-        // 可选时间点：08:00 ~ 18:00，每半小时一个（分钟只有 00/30）
+        // 可选时间点：08:00 ~ 23:30，每半小时一个（分钟只有 00/30）
         timeSlots() {
             const list = [];
-            for (let h = 8; h <= 18; h++) {
+            for (let h = 8; h <= 23; h++) {
                 list.push(String(h).padStart(2, '0') + ':00');
-                if (h < 18) list.push(String(h).padStart(2, '0') + ':30');
+                if (h < 23) list.push(String(h).padStart(2, '0') + ':30');
             }
+            list.push('23:30');
             return list;
         },
 
@@ -430,13 +431,13 @@
 
         addRow() {
             this.formRows = this.readRowsFromDom();
-            // 自动沿用上一行结束时间作为新行开始，预设 30 分钟（不超过 18:00）
+            // 自动沿用上一行结束时间作为新行开始，预设 30 分钟（不超过 23:30）
             let nf = '', nt = '';
             const last = this.formRows[this.formRows.length - 1];
             if (last && /^([01]\d|2[0-3]):[0-5]\d$/.test(last.to_time || '')) {
                 const [h, m] = last.to_time.split(':').map(Number);
                 const endMin = h * 60 + m + 30;
-                if (endMin <= 18 * 60) {
+                if (endMin <= 23 * 60 + 30) {
                     nf = last.to_time;
                     nt = `${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}`;
                 }
@@ -484,7 +485,7 @@
                 if (h === null) { UI.toast(t('dr.msg.time_invalid'), 'error'); return; }
                 const [fh] = r.from_time.split(':').map(Number);
                 const [th, tm] = r.to_time.split(':').map(Number);
-                if (fh < 8 || th * 60 + tm > 18 * 60) { UI.toast(t('dr.msg.time_invalid'), 'error'); return; }
+                if (fh < 8 || th * 60 + tm > 23 * 60 + 30) { UI.toast(t('dr.msg.time_invalid'), 'error'); return; }
                 // 每笔工作时间必须 ≥ 30 分钟，否则阻止保存
                 if (h < 0.5) { UI.toast(t('dr.msg.under_30min'), 'error'); return; }
             }

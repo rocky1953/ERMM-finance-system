@@ -33,7 +33,7 @@ function isManagerRole(admin, xuserType) {
 }
 
 const DAY_START_MIN = 8 * 60;   // 08:00
-const DAY_END_MIN = 18 * 60;    // 18:00
+const DAY_END_MIN = 23 * 60 + 30; // 23:30
 const EDIT_WINDOW_DAYS = 7;
 
 // ============ 工具函数 ============
@@ -328,7 +328,7 @@ router.post('/', async (req, res) => {
             const to = trimOrNull(row.to_time);
             if (!validHHmm(from) || !validHHmm(to)) return fail(res, '作业时间格式应为 HH:mm', 400);
             const fMin = hhmmToMin(from), tMin = hhmmToMin(to);
-            if (fMin < DAY_START_MIN || tMin > DAY_END_MIN) return fail(res, '作业时间须在 08:00~18:00 之间', 400);
+            if (fMin < DAY_START_MIN || tMin > DAY_END_MIN) return fail(res, '作业时间须在 08:00~23:30 之间', 400);
             if (tMin <= fMin) return fail(res, '结束时间必须晚于开始时间', 400);
             if ((tMin - fMin) < 30) return fail(res, '每一个工作时间不足半小时不允许单独记录', 400);
             const useTime = diffHours(from, to);

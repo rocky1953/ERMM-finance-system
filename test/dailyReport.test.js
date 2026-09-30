@@ -267,7 +267,8 @@ describe('POST /api/daily-report', () => {
 
     test.each([
         ['结束早于开始', { from_time: '09:00', to_time: '08:00', projects: 'x' }],
-        ['超出 08:00~18:00', { from_time: '07:00', to_time: '08:30', projects: 'x' }],
+        ['早于 08:00', { from_time: '07:00', to_time: '08:30', projects: 'x' }],
+        ['晚于 23:30', { from_time: '23:00', to_time: '23:45', projects: 'x' }],
         ['工作项目为空', { from_time: '08:00', to_time: '08:30', projects: '  ' }]
     ])('非法明细 → 400（%s）', async (_name, detail) => {
         const res = await as(EMP).post('/api/daily-report').send({
