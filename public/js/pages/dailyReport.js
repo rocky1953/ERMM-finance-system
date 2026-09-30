@@ -349,8 +349,8 @@
             trs.forEach(tr => {
                 rows.push({
                     projects: tr.querySelector('.dr-f-project').value.trim(),
-                    from_time: tr.querySelector('.dr-f-from').value,
-                    to_time: tr.querySelector('.dr-f-to').value,
+                    from_time: this.snapHalf(tr.querySelector('.dr-f-from').value),
+                    to_time: this.snapHalf(tr.querySelector('.dr-f-to').value),
                     wk_type: tr.querySelector('.dr-f-wk').value,
                     client_id: tr.querySelector('.dr-f-client').value.trim(),
                     items_id: tr.querySelector('.dr-f-items').value.trim()
@@ -359,7 +359,26 @@
             return rows;
         },
 
+        // 时间分钟强制对齐到 00/30（手动键入时纠偏）
+        snapHalf(value) {
+            const m = /^(\d{1,2}):(\d{2})$/.exec((value || '').trim());
+            if (!m) return value || '';
+            const hh = Number(m[1]);
+            const mm = Number(m[2]);
+            const snapped = mm < 15 ? 0 : mm < 45 ? 30 : 60;
+            const h = snapped === 60 ? (hh + 1) % 24 : hh;
+            const mi = snapped === 60 ? 0 : snapped;
+            return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+        },
+
         syncRowTimes() {
+            // 先把 from/to 分钟对齐到 00/30 并回写，防止手动键入非半点值
+            document.querySelectorAll('#drFormRows tr.dr-row').forEach(tr => {
+                const f = tr.querySelector('.dr-f-from');
+                const to = tr.querySelector('.dr-f-to');
+                if (f) { const v = this.snapHalf(f.value); if (v !== f.value) f.value = v; }
+                if (to) { const v = this.snapHalf(to.value); if (v !== to.value) to.value = v; }
+            });
             // 时间变更后重算各行小时与合计
             this.formRows = this.readRowsFromDom();
             const trs = document.querySelectorAll('#drFormRows tr.dr-row');
@@ -417,8 +436,8 @@
                 <tr class="dr-row" data-idx="${i}">
                     <td>${i + 1}</td>
                     <td><input class="dr-f-project" style="width:100%;min-width:200px;min-height:48px;" value="${esc(r.projects || '')}"></td>
-                    <td><input type="time" class="dr-f-from" style="width:95px;min-height:48px;" min="08:00" max="18:00" value="${esc(r.from_time || '')}" onchange="DRApp.syncRowTimes()"></td>
-                    <td><input type="time" class="dr-f-to" style="width:95px;min-height:48px;" min="08:00" max="18:00" value="${esc(r.to_time || '')}" onchange="DRApp.syncRowTimes()"></td>
+                    <td><input type="time" class="dr-f-from" style="width:95px;min-height:48px;" min="08:00" max="18:00" step="1800" value="${esc(r.from_time || '')}" onchange="DRApp.syncRowTimes()"></td>
+                    <td><input type="time" class="dr-f-to" style="width:95px;min-height:48px;" min="08:00" max="18:00" step="1800" value="${esc(r.to_time || '')}" onchange="DRApp.syncRowTimes()"></td>
                     <td><select class="dr-f-wk" style="min-height:48px;">${wks.map(w => `<option value="${esc(w)}" ${r.wk_type === w ? 'selected' : ''}>${this.wkLabel(w)}</option>`).join('')}</select></td>
                     <td class="num dr-f-hours" style="min-height:48px;">-</td>
                     <td><input class="dr-f-client" style="width:125px;min-height:48px;" list="drClientList" value="${esc(r.client_id || '')}"></td>
