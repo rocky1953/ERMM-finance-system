@@ -41,7 +41,7 @@
         yearOptions(sel) {
             const y = new Date().getFullYear();
             let html = `<option value="">${t('dr.all')}</option>`;
-            for (let yy = y + 1; yy >= y - 6; yy--) {
+            for (let yy = y + 1; yy >= y - 25; yy--) {
                 html += `<option value="${yy}" ${String(sel) === String(yy) ? 'selected' : ''}>${yy}</option>`;
             }
             return html;
