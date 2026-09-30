@@ -16,8 +16,9 @@
 const { request, app, pool } = require('./setup');
 
 const BU = 'TEST';
-const MGR = 'TEST_DR_MGR';
-const EMP = 'TEST_DR_EMP';
+const MGR = 'TEST_DR_MGR';   // admin=管理员 → isManager + isSenior
+const EMP = 'TEST_DR_EMP';   // 一般员工
+const SUP = 'TEST_DR_SUP';   // 部門主管 + 普通者 → isManager 但非 isSenior（制衡测试）
 const DEPT = '测试部';
 
 function fmtDate(offsetDays) {
@@ -72,6 +73,50 @@ async function ensureTables() {
             INDEX idx_ruid (ruid), INDEX idx_user_ym (user_id, YYYY_MM), INDEX idx_bu_ym (bu_no, YYYY_MM)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    // 签核锁定表（与 database/add_daily_report_lock_audit.js 保持一致）
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_lock (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bu_no VARCHAR(10) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            YYYY_MM CHAR(7) NOT NULL,
+            lock_status CHAR(10) NOT NULL DEFAULT 'LOCKED',
+            locked_by VARCHAR(50) NOT NULL,
+            locked_by_name VARCHAR(100) DEFAULT '',
+            locked_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            unlocked_by VARCHAR(50) DEFAULT NULL,
+            unlocked_by_name VARCHAR(100) DEFAULT NULL,
+            unlocked_time DATETIME DEFAULT NULL,
+            unlock_reason VARCHAR(500) DEFAULT NULL,
+            UNIQUE KEY uk_bu_user_ym (bu_no, user_id, YYYY_MM),
+            INDEX idx_bu_ym (bu_no, YYYY_MM),
+            INDEX idx_status (lock_status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    // 审计日志表
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_audit_log (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            bu_no VARCHAR(10) NOT NULL,
+            ruid INT DEFAULT NULL,
+            report_date CHAR(10) DEFAULT NULL,
+            target_user_id VARCHAR(50) NOT NULL,
+            target_user_name VARCHAR(100) DEFAULT '',
+            YYYY_MM CHAR(7) DEFAULT NULL,
+            action VARCHAR(20) NOT NULL,
+            operator_id VARCHAR(50) NOT NULL,
+            operator_name VARCHAR(100) DEFAULT '',
+            operator_ip VARCHAR(64) DEFAULT '',
+            old_data JSON DEFAULT NULL,
+            new_data JSON DEFAULT NULL,
+            remark VARCHAR(500) DEFAULT NULL,
+            created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_bu_ym (bu_no, YYYY_MM),
+            INDEX idx_target (target_user_id, YYYY_MM),
+            INDEX idx_action (action),
+            INDEX idx_created (created_time)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 }
 
 async function seedReport(o) {
@@ -99,9 +144,11 @@ async function seedReport(o) {
 
 beforeAll(async () => {
     await ensureTables();
+    await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_detail WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report WHERE bu_no=?', [BU]);
-    await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?)', [MGR, EMP]);
+    await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?,?)', [MGR, EMP, SUP]);
 
     await pool.execute(`
         INSERT INTO cams_xuser
@@ -113,6 +160,11 @@ beforeAll(async () => {
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
     `, [EMP, 'x', '李员工', DEPT, null, 'USE', '普通者', null, null, '一般员工']);
+    await pool.execute(`
+        INSERT INTO cams_xuser
+            (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
+        VALUES (?,?,?,?,?,?,?,?,?,?)
+    `, [SUP, 'x', '张主管', DEPT, null, 'USE', '普通者', null, null, '部門主管']);
 
     // 固定分析数据 2099/01
     await seedReport({
@@ -139,9 +191,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+    await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_detail WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report WHERE bu_no=?', [BU]);
-    await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?)', [MGR, EMP]);
+    await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?,?)', [MGR, EMP, SUP]);
     // 不关闭全局连接池（避免影响其他测试套件）
 });
 
@@ -532,5 +586,205 @@ describe('POST /api/daily-report/relink', () => {
     test('员工不可更新他人资料 → 403', async () => {
         const res = await as(EMP).post('/api/daily-report/relink').send({ bu_no: BU, year: 2099, month: 1, user_id: MGR });
         expect(res.status).toBe(403);
+    });
+});
+
+// ============ P0：签核锁定 + 审计日志 ============
+describe('P0 签核锁定与审计日志', () => {
+    // 取员工当日日报 id（列表接口对员工强制本人口径）
+    async function empTodayId() {
+        const res = await as(EMP).get(
+            `/api/daily-report?bu_no=${BU}&date_from=${today}&date_to=${today}&page=1&pageSize=1`);
+        expect(res.body.data.list.length).toBeGreaterThan(0);
+        return res.body.data.list[0].id;
+    }
+    const auditCount = async (action, target) => {
+        const sql = 'SELECT COUNT(*) AS c FROM daily_report_audit_log WHERE bu_no=? AND action=?' +
+            (target ? ' AND target_user_id=?' : '');
+        const params = target ? [BU, action, target] : [BU, action];
+        const [[row]] = await pool.execute(sql, params);
+        return Number(row.c);
+    };
+
+    test('身份判定：EMP 非主管；SUP 主管但非高管；MGR 为高管', async () => {
+        const e = await as(EMP).get('/api/daily-report/meta');
+        expect(e.body.data.me.isManager).toBe(false);
+        expect(e.body.data.me.isSenior).toBe(false);
+        const s = await as(SUP).get('/api/daily-report/meta');
+        expect(s.body.data.me.isManager).toBe(true);
+        expect(s.body.data.me.isSenior).toBe(false);
+        const m = await as(MGR).get('/api/daily-report/meta');
+        expect(m.body.data.me.isManager).toBe(true);
+        expect(m.body.data.me.isSenior).toBe(true);
+    });
+
+    test('员工不可执行签核锁定 → 403', async () => {
+        const res = await as(EMP).post('/api/daily-report/lock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP });
+        expect(res.status).toBe(403);
+    });
+
+    test('部门主管可单人锁定员工当月 → 200（locked=1）', async () => {
+        const res = await as(SUP).post('/api/daily-report/lock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP });
+        expect(res.status).toBe(200);
+        expect(res.body.data.locked).toBe(1);
+        expect(res.body.data.targets[0].user_id).toBe(EMP);
+
+        const [[lock]] = await pool.execute(
+            "SELECT lock_status, locked_by FROM daily_report_lock WHERE bu_no=? AND user_id=? AND YYYY_MM=?",
+            [BU, EMP, curYM]);
+        expect(lock.lock_status).toBe('LOCKED');
+        expect(lock.locked_by).toBe(SUP);
+        expect(await auditCount('LOCK', EMP)).toBe(1);
+    });
+
+    test('重复锁定已锁定人员 → locked=0, skipped=1，不重复写审计', async () => {
+        const res = await as(SUP).post('/api/daily-report/lock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP });
+        expect(res.status).toBe(200);
+        expect(res.body.data.locked).toBe(0);
+        expect(res.body.data.skipped).toBe(1);
+        expect(await auditCount('LOCK', EMP)).toBe(1);
+    });
+
+    test('锁定后员工保存 → 423；删除 → 423', async () => {
+        const id = await empTodayId();
+        const saveRes = await as(EMP).post('/api/daily-report').send({
+            bu_no: BU, report_date: today,
+            details: [{ from_time: '08:00', to_time: '08:30', projects: '锁定后强改', wk_type: '日常工作' }]
+        });
+        expect(saveRes.status).toBe(423);
+
+        const delRes = await as(EMP).delete(`/api/daily-report/${id}`);
+        expect(delRes.status).toBe(423);
+        // 数据未被改动
+        const got = await as(EMP).get(`/api/daily-report/${id}`);
+        expect(got.body.data.locked).toBe(true);
+        expect(got.body.data.details[0].projects).toBe('替换后');
+    });
+
+    test('部门主管不可解锁（制衡）→ 403', async () => {
+        const res = await as(SUP).post('/api/daily-report/unlock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP, reason: '主管想自己解锁' });
+        expect(res.status).toBe(403);
+    });
+
+    test('高管解锁：缺原因 → 400；带原因 → 200 并留 UNLOCK 审计', async () => {
+        const noReason = await as(MGR).post('/api/daily-report/unlock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP });
+        expect(noReason.status).toBe(400);
+
+        const res = await as(MGR).post('/api/daily-report/unlock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP, reason: '员工反映日报误植，主管确认后补正' });
+        expect(res.status).toBe(200);
+
+        const [[lock]] = await pool.execute(
+            "SELECT lock_status, unlocked_by, unlock_reason FROM daily_report_lock WHERE bu_no=? AND user_id=? AND YYYY_MM=?",
+            [BU, EMP, curYM]);
+        expect(lock.lock_status).toBe('UNLOCKED');
+        expect(lock.unlocked_by).toBe(MGR);
+        expect(lock.unlock_reason).toBe('员工反映日报误植，主管确认后补正');
+
+        const [logs] = await pool.execute(
+            "SELECT remark, old_data, new_data FROM daily_report_audit_log WHERE bu_no=? AND action='UNLOCK' AND target_user_id=?",
+            [BU, EMP]);
+        expect(logs).toHaveLength(1);
+        expect(logs[0].remark).toBe('员工反映日报误植，主管确认后补正');
+        const nd = typeof logs[0].new_data === 'string' ? JSON.parse(logs[0].new_data) : logs[0].new_data;
+        expect(nd.lock_status).toBe('UNLOCKED');
+    });
+
+    test('解锁后员工可再修改 → 200（写 UPDATE 审计）', async () => {
+        const res = await as(EMP).post('/api/daily-report').send({
+            bu_no: BU, report_date: today,
+            details: [{ from_time: '08:00', to_time: '09:00', projects: '解锁后补正', wk_type: '日常工作' }]
+        });
+        expect(res.status).toBe(200);
+        const id = await empTodayId();
+        const got = await as(EMP).get(`/api/daily-report/${id}`);
+        expect(got.body.data.details[0].projects).toBe('解锁后补正');
+        expect(got.body.data.locked).toBe(false);
+        expect(await auditCount('UPDATE', EMP)).toBeGreaterThanOrEqual(1);
+    });
+
+    test('user_ids 多人一次锁定 [EMP,SUP] → locked=2', async () => {
+        const res = await as(MGR).post('/api/daily-report/lock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_ids: [EMP, SUP] });
+        expect(res.status).toBe(200);
+        expect(res.body.data.locked).toBe(2);
+        const ids = res.body.data.targets.map(t => t.user_id).sort();
+        expect(ids).toEqual([EMP, SUP].sort());
+    });
+
+    test('整批 batch：当月有日报者含 EMP（已锁→skipped>=1）', async () => {
+        const res = await as(MGR).post('/api/daily-report/lock')
+            .send({ bu_no: BU, YYYY_MM: curYM, batch: true });
+        expect(res.status).toBe(200);
+        expect(res.body.data.targets.some(t => t.user_id === EMP)).toBe(false); // 已锁定者不在新锁定清单
+        expect(res.body.data.skipped).toBeGreaterThanOrEqual(1);
+    });
+
+    test('locks 面板：员工仅见本人且为锁定态；经理见全员', async () => {
+        const mine = await as(EMP).get(`/api/daily-report/locks?bu_no=${BU}&YYYY_MM=${encodeURIComponent(curYM)}`);
+        expect(mine.status).toBe(200);
+        expect(mine.body.data).toHaveLength(1);
+        expect(mine.body.data[0].user_id).toBe(EMP);
+        expect(mine.body.data[0].locked).toBe(true);
+        expect(mine.body.data[0].locked_by).toBe(MGR);
+
+        const all = await as(MGR).get(`/api/daily-report/locks?bu_no=${BU}&YYYY_MM=${encodeURIComponent(curYM)}`);
+        const uids = all.body.data.map(r => r.user_id);
+        expect(uids).toContain(EMP);
+        expect(uids).toContain(SUP);
+        const empRow = all.body.data.find(r => r.user_id === EMP);
+        expect(empRow.report_cnt).toBeGreaterThanOrEqual(1);
+    });
+
+    test('收尾：高管解锁 EMP 恢复未锁状态', async () => {
+        const res = await as(MGR).post('/api/daily-report/unlock')
+            .send({ bu_no: BU, YYYY_MM: curYM, user_id: EMP, reason: '测试收尾恢复' });
+        expect(res.status).toBe(200);
+    });
+
+    test('audit-logs 落库与权限分级', async () => {
+        // 本文件 bu=TEST 的成功写库动作（400/403 不写审计）：
+        //   保存类 8 次（新增/覆盖/历史改提/并发双击2/解锁补正等），
+        //   并发双击在 RR 隔离下可能记为 2 CREATE 或 CREATE+UPDATE，故只断言合计 8；
+        //   DELETE=2（员工自删 1、经理代删 1）；LOCK=3（单人1+多人2）；UNLOCK=2
+        const createCnt = await auditCount('CREATE');
+        const updateCnt = await auditCount('UPDATE');
+        expect(createCnt + updateCnt).toBe(8);
+        expect(createCnt).toBeGreaterThanOrEqual(1);
+        expect(updateCnt).toBeGreaterThanOrEqual(1);
+        expect(await auditCount('DELETE')).toBe(2);
+        expect(await auditCount('LOCK')).toBe(3);
+        expect(await auditCount('UNLOCK')).toBe(2);
+
+        // 员工只能看到本人记录（保存8 + 删除2 + LOCK2 + UNLOCK2 = 14 条）
+        const empLogs = await as(EMP).get(`/api/daily-report/audit-logs?bu_no=${BU}&pageSize=100`);
+        expect(empLogs.status).toBe(200);
+        expect(empLogs.body.data.total).toBe(14);
+        expect(empLogs.body.data.list.every(r => r.target_user_id === EMP)).toBe(true);
+
+        // action 过滤：LOCK 共 3 条（EMP 2 + SUP 1）
+        const lockLogs = await as(MGR).get(
+            `/api/daily-report/audit-logs?bu_no=${BU}&action=LOCK&pageSize=100`);
+        expect(lockLogs.body.data.total).toBe(3);
+        expect(lockLogs.body.data.list.every(r => r.action === 'LOCK')).toBe(true);
+
+        // 高管可见全部（bu=TEST 共 15 条：员工 14 + SUP 锁定 1）
+        const allLogs = await as(MGR).get(`/api/daily-report/audit-logs?bu_no=${BU}&pageSize=100`);
+        expect(allLogs.body.data.total).toBe(15);
+
+        // 部门主管限本部门：三个测试账号同部门，同样可见 15 条
+        const supLogs = await as(SUP).get(`/api/daily-report/audit-logs?bu_no=${BU}&pageSize=100`);
+        expect(supLogs.body.data.total).toBe(15);
+
+        // LOCK 记录的 new_data 必须含锁定状态快照
+        const oneLock = lockLogs.body.data.list.find(r => r.target_user_id === SUP);
+        expect(oneLock).toBeTruthy();
+        const nd2 = typeof oneLock.new_data === 'string' ? JSON.parse(oneLock.new_data) : oneLock.new_data;
+        expect(nd2.lock_status).toBe('LOCKED');
     });
 });

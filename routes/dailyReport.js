@@ -31,6 +31,49 @@ function isManagerRole(admin, xuserType) {
         .replace(/管理员/g, '管理員').replace(/高价/g, '高階');
     return ADMIN_MANAGER_VALUES.includes(norm(admin)) || MANAGER_TYPES.includes(norm(xuserType));
 }
+// 高階权限：仅 管理员(管理員) 或 高階主管 —— 解锁等制衡性操作仅限此身份
+function isSeniorRole(admin, xuserType) {
+    const na = String(admin || '').replace(/管理员/g, '管理員');
+    const nt = String(xuserType || '').replace(/高阶/g, '高階');
+    return na === '管理員' || nt === '高階主管';
+}
+
+// 审计动作常量
+const AUDIT = { CREATE: 'CREATE', UPDATE: 'UPDATE', DELETE: 'DELETE', LOCK: 'LOCK', UNLOCK: 'UNLOCK' };
+
+// 取客户端真实 IP（Nginx 反代场景优先 X-Forwarded-For 首段）
+function clientIp(req) {
+    const xff = req.headers && req.headers['x-forwarded-for'];
+    if (xff) return String(xff).split(',')[0].trim().slice(0, 63);
+    return (req.ip || (req.socket && req.socket.remoteAddress) || '').slice(0, 63);
+}
+
+// 查询某员工某月是否处于 LOCKED 状态（executor 可为 pool 或事务连接）
+async function findActiveLock(executor, bu, userId, ym) {
+    const [rows] = await executor.execute(
+        `SELECT * FROM daily_report_lock
+          WHERE bu_no=? AND user_id=? AND YYYY_MM=? AND lock_status='LOCKED' LIMIT 1`,
+        [bu, userId, ym]
+    );
+    return rows.length > 0 ? rows[0] : null;
+}
+
+// 写入审计日志（须在业务事务内调用，随事务一起提交/回滚）
+async function writeAudit(conn, o) {
+    await conn.execute(`
+        INSERT INTO daily_report_audit_log
+            (bu_no, ruid, report_date, target_user_id, target_user_name, YYYY_MM,
+             action, operator_id, operator_name, operator_ip, old_data, new_data, remark)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `, [
+        o.bu_no, o.ruid == null ? null : o.ruid, o.report_date || null,
+        o.target_user_id, o.target_user_name || '', o.ym || null,
+        o.action, o.operator_id, o.operator_name || '', o.operator_ip || '',
+        o.old_data ? JSON.stringify(o.old_data) : null,
+        o.new_data ? JSON.stringify(o.new_data) : null,
+        o.remark || null
+    ]);
+}
 
 const DAY_START_MIN = 8 * 60;   // 08:00
 const DAY_END_MIN = 23 * 60 + 30; // 23:30
@@ -103,7 +146,7 @@ async function resolveActor(req) {
     if (rows.length === 0) {
         // 测试环境允许不存在于 cams_xuser 的身份(预设为经理级，便于隔离测试)
         if (process.env.NODE_ENV === 'test') {
-            return { user_id: uid, user_name: uid, xuser_dept: null, xuser_type: '部門主管', admin: '管理員', isManager: true };
+            return { user_id: uid, user_name: uid, xuser_dept: null, xuser_type: '部門主管', admin: '管理員', isManager: true, isSenior: true };
         }
         return { error: 'NOT_FOUND' };
     }
@@ -114,7 +157,8 @@ async function resolveActor(req) {
         xuser_dept: u.xuser_dept || null,
         xuser_type: u.xuser_type || '一般員工',
         admin: u.admin || '普通者',
-        isManager: isManagerRole(u.admin, u.xuser_type)
+        isManager: isManagerRole(u.admin, u.xuser_type),
+        isSenior: isSeniorRole(u.admin, u.xuser_type)
     };
 }
 
@@ -163,7 +207,7 @@ router.get('/meta', async (req, res) => {
             writers: writerRows,
             clients: clientRows.map(r => r.client_id),
             items: itemsRows.map(r => r.items_id),
-            me: { user_id: actor.user_id, user_name: actor.user_name, depart_id: actor.xuser_dept, isManager: actor.isManager }
+            me: { user_id: actor.user_id, user_name: actor.user_name, depart_id: actor.xuser_dept, isManager: actor.isManager, isSenior: actor.isSenior }
         });
     } catch (err) { fail500(res, err); }
 });
@@ -212,9 +256,13 @@ router.get('/', async (req, res) => {
                    r.projects1, r.projects2, r.status1, r.YYYY, r.YYYY_MM, r.ruid,
                    r.create_time, r.update_time,
                    ROUND(COALESCE(d.total_hours,0),2) AS total_hours,
-                   d.work_text
+                   d.work_text,
+                   CASE WHEN lk.id IS NULL THEN 0 ELSE 1 END AS locked,
+                   lk.locked_by_name, lk.locked_time
               FROM daily_report r
               LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
+              LEFT JOIN daily_report_lock lk
+                ON lk.bu_no=r.bu_no AND lk.user_id=r.user_id AND lk.YYYY_MM=r.YYYY_MM AND lk.lock_status='LOCKED'
               LEFT JOIN (
                     SELECT ruid, SUM(use_time) AS total_hours,
                            GROUP_CONCAT(projects SEPARATOR '；') AS work_text
@@ -280,6 +328,253 @@ router.post('/relink', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ 签核锁定：宽松解析 YYYY/MM、YYYY-MM ============
+function parseYM(s) {
+    const m = /^(\d{4})[-/](\d{1,2})$/.exec(String(s || '').trim());
+    if (!m) return null;
+    const mm = String(Number(m[2])).padStart(2, '0');
+    if (Number(mm) < 1 || Number(mm) > 12) return null;
+    return { year: Number(m[1]), mm, ym: `${m[1]}/${mm}` };
+}
+
+// ============ 签核锁定（经理：单人 user_id 或整批 batch=当月有日报者） ============
+router.post('/lock', async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '仅部門主管/高階主管可执行签核锁定', 403);
+
+        const b = req.body || {};
+        const bu = trimOrNull(b.bu_no) || 'HM';
+        const mo = parseYM(b.YYYY_MM || b.month);
+        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+        const wantUser = trimOrNull(b.user_id);
+        const wantUsers = Array.isArray(b.user_ids)
+            ? [...new Set(b.user_ids.map(trimOrNull).filter(Boolean))] : [];
+        const isBatch = !wantUser && wantUsers.length === 0 && !!b.batch;
+        if (!wantUser && wantUsers.length === 0 && !isBatch) return fail(res, '请指定撰写人或使用整批锁定', 400);
+
+        // 锁定对象：单人 / 指定多人 或 当月有日报(USE)的全部撰写人
+        let targets = [];
+        const wantList = wantUser ? [wantUser] : wantUsers;
+        if (wantList.length > 0) {
+            for (const uid of wantList) {
+                const [urows] = await pool.execute(
+                    'SELECT xuser_name FROM cams_xuser WHERE xuser_id=? LIMIT 1', [uid]);
+                targets.push({ user_id: uid, user_name: urows[0] ? urows[0].xuser_name : uid });
+            }
+        } else {
+            const [rrows] = await pool.execute(
+                `SELECT DISTINCT user_id FROM daily_report
+                  WHERE bu_no=? AND YYYY_MM=? AND status1='USE' ORDER BY user_id`,
+                [bu, mo.ym]);
+            for (const r of rrows) {
+                const [urows] = await pool.execute(
+                    'SELECT xuser_name FROM cams_xuser WHERE xuser_id=? LIMIT 1', [r.user_id]);
+                targets.push({ user_id: r.user_id, user_name: urows[0] ? urows[0].xuser_name : r.user_id });
+            }
+        }
+        if (targets.length === 0) return fail(res, '该月份尚无任何日报可锁定', 400);
+
+        await conn.beginTransaction();
+        let locked = 0, skipped = 0;
+        const lockedTargets = [];
+        for (const t of targets) {
+            const exist = await findActiveLock(conn, bu, t.user_id, mo.ym);
+            if (exist) { skipped++; continue; }
+            await conn.execute(`
+                INSERT INTO daily_report_lock
+                    (bu_no, user_id, YYYY_MM, lock_status, locked_by, locked_by_name, locked_time)
+                VALUES (?,?,?,'LOCKED',?,?,NOW())
+                ON DUPLICATE KEY UPDATE
+                    lock_status='LOCKED', locked_by=VALUES(locked_by),
+                    locked_by_name=VALUES(locked_by_name), locked_time=NOW(),
+                    unlocked_by=NULL, unlocked_by_name=NULL, unlocked_time=NULL, unlock_reason=NULL
+            `, [bu, t.user_id, mo.ym, actor.user_id, actor.user_name]);
+            await writeAudit(conn, {
+                bu_no: bu, target_user_id: t.user_id, target_user_name: t.user_name, ym: mo.ym,
+                action: AUDIT.LOCK, operator_id: actor.user_id, operator_name: actor.user_name,
+                operator_ip: clientIp(req),
+                new_data: { bu_no: bu, user_id: t.user_id, YYYY_MM: mo.ym, lock_status: 'LOCKED' }
+            });
+            locked++;
+            lockedTargets.push(t);
+        }
+        await conn.commit();
+        ok(res, { locked, skipped, targets: lockedTargets },
+            `已锁定 ${locked} 人${skipped ? `，跳过(已锁定) ${skipped} 人` : ''}`);
+    } catch (err) {
+        try { await conn.rollback(); } catch (e) { /* 忽略 */ }
+        fail500(res, err);
+    } finally {
+        conn.release();
+    }
+});
+
+// ============ 解锁（仅高階主管/管理员，必须填原因） ============
+router.post('/unlock', async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '解锁权限仅限高階主管/管理员', 403);
+
+        const b = req.body || {};
+        const bu = trimOrNull(b.bu_no) || 'HM';
+        const mo = parseYM(b.YYYY_MM || b.month);
+        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+        const wantUser = trimOrNull(b.user_id);
+        const reason = trimOrNull(b.reason);
+        if (!wantUser) return fail(res, '请指定要解锁的撰写人', 400);
+        if (!reason) return fail(res, '请填写解锁原因（将永久留痕）', 400);
+
+        await conn.beginTransaction();
+        const [cur] = await conn.execute(
+            `SELECT * FROM daily_report_lock
+              WHERE bu_no=? AND user_id=? AND YYYY_MM=? FOR UPDATE`,
+            [bu, wantUser, mo.ym]);
+        if (cur.length === 0 || cur[0].lock_status !== 'LOCKED') {
+            await conn.rollback();
+            return fail(res, '该员工当月未处于锁定状态', 400);
+        }
+        const lockRow = cur[0];
+        const [urows] = await pool.execute(
+            'SELECT xuser_name FROM cams_xuser WHERE xuser_id=? LIMIT 1', [wantUser]);
+        const targetName = urows[0] ? urows[0].xuser_name : wantUser;
+
+        await conn.execute(`
+            UPDATE daily_report_lock
+               SET lock_status='UNLOCKED', unlocked_by=?, unlocked_by_name=?,
+                   unlocked_time=NOW(), unlock_reason=?
+             WHERE id=?
+        `, [actor.user_id, actor.user_name, reason.slice(0, 500), lockRow.id]);
+        await writeAudit(conn, {
+            bu_no: bu, target_user_id: wantUser, target_user_name: targetName, ym: mo.ym,
+            action: AUDIT.UNLOCK, operator_id: actor.user_id, operator_name: actor.user_name,
+            operator_ip: clientIp(req),
+            old_data: lockRow, remark: reason.slice(0, 500),
+            new_data: { bu_no: bu, user_id: wantUser, YYYY_MM: mo.ym, lock_status: 'UNLOCKED' }
+        });
+        await conn.commit();
+        ok(res, { user_id: wantUser, YYYY_MM: mo.ym }, `已解锁 ${targetName} ${mo.ym} 的日报`);
+    } catch (err) {
+        try { await conn.rollback(); } catch (e) { /* 忽略 */ }
+        fail500(res, err);
+    } finally {
+        conn.release();
+    }
+});
+
+// ============ 锁定状态查询（签核面板数据源） ============
+router.get('/locks', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const bu = trimOrNull(q.bu_no) || 'HM';
+        const mo = parseYM(q.YYYY_MM || q.month);
+        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+
+        // 员工仅能查本人；经理可查全部
+        const onlySelf = actor.isManager ? trimOrNull(q.user_id) : actor.user_id;
+
+        const params = [bu, mo.ym, bu, mo.ym, bu, mo.ym, bu, mo.ym, bu, mo.ym];
+        let selfWhere = '';
+        if (onlySelf) { selfWhere = 'WHERE base.user_id=?'; params.push(onlySelf); }
+
+        const [rows] = await pool.execute(`
+            SELECT base.user_id,
+                   COALESCE(u.xuser_name, rn.user_name) AS user_name,
+                   COALESCE(u.xuser_dept, rn.depart_id) AS depart_id,
+                   COUNT(DISTINCT r.id) AS report_cnt,
+                   ROUND(COALESCE(SUM(d.use_time),0),2) AS hours,
+                   COUNT(DISTINCT CASE WHEN r.projects1 IS NOT NULL AND r.projects1<>'' THEN r.id END) AS delays,
+                   COUNT(DISTINCT CASE WHEN r.projects2 IS NOT NULL AND r.projects2<>'' THEN r.id END) AS unresolved,
+                   l.lock_status, l.locked_by, l.locked_by_name, l.locked_time,
+                   l.unlocked_by, l.unlocked_by_name, l.unlocked_time, l.unlock_reason
+              FROM (
+                    SELECT DISTINCT user_id FROM daily_report
+                     WHERE bu_no=? AND YYYY_MM=? AND status1='USE'
+                    UNION
+                    SELECT user_id FROM daily_report_lock WHERE bu_no=? AND YYYY_MM=?
+              ) base
+              LEFT JOIN cams_xuser u ON u.xuser_id = base.user_id
+              LEFT JOIN daily_report r
+                ON r.bu_no=? AND r.YYYY_MM=? AND r.user_id=base.user_id AND r.status1='USE'
+              LEFT JOIN daily_report_detail d ON d.ruid = r.id
+              LEFT JOIN daily_report_lock l
+                ON l.bu_no=? AND l.YYYY_MM=? AND l.user_id=base.user_id
+              LEFT JOIN (
+                    SELECT user_id, MAX(user_name) AS user_name, MAX(depart_id) AS depart_id
+                      FROM daily_report WHERE bu_no=? AND YYYY_MM=? GROUP BY user_id
+              ) rn ON rn.user_id = base.user_id
+              ${selfWhere}
+             GROUP BY base.user_id, u.xuser_name, rn.user_name, u.xuser_dept, rn.depart_id,
+                      l.lock_status, l.locked_by, l.locked_by_name, l.locked_time,
+                      l.unlocked_by, l.unlocked_by_name, l.unlocked_time, l.unlock_reason
+             ORDER BY l.lock_status IS NULL, base.user_id
+        `, params);
+        ok(res, rows.map(r => ({
+            ...r,
+            report_cnt: Number(r.report_cnt), hours: Number(r.hours),
+            delays: Number(r.delays), unresolved: Number(r.unresolved),
+            locked: r.lock_status === 'LOCKED'
+        })));
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ 审计日志查询（高管全部/部门主管本部门/员工仅本人） ============
+router.get('/audit-logs', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const bu = trimOrNull(q.bu_no) || 'HM';
+        const where = ['a.bu_no=?'];
+        const params = [bu];
+
+        if (trimOrNull(q.YYYY_MM || q.month)) {
+            const mo = parseYM(q.YYYY_MM || q.month);
+            if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+            where.push('a.YYYY_MM=?'); params.push(mo.ym);
+        }
+        if (trimOrNull(q.action)) { where.push('a.action=?'); params.push(trimOrNull(q.action)); }
+
+        if (!actor.isManager) {
+            // 一般员工仅能查自己被操作的记录
+            where.push('a.target_user_id=?'); params.push(actor.user_id);
+        } else if (!actor.isSenior && actor.xuser_dept) {
+            // 部门主管限本部门（按归属人当前部门）
+            where.push('tu.xuser_dept=?'); params.push(actor.xuser_dept);
+        }
+        if (actor.isManager && trimOrNull(q.user_id)) {
+            where.push('a.target_user_id=?'); params.push(trimOrNull(q.user_id));
+        }
+
+        const page = Math.max(1, Number(q.page) || 1);
+        const pageSize = Math.min(100, Math.max(1, Number(q.pageSize) || 20));
+        const offset = (page - 1) * pageSize;
+        const whereSql = where.join(' AND ');
+
+        const [[{ total }]] = await pool.execute(
+            `SELECT COUNT(*) AS total FROM daily_report_audit_log a
+             LEFT JOIN cams_xuser tu ON tu.xuser_id=a.target_user_id
+             WHERE ${whereSql}`, params);
+        const [rows] = await pool.execute(`
+            SELECT a.id, a.ruid, a.report_date, a.target_user_id, a.target_user_name,
+                   a.YYYY_MM, a.action, a.operator_id, a.operator_name, a.operator_ip,
+                   a.old_data, a.new_data, a.remark, a.created_time
+              FROM daily_report_audit_log a
+              LEFT JOIN cams_xuser tu ON tu.xuser_id=a.target_user_id
+             WHERE ${whereSql}
+             ORDER BY a.id DESC
+             LIMIT ? OFFSET ?
+        `, [...params, String(pageSize), String(offset)]);
+        ok(res, { list: rows, total: Number(total), page, pageSize });
+    } catch (err) { fail500(res, err); }
+});
+
 // ============ 单笔日报（主表+明细） ============
 router.get('/:id', async (req, res) => {
     try {
@@ -300,7 +595,15 @@ router.get('/:id', async (req, res) => {
         const [details] = await pool.execute(
             'SELECT * FROM daily_report_detail WHERE ruid=? ORDER BY from_time, id', [id]
         );
-        ok(res, { master, details });
+        const lock = await findActiveLock(pool, master.bu_no, master.user_id, master.YYYY_MM);
+        ok(res, {
+            master, details,
+            locked: !!lock,
+            lock: lock ? {
+                locked_by: lock.locked_by, locked_by_name: lock.locked_by_name,
+                locked_time: lock.locked_time
+            } : null
+        });
     } catch (err) { fail500(res, err); }
 });
 
@@ -340,6 +643,9 @@ router.post('/', async (req, res) => {
         }
 
         const { year, ym } = deriveYM(dateStr);
+        // 签核锁定拦截：该员工该月已锁定即禁止任何新增/覆盖（连接由 finally 统一释放）
+        const activeLock = await findActiveLock(pool, bu, actor.user_id, ym);
+        if (activeLock) return fail(res, '该月日报已签核锁定，请联系高階主管解锁后再修改', 423);
         const withinWindow = Math.abs(daysFromToday(dateStr)) <= EDIT_WINDOW_DAYS;
         const reqP1 = trimOrNull(b.projects1);
         const reqP2 = trimOrNull(b.projects2);
@@ -348,14 +654,21 @@ router.post('/', async (req, res) => {
         const p1 = withinWindow ? reqP1 : null;
         const p2 = withinWindow ? reqP2 : null;
 
-        // 文案用：保存前是否已存在（非锁定，仅用于提示语，不参与正确性）
-        const [pre] = await pool.execute(
-            'SELECT id FROM daily_report WHERE bu_no=? AND user_id=? AND report_date=? LIMIT 1',
+        await conn.beginTransaction();
+
+        // 保存前旧值（审计用，事务内读取保证一致性）
+        const [oldMasters] = await conn.execute(
+            'SELECT * FROM daily_report WHERE bu_no=? AND user_id=? AND report_date=? LIMIT 1',
             [bu, actor.user_id, dateStr]
         );
-        const existed = pre.length > 0;
-
-        await conn.beginTransaction();
+        const oldMaster = oldMasters[0] || null;
+        let oldDetails = [];
+        if (oldMaster) {
+            const [od] = await conn.execute(
+                'SELECT * FROM daily_report_detail WHERE ruid=? ORDER BY from_time, id', [oldMaster.id]);
+            oldDetails = od;
+        }
+        const existed = !!oldMaster;
 
         // 原子 UPSERT，避免「先 SELECT 再 INSERT」并发下的竞态：
         //   唯一键冲突即转 UPDATE；超窗时 CASE 保留库内 projects1/2；
@@ -400,6 +713,26 @@ router.post('/', async (req, res) => {
             VALUES ${valuesSql}
         `, detailParams);
 
+        // 审计日志（CREATE/UPDATE），与业务同一事务，杜绝「改了没记」
+        const effectiveP1 = withinWindow ? p1 : (oldMaster ? oldMaster.projects1 : p1);
+        const effectiveP2 = withinWindow ? p2 : (oldMaster ? oldMaster.projects2 : p2);
+        await writeAudit(conn, {
+            bu_no: bu, ruid: masterId, report_date: dateStr,
+            target_user_id: actor.user_id, target_user_name: actor.user_name, ym,
+            action: existed ? AUDIT.UPDATE : AUDIT.CREATE,
+            operator_id: actor.user_id, operator_name: actor.user_name,
+            operator_ip: clientIp(req),
+            old_data: existed ? { master: oldMaster, details: oldDetails } : null,
+            new_data: {
+                master: {
+                    bu_no: bu, depart_id: actor.xuser_dept, user_id: actor.user_id,
+                    report_date: dateStr, projects1: effectiveP1, projects2: effectiveP2,
+                    status1, YYYY_MM: ym
+                },
+                details
+            }
+        });
+
         await conn.commit();
         ok(res, { id: masterId, within_window: withinWindow }, existed ? '日报已覆盖更新' : '日报已新增');
     } catch (err) {
@@ -419,11 +752,27 @@ router.delete('/:id', async (req, res) => {
         const id = Number(req.params.id);
         if (!id) return fail(res, 'id 不正确', 400);
 
-        const [masters] = await conn.execute('SELECT user_id FROM daily_report WHERE id=? LIMIT 1', [id]);
+        const [masters] = await conn.execute('SELECT * FROM daily_report WHERE id=? LIMIT 1', [id]);
         if (masters.length === 0) return fail(res, '日报不存在', 404);
-        if (!actor.isManager && masters[0].user_id !== actor.user_id) return fail(res, '权限不足，无法删除他人日报', 403);
+        const masterRow = masters[0];
+        if (!actor.isManager && masterRow.user_id !== actor.user_id) return fail(res, '权限不足，无法删除他人日报', 403);
+
+        // 签核锁定拦截：任何人（含经理）删除已锁定月日报均须先解锁
+        const delLock = await findActiveLock(conn, masterRow.bu_no, masterRow.user_id, masterRow.YYYY_MM);
+        if (delLock) return fail(res, '该月日报已签核锁定，请联系高階主管解锁后再删除', 423);
 
         await conn.beginTransaction();
+        const [oldDetails] = await conn.execute(
+            'SELECT * FROM daily_report_detail WHERE ruid=? ORDER BY from_time, id', [id]);
+        await writeAudit(conn, {
+            bu_no: masterRow.bu_no, ruid: id, report_date: masterRow.report_date,
+            target_user_id: masterRow.user_id,
+            target_user_name: masterRow.user_name, ym: masterRow.YYYY_MM,
+            action: AUDIT.DELETE,
+            operator_id: actor.user_id, operator_name: actor.user_name,
+            operator_ip: clientIp(req),
+            old_data: { master: masterRow, details: oldDetails }, new_data: null
+        });
         await conn.execute('DELETE FROM daily_report_detail WHERE ruid=?', [id]);
         await conn.execute('DELETE FROM daily_report WHERE id=?', [id]);
         await conn.commit();

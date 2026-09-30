@@ -100,6 +100,8 @@
                         <button class="btn" onclick="DRApp.openAnalysis('time')">📊 ${t('dr.btn.an_time')}</button>
                         <button class="btn" onclick="DRApp.openAnalysis('client')">🧩 ${t('dr.btn.an_client')}</button>
                         <button class="btn" onclick="DRApp.openAnalysis('wheel')">☸️ ${t('dr.btn.an_wheel')}</button>
+                        ${mgr ? `<button class="btn" style="background:#8e44ad;color:#fff;" onclick="DRApp.openSignoff()">📝 ${t('dr.sign.title')}</button>
+                                 <button class="btn" style="background:#5d6d7e;color:#fff;" onclick="DRApp.openAudit()">📜 ${t('dr.audit.title')}</button>` : ''}
                         <span style="margin-left:auto;color:#7f8c8d;font-size:0.9em;" id="drTotal"></span>
                     </div>
                     <div id="drTable">${t('loading')}</div>
@@ -174,9 +176,9 @@
                         return has ? `class="${cellClickCls}" data-jump-kind="${kind}" data-jump-uid="${uid}" data-jump-uname="${uname}" data-jump-year="${year}" data-jump-month="${month}"` : '';
                     };
                     return `
-                    <tr>
+                    <tr${Number(r.locked) ? ' style="background:#fdf6e3;"' : ''}>
                         <td>${(this.filters.page - 1) * this.filters.pageSize + i + 1}</td>
-                        <td>${esc(r.report_date)}</td>
+                        <td>${esc(r.report_date)}${Number(r.locked) ? ' <span title="' + t('dr.sign.locked_tip') + '">🔒</span>' : ''}</td>
                         <td class="num">${UI.fmt(r.total_hours)}</td>
                         <td style="max-width:280px;" title="${esc(r.work_text || '')}">${esc(r.work_text || '-')}</td>
                         <td style="${delayTdCls}" ${tdAttrs('delay')}>${hasDelay ? esc(r.projects1) : '-'}</td>
@@ -184,7 +186,7 @@
                         <td>${uname}</td>
                         <td>
                             <button class="btn btn-sm btn-info" title="${t('edit')}" data-edit-id="${Number(r.id) || 0}" data-edit-date="${esc(r.report_date)}">✏️</button>
-                            <button class="btn btn-danger btn-sm" data-del-id="${Number(r.id) || 0}">🗑</button>
+                            ${Number(r.locked) ? '' : `<button class="btn btn-danger btn-sm" data-del-id="${Number(r.id) || 0}">🗑</button>`}
                         </td>
                     </tr>`;
                 }).join('')}</tbody>
@@ -243,15 +245,25 @@
             this.renderForm(this.todayStr(), null);
         },
 
-        renderForm(dateStr, loaded) {
-            const locked = Math.abs(this.daysFromToday(dateStr)) > 7;
+        renderForm(dateStr, loaded, signLock) {
+            this._formSignLock = signLock || null;
+            const sl = !!signLock;
+            const windowLocked = Math.abs(this.daysFromToday(dateStr)) > 7;
             const clients = (this.meta.clients || []).map(x => `<option value="${esc(x)}">`).join('');
             const items = (this.meta.items || []).map(x => `<option value="${esc(x)}">`).join('');
+            const lockBanner = sl ? `
+                    <div style="background:#fdf2e3;border:1px solid #e67e22;color:#a04000;padding:10px 14px;border-radius:8px;margin-bottom:10px;">
+                        🔒 <b>${t('dr.sign.form_banner')}</b>
+                        ${signLock.locked_by_name ? '　' + t('dr.sign.locked_by') + '：' + esc(signLock.locked_by_name) : ''}
+                        ${signLock.locked_time ? '　' + t('dr.sign.locked_time') + '：' + esc(String(signLock.locked_time).replace('T', ' ').slice(0, 16)) : ''}
+                        <div style="font-size:0.9em;margin-top:2px;">${t('dr.sign.form_banner_hint')}</div>
+                    </div>` : '';
             this.c.innerHTML = `
                 <div class="card">
+                    ${lockBanner}
                     <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
-                        <label><b>${t('dr.form.report_date')}：</b><input type="date" id="drFormDate" value="${dateStr}" onchange="DRApp.onDateChange()"></label>
-                        <button class="btn" onclick="DRApp.showGuide()">📖 ${t('dr.btn.guide')}</button>
+                        <label><b>${t('dr.form.report_date')}：</b><input type="date" id="drFormDate" value="${dateStr}" ${sl ? 'disabled' : 'onchange="DRApp.onDateChange()"'}></label>
+                        ${sl ? '' : `<button class="btn" onclick="DRApp.showGuide()">📖 ${t('dr.btn.guide')}</button>`}
                         <span id="drFormHint" style="color:#e67e22;font-size:0.9em;"></span>
                     </div>
 
@@ -271,25 +283,25 @@
                         <tbody id="drFormRows"></tbody>
                     </table>
                     <div class="toolbar" style="margin-top:8px;">
-                        <button class="btn btn-sm" onclick="DRApp.addRow()">➕ ${t('dr.btn.add_row')}</button>
+                        ${sl ? '' : `<button class="btn btn-sm" onclick="DRApp.addRow()">➕ ${t('dr.btn.add_row')}</button>`}
                         <span style="margin-left:auto;font-weight:700;">${t('dr.form.total_hours')}：<span id="drFormTotal">0.00</span> ${t('dr.axis.hours')}</span>
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;">
                         <div>
                             <label><b>${t('dr.form.delay_today')}</b></label>
-                            <textarea id="drFormP1" rows="8" style="width:100%;margin-top:4px;min-height:160px;" placeholder="${locked ? t('dr.form.lock_hint') : ''}" ${locked ? 'disabled' : ''}>${loaded ? esc(loaded.projects1 || '') : ''}</textarea>
+                            <textarea id="drFormP1" rows="8" style="width:100%;margin-top:4px;min-height:160px;" placeholder="${(!sl && windowLocked) ? t('dr.form.lock_hint') : ''}" ${(sl || windowLocked) ? 'disabled' : ''}>${loaded ? esc(loaded.projects1 || '') : ''}</textarea>
                         </div>
                         <div>
                             <label><b>${t('dr.form.unresolved_now')}</b></label>
-                            <textarea id="drFormP2" rows="8" style="width:100%;margin-top:4px;min-height:160px;" placeholder="${locked ? t('dr.form.lock_hint') : ''}" ${locked ? 'disabled' : ''}>${loaded ? esc(loaded.projects2 || '') : ''}</textarea>
+                            <textarea id="drFormP2" rows="8" style="width:100%;margin-top:4px;min-height:160px;" placeholder="${(!sl && windowLocked) ? t('dr.form.lock_hint') : ''}" ${(sl || windowLocked) ? 'disabled' : ''}>${loaded ? esc(loaded.projects2 || '') : ''}</textarea>
                         </div>
                     </div>
-                    ${locked ? `<div style="color:#e67e22;margin-top:8px;">⚠️ ${t('dr.form.lock_hint')}</div>` : ''}
+                    ${(!sl && windowLocked) ? `<div style="color:#e67e22;margin-top:8px;">⚠️ ${t('dr.form.lock_hint')}</div>` : ''}
 
                     <div class="toolbar" style="margin-top:14px;">
-                        <button class="btn btn-primary" id="drSaveBtn" onclick="DRApp.save()">💾 ${t('save')}</button>
-                        <button class="btn" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                        ${sl ? '' : `<button class="btn btn-primary" id="drSaveBtn" onclick="DRApp.save()">💾 ${t('save')}</button>`}
+                        <button class="btn" data-keep="1" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
                     </div>
                     <datalist id="drClientList">${clients}</datalist>
                     <datalist id="drItemsList">${items}</datalist>
@@ -320,11 +332,17 @@
             try {
                 const res = await API.get('/api/daily-report?' + qs.toString());
                 const row = (res.data.list || [])[0];
-                if (!row) { // 空白表单，仅应用锁定状态
-                    const locked = Math.abs(this.daysFromToday(dateStr)) > 7;
-                    const p1 = document.getElementById('drFormP1'), p2 = document.getElementById('drFormP2');
-                    if (p1) { p1.value = ''; p1.disabled = locked; }
-                    if (p2) { p2.value = ''; p2.disabled = locked; }
+                if (!row) {
+                    // 当天无日报：查本人当月签核锁，锁定则禁止新增
+                    const ym = dateStr.slice(0, 7).replace('-', '/');
+                    const lres = await API.get('/api/daily-report/locks?bu_no=' + encodeURIComponent(State.bu_no) +
+                        '&YYYY_MM=' + encodeURIComponent(ym) + '&user_id=' + encodeURIComponent(this.me ? this.me.user_id : ''));
+                    const lrow = (lres.data || [])[0];
+                    const signLock = lrow && lrow.locked
+                        ? { locked_by: lrow.locked_by, locked_by_name: lrow.locked_by_name, locked_time: lrow.locked_time }
+                        : null;
+                    this.formRows = [{ projects: '', from_time: '08:00', to_time: '08:30', wk_type: '日常工作', client_id: '', items_id: '' }];
+                    this.renderForm(dateStr, null, signLock);
                     const hint = document.getElementById('drFormHint');
                     if (hint) hint.textContent = '';
                     return;
@@ -335,7 +353,7 @@
                     projects: d.projects || '', from_time: d.from_time || '', to_time: d.to_time || '',
                     wk_type: d.wk_type || '日常工作', client_id: d.client_id || '', items_id: d.items_id || ''
                 }));
-                this.renderForm(dateStr, m);
+                this.renderForm(dateStr, m, got.data.lock);
                 const hint = document.getElementById('drFormHint');
                 if (hint) hint.textContent = 'ID #' + m.id;
             } catch (e) {
@@ -383,7 +401,8 @@
         },
 
         // 渲染时间下拉（替代原生 input[type=time]，确保分钟只能选 00/30）
-        timeSelect(cls, cur) {
+        timeSelect(cls, cur, disabled) {
+            const dis = disabled ? ' disabled' : '';
             const slots = this.timeSlots();
             let extra = '';
             if (!cur) {
@@ -394,7 +413,7 @@
             }
             const opts = slots.map(v =>
                 `<option value="${v}" ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
-            return `<select class="${cls}" style="width:95px;min-height:48px;" onchange="DRApp.syncRowTimes()">${extra}${opts}</select>`;
+            return `<select class="${cls}" style="width:95px;min-height:48px;"${dis} onchange="DRApp.syncRowTimes()">${extra}${opts}</select>`;
         },
 
         syncRowTimes() {
@@ -458,17 +477,19 @@
             const tb = document.getElementById('drFormRows');
             if (!tb) return;
             const wks = (this.meta.wk_types || ['日常工作']);
+            const ro = !!this._formSignLock;
+            const dis = ro ? ' disabled' : '';
             tb.innerHTML = this.formRows.map((r, i) => `
                 <tr class="dr-row" data-idx="${i}">
                     <td>${i + 1}</td>
-                    <td><input class="dr-f-project" style="width:100%;min-width:200px;min-height:48px;" value="${esc(r.projects || '')}"></td>
-                    <td>${this.timeSelect('dr-f-from', r.from_time || '')}</td>
-                    <td>${this.timeSelect('dr-f-to', r.to_time || '')}</td>
-                    <td><select class="dr-f-wk" style="min-height:48px;">${wks.map(w => `<option value="${esc(w)}" ${r.wk_type === w ? 'selected' : ''}>${this.wkLabel(w)}</option>`).join('')}</select></td>
+                    <td><input class="dr-f-project" style="width:100%;min-width:200px;min-height:48px;" value="${esc(r.projects || '')}"${dis}></td>
+                    <td>${this.timeSelect('dr-f-from', r.from_time || '', ro)}</td>
+                    <td>${this.timeSelect('dr-f-to', r.to_time || '', ro)}</td>
+                    <td><select class="dr-f-wk" style="min-height:48px;"${dis}>${wks.map(w => `<option value="${esc(w)}" ${r.wk_type === w ? 'selected' : ''}>${this.wkLabel(w)}</option>`).join('')}</select></td>
                     <td class="num dr-f-hours" style="min-height:48px;">-</td>
-                    <td><input class="dr-f-client" style="width:125px;min-height:48px;" list="drClientList" value="${esc(r.client_id || '')}"></td>
-                    <td><input class="dr-f-items" style="width:125px;min-height:48px;" list="drItemsList" value="${esc(r.items_id || '')}"></td>
-                    <td><button class="btn btn-danger btn-sm" onclick="DRApp.delRow(this)">✕</button></td>
+                    <td><input class="dr-f-client" style="width:125px;min-height:48px;" list="drClientList" value="${esc(r.client_id || '')}"${dis}></td>
+                    <td><input class="dr-f-items" style="width:125px;min-height:48px;" list="drItemsList" value="${esc(r.items_id || '')}"${dis}></td>
+                    <td>${ro ? '' : `<button class="btn btn-danger btn-sm" onclick="DRApp.delRow(this)">✕</button>`}</td>
                 </tr>`).join('');
             this.syncRowTimes();
         },
@@ -523,7 +544,7 @@
                 projects: d.projects || '', from_time: d.from_time || '', to_time: d.to_time || '',
                 wk_type: d.wk_type || '日常工作', client_id: d.client_id || '', items_id: d.items_id || ''
             }));
-            this.renderForm(reportDate || m.report_date, m);
+            this.renderForm(reportDate || m.report_date, m, got.data.lock);
             const hint = document.getElementById('drFormHint');
             if (hint) hint.textContent = 'ID #' + m.id;
         },
@@ -547,6 +568,251 @@
                     </tbody>
                 </table>
             `, `<button class="btn btn-primary" onclick="UI.closeModal()">${t('confirm')}</button>`);
+        },
+
+        // ============ 签核管理面板 ============
+        openSignoff() {
+            this.view = 'signoff';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._signYM) {
+                this._signYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.sign.period')}：</b>
+                            <select id="drsYear">${this.yearOptions(this._signYM.year)}</select> /
+                            <select id="drsMonth">${this.monthOptions(this._signYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadLocks()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="background:#8e44ad;color:#fff;" onclick="DRApp.lockSelected()">🔒 ${t('dr.sign.lock_selected')}</button>
+                        <button class="btn" style="background:#6c3483;color:#fff;" onclick="DRApp.lockAll()">🔒 ${t('dr.sign.lock_all')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="drsBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadLocks();
+        },
+
+        signYM() {
+            const y = document.getElementById('drsYear').value;
+            const mm = document.getElementById('drsMonth').value;
+            this._signYM = { year: y, mm };
+            return `${y}/${mm}`;
+        },
+
+        async loadLocks() {
+            const el = document.getElementById('drsBody');
+            if (!el) return;
+            const ym = this.signYM();
+            const senior = !!(this.me && this.me.isSenior);
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/locks?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const rows = res.data || [];
+                this._lockRows = rows;
+                if (rows.length === 0) {
+                    el.innerHTML = UI.empty('📭', t('dr.sign.empty'));
+                    return;
+                }
+                const statusBadge = (r) => {
+                    if (r.locked) return `<span style="color:#8e44ad;font-weight:700;">🔒 ${t('dr.sign.status.locked')}</span>`;
+                    if (r.lock_status === 'UNLOCKED') return `<span style="color:#7f8c8d;">🔓 ${t('dr.sign.status.unlocked')}</span>`;
+                    return `<span style="color:#27ae60;">${t('dr.sign.status.none')}</span>`;
+                };
+                const lockInfo = (r) => r.locked
+                    ? `${esc(r.locked_by_name || r.locked_by || '')}<br><span style="color:#7f8c8d;font-size:0.85em;">${this.fmtDT(r.locked_time)}</span>`
+                    : (r.lock_status === 'UNLOCKED'
+                        ? `<span style="color:#d35400;">${esc(r.unlocked_by_name || r.unlocked_by || '')} ${this.fmtDT(r.unlocked_time)}</span><br><span style="color:#7f8c8d;font-size:0.85em;">${esc(r.unlock_reason || '')}</span>`
+                        : '-');
+                el.innerHTML = `<table class="data-table">
+                    <thead><tr>
+                        <th style="width:36px;"></th>
+                        <th>${t('dr.sign.col.writer')}</th><th>${t('dr.sign.col.depart')}</th>
+                        <th>${t('dr.sign.col.reports')}</th><th>${t('dr.sign.col.hours')}</th>
+                        <th>${t('dr.sign.col.delays')}</th><th>${t('dr.sign.col.unresolved')}</th>
+                        <th>${t('dr.sign.col.status')}</th><th>${t('dr.sign.col.info')}</th>
+                        <th>${t('dr.sign.col.action')}</th>
+                    </tr></thead>
+                    <tbody>${rows.map(r => `
+                        <tr${r.locked ? ' style="background:#f4ecf7;"' : ''}>
+                            <td><input type="checkbox" class="drs-chk" data-uid="${esc(r.user_id)}" ${r.locked ? 'disabled' : ''}></td>
+                            <td>${esc(r.user_id)} - ${esc(r.user_name || '')}</td>
+                            <td>${esc(r.depart_id || '-')}</td>
+                            <td class="num">${r.report_cnt}</td>
+                            <td class="num">${UI.fmt(r.hours)}</td>
+                            <td class="num" style="color:${r.delays ? '#e67e22' : ''};">${r.delays}</td>
+                            <td class="num" style="color:${r.unresolved ? '#e74c3c' : ''};">${r.unresolved}</td>
+                            <td>${statusBadge(r)}</td>
+                            <td style="max-width:220px;font-size:0.88em;">${lockInfo(r)}</td>
+                            <td>${(senior && r.locked) ? `<button class="btn btn-sm" style="background:#d35400;color:#fff;" data-unlock-uid="${esc(r.user_id)}" data-unlock-name="${esc(r.user_name || r.user_id)}">🔓 ${t('dr.sign.unlock')}</button>` : '-'}</td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+                el.querySelectorAll('button[data-unlock-uid]').forEach(btn => {
+                    btn.addEventListener('click', () => this.askUnlock(btn.dataset.unlockUid, btn.dataset.unlockName));
+                });
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${t('dr.msg.load_fail')}: ${esc(e.message)}</p>`;
+            }
+        },
+
+        async lockSelected() {
+            const uids = Array.from(document.querySelectorAll('.drs-chk:checked')).map(c => c.dataset.uid);
+            if (uids.length === 0) { UI.toast(t('dr.sign.pick_first'), 'error'); return; }
+            if (!confirm(t('dr.sign.confirm_lock').replace('{n}', uids.length))) return;
+            const ym = this._signYM.year + '/' + this._signYM.mm;
+            try {
+                const res = await API.post('/api/daily-report/lock', { bu_no: State.bu_no, YYYY_MM: ym, user_ids: uids });
+                UI.toast(res.message || 'OK', 'success');
+                this.loadLocks();
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        async lockAll() {
+            if (!confirm(t('dr.sign.confirm_lock_all'))) return;
+            const ym = this._signYM.year + '/' + this._signYM.mm;
+            try {
+                const res = await API.post('/api/daily-report/lock', { bu_no: State.bu_no, YYYY_MM: ym, batch: true });
+                UI.toast(res.message || 'OK', 'success');
+                this.loadLocks();
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        askUnlock(uid, uname) {
+            UI.modal(`🔓 ${t('dr.sign.unlock')} - ${esc(uname)} (${esc(uid)})`, `
+                <div style="line-height:1.8;margin-bottom:8px;color:#a04000;">${t('dr.sign.unlock_notice')}</div>
+                <label><b>${t('dr.sign.unlock_reason')}：</b></label>
+                <textarea id="drsUnlockReason" rows="4" style="width:100%;margin-top:4px;" placeholder="${t('dr.sign.unlock_reason_ph')}"></textarea>
+            `, `
+                <button class="btn btn-primary" onclick="DRApp.doUnlock('${esc(uid)}','${esc(uname)}')">${t('confirm')}</button>
+                <button class="btn" onclick="UI.closeModal()">${t('cancel')}</button>
+            `);
+        },
+
+        async doUnlock(uid, uname) {
+            const reason = (document.getElementById('drsUnlockReason').value || '').trim();
+            if (!reason) { UI.toast(t('dr.sign.reason_required'), 'error'); return; }
+            const ym = this._signYM.year + '/' + this._signYM.mm;
+            try {
+                const res = await API.post('/api/daily-report/unlock', { bu_no: State.bu_no, YYYY_MM: ym, user_id: uid, reason });
+                UI.closeModal();
+                UI.toast(res.message || 'OK', 'success');
+                this.loadLocks();
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        // ============ 审计日志查询弹窗 ============
+        openAudit() {
+            const now = new Date();
+            this._auditFilter = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0'), action: '', page: 1 };
+            UI.modal(`📜 ${t('dr.audit.title')}`, `
+                <div style="min-width:780px;max-width:90vw;">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:8px;">
+                        <select id="draYear">${this.yearOptions(this._auditFilter.year)}</select> /
+                        <select id="draMonth">${this.monthOptions(this._auditFilter.mm)}</select>
+                        <select id="draAction">
+                            <option value="">${t('dr.all')}</option>
+                            ${['CREATE', 'UPDATE', 'DELETE', 'LOCK', 'UNLOCK'].map(a =>
+                                `<option value="${a}">${t('dr.audit.act.' + a)}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="DRApp.loadAudit(1)">🔍 ${t('dr.btn.query')}</button>
+                    </div>
+                    <div id="draBody" style="margin-top:10px;max-height:60vh;overflow:auto;">${t('loading')}</div>
+                </div>
+            `, `<button class="btn" onclick="UI.closeModal()">${t('modal.close')}</button>`);
+            this.loadAudit(1);
+        },
+
+        auditActionBadge(a) {
+            const colors = { CREATE: '#27ae60', UPDATE: '#2980b9', DELETE: '#e74c3c', LOCK: '#8e44ad', UNLOCK: '#d35400' };
+            const key = 'dr.audit.act.' + a;
+            return `<span style="background:${colors[a] || '#7f8c8d'};color:#fff;padding:2px 8px;border-radius:10px;font-size:0.82em;white-space:nowrap;">${t(key)}</span>`;
+        },
+
+        async loadAudit(page) {
+            const el = document.getElementById('draBody');
+            if (!el) return;
+            const f = this._auditFilter;
+            f.year = document.getElementById('draYear').value;
+            f.mm = document.getElementById('draMonth').value;
+            f.action = document.getElementById('draAction').value;
+            f.page = page || 1;
+            const qs = new URLSearchParams({ bu_no: State.bu_no, page: f.page, pageSize: 15 });
+            if (f.year && f.mm) qs.set('YYYY_MM', f.year + '/' + f.mm);
+            if (f.action) qs.set('action', f.action);
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/audit-logs?' + qs.toString());
+                const rows = res.data.list || [];
+                this._auditRows = rows;
+                if (rows.length === 0) { el.innerHTML = UI.empty('📭', t('dr.audit.empty')); return; }
+                const pages = Math.max(1, Math.ceil(res.data.total / res.data.pageSize));
+                el.innerHTML = `<table class="data-table" style="font-size:0.88em;">
+                    <thead><tr>
+                        <th>${t('dr.audit.col.time')}</th><th>${t('dr.audit.col.action')}</th>
+                        <th>${t('dr.audit.col.target')}</th><th>${t('dr.audit.col.operator')}</th>
+                        <th>${t('dr.audit.col.ip')}</th><th>${t('dr.audit.col.remark')}</th><th></th>
+                    </tr></thead>
+                    <tbody>${rows.map((r, i) => `
+                        <tr>
+                            <td style="white-space:nowrap;">${this.fmtDT(r.created_time)}</td>
+                            <td>${this.auditActionBadge(r.action)}</td>
+                            <td>${esc(r.target_user_name || r.target_user_id)}<br><span style="color:#7f8c8d;font-size:0.9em;">${esc(r.YYYY_MM || '')} ${esc(r.report_date || '')}</span></td>
+                            <td>${esc(r.operator_name || r.operator_id)}</td>
+                            <td style="font-size:0.85em;">${esc(r.operator_ip || '-')}</td>
+                            <td style="max-width:200px;font-size:0.85em;color:#d35400;">${esc(r.remark || '-')}</td>
+                            <td><button class="btn btn-sm" data-diff-idx="${i}">${t('dr.audit.view_diff')}</button></td>
+                        </tr>`).join('')}
+                    </tbody></table>
+                    <div class="toolbar" style="justify-content:flex-end;gap:8px;margin-top:8px;">
+                        <button class="btn btn-sm" ${f.page <= 1 ? 'disabled' : ''} onclick="DRApp.loadAudit(${f.page - 1})">◀</button>
+                        <span>${f.page} / ${pages}</span>
+                        <button class="btn btn-sm" ${f.page >= pages ? 'disabled' : ''} onclick="DRApp.loadAudit(${f.page + 1})">▶</button>
+                    </div>`;
+                el.querySelectorAll('button[data-diff-idx]').forEach(btn => {
+                    btn.addEventListener('click', () => this.showAuditDiff(Number(btn.dataset.diffIdx)));
+                });
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
+        },
+
+        showAuditDiff(idx) {
+            const r = (this._auditRows || [])[idx];
+            if (!r) return;
+            const pretty = (val) => {
+                if (val == null || val === '') return '(' + t('dr.audit.none') + ')';
+                if (typeof val === 'string') {
+                    try { val = JSON.parse(val); } catch (e) { return val; }
+                }
+                return JSON.stringify(val, null, 2);
+            };
+            const block = (title, val) => `
+                <div style="margin-top:8px;"><b>${title}</b></div>
+                <pre style="background:#f8f9fa;border:1px solid #e0e0e0;border-radius:6px;padding:8px;max-height:260px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-all;">${esc(pretty(val))}</pre>`;
+            UI.modal(`${t('dr.audit.view_diff')} #${r.id} - ${this.auditActionBadge(r.action)}`,
+                `<div style="min-width:640px;max-width:88vw;max-height:72vh;overflow:auto;">
+                    <div style="color:#7f8c8d;font-size:0.9em;">${this.fmtDT(r.created_time)}　${esc(r.operator_name || '')} (${esc(r.operator_id)})　${esc(r.operator_ip || '')}</div>
+                    ${block(t('dr.audit.old_data'), r.old_data)}
+                    ${block(t('dr.audit.new_data'), r.new_data)}
+                    ${r.remark ? `<div style="margin-top:8px;color:#d35400;"><b>${t('dr.audit.col.remark')}：</b>${esc(r.remark)}</div>` : ''}
+                </div>`,
+                `<button class="btn btn-primary" onclick="UI.closeModal()">${t('modal.close')}</button>`);
+        },
+
+        // 日期时间格式化（mysql datetime / ISO 一律转本地 YYYY-MM-DD HH:mm）
+        fmtDT(v) {
+            if (!v) return '-';
+            const s = String(v);
+            if (s.includes('T')) {
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ` +
+                        `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                }
+            }
+            return s.slice(0, 16);
         },
 
         // ============ 分析视图 ============
