@@ -575,6 +575,275 @@ router.get('/audit-logs', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ P1-① 提交及时率看板 ============
+router.get('/timeliness', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const bu = trimOrNull(q.bu_no) || 'HM';
+        const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
+            const d = new Date();
+            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+        })();
+        const [y, m] = mo.ym.split('/').map(Number);
+
+        // 计算应交天数（当月已过去的日历日，含今日）
+        const now = new Date();
+        const isCurMonth = (now.getFullYear() === y && (now.getMonth() + 1) === m);
+        const lastDayOfMonth = new Date(y, m, 0).getDate();
+        const today = isCurMonth ? now.getDate() : lastDayOfMonth;
+        const dueDays = today; // 简化：每日均须交，含周末（工厂排班）
+
+        // 拉取各人提交统计
+        let where = ['bu_no=?', 'YYYY_MM=?', "status1='USE'"];
+        let params = [bu, mo.ym];
+        const target = resolveTarget(actor, trimOrNull(q.user_id));
+        if (target) { where.push('user_id=?'); params.push(target); }
+        const dept = trimOrNull(q.depart_id);
+        if (dept) { where.push('depart_id=?'); params.push(dept); }
+
+        const [rows] = await pool.execute(`
+            SELECT user_id,
+                   MAX(user_name) AS user_name,
+                   MAX(depart_id) AS depart_id,
+                   COUNT(DISTINCT report_date) AS submitted,
+                   SUM(CASE WHEN create_time IS NOT NULL AND DATE(create_time) > report_date THEN 1 ELSE 0 END) AS late
+              FROM daily_report
+             WHERE ${where.join(' AND ')}
+             GROUP BY user_id
+             ORDER BY user_id
+        `, params);
+
+        const list = rows.map(r => {
+            const submitted = Number(r.submitted);
+            const late = Number(r.late) || 0;
+            const missing = Math.max(0, dueDays - submitted);
+            const onTime = Math.max(0, submitted - late);
+            const rate = dueDays > 0 ? Math.round(onTime / dueDays * 1000) / 10 : 0;
+            return {
+                user_id: r.user_id,
+                user_name: r.user_name || r.user_id,
+                depart_id: r.depart_id || '',
+                due: dueDays,
+                submitted,
+                on_time: onTime,
+                late,
+                missing,
+                rate
+            };
+        });
+
+        // 附加无日报但有锁定记录的人（极端情况）
+        if (!target) {
+            const [lockOnly] = await pool.execute(`
+                SELECT DISTINCT user_id FROM daily_report_lock
+                  WHERE bu_no=? AND YYYY_MM=? AND lock_status='LOCKED'
+                    AND user_id NOT IN (SELECT user_id FROM daily_report WHERE bu_no=? AND YYYY_MM=?)
+            `, [bu, mo.ym, bu, mo.ym]);
+            for (const lo of lockOnly) {
+                if (!list.find(x => x.user_id === lo.user_id)) {
+                    list.push({ user_id: lo.user_id, user_name: lo.user_id, depart_id: '',
+                        due: dueDays, submitted: 0, on_time: 0, late: 0, missing: dueDays, rate: 0 });
+                }
+            }
+        }
+
+        ok(res, list);
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ P1-② 月度绩效自动汇总 ============
+router.get('/monthly-summary', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const bu = trimOrNull(q.bu_no) || 'HM';
+        const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
+            const d = new Date();
+            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+        })();
+
+        let where = ['d.bu_no=?', 'd.YYYY_MM=?', "d.status1='USE'"];
+        let params = [bu, mo.ym];
+        const target = resolveTarget(actor, trimOrNull(q.user_id));
+        if (target) { where.push('d.user_id=?'); params.push(target); }
+        const dept = trimOrNull(q.depart_id);
+        if (dept) { where.push('d.depart_id=?'); params.push(dept); }
+
+        const [rows] = await pool.execute(`
+            SELECT d.user_id,
+                   MAX(d.user_name) AS user_name,
+                   MAX(d.depart_id) AS depart_id,
+                   COUNT(DISTINCT d.report_date) AS report_days,
+                   COUNT(dt.id) AS detail_cnt,
+                   ROUND(SUM(dt.use_time), 2) AS total_hours,
+                   SUM(CASE WHEN d.projects1 IS NOT NULL AND d.projects1<>'' THEN 1 ELSE 0 END) AS delay_cnt,
+                   SUM(CASE WHEN d.projects2 IS NOT NULL AND d.projects2<>'' THEN 1 ELSE 0 END) AS unresolved_cnt,
+                   ROUND(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END), 2) AS work_hours,
+                   ROUND(SUM(CASE WHEN dt.wk_type!='日常工作' THEN dt.use_time ELSE 0 END), 2) AS life_hours
+              FROM daily_report d
+              LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+             WHERE ${where.join(' AND ')}
+             GROUP BY d.user_id
+             ORDER BY d.user_id
+        `, params);
+
+        const list = rows.map(r => {
+            const total = Number(r.total_hours) || 0;
+            const work = Number(r.work_hours) || 0;
+            const life = Number(r.life_hours) || 0;
+            return {
+                user_id: r.user_id,
+                user_name: r.user_name || r.user_id,
+                depart_id: r.depart_id || '',
+                YYYY_MM: mo.ym,
+                report_days: Number(r.report_days) || 0,
+                detail_cnt: Number(r.detail_cnt) || 0,
+                total_hours: total,
+                delay_cnt: Number(r.delay_cnt) || 0,
+                unresolved_cnt: Number(r.unresolved_cnt) || 0,
+                work_hours: work,
+                life_hours: life,
+                work_ratio: total > 0 ? Math.round(work / total * 1000) / 10 : 0,
+                life_ratio: total > 0 ? Math.round(life / total * 1000) / 10 : 0,
+                avg_hours: Number(r.report_days) > 0 ? Math.round(total / Number(r.report_days) * 100) / 100 : 0
+            };
+        });
+
+        // LEFT JOIN daily_report_target 取目标值
+        if (list.length > 0) {
+            const userIds = list.map(x => x.user_id);
+            const placeholders = userIds.map(() => '?').join(',');
+            const [targets] = await pool.execute(
+                `SELECT user_id, target_hours, max_delays, max_unresolved, min_work_ratio, remark
+                   FROM daily_report_target
+                  WHERE bu_no=? AND YYYY_MM=? AND user_id IN (${placeholders})`,
+                [bu, mo.ym, ...userIds]
+            );
+            const tMap = Object.fromEntries(targets.map(t => [t.user_id, t]));
+            for (const item of list) {
+                const t = tMap[item.user_id];
+                if (t) {
+                    item.target_hours = Number(t.target_hours) || null;
+                    item.max_delays = Number(t.max_delays) || null;
+                    item.max_unresolved = Number(t.max_unresolved) || null;
+                    item.min_work_ratio = Number(t.min_work_ratio) || null;
+                    item.target_remark = t.remark || '';
+                    // 达成率
+                    item.hours_achieve = item.target_hours ? Math.round(total_safe(item.total_hours) / item.target_hours * 1000) / 10 : null;
+                    item.delay_over = item.max_delays != null ? Math.max(0, item.delay_cnt - item.max_delays) : null;
+                    item.unresolved_over = item.max_unresolved != null ? Math.max(0, item.unresolved_cnt - item.max_unresolved) : null;
+                }
+            }
+        }
+
+        ok(res, list);
+    } catch (err) { fail500(res, err); }
+});
+
+function total_safe(v) { return Number(v) || 0; }
+
+// ============ P1-③ 目标设定与管理 ============
+router.get('/targets', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可设定目标', 403);
+        const q = req.query;
+        const bu = trimOrNull(q.bu_no) || 'HM';
+        const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
+            const d = new Date();
+            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+        })();
+
+        const where = ['bu_no=?', 'YYYY_MM=?'];
+        const params = [bu, mo.ym];
+        const dept = trimOrNull(q.depart_id);
+        if (dept) { where.push('depart_id=?'); params.push(dept); }
+
+        const [rows] = await pool.execute(`
+            SELECT t.*, u.xuser_name AS target_name, u.xuser_dept AS target_dept
+              FROM daily_report_target t
+              LEFT JOIN cams_xuser u ON u.xuser_id = t.user_id
+             WHERE ${where.join(' AND ')}
+             ORDER BY t.user_id
+        `, params);
+
+        ok(res, rows.map(r => ({
+            id: r.id,
+            user_id: r.user_id,
+            user_name: r.target_name || r.user_id,
+            depart_id: r.target_dept || '',
+            YYYY_MM: r.YYYY_MM,
+            target_hours: r.target_hours != null ? Number(r.target_hours) : null,
+            max_delays: r.max_delays != null ? Number(r.max_delays) : null,
+            max_unresolved: r.max_unresolved != null ? Number(r.max_unresolved) : null,
+            min_work_ratio: r.min_work_ratio != null ? Number(r.min_work_ratio) : null,
+            set_by: r.set_by,
+            set_by_name: r.set_by_name,
+            set_time: r.set_time,
+            remark: r.remark || ''
+        })));
+    } catch (err) { fail500(res, err); }
+});
+
+router.post('/targets', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可设定目标', 403);
+        const b = req.body || {};
+        const bu = trimOrNull(b.bu_no) || 'HM';
+        const mo = parseYM(b.YYYY_MM);
+        if (!mo) return fail(res, 'YYYY_MM 格式不正确（如 2025/10）', 400);
+
+        const targets = Array.isArray(b.targets) ? b.targets : (b.user_id ? [b] : []);
+        if (targets.length === 0) return fail(res, '请指定目标人员（targets 数组或 user_id）', 400);
+
+        let upserted = 0;
+        for (const t of targets) {
+            const uid = trimOrNull(t.user_id);
+            if (!uid) continue;
+            const th = t.target_hours != null && t.target_hours !== '' ? Number(t.target_hours) : null;
+            const md = t.max_delays != null && t.max_delays !== '' ? Number(t.max_delays) : null;
+            const mu = t.max_unresolved != null && t.max_unresolved !== '' ? Number(t.max_unresolved) : null;
+            const mw = t.min_work_ratio != null && t.min_work_ratio !== '' ? Number(t.min_work_ratio) : null;
+            const remark = trimOrNull(t.remark) || null;
+
+            await pool.execute(`
+                INSERT INTO daily_report_target
+                    (bu_no, user_id, YYYY_MM, target_hours, max_delays, max_unresolved, min_work_ratio, set_by, set_by_name, remark)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON DUPLICATE KEY UPDATE
+                    target_hours=VALUES(target_hours),
+                    max_delays=VALUES(max_delays),
+                    max_unresolved=VALUES(max_unresolved),
+                    min_work_ratio=VALUES(min_work_ratio),
+                    set_by=VALUES(set_by),
+                    set_by_name=VALUES(set_by_name),
+                    remark=VALUES(remark)
+            `, [bu, uid, mo.ym, th, md, mu, mw, actor.user_id, actor.user_name, remark]);
+            upserted++;
+        }
+
+        ok(res, { upserted }, `目标设定完成（${upserted} 人）`);
+    } catch (err) { fail500(res, err); }
+});
+
+router.delete('/targets/:id', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可删除目标', 403);
+        const id = Number(req.params.id);
+        if (!id) return fail(res, 'id 不正确', 400);
+        await pool.execute('DELETE FROM daily_report_target WHERE id=?', [id]);
+        ok(res, { id }, '目标已删除');
+    } catch (err) { fail500(res, err); }
+});
+
 // ============ 单笔日报（主表+明细） ============
 router.get('/:id', async (req, res) => {
     try {

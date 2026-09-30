@@ -101,7 +101,10 @@
                         <button class="btn" onclick="DRApp.openAnalysis('client')">🧩 ${t('dr.btn.an_client')}</button>
                         <button class="btn" onclick="DRApp.openAnalysis('wheel')">☸️ ${t('dr.btn.an_wheel')}</button>
                         ${mgr ? `<button class="btn" style="background:#8e44ad;color:#fff;" onclick="DRApp.openSignoff()">📝 ${t('dr.sign.title')}</button>
-                                 <button class="btn" style="background:#5d6d7e;color:#fff;" onclick="DRApp.openAudit()">📜 ${t('dr.audit.title')}</button>` : ''}
+                                 <button class="btn" style="background:#5d6d7e;color:#fff;" onclick="DRApp.openAudit()">📜 ${t('dr.audit.title')}</button>
+                                 <button class="btn" style="background:#1a5276;color:#fff;" onclick="DRApp.openTimeliness()">📊 ${t('dr.tl.title')}</button>
+                                 <button class="btn" style="background:#117a65;color:#fff;" onclick="DRApp.openSummary()">📋 ${t('dr.sum.title')}</button>
+                                 <button class="btn" style="background:#b9770e;color:#fff;" onclick="DRApp.openTargets()">🎯 ${t('dr.tgt.title')}</button>` : ''}
                         <span style="margin-left:auto;color:#7f8c8d;font-size:0.9em;" id="drTotal"></span>
                     </div>
                     <div id="drTable">${t('loading')}</div>
@@ -568,6 +571,256 @@
                     </tbody>
                 </table>
             `, `<button class="btn btn-primary" onclick="UI.closeModal()">${t('confirm')}</button>`);
+        },
+
+        // ============ P1-① 提交及时率看板 ============
+        openTimeliness() {
+            this.view = 'timeliness';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._tlYM) {
+                this._tlYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.tl.period')}：</b>
+                            <select id="tlYear">${this.yearOptions(this._tlYM.year)}</select> /
+                            <select id="tlMonth">${this.monthOptions(this._tlYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadTimeliness()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="tlBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadTimeliness();
+        },
+
+        async loadTimeliness() {
+            const el = document.getElementById('tlBody');
+            if (!el) return;
+            const y = document.getElementById('tlYear').value;
+            const mm = document.getElementById('tlMonth').value;
+            this._tlYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/timeliness?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const rows = res.data || [];
+                if (rows.length === 0) { el.innerHTML = UI.empty('📭', t('dr.tl.empty')); return; }
+                const rateColor = (r) => r >= 90 ? '#27ae60' : r >= 70 ? '#e67e22' : '#e74c3c';
+                el.innerHTML = `<table class="data-table">
+                    <thead><tr>
+                        <th>${t('dr.tl.col.writer')}</th><th>${t('dr.tl.col.depart')}</th>
+                        <th>${t('dr.tl.col.due')}</th><th>${t('dr.tl.col.submitted')}</th>
+                        <th>${t('dr.tl.col.on_time')}</th><th>${t('dr.tl.col.late')}</th>
+                        <th>${t('dr.tl.col.missing')}</th><th>${t('dr.tl.col.rate')}</th>
+                    </tr></thead>
+                    <tbody>${rows.map(r => `
+                        <tr>
+                            <td>${esc(r.user_id)} - ${esc(r.user_name || '')}</td>
+                            <td>${esc(r.depart_id || '-')}</td>
+                            <td class="num">${r.due}</td>
+                            <td class="num">${r.submitted}</td>
+                            <td class="num" style="color:#27ae60;">${r.on_time}</td>
+                            <td class="num" style="color:${r.late ? '#e67e22' : ''};">${r.late}</td>
+                            <td class="num" style="color:${r.missing ? '#e74c3c' : ''};">${r.missing}</td>
+                            <td class="num" style="font-weight:700;color:${rateColor(r.rate)};">${r.rate}%</td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
+        },
+
+        // ============ P1-② 月度绩效自动汇总 ============
+        openSummary() {
+            this.view = 'summary';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._sumYM) {
+                this._sumYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.sum.period')}：</b>
+                            <select id="sumYear">${this.yearOptions(this._sumYM.year)}</select> /
+                            <select id="sumMonth">${this.monthOptions(this._sumYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadSummary()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="sumBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadSummary();
+        },
+
+        async loadSummary() {
+            const el = document.getElementById('sumBody');
+            if (!el) return;
+            const y = document.getElementById('sumYear').value;
+            const mm = document.getElementById('sumMonth').value;
+            this._sumYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/monthly-summary?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const rows = res.data || [];
+                if (rows.length === 0) { el.innerHTML = UI.empty('📭', t('dr.sum.empty')); return; }
+                const tgtBadge = (val, over) => {
+                    if (val == null) return '-';
+                    if (over != null && over > 0) return `<span style="color:#e74c3c;font-weight:700;">${val} (↑${over})</span>`;
+                    return `<span style="color:#27ae60;">${val}</span>`;
+                };
+                const achieveColor = (v) => v == null ? '#7f8c8d' : v >= 100 ? '#27ae60' : v >= 80 ? '#e67e22' : '#e74c3c';
+                el.innerHTML = `<table class="data-table" style="font-size:0.9em;">
+                    <thead><tr>
+                        <th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th>
+                        <th>${t('dr.sum.col.days')}</th><th>${t('dr.sum.col.hours')}</th>
+                        <th>${t('dr.sum.col.target_h')}</th><th>${t('dr.sum.col.achieve')}</th>
+                        <th>${t('dr.sum.col.delays')}</th><th>${t('dr.sum.col.max_delays')}</th>
+                        <th>${t('dr.sum.col.unresolved')}</th><th>${t('dr.sum.col.max_unsolved')}</th>
+                        <th>${t('dr.sum.col.work_ratio')}</th><th>${t('dr.sum.col.min_work')}</th>
+                        <th>${t('dr.sum.col.avg_h')}</th>
+                    </tr></thead>
+                    <tbody>${rows.map(r => `
+                        <tr>
+                            <td>${esc(r.user_id)} - ${esc(r.user_name || '')}</td>
+                            <td>${esc(r.depart_id || '-')}</td>
+                            <td class="num">${r.report_days}</td>
+                            <td class="num" style="font-weight:700;">${UI.fmt(r.total_hours)}</td>
+                            <td class="num">${r.target_hours != null ? UI.fmt(r.target_hours) : '-'}</td>
+                            <td class="num" style="font-weight:700;color:${achieveColor(r.hours_achieve)};">${r.hours_achieve != null ? r.hours_achieve + '%' : '-'}</td>
+                            <td class="num" style="color:${r.delay_cnt ? '#e67e22' : ''};">${r.delay_cnt}</td>
+                            <td class="num">${tgtBadge(r.max_delays, r.delay_over)}</td>
+                            <td class="num" style="color:${r.unresolved_cnt ? '#e74c3c' : ''};">${r.unresolved_cnt}</td>
+                            <td class="num">${tgtBadge(r.max_unresolved, r.unresolved_over)}</td>
+                            <td class="num">${r.work_ratio}%</td>
+                            <td class="num">${r.min_work_ratio != null ? r.min_work_ratio + '%' : '-'}</td>
+                            <td class="num">${UI.fmt(r.avg_hours)}</td>
+                        </tr>`).join('')}
+                    </tbody></table>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
+        },
+
+        // ============ P1-③ 目标设定与管理 ============
+        openTargets() {
+            this.view = 'targets';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._tgtYM) {
+                this._tgtYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.tgt.period')}：</b>
+                            <select id="tgtYear">${this.yearOptions(this._tgtYM.year)}</select> /
+                            <select id="tgtMonth">${this.monthOptions(this._tgtYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadTargets()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn btn-success" onclick="DRApp.addTargetRow()">➕ ${t('dr.tgt.add_row')}</button>
+                        <button class="btn btn-primary" onclick="DRApp.saveTargets()">💾 ${t('save')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="tgtBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadTargets();
+        },
+
+        async loadTargets() {
+            const el = document.getElementById('tgtBody');
+            if (!el) return;
+            const y = document.getElementById('tgtYear').value;
+            const mm = document.getElementById('tgtMonth').value;
+            this._tgtYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/targets?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const rows = res.data || [];
+                this._tgtRows = rows.length > 0 ? rows : [];
+                this.renderTargetTable();
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
+        },
+
+        renderTargetTable() {
+            const el = document.getElementById('tgtBody');
+            if (!el) return;
+            const rows = this._tgtRows || [];
+            if (rows.length === 0) {
+                el.innerHTML = UI.empty('🎯', t('dr.tgt.empty'));
+                return;
+            }
+            el.innerHTML = `<table class="data-table" style="font-size:0.9em;">
+                <thead><tr>
+                    <th>${t('dr.tgt.col.writer')}</th>
+                    <th>${t('dr.tgt.col.target_hours')}</th>
+                    <th>${t('dr.tgt.col.max_delays')}</th>
+                    <th>${t('dr.tgt.col.max_unresolved')}</th>
+                    <th>${t('dr.tgt.col.min_work_ratio')}</th>
+                    <th>${t('dr.tgt.col.remark')}</th>
+                    <th>${t('dr.tgt.col.set_by')}</th>
+                    <th></th>
+                </tr></thead>
+                <tbody>${rows.map((r, i) => `
+                    <tr data-tgt-idx="${i}">
+                        <td>${esc(r.user_id)} - ${esc(r.user_name || '')}<input type="hidden" class="tgt-uid" value="${esc(r.user_id)}"></td>
+                        <td><input class="tgt-th" type="number" step="0.5" style="width:80px;" value="${r.target_hours != null ? r.target_hours : ''}" placeholder="-"></td>
+                        <td><input class="tgt-md" type="number" step="1" style="width:60px;" value="${r.max_delays != null ? r.max_delays : ''}" placeholder="-"></td>
+                        <td><input class="tgt-mu" type="number" step="1" style="width:60px;" value="${r.max_unresolved != null ? r.max_unresolved : ''}" placeholder="-"></td>
+                        <td><input class="tgt-mw" type="number" step="1" min="0" max="100" style="width:60px;" value="${r.min_work_ratio != null ? r.min_work_ratio : ''}" placeholder="-"></td>
+                        <td><input class="tgt-rm" style="width:200px;" value="${esc(r.remark || '')}"></td>
+                        <td style="font-size:0.85em;color:#7f8c8d;">${esc(r.set_by_name || '')}<br>${this.fmtDT(r.set_time)}</td>
+                        <td><button class="btn btn-danger btn-sm" data-tgt-del="${i}">✕</button></td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+            el.querySelectorAll('button[data-tgt-del]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const idx = Number(btn.dataset.tgtDel);
+                    this._tgtRows.splice(idx, 1);
+                    this.renderTargetTable();
+                });
+            });
+        },
+
+        addTargetRow() {
+            const uid = prompt(t('dr.tgt.input_uid'));
+            if (!uid) return;
+            if (!this._tgtRows) this._tgtRows = [];
+            if (this._tgtRows.find(r => r.user_id === uid)) {
+                UI.toast(t('dr.tgt.duplicate'), 'error'); return;
+            }
+            this._tgtRows.push({ user_id: uid, user_name: uid, target_hours: null, max_delays: null, max_unresolved: null, min_work_ratio: null, remark: '', set_by_name: '', set_time: null });
+            this.renderTargetTable();
+        },
+
+        async saveTargets() {
+            const rows = this._tgtRows || [];
+            if (rows.length === 0) { UI.toast(t('dr.tgt.empty_rows'), 'error'); return; }
+            const ym = this._tgtYM.year + '/' + this._tgtYM.mm;
+            const targets = rows.map(r => {
+                const tr = document.querySelector(`tr[data-tgt-idx="${rows.indexOf(r)}"]`);
+                if (!tr) return null;
+                return {
+                    user_id: tr.querySelector('.tgt-uid').value,
+                    target_hours: tr.querySelector('.tgt-th').value,
+                    max_delays: tr.querySelector('.tgt-md').value,
+                    max_unresolved: tr.querySelector('.tgt-mu').value,
+                    min_work_ratio: tr.querySelector('.tgt-mw').value,
+                    remark: tr.querySelector('.tgt-rm').value
+                };
+            }).filter(Boolean);
+            try {
+                const res = await API.post('/api/daily-report/targets', { bu_no: State.bu_no, YYYY_MM: ym, targets });
+                UI.toast(res.message || 'OK', 'success');
+                this.loadTargets();
+            } catch (e) { UI.toast(e.message, 'error'); }
         },
 
         // ============ 签核管理面板 ============

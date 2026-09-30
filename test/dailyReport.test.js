@@ -117,6 +117,25 @@ async function ensureTables() {
             INDEX idx_created (created_time)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    // P1-③ 目标设定表
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_target (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bu_no VARCHAR(10) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            YYYY_MM CHAR(7) NOT NULL,
+            target_hours DECIMAL(8,2) DEFAULT NULL,
+            max_delays INT DEFAULT NULL,
+            max_unresolved INT DEFAULT NULL,
+            min_work_ratio INT DEFAULT NULL,
+            set_by VARCHAR(50) NOT NULL,
+            set_by_name VARCHAR(100) DEFAULT '',
+            set_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            remark VARCHAR(500) DEFAULT NULL,
+            UNIQUE KEY uk_bu_user_ym (bu_no, user_id, YYYY_MM),
+            INDEX idx_bu_ym (bu_no, YYYY_MM)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 }
 
 async function seedReport(o) {
@@ -146,6 +165,7 @@ beforeAll(async () => {
     await ensureTables();
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_target WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_detail WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?,?)', [MGR, EMP, SUP]);
@@ -193,6 +213,7 @@ beforeAll(async () => {
 afterAll(async () => {
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_target WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_detail WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM cams_xuser WHERE xuser_id IN (?,?,?)', [MGR, EMP, SUP]);
@@ -786,5 +807,117 @@ describe('P0 签核锁定与审计日志', () => {
         expect(oneLock).toBeTruthy();
         const nd2 = typeof oneLock.new_data === 'string' ? JSON.parse(oneLock.new_data) : oneLock.new_data;
         expect(nd2.lock_status).toBe('LOCKED');
+    });
+});
+
+// ============ P1：考核闭环（及时率/汇总/目标设定） ============
+describe('P1 考核闭环', () => {
+    const P1YM = today.slice(0, 7).replace('-', '/');
+
+    test('① 提交及时率：员工仅见本人；经理见全员', async () => {
+        const empRes = await as(EMP).get(`/api/daily-report/timeliness?bu_no=${BU}&YYYY_MM=${encodeURIComponent(P1YM)}`);
+        expect(empRes.status).toBe(200);
+        expect(empRes.body.data.length).toBeGreaterThan(0);
+        expect(empRes.body.data.every(r => r.user_id === EMP)).toBe(true);
+        const empRow = empRes.body.data[0];
+        expect(empRow.due).toBeGreaterThan(0);
+        expect(empRow.submitted).toBeGreaterThanOrEqual(1);
+        expect(empRow.due - empRow.submitted).toBe(empRow.missing);
+
+        const mgrRes = await as(MGR).get(`/api/daily-report/timeliness?bu_no=${BU}&YYYY_MM=${encodeURIComponent(P1YM)}`);
+        expect(mgrRes.status).toBe(200);
+        const uids = mgrRes.body.data.map(r => r.user_id);
+        expect(uids).toContain(EMP);
+    });
+
+    test('② 月度绩效汇总：含工时/延误/未解/工作占比', async () => {
+        const res = await as(MGR).get(`/api/daily-report/monthly-summary?bu_no=${BU}&YYYY_MM=${encodeURIComponent(P1YM)}`);
+        expect(res.status).toBe(200);
+        const empRow = res.body.data.find(r => r.user_id === EMP);
+        expect(empRow).toBeTruthy();
+        expect(empRow.total_hours).toBeGreaterThan(0);
+        expect(typeof empRow.work_ratio).toBe('number');
+        expect(empRow.work_ratio + empRow.life_ratio).toBeCloseTo(100, 0);
+        expect(empRow.report_days).toBeGreaterThanOrEqual(1);
+    });
+
+    test('③ 目标设定：员工不可设定 → 403', async () => {
+        const res = await as(EMP).post('/api/daily-report/targets')
+            .send({ bu_no: BU, YYYY_MM: P1YM, user_id: EMP, target_hours: 200 });
+        expect(res.status).toBe(403);
+    });
+
+    test('③ 目标设定：主管单人设定 → 200', async () => {
+        const res = await as(MGR).post('/api/daily-report/targets')
+            .send({ bu_no: BU, YYYY_MM: P1YM, user_id: EMP, target_hours: 200, max_delays: 3, max_unresolved: 2, min_work_ratio: 70, remark: '月度考核目标' });
+        expect(res.status).toBe(200);
+        expect(res.body.data.upserted).toBe(1);
+
+        const [[row]] = await pool.execute(
+            'SELECT target_hours, max_delays, max_unresolved, min_work_ratio, remark FROM daily_report_target WHERE bu_no=? AND user_id=? AND YYYY_MM=?',
+            [BU, EMP, P1YM]);
+        expect(Number(row.target_hours)).toBe(200);
+        expect(row.max_delays).toBe(3);
+        expect(row.min_work_ratio).toBe(70);
+        expect(row.remark).toBe('月度考核目标');
+    });
+
+    test('③ 目标设定：批量 targets 数组 → upserted=2', async () => {
+        const res = await as(MGR).post('/api/daily-report/targets')
+            .send({ bu_no: BU, YYYY_MM: P1YM, targets: [
+                { user_id: EMP, target_hours: 180, max_delays: 5 },
+                { user_id: SUP, target_hours: 160, max_unresolved: 1 }
+            ]});
+        expect(res.status).toBe(200);
+        expect(res.body.data.upserted).toBe(2);
+
+        // EMP 被覆盖
+        const [[empRow]] = await pool.execute(
+            'SELECT target_hours FROM daily_report_target WHERE bu_no=? AND user_id=? AND YYYY_MM=?',
+            [BU, EMP, P1YM]);
+        expect(Number(empRow.target_hours)).toBe(180);
+    });
+
+    test('③ 目标查询：经理可见全部设定', async () => {
+        const res = await as(MGR).get(`/api/daily-report/targets?bu_no=${BU}&YYYY_MM=${encodeURIComponent(P1YM)}`);
+        expect(res.status).toBe(200);
+        expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+        const empT = res.body.data.find(r => r.user_id === EMP);
+        expect(empT).toBeTruthy();
+        expect(Number(empT.target_hours)).toBe(180);
+        expect(empT.set_by_name).toBeTruthy();
+    });
+
+    test('② 汇总关联目标：达成率/超额计算正确', async () => {
+        const res = await as(MGR).get(`/api/daily-report/monthly-summary?bu_no=${BU}&YYYY_MM=${encodeURIComponent(P1YM)}`);
+        const empRow = res.body.data.find(r => r.user_id === EMP);
+        expect(empRow).toBeTruthy();
+        expect(empRow.target_hours).toBe(180);
+        expect(empRow.hours_achieve).not.toBeNull();
+        expect(typeof empRow.hours_achieve).toBe('number');
+        expect(empRow.max_delays).toBe(5);
+        expect(empRow.delay_over != null).toBe(true);
+    });
+
+    test('③ 目标删除：经理可删 → 200', async () => {
+        const [rows] = await pool.execute(
+            'SELECT id FROM daily_report_target WHERE bu_no=? AND user_id=?', [BU, SUP]);
+        expect(rows.length).toBe(1);
+        const res = await as(MGR).delete(`/api/daily-report/targets/${rows[0].id}`);
+        expect(res.status).toBe(200);
+        const [after] = await pool.execute('SELECT * FROM daily_report_target WHERE id=?', [rows[0].id]);
+        expect(after).toHaveLength(0);
+    });
+
+    test('③ 目标设定：缺 YYYY_MM → 400', async () => {
+        const res = await as(MGR).post('/api/daily-report/targets')
+            .send({ bu_no: BU, user_id: EMP, target_hours: 100 });
+        expect(res.status).toBe(400);
+    });
+
+    test('③ 目标设定：空 targets → 400', async () => {
+        const res = await as(MGR).post('/api/daily-report/targets')
+            .send({ bu_no: BU, YYYY_MM: P1YM });
+        expect(res.status).toBe(400);
     });
 });

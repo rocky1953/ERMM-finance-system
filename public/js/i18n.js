@@ -1230,7 +1230,54 @@ const I18N = {
             'dr.audit.view_diff': '查看內容',
             'dr.audit.old_data': '修改前內容',
             'dr.audit.new_data': '修改後內容',
-            'dr.audit.none': '無'
+            'dr.audit.none': '無',
+
+            // P1-① 提交及時率看板
+            'dr.tl.title': '提交及時率',
+            'dr.tl.period': '月份',
+            'dr.tl.empty': '該月份尚無提交記錄',
+            'dr.tl.col.writer': '撰寫人',
+            'dr.tl.col.depart': '部門',
+            'dr.tl.col.due': '應交',
+            'dr.tl.col.submitted': '實交',
+            'dr.tl.col.on_time': '準時',
+            'dr.tl.col.late': '遲交',
+            'dr.tl.col.missing': '缺交',
+            'dr.tl.col.rate': '及時率',
+
+            // P1-② 月度績效自動匯總
+            'dr.sum.title': '月度績效匯總',
+            'dr.sum.period': '月份',
+            'dr.sum.empty': '該月份尚無績效資料',
+            'dr.sum.col.writer': '撰寫人',
+            'dr.sum.col.depart': '部門',
+            'dr.sum.col.days': '日報天數',
+            'dr.sum.col.hours': '總工時',
+            'dr.sum.col.target_h': '目標工時',
+            'dr.sum.col.achieve': '達成率',
+            'dr.sum.col.delays': '延誤',
+            'dr.sum.col.max_delays': '延誤上限',
+            'dr.sum.col.unresolved': '未解',
+            'dr.sum.col.max_unsolved': '未解上限',
+            'dr.sum.col.work_ratio': '工作占比',
+            'dr.sum.col.min_work': '工作下限',
+            'dr.sum.col.avg_h': '日均工時',
+
+            // P1-③ 目標設定與管理
+            'dr.tgt.title': '目標設定',
+            'dr.tgt.period': '月份',
+            'dr.tgt.empty': '尚無目標設定，點擊「新增人員」開始設定',
+            'dr.tgt.empty_rows': '沒有可保存的目標資料',
+            'dr.tgt.add_row': '新增人員',
+            'dr.tgt.input_uid': '請輸入員工編號（user_id）',
+            'dr.tgt.duplicate': '該人員已存在',
+            'dr.tgt.col.writer': '撰寫人',
+            'dr.tgt.col.target_hours': '目標工時',
+            'dr.tgt.col.max_delays': '延誤上限',
+            'dr.tgt.col.max_unresolved': '未解上限',
+            'dr.tgt.col.min_work_ratio': '工作占比下限(%)',
+            'dr.tgt.col.remark': '備註',
+            'dr.tgt.col.set_by': '設定人'
         },
 
         'zh-CN': {
@@ -2452,7 +2499,54 @@ const I18N = {
             'dr.audit.view_diff': '查看内容',
             'dr.audit.old_data': '修改前内容',
             'dr.audit.new_data': '修改后内容',
-            'dr.audit.none': '无'
+            'dr.audit.none': '无',
+
+            // P1-① 提交及时率看板
+            'dr.tl.title': '提交及时率',
+            'dr.tl.period': '月份',
+            'dr.tl.empty': '该月份尚无提交记录',
+            'dr.tl.col.writer': '撰写人',
+            'dr.tl.col.depart': '部门',
+            'dr.tl.col.due': '应交',
+            'dr.tl.col.submitted': '实交',
+            'dr.tl.col.on_time': '准时',
+            'dr.tl.col.late': '迟交',
+            'dr.tl.col.missing': '缺交',
+            'dr.tl.col.rate': '及时率',
+
+            // P1-② 月度绩效自动汇总
+            'dr.sum.title': '月度绩效汇总',
+            'dr.sum.period': '月份',
+            'dr.sum.empty': '该月份尚无绩效数据',
+            'dr.sum.col.writer': '撰写人',
+            'dr.sum.col.depart': '部门',
+            'dr.sum.col.days': '日报天数',
+            'dr.sum.col.hours': '总工时',
+            'dr.sum.col.target_h': '目标工时',
+            'dr.sum.col.achieve': '达成率',
+            'dr.sum.col.delays': '延误',
+            'dr.sum.col.max_delays': '延误上限',
+            'dr.sum.col.unresolved': '未解',
+            'dr.sum.col.max_unsolved': '未解上限',
+            'dr.sum.col.work_ratio': '工作占比',
+            'dr.sum.col.min_work': '工作下限',
+            'dr.sum.col.avg_h': '日均工时',
+
+            // P1-③ 目标设定与管理
+            'dr.tgt.title': '目标设定',
+            'dr.tgt.period': '月份',
+            'dr.tgt.empty': '尚无目标设定，点击「新增人员」开始设定',
+            'dr.tgt.empty_rows': '没有可保存的目标数据',
+            'dr.tgt.add_row': '新增人员',
+            'dr.tgt.input_uid': '请输入员工编号（user_id）',
+            'dr.tgt.duplicate': '该人员已存在',
+            'dr.tgt.col.writer': '撰写人',
+            'dr.tgt.col.target_hours': '目标工时',
+            'dr.tgt.col.max_delays': '延误上限',
+            'dr.tgt.col.max_unresolved': '未解上限',
+            'dr.tgt.col.min_work_ratio': '工作占比下限(%)',
+            'dr.tgt.col.remark': '备注',
+            'dr.tgt.col.set_by': '设定人'
         },
 
         'en': {
@@ -3674,7 +3768,54 @@ const I18N = {
             'dr.audit.view_diff': 'View Content',
             'dr.audit.old_data': 'Before',
             'dr.audit.new_data': 'After',
-            'dr.audit.none': 'None'
+            'dr.audit.none': 'None',
+
+            // P1-① Submission Timeliness Dashboard
+            'dr.tl.title': 'Timeliness',
+            'dr.tl.period': 'Month',
+            'dr.tl.empty': 'No submission records for this month',
+            'dr.tl.col.writer': 'Reporter',
+            'dr.tl.col.depart': 'Dept.',
+            'dr.tl.col.due': 'Due',
+            'dr.tl.col.submitted': 'Submitted',
+            'dr.tl.col.on_time': 'On Time',
+            'dr.tl.col.late': 'Late',
+            'dr.tl.col.missing': 'Missing',
+            'dr.tl.col.rate': 'Rate',
+
+            // P1-② Monthly Performance Summary
+            'dr.sum.title': 'Monthly Summary',
+            'dr.sum.period': 'Month',
+            'dr.sum.empty': 'No performance data for this month',
+            'dr.sum.col.writer': 'Reporter',
+            'dr.sum.col.depart': 'Dept.',
+            'dr.sum.col.days': 'Report Days',
+            'dr.sum.col.hours': 'Total Hours',
+            'dr.sum.col.target_h': 'Target Hours',
+            'dr.sum.col.achieve': 'Achievement',
+            'dr.sum.col.delays': 'Delays',
+            'dr.sum.col.max_delays': 'Max Delays',
+            'dr.sum.col.unresolved': 'Unresolved',
+            'dr.sum.col.max_unsolved': 'Max Unresolved',
+            'dr.sum.col.work_ratio': 'Work Ratio',
+            'dr.sum.col.min_work': 'Min Work %',
+            'dr.sum.col.avg_h': 'Avg Hours',
+
+            // P1-③ Target Setting & Management
+            'dr.tgt.title': 'Target Setting',
+            'dr.tgt.period': 'Month',
+            'dr.tgt.empty': 'No targets set. Click "Add" to start.',
+            'dr.tgt.empty_rows': 'No target data to save',
+            'dr.tgt.add_row': 'Add Person',
+            'dr.tgt.input_uid': 'Enter employee ID (user_id)',
+            'dr.tgt.duplicate': 'This person already exists',
+            'dr.tgt.col.writer': 'Reporter',
+            'dr.tgt.col.target_hours': 'Target Hours',
+            'dr.tgt.col.max_delays': 'Max Delays',
+            'dr.tgt.col.max_unresolved': 'Max Unresolved',
+            'dr.tgt.col.min_work_ratio': 'Min Work Ratio (%)',
+            'dr.tgt.col.remark': 'Remark',
+            'dr.tgt.col.set_by': 'Set By'
         }
     },
 
