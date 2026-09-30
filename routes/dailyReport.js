@@ -844,6 +844,320 @@ router.delete('/targets/:id', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ P2-① 高管人效仪表盘 ============
+router.get('/efficiency-dashboard', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可查看人效仪表盘', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const mo = parseYM(req.query.YYYY_MM) || (() => {
+            const d = new Date(); return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+        })();
+        const ym = mo.ym;
+
+        // 1) 当月经营数据（产值 + 薪资 + 员工数）
+        const [fin] = await pool.execute(
+            `SELECT employee_cnt, salary_amt, avg_salary FROM mgm_finance_summary
+              WHERE bu_no=? AND YYYY_MM=? LIMIT 1`, [bu, ym]);
+        const empCnt = Number(fin[0]?.employee_cnt) || 84;
+        const salaryTotal = Number(fin[0]?.salary_amt) || 0;
+
+        const [so] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output
+               FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const totalOutput = Number(so[0]?.output) || 0;
+
+        const [inv] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(sub_amt),2),0) AS invoice_amt
+               FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+
+        // 2) 当月日报工时汇总
+        const [hrs] = await pool.execute(
+            `SELECT ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
+                    COUNT(DISTINCT d.user_id) AS report_user_cnt
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
+        const totalHours = Number(hrs[0]?.total_hours) || 0;
+
+        // 3) 部门维度
+        const [depts] = await pool.execute(
+            `SELECT d.depart_id,
+                    COUNT(DISTINCT d.user_id) AS emp_cnt,
+                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
+              GROUP BY d.depart_id ORDER BY total_hours DESC`, [bu, ym]);
+
+        const deptRows = depts.map(d => {
+            const ec = Number(d.emp_cnt) || 1;
+            const th = Number(d.total_hours) || 0;
+            return {
+                depart_id: d.depart_id || '未分類',
+                emp_cnt: ec,
+                total_hours: th,
+                per_capita_hours: Math.round(th / ec * 100) / 100,
+                output_share: totalHours > 0 ? Math.round(th / totalHours * 1000) / 10 : 0
+            };
+        });
+
+        // 4) 近 6 个月趋势
+        const [y0, m0] = ym.split('/').map(Number);
+        const trendMonths = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(y0, m0 - 1 - i, 1);
+            trendMonths.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`);
+        }
+        const ph = trendMonths.map(() => '?').join(',');
+        const [trendSo] = await pool.execute(
+            `SELECT YYYY_MM, COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output
+               FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM IN (${ph}) GROUP BY YYYY_MM`,
+            [bu, ...trendMonths]);
+        const soMap = Object.fromEntries(trendSo.map(r => [r.YYYY_MM, Number(r.output)]));
+        const [trendHr] = await pool.execute(
+            `SELECT d.YYYY_MM, COALESCE(ROUND(SUM(dt.use_time),2),0) AS total_hours
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM IN (${ph}) AND d.status1='USE'
+              GROUP BY d.YYYY_MM`, [bu, ...trendMonths]);
+        const hrMap = Object.fromEntries(trendHr.map(r => [r.YYYY_MM, Number(r.total_hours)]));
+        const trend = trendMonths.map(m => {
+            const out = soMap[m] || 0;
+            const th = hrMap[m] || 0;
+            return {
+                YYYY_MM: m,
+                output: out,
+                total_hours: th,
+                per_capita_output: empCnt > 0 ? Math.round(out / empCnt) : 0,
+                per_capita_hours: empCnt > 0 ? Math.round(th / empCnt * 100) / 100 : 0
+            };
+        });
+
+        // 5) 交叉验证：日报 items_id ↔ ERP 单据
+        const [xref] = await pool.execute(
+            `SELECT items_id, erp_doc_type, erp_ref_field FROM daily_report_erp_xref WHERE bu_no=?`, [bu]);
+        const xrefMap = new Map(xref.map(x => [x.items_id, x]));
+
+        const [items] = await pool.execute(
+            `SELECT dt.items_id, COUNT(*) AS report_cnt
+               FROM daily_report_detail dt
+               JOIN daily_report d ON d.id = dt.ruid
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE' AND dt.items_id IS NOT NULL
+              GROUP BY dt.items_id ORDER BY report_cnt DESC`, [bu, ym]);
+
+        let reportItemCnt = 0, matchedCnt = 0;
+        const itemRows = [];
+        for (const it of items) {
+            reportItemCnt += Number(it.report_cnt);
+            const mapping = xrefMap.get(it.items_id);
+            let erpDocCnt = 0;
+            if (mapping) {
+                const tbl = mapping.erp_doc_type === 'SO' ? 'ermm_erp_so'
+                          : mapping.erp_doc_type === 'PO' ? 'ermm_erp_po'
+                          : 'mgm_invoice_details';
+                try {
+                    const [[c]] = await pool.execute(
+                        `SELECT COUNT(*) AS cnt FROM ${tbl} WHERE bu_no=? AND YYYY_MM=?`,
+                        [bu, ym]);
+                    erpDocCnt = Number(c.cnt);
+                } catch (e) { /* PO 表无 YYYY_MM 字段时用 po_date 兜底 */
+                    if (mapping.erp_doc_type === 'PO') {
+                        const [[c2]] = await pool.execute(
+                            `SELECT COUNT(*) AS cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`,
+                            [bu, ym]);
+                        erpDocCnt = Number(c2.cnt);
+                    }
+                }
+                matchedCnt += Number(it.report_cnt);
+            }
+            itemRows.push({
+                items_id: it.items_id,
+                report_cnt: Number(it.report_cnt),
+                erp_doc_cnt: erpDocCnt,
+                matched: !!mapping,
+                erp_doc_type: mapping?.erp_doc_type || null
+            });
+        }
+
+        ok(res, {
+            period: ym,
+            kpi: {
+                total_output: totalOutput,
+                invoice_amt: Number(inv[0]?.invoice_amt) || 0,
+                total_hours: totalHours,
+                employee_cnt: empCnt,
+                report_user_cnt: Number(hrs[0]?.report_user_cnt) || 0,
+                per_capita_output: empCnt > 0 ? Math.round(totalOutput / empCnt) : 0,
+                per_capita_hours: empCnt > 0 ? Math.round(totalHours / empCnt * 100) / 100 : 0,
+                salary_total: salaryTotal,
+                per_capita_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0
+            },
+            departments: deptRows,
+            trend,
+            crossValidation: {
+                report_item_cnt: reportItemCnt,
+                matched_cnt: matchedCnt,
+                unmatched_cnt: reportItemCnt - matchedCnt,
+                match_rate: reportItemCnt > 0 ? Math.round(matchedCnt / reportItemCnt * 1000) / 10 : 0,
+                items: itemRows
+            }
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ P2-② 月度经营+人效报告 ============
+router.get('/monthly-business-report', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可查看经营报告', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const mo = parseYM(req.query.YYYY_MM) || (() => {
+            const d = new Date(); return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+        })();
+        const ym = mo.ym;
+
+        // 经营数据
+        const [fin] = await pool.execute(
+            `SELECT employee_cnt, salary_amt, avg_salary FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const [so] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output, COUNT(*) AS so_cnt FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const [inv] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(sub_amt),2),0) AS invoice_amt, COUNT(*) AS inv_cnt FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const [po] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(po_qty*unit_price),2),0) AS po_amt, COUNT(*) AS po_cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`, [bu, ym]);
+
+        const empCnt = Number(fin[0]?.employee_cnt) || 84;
+        const salaryTotal = Number(fin[0]?.salary_amt) || 0;
+        const output = Number(so[0]?.output) || 0;
+        const invoiceAmt = Number(inv[0]?.invoice_amt) || 0;
+        const poAmt = Number(po[0]?.po_amt) || 0;
+
+        // 人效汇总
+        const [eff] = await pool.execute(
+            `SELECT COUNT(DISTINCT d.user_id) AS report_users,
+                    COUNT(DISTINCT d.report_date) AS report_days,
+                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
+                    ROUND(COALESCE(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END),0),2) AS work_hours
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
+
+        // 部门表现
+        const [depts] = await pool.execute(
+            `SELECT d.depart_id,
+                    COUNT(DISTINCT d.user_id) AS emp_cnt,
+                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
+              GROUP BY d.depart_id ORDER BY total_hours DESC`, [bu, ym]);
+
+        // Top / Bottom 员工（按总工时）
+        const [users] = await pool.execute(
+            `SELECT d.user_id, MAX(d.user_name) AS user_name, MAX(d.depart_id) AS depart_id,
+                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+               FROM daily_report d
+               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
+              GROUP BY d.user_id ORDER BY total_hours DESC`, [bu, ym]);
+        const top5 = users.slice(0, 5);
+        const bottom5 = users.slice(-5).reverse();
+
+        // 上月对比（产值环比）
+        const [y0, m0] = ym.split('/').map(Number);
+        const prev = new Date(y0, m0 - 2, 1);
+        const prevYm = `${prev.getFullYear()}/${String(prev.getMonth() + 1).padStart(2, '0')}`;
+        const [prevSo] = await pool.execute(
+            `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, prevYm]);
+        const prevOutput = Number(prevSo[0]?.output) || 0;
+        const outputMom = prevOutput > 0 ? Math.round((output - prevOutput) / prevOutput * 1000) / 10 : null;
+
+        const totalHours = Number(eff[0]?.total_hours) || 0;
+        const workHours = Number(eff[0]?.work_hours) || 0;
+
+        const report = {
+            period: ym,
+            bu_no: bu,
+            business: {
+                output, output_mom: outputMom,
+                invoice_amt: invoiceAmt, invoice_cnt: Number(inv[0]?.inv_cnt) || 0,
+                po_amt: poAmt, po_cnt: Number(po[0]?.po_cnt) || 0,
+                so_cnt: Number(so[0]?.so_cnt) || 0
+            },
+            hr: {
+                employee_cnt: empCnt,
+                salary_total: salaryTotal,
+                avg_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0
+            },
+            efficiency: {
+                report_users: Number(eff[0]?.report_users) || 0,
+                report_days: Number(eff[0]?.report_days) || 0,
+                total_hours: totalHours,
+                work_hours: workHours,
+                work_ratio: totalHours > 0 ? Math.round(workHours / totalHours * 1000) / 10 : 0,
+                per_capita_output: empCnt > 0 ? Math.round(output / empCnt) : 0,
+                per_capita_hours: empCnt > 0 ? Math.round(totalHours / empCnt * 100) / 100 : 0
+            },
+            departments: depts.map(d => ({
+                depart_id: d.depart_id || '未分類',
+                emp_cnt: Number(d.emp_cnt) || 0,
+                total_hours: Number(d.total_hours) || 0
+            })),
+            top_performers: top5,
+            bottom_performers: bottom5,
+            generated_at: new Date().toISOString()
+        };
+
+        ok(res, report);
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ P2-② 推送月度报告 ============
+router.post('/monthly-business-report/push', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可推送报告', 403);
+        const bu = trimOrNull(req.body?.bu_no) || 'HM';
+        const mo = parseYM(req.body?.YYYY_MM);
+        if (!mo) return fail(res, 'YYYY_MM 格式不正确（YYYY/MM）', 400);
+        const ym = mo.ym;
+
+        // 复用 GET 的数据（模拟内部调用）
+        const [fin] = await pool.execute(`SELECT employee_cnt, salary_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const [so] = await pool.execute(`SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        const [eff] = await pool.execute(`SELECT COUNT(DISTINCT d.user_id) AS ru, ROUND(COALESCE(SUM(dt.use_time),0),2) AS th FROM daily_report d LEFT JOIN daily_report_detail dt ON dt.ruid=d.id WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
+        const empCnt = Number(fin[0]?.employee_cnt) || 84;
+        const output = Number(so[0]?.output) || 0;
+        const reportData = {
+            period: ym, bu_no: bu,
+            business: { output },
+            hr: { employee_cnt: empCnt, salary_total: Number(fin[0]?.salary_amt) || 0 },
+            efficiency: {
+                report_users: Number(eff[0]?.ru) || 0,
+                total_hours: Number(eff[0]?.th) || 0,
+                per_capita_output: empCnt > 0 ? Math.round(output / empCnt) : 0
+            }
+        };
+
+        const [exist] = await pool.execute(`SELECT id FROM daily_report_mgmt_report WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+        if (exist.length > 0) {
+            await pool.execute(
+                `UPDATE daily_report_mgmt_report SET report_data=?, pushed_by=?, pushed_by_name=?, pushed_time=NOW(), status='PUSHED' WHERE id=?`,
+                [JSON.stringify(reportData), actor.user_id, actor.user_name, exist[0].id]);
+        } else {
+            await pool.execute(
+                `INSERT INTO daily_report_mgmt_report (bu_no, YYYY_MM, report_data, pushed_by, pushed_by_name, pushed_time, status)
+                 VALUES (?,?,?,?,?,NOW(),'PUSHED')`,
+                [bu, ym, JSON.stringify(reportData), actor.user_id, actor.user_name]);
+        }
+        ok(res, { bu_no: bu, YYYY_MM: ym, status: 'PUSHED', pushed_by: actor.user_name, pushed_time: new Date().toISOString() }, '報告已推送给高管');
+    } catch (err) { fail500(res, err); }
+});
+
 // ============ 单笔日报（主表+明细） ============
 router.get('/:id', async (req, res) => {
     try {

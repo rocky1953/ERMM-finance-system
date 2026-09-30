@@ -104,7 +104,9 @@
                                  <button class="btn" style="background:#5d6d7e;color:#fff;" onclick="DRApp.openAudit()">📜 ${t('dr.audit.title')}</button>
                                  <button class="btn" style="background:#1a5276;color:#fff;" onclick="DRApp.openTimeliness()">📊 ${t('dr.tl.title')}</button>
                                  <button class="btn" style="background:#117a65;color:#fff;" onclick="DRApp.openSummary()">📋 ${t('dr.sum.title')}</button>
-                                 <button class="btn" style="background:#b9770e;color:#fff;" onclick="DRApp.openTargets()">🎯 ${t('dr.tgt.title')}</button>` : ''}
+                                 <button class="btn" style="background:#b9770e;color:#fff;" onclick="DRApp.openTargets()">🎯 ${t('dr.tgt.title')}</button>
+                                 <button class="btn" style="background:#1b4f72;color:#fff;" onclick="DRApp.openDashboard()">📈 ${t('dr.eff.title')}</button>
+                                 <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.openMgmtReport()">📑 ${t('dr.mbr.title')}</button>` : ''}
                         <span style="margin-left:auto;color:#7f8c8d;font-size:0.9em;" id="drTotal"></span>
                     </div>
                     <div id="drTable">${t('loading')}</div>
@@ -820,6 +822,245 @@
                 const res = await API.post('/api/daily-report/targets', { bu_no: State.bu_no, YYYY_MM: ym, targets });
                 UI.toast(res.message || 'OK', 'success');
                 this.loadTargets();
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        // ============ P2-① 人效仪表盘 ============
+        openDashboard() {
+            this.view = 'dashboard';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._dashYM) {
+                this._dashYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.eff.period')}：</b>
+                            <select id="dashYear">${this.yearOptions(this._dashYM.year)}</select> /
+                            <select id="dashMonth">${this.monthOptions(this._dashYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadDashboard()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="dashBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadDashboard();
+        },
+
+        async loadDashboard() {
+            const el = document.getElementById('dashBody');
+            if (!el) return;
+            const y = document.getElementById('dashYear').value;
+            const mm = document.getElementById('dashMonth').value;
+            this._dashYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/efficiency-dashboard?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const d = res.data;
+                const k = d.kpi;
+                const fmtMoney = v => UI.fmt(v);
+                const kpiCard = (label, val, sub, color) => `
+                    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                        <div style="color:#7f8c8d;font-size:0.85em;">${esc(label)}</div>
+                        <div style="font-size:1.5em;font-weight:700;color:${color || '#2c3e50'};margin:4px 0;">${esc(val)}</div>
+                        <div style="font-size:0.8em;color:#95a5a6;">${esc(sub || '')}</div>
+                    </div>`;
+
+                const cross = d.crossValidation;
+                const rateColor = cross.match_rate >= 80 ? '#27ae60' : cross.match_rate >= 50 ? '#e67e22' : '#e74c3c';
+
+                el.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px;">
+                        ${kpiCard(t('dr.eff.kpi.output'), fmtMoney(k.total_output), `${t('dr.eff.kpi.invoice')}: ${fmtMoney(k.invoice_amt)}`, '#2980b9')}
+                        ${kpiCard(t('dr.eff.kpi.emp'), k.employee_cnt, `${t('dr.eff.kpi.reporter')}: ${k.report_user_cnt}`, '#8e44ad')}
+                        ${kpiCard(t('dr.eff.kpi.per_output'), fmtMoney(k.per_capita_output), t('dr.eff.kpi.per_output_sub'), '#27ae60')}
+                        ${kpiCard(t('dr.eff.kpi.per_hours'), UI.fmt(k.per_capita_hours) + ' h', `${t('dr.eff.kpi.total_hours')}: ${UI.fmt(k.total_hours)} h`, '#e67e22')}
+                        ${kpiCard(t('dr.eff.kpi.salary'), fmtMoney(k.salary_total), `${t('dr.eff.kpi.per_salary')}: ${fmtMoney(k.per_capita_salary)}`, '#c0392b')}
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;">
+                        <div>
+                            <h4 style="margin:0 0 10px 0;">${t('dr.eff.dept_title')}</h4>
+                            <table class="data-table" style="font-size:0.9em;">
+                                <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th><th>${t('dr.eff.kpi.per_hours')}</th><th>${t('dr.eff.dept_share')}</th></tr></thead>
+                                <tbody>${d.departments.map(dp => `
+                                    <tr>
+                                        <td>${esc(dp.depart_id)}</td>
+                                        <td class="num">${dp.emp_cnt}</td>
+                                        <td class="num">${UI.fmt(dp.total_hours)}</td>
+                                        <td class="num">${UI.fmt(dp.per_capita_hours)}</td>
+                                        <td class="num" style="color:#1a5276;font-weight:700;">${dp.output_share}%</td>
+                                    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h4 style="margin:0 0 10px 0;">${t('dr.eff.cross_title')}</h4>
+                            <div style="background:#f8f9fa;padding:12px;border-radius:6px;margin-bottom:10px;">
+                                <span style="font-size:1.8em;font-weight:700;color:${rateColor};">${cross.match_rate}%</span>
+                                <span style="color:#7f8c8d;margin-left:8px;">${t('dr.eff.cross_rate')}</span>
+                                <div style="font-size:0.85em;color:#7f8c8d;margin-top:4px;">
+                                    ${t('dr.eff.cross_matched')}: ${cross.matched_cnt} / ${cross.report_item_cnt}
+                                    ${cross.unmatched_cnt > 0 ? `<span style="color:#e74c3c;">（${t('dr.eff.cross_unmatched')}: ${cross.unmatched_cnt}）</span>` : ''}
+                                </div>
+                            </div>
+                            <table class="data-table" style="font-size:0.85em;">
+                                <thead><tr><th>${t('dr.eff.cross_item')}</th><th>${t('dr.eff.cross_report')}</th><th>ERP</th><th>${t('dr.eff.cross_status')}</th></tr></thead>
+                                <tbody>${cross.items.slice(0, 8).map(it => `
+                                    <tr>
+                                        <td>${esc(it.items_id)}</td>
+                                        <td class="num">${it.report_cnt}</td>
+                                        <td class="num">${it.erp_doc_type || '-'} (${it.erp_doc_cnt})</td>
+                                        <td>${it.matched ? '<span style="color:#27ae60;">✓</span>' : '<span style="color:#e74c3c;">✗</span>'}</td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 style="margin:0 0 10px 0;">${t('dr.eff.trend_title')}（${t('dr.eff.trend_6m')}）</h4>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                            <canvas id="dashTrend" height="100"></canvas>
+                        </div>
+                    </div>`;
+
+                // 趋势双轴图：产值（柱）+ 工时（线）
+                const labels = d.trend.map(t => t.YYYY_MM);
+                this.charts.push(new Chart(document.getElementById('dashTrend'), {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { type: 'bar', label: t('dr.eff.kpi.output'), data: d.trend.map(t => t.output), backgroundColor: 'rgba(41,128,185,0.6)', yAxisID: 'y', order: 2 },
+                            { type: 'line', label: t('dr.eff.kpi.hours'), data: d.trend.map(t => t.total_hours), borderColor: '#e67e22', backgroundColor: 'rgba(230,126,34,0.2)', tension: 0.3, yAxisID: 'y1', order: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'top' } },
+                        scales: {
+                            y: { type: 'linear', position: 'left', title: { display: true, text: t('dr.eff.kpi.output') } },
+                            y1: { type: 'linear', position: 'right', title: { display: true, text: t('dr.eff.kpi.hours') }, grid: { drawOnChartArea: false } }
+                        }
+                    }
+                }));
+            } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
+        },
+
+        // ============ P2-② 月度经营+人效报告 ============
+        openMgmtReport() {
+            this.view = 'mgmtReport';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._mbrYM) {
+                this._mbrYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+            }
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.mbr.period')}：</b>
+                            <select id="mbrYear">${this.yearOptions(this._mbrYM.year)}</select> /
+                            <select id="mbrMonth">${this.monthOptions(this._mbrYM.mm)}</select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadMgmtReport()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.pushMgmtReport()">📤 ${t('dr.mbr.push')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="mbrBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadMgmtReport();
+        },
+
+        async loadMgmtReport() {
+            const el = document.getElementById('mbrBody');
+            if (!el) return;
+            const y = document.getElementById('mbrYear').value;
+            const mm = document.getElementById('mbrMonth').value;
+            this._mbrYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/monthly-business-report?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const r = res.data;
+                const b = r.business, h = r.hr, e = r.efficiency;
+                const momTag = b.output_mom != null
+                    ? `<span style="color:${b.output_mom >= 0 ? '#27ae60' : '#e74c3c'};font-size:0.85em;">(${b.output_mom >= 0 ? '↑' : '↓'} ${Math.abs(b.output_mom)}%)</span>`
+                    : '';
+                el.innerHTML = `
+                    <h3 style="margin:0 0 12px 0;color:#2c3e50;">📑 ${t('dr.mbr.title')} · ${esc(r.period)}</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:18px;">
+                        <div style="background:#eaf2f8;padding:14px;border-radius:8px;">
+                            <div style="font-weight:700;color:#1a5276;margin-bottom:6px;">💰 ${t('dr.mbr.business')}</div>
+                            <div>${t('dr.eff.kpi.output')}: <b>${UI.fmt(b.output)}</b> ${momTag}</div>
+                            <div>${t('dr.mbr.invoice')}: ${UI.fmt(b.invoice_amt)} (${b.invoice_cnt} ${t('dr.mbr.pen')})</div>
+                            <div>${t('dr.mbr.po')}: ${UI.fmt(b.po_amt)} (${b.po_cnt} ${t('dr.mbr.pen')})</div>
+                            <div>${t('dr.mbr.so')}: ${b.so_cnt} ${t('dr.mbr.pen')}</div>
+                        </div>
+                        <div style="background:#f4ecf7;padding:14px;border-radius:8px;">
+                            <div style="font-weight:700;color:#6c3483;margin-bottom:6px;">👥 ${t('dr.mbr.hr')}</div>
+                            <div>${t('dr.eff.kpi.emp')}: <b>${h.employee_cnt}</b></div>
+                            <div>${t('dr.eff.kpi.salary')}: ${UI.fmt(h.salary_total)}</div>
+                            <div>${t('dr.eff.kpi.per_salary')}: ${UI.fmt(h.avg_salary)}</div>
+                        </div>
+                        <div style="background:#e8f8f5;padding:14px;border-radius:8px;">
+                            <div style="font-weight:700;color:#117a65;margin-bottom:6px;">⚙️ ${t('dr.mbr.efficiency')}</div>
+                            <div>${t('dr.eff.kpi.per_output')}: <b>${UI.fmt(e.per_capita_output)}</b></div>
+                            <div>${t('dr.eff.kpi.per_hours')}: ${UI.fmt(e.per_capita_hours)} h</div>
+                            <div>${t('dr.sum.col.work_ratio')}: ${e.work_ratio}%</div>
+                            <div>${t('dr.mbr.report_users')}: ${e.report_users} (${e.report_days} ${t('dr.mbr.days')})</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+                        <div>
+                            <h4 style="margin:0 0 10px 0;">🏆 ${t('dr.mbr.top')}</h4>
+                            <table class="data-table" style="font-size:0.9em;">
+                                <thead><tr><th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th><th>${t('dr.sum.col.hours')}</th></tr></thead>
+                                <tbody>${r.top_performers.map((u, i) => `
+                                    <tr><td>${i + 1}</td><td>${esc(u.user_id)} ${esc(u.user_name || '')}</td><td>${esc(u.depart_id || '-')}</td><td class="num">${UI.fmt(u.total_hours)}</td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h4 style="margin:0 0 10px 0;">⚠️ ${t('dr.mbr.bottom')}</h4>
+                            <table class="data-table" style="font-size:0.9em;">
+                                <thead><tr><th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th><th>${t('dr.sum.col.hours')}</th></tr></thead>
+                                <tbody>${r.bottom_performers.map((u, i) => `
+                                    <tr style="background:#fdf6e3;"><td>${i + 1}</td><td>${esc(u.user_id)} ${esc(u.user_name || '')}</td><td>${esc(u.depart_id || '-')}</td><td class="num">${UI.fmt(u.total_hours)}</td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:18px;">
+                        <h4 style="margin:0 0 10px 0;">🏢 ${t('dr.eff.dept_title')}</h4>
+                        <table class="data-table" style="font-size:0.9em;">
+                            <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th><th>${t('dr.eff.kpi.per_hours')}</th></tr></thead>
+                            <tbody>${r.departments.map(dp => `
+                                <tr>
+                                    <td>${esc(dp.depart_id)}</td>
+                                    <td class="num">${dp.emp_cnt}</td>
+                                    <td class="num">${UI.fmt(dp.total_hours)}</td>
+                                    <td class="num">${dp.emp_cnt > 0 ? UI.fmt(Math.round(dp.total_hours / dp.emp_cnt * 100) / 100) : 0}</td>
+                                </tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="margin-top:14px;font-size:0.8em;color:#95a5a6;">${t('dr.mbr.gen_at')}: ${esc(r.generated_at)}</div>`;
+            } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
+        },
+
+        async pushMgmtReport() {
+            const y = document.getElementById('mbrYear').value;
+            const mm = document.getElementById('mbrMonth').value;
+            const ym = y + '/' + mm;
+            try {
+                const res = await API.post('/api/daily-report/monthly-business-report/push', { bu_no: State.bu_no, YYYY_MM: ym });
+                UI.toast(`${t('dr.mbr.pushed_ok')}：${esc(res.data.YYYY_MM)}`, 'success');
             } catch (e) { UI.toast(e.message, 'error'); }
         },
 
