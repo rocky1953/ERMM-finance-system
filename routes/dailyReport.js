@@ -14,9 +14,30 @@
  */
 const express = require('express');
 const router = express.Router();
+const ExcelJS = require('exceljs');
 const { pool } = require('../config/db');
 const { ok, fail, fail500, pagination, n } = require('../utils/response');
 const { sendMgmtReport, getRecipients } = require('../utils/mailer');
+
+// ============ M1 年度績效：計分模型常量（分數線/權重可於此調整） ============
+const ANNUAL = {
+    W_HOURS: 0.4, W_TIMELINESS: 0.3, W_WORKRATIO: 0.2, W_PENALTY: 0.1,
+    GRADES: [
+        { grade: 'S', min: 95 },
+        { grade: 'A', min: 85 },
+        { grade: 'B', min: 70 },
+        { grade: 'C', min: -Infinity }
+    ],
+    DEFAULT_MIN_WORK_RATIO: 70   // 當月未設工作占比目標時的預設達標線
+};
+
+function gradeOf(score) {
+    const s = Math.round(score * 10) / 10;
+    return ANNUAL.GRADES.find(g => s >= g.min).grade;
+}
+
+// 數值截斷到 [min,max]
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 // 时间类别（生命平衡轮）固定 9 项，顺序即图表展示顺序
 const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
@@ -680,8 +701,8 @@ router.get('/monthly-summary', async (req, res) => {
                    COUNT(DISTINCT d.report_date) AS report_days,
                    COUNT(dt.id) AS detail_cnt,
                    ROUND(SUM(dt.use_time), 2) AS total_hours,
-                   SUM(CASE WHEN d.projects1 IS NOT NULL AND d.projects1<>'' THEN 1 ELSE 0 END) AS delay_cnt,
-                   SUM(CASE WHEN d.projects2 IS NOT NULL AND d.projects2<>'' THEN 1 ELSE 0 END) AS unresolved_cnt,
+                   COUNT(DISTINCT CASE WHEN d.projects1 IS NOT NULL AND d.projects1<>'' THEN d.report_date END) AS delay_cnt,
+                   COUNT(DISTINCT CASE WHEN d.projects2 IS NOT NULL AND d.projects2<>'' THEN d.report_date END) AS unresolved_cnt,
                    ROUND(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END), 2) AS work_hours,
                    ROUND(SUM(CASE WHEN dt.wk_type!='日常工作' THEN dt.use_time ELSE 0 END), 2) AS life_hours
               FROM daily_report d
@@ -1209,8 +1230,364 @@ router.get('/mgmt-reports/:id', async (req, res) => {
             `SELECT * FROM daily_report_mgmt_report WHERE id=? LIMIT 1`, [id]);
         if (rows.length === 0) return fail(res, '报告不存在', 404);
         const r = rows[0];
-        try { r.report_data = JSON.parse(r.report_data); } catch (e) { /* keep raw */ }
+        if (r.report_data) {
+            r.report_data = typeof r.report_data === 'string' ? JSON.parse(r.report_data) : r.report_data;
+        }
         ok(res, r);
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ M1 年度績效自動生成 ============
+// 核心結算邏輯（generate / list / export 共用）
+async function computeAnnualReview(bu, yyyy) {
+    const yyyyNum = Number(yyyy);
+    const now = new Date();
+    const curY = now.getFullYear(), curM = now.getMonth() + 1, curD = now.getDate();
+
+    // 1) 每人每月工時/遲交/延誤/未解聚合
+    //    注意：JOIN 明細後主表欄位會被明細筆數放大，標記類計數必須 DISTINCT report_date（主表同人同日唯一）
+    const [agg] = await pool.execute(`
+        SELECT d.user_id,
+               MAX(d.user_name) AS user_name,
+               MAX(d.depart_id) AS depart_id,
+               d.YYYY_MM,
+               COUNT(DISTINCT d.report_date) AS report_days,
+               ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
+               ROUND(COALESCE(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END),0),2) AS work_hours,
+               COUNT(DISTINCT CASE WHEN d.projects1 IS NOT NULL AND d.projects1<>'' THEN d.report_date END) AS delay_cnt,
+               COUNT(DISTINCT CASE WHEN d.projects2 IS NOT NULL AND d.projects2<>'' THEN d.report_date END) AS unresolved_cnt,
+               COUNT(DISTINCT CASE WHEN d.create_time IS NOT NULL AND DATE(d.create_time) > d.report_date THEN d.report_date END) AS late_cnt
+          FROM daily_report d
+          LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+         WHERE d.bu_no=? AND d.YYYY_MM LIKE ? AND d.status1='USE'
+         GROUP BY d.user_id, d.YYYY_MM`,
+        [bu, `${yyyy}/%`]);
+
+    // 2) 當年度目標
+    const [targets] = await pool.execute(`
+        SELECT user_id, YYYY_MM, target_hours, max_delays, max_unresolved, min_work_ratio
+          FROM daily_report_target
+         WHERE bu_no=? AND YYYY_MM LIKE ?`,
+        [bu, `${yyyy}/%`]);
+    const tMap = {};
+    for (const t of targets) {
+        tMap[`${t.user_id}|${t.YYYY_MM}`] = t;
+    }
+
+    // 3) 當年度鎖定月
+    const [locks] = await pool.execute(`
+        SELECT user_id, YYYY_MM FROM daily_report_lock
+         WHERE bu_no=? AND YYYY_MM LIKE ? AND lock_status='LOCKED'`,
+        [bu, `${yyyy}/%`]);
+    const lockSet = new Set(locks.map(l => `${l.user_id}|${l.YYYY_MM}`));
+
+    // 4) 按人分組計分
+    const byUser = new Map();
+    for (const r of agg) {
+        if (!byUser.has(r.user_id)) {
+            byUser.set(r.user_id, {
+                user_id: r.user_id, user_name: r.user_name || r.user_id,
+                depart_id: r.depart_id || '未分類', months: []
+            });
+        }
+        const mmNum = Number(r.YYYY_MM.split('/')[1]);
+        // 應交天數：過往月整月天數；當月=今天日號；未來月=0
+        let dueDays = 0;
+        if (yyyyNum < curY) dueDays = new Date(yyyyNum, mmNum, 0).getDate();
+        else if (yyyyNum === curY) {
+            dueDays = mmNum < curM ? new Date(yyyyNum, mmNum, 0).getDate()
+                    : mmNum === curM ? curD : 0;
+        }
+        const tgt = tMap[`${r.user_id}|${r.YYYY_MM}`] || null;
+        const totalHours = Number(r.total_hours) || 0;
+        const workHours = Number(r.work_hours) || 0;
+        byUser.get(r.user_id).months.push({
+            YYYY_MM: r.YYYY_MM,
+            report_days: Number(r.report_days) || 0,
+            due_days: dueDays,
+            total_hours: totalHours,
+            work_hours: workHours,
+            work_ratio: totalHours > 0 ? Math.round(workHours / totalHours * 1000) / 10 : 0,
+            delay_cnt: Number(r.delay_cnt) || 0,
+            unresolved_cnt: Number(r.unresolved_cnt) || 0,
+            late_cnt: Number(r.late_cnt) || 0,
+            target_hours: tgt ? Number(tgt.target_hours) || null : null,
+            max_delays: tgt ? Number(tgt.max_delays) : null,
+            max_unresolved: tgt ? Number(tgt.max_unresolved) : null,
+            min_work_ratio: tgt && tgt.min_work_ratio != null ? Number(tgt.min_work_ratio) : null,
+            hours_achieve: tgt && Number(tgt.target_hours) > 0
+                ? Math.round(totalHours / Number(tgt.target_hours) * 1000) / 10 : null,
+            locked: lockSet.has(`${r.user_id}|${r.YYYY_MM}`)
+        });
+    }
+
+    const results = [];
+    for (const u of byUser.values()) {
+        const months = u.months.sort((a, b) => a.YYYY_MM.localeCompare(b.YYYY_MM));
+        const submittedMonths = months.filter(m => m.report_days > 0);
+        const nMonths = submittedMonths.length;
+
+        // ① 工時達成得分：有目標月份的平均達成率（截斷 0-100，超時不加分）
+        const achMonths = submittedMonths.filter(m => m.hours_achieve != null);
+        const avgHoursAchieve = achMonths.length > 0
+            ? Math.round(achMonths.reduce((s, m) => s + clamp(m.hours_achieve, 0, 100), 0) / achMonths.length * 10) / 10
+            : null;
+        const scoreHours = avgHoursAchieve != null ? avgHoursAchieve : 0;
+
+        // ② 年度及時率：準時天數 / 應交天數（所有應交月）
+        const dueMonths = months.filter(m => m.due_days > 0);
+        const totalDue = dueMonths.reduce((s, m) => s + m.due_days, 0);
+        const totalOnTime = dueMonths.reduce((s, m) => s + Math.max(0, m.report_days - m.late_cnt), 0);
+        const annualTimeliness = totalDue > 0 ? Math.round(totalOnTime / totalDue * 1000) / 10 : 0;
+
+        // ③ 工作占比達標率：達標月數 / 已交月數
+        let compliant = 0;
+        for (const m of submittedMonths) {
+            const bar = m.min_work_ratio != null ? m.min_work_ratio : ANNUAL.DEFAULT_MIN_WORK_RATIO;
+            if (m.work_ratio >= bar) compliant++;
+        }
+        const scoreWorkRatio = nMonths > 0 ? Math.round(compliant / nMonths * 1000) / 10 : 0;
+
+        // ④ 延誤/未解扣分：有目標月份中超出上限者，每超標月等額扣分
+        const tgtMonths = submittedMonths.filter(m => m.max_delays != null || m.max_unresolved != null);
+        let overMonths = 0;
+        for (const m of tgtMonths) {
+            const dOver = m.max_delays != null && m.delay_cnt > m.max_delays;
+            const uOver = m.max_unresolved != null && m.unresolved_cnt > m.max_unresolved;
+            if (dOver || uOver) overMonths++;
+        }
+        const scorePenalty = tgtMonths.length > 0
+            ? Math.round(clamp(100 - overMonths / tgtMonths.length * 100, 0, 100) * 10) / 10
+            : 100; // 全年未設目標者不扣分
+
+        const totalScore = Math.round((
+            scoreHours * ANNUAL.W_HOURS +
+            annualTimeliness * ANNUAL.W_TIMELINESS +
+            scoreWorkRatio * ANNUAL.W_WORKRATIO +
+            scorePenalty * ANNUAL.W_PENALTY
+        ) * 10) / 10;
+
+        results.push({
+            bu_no: bu, yyyy: String(yyyyNum),
+            user_id: u.user_id, user_name: u.user_name, depart_id: u.depart_id,
+            score_hours: scoreHours,
+            score_timeliness: annualTimeliness,
+            score_workratio: scoreWorkRatio,
+            score_penalty: scorePenalty,
+            total_score: totalScore,
+            grade: gradeOf(totalScore),
+            avg_hours_achieve: avgHoursAchieve,
+            annual_timeliness: annualTimeliness,
+            months_submitted: nMonths,
+            months_locked: months.filter(m => m.locked).length,
+            over_months: overMonths,
+            review_data: { months }
+        });
+    }
+    return results.sort((a, b) => b.total_score - a.total_score);
+}
+
+// 一鍵結算全年（高階主管）
+router.post('/annual-review/generate', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可結算年度績效', 403);
+        const bu = trimOrNull(req.body?.bu_no) || 'HM';
+        const yyyy = String(req.body?.yyyy || new Date().getFullYear());
+        if (!/^\d{4}$/.test(yyyy)) return fail(res, '年度格式不正确（YYYY）', 400);
+
+        const rows = await computeAnnualReview(bu, yyyy);
+        if (rows.length === 0) return fail(res, `${yyyy} 年尚無日報資料，無法結算`, 400);
+
+        let upserted = 0;
+        for (const r of rows) {
+            await pool.execute(
+                `INSERT INTO daily_report_annual_review
+                    (bu_no, yyyy, user_id, user_name, depart_id,
+                     score_hours, score_timeliness, score_workratio, score_penalty,
+                     total_score, grade, avg_hours_achieve, annual_timeliness,
+                     months_submitted, months_locked, over_months, review_data,
+                     generated_by, generated_by_name, generated_time)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+                 ON DUPLICATE KEY UPDATE
+                     user_name=VALUES(user_name), depart_id=VALUES(depart_id),
+                     score_hours=VALUES(score_hours), score_timeliness=VALUES(score_timeliness),
+                     score_workratio=VALUES(score_workratio), score_penalty=VALUES(score_penalty),
+                     total_score=VALUES(total_score), grade=VALUES(grade),
+                     avg_hours_achieve=VALUES(avg_hours_achieve), annual_timeliness=VALUES(annual_timeliness),
+                     months_submitted=VALUES(months_submitted), months_locked=VALUES(months_locked),
+                     over_months=VALUES(over_months), review_data=VALUES(review_data),
+                     generated_by=VALUES(generated_by), generated_by_name=VALUES(generated_by_name),
+                     generated_time=NOW()`,
+                [r.bu_no, r.yyyy, r.user_id, r.user_name, r.depart_id,
+                 r.score_hours, r.score_timeliness, r.score_workratio, r.score_penalty,
+                 r.total_score, r.grade, r.avg_hours_achieve, r.annual_timeliness,
+                 r.months_submitted, r.months_locked, r.over_months, JSON.stringify(r.review_data),
+                 actor.user_id, actor.user_name]);
+            upserted++;
+        }
+        const gradeCounts = { S: 0, A: 0, B: 0, C: 0 };
+        rows.forEach(r => { gradeCounts[r.grade]++; });
+        ok(res, { yyyy, upserted, grade_counts: gradeCounts }, `年度績效已結算 ${upserted} 人`);
+    } catch (err) { fail500(res, err); }
+});
+
+// 年度績效清單（含分佈圖區塊；員工僅見本人）
+router.get('/annual-review', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const yyyy = String(req.query.year || req.query.yyyy || new Date().getFullYear());
+        if (!/^\d{4}$/.test(yyyy)) return fail(res, '年度格式不正确（YYYY）', 400);
+        const target = resolveTarget(actor, trimOrNull(req.query.user_id));
+        const dept = trimOrNull(req.query.depart_id);
+        const grade = trimOrNull(req.query.grade);
+
+        let where = ['bu_no=?', 'yyyy=?'];
+        const params = [bu, yyyy];
+        if (target) { where.push('user_id=?'); params.push(target); }
+        if (dept) { where.push('depart_id=?'); params.push(dept); }
+        if (grade) { where.push('grade=?'); params.push(grade); }
+
+        const [rows] = await pool.execute(
+            `SELECT id, bu_no, yyyy, user_id, user_name, depart_id,
+                    score_hours, score_timeliness, score_workratio, score_penalty,
+                    total_score, grade, avg_hours_achieve, annual_timeliness,
+                    months_submitted, months_locked, over_months,
+                    generated_by_name, generated_time
+               FROM daily_report_annual_review
+              WHERE ${where.join(' AND ')}
+              ORDER BY total_score DESC, user_id`, params);
+
+        const list = rows.map(r => ({
+            ...r,
+            score_hours: Number(r.score_hours), score_timeliness: Number(r.score_timeliness),
+            score_workratio: Number(r.score_workratio), score_penalty: Number(r.score_penalty),
+            total_score: Number(r.total_score),
+            avg_hours_achieve: r.avg_hours_achieve == null ? null : Number(r.avg_hours_achieve),
+            annual_timeliness: Number(r.annual_timeliness),
+            months_submitted: Number(r.months_submitted), months_locked: Number(r.months_locked),
+            over_months: Number(r.over_months)
+        }));
+
+        // 分佈圖區塊（全公司口徑，不受部門/等第篩選影響）
+        const [allRows] = await pool.execute(
+            `SELECT grade, total_score, depart_id FROM daily_report_annual_review WHERE bu_no=? AND yyyy=?`,
+            [bu, yyyy]);
+        const gradeCounts = { S: 0, A: 0, B: 0, C: 0 };
+        const histogram = Array.from({ length: 10 }, (_, i) => ({ bin: `${i * 10}-${i * 10 + 9}`, count: 0 }));
+        const deptMap = new Map();
+        for (const r of allRows) {
+            gradeCounts[r.grade] = (gradeCounts[r.grade] || 0) + 1;
+            const sc = Number(r.total_score);
+            const idx = clamp(Math.floor(sc / 10), 0, 9);
+            histogram[idx].count++;
+            if (!deptMap.has(r.depart_id)) deptMap.set(r.depart_id, { depart_id: r.depart_id, S: 0, A: 0, B: 0, C: 0 });
+            deptMap.get(r.depart_id)[r.grade]++;
+        }
+        const avgScore = allRows.length > 0
+            ? Math.round(allRows.reduce((s, r) => s + Number(r.total_score), 0) / allRows.length * 10) / 10
+            : 0;
+
+        ok(res, {
+            period: yyyy,
+            list,
+            distribution: {
+                total: allRows.length,
+                avg_score: avgScore,
+                grade_counts: gradeCounts,
+                histogram,
+                dept_grade: Array.from(deptMap.values())
+            }
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+// 單人年度詳情（員工僅可查本人）
+router.get('/annual-review/:id', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const id = Number(req.params.id);
+        if (!id) return fail(res, 'id 不正确', 400);
+        const [rows] = await pool.execute(
+            `SELECT * FROM daily_report_annual_review WHERE id=? LIMIT 1`, [id]);
+        if (rows.length === 0) return fail(res, '年度績效不存在', 404);
+        const r = rows[0];
+        if (!actor.isManager && r.user_id !== actor.user_id) {
+            return fail(res, '权限不足，僅可查看本人年度績效', 403);
+        }
+        // mysql2 execute 會自動把 JSON 欄位解析為物件；字串才需手動 parse
+        if (r.review_data) {
+            r.review_data = typeof r.review_data === 'string' ? JSON.parse(r.review_data) : r.review_data;
+        } else {
+            r.review_data = { months: [] };
+        }
+        if (!Array.isArray(r.review_data.months)) r.review_data.months = [];
+        ok(res, r);
+    } catch (err) { fail500(res, err); }
+});
+
+// 年度績效 Excel 匯出
+router.get('/export/annual-review.xlsx', async (req, res) => {
+    let wb;
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const yyyy = String(req.query.year || req.query.yyyy || new Date().getFullYear());
+
+        const [rows] = await pool.execute(
+            `SELECT user_id, user_name, depart_id, total_score, grade,
+                    score_hours, score_timeliness, score_workratio, score_penalty,
+                    avg_hours_achieve, annual_timeliness,
+                    months_submitted, months_locked, over_months,
+                    generated_by_name, generated_time
+               FROM daily_report_annual_review
+              WHERE bu_no=? AND yyyy=?
+              ORDER BY total_score DESC, user_id`, [bu, yyyy]);
+        if (rows.length === 0) return fail(res, '尚無年度績效資料，請先結算', 400);
+
+        wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet(`${yyyy}年度績效`);
+        ws.columns = [
+            { header: '排名', width: 6 }, { header: '員工編號', width: 12 }, { header: '姓名', width: 12 },
+            { header: '部門', width: 14 }, { header: '年度總分', width: 10 }, { header: '等第', width: 8 },
+            { header: '工時達成(40%)', width: 14 }, { header: '及時率(30%)', width: 12 },
+            { header: '工作占比(20%)', width: 14 }, { header: '合規(10%)', width: 12 },
+            { header: '平均工時達成率%', width: 16 }, { header: '年度及時率%', width: 12 },
+            { header: '提交月數', width: 10 }, { header: '鎖定月數', width: 10 }, { header: '超標月數', width: 10 },
+            { header: '結算人', width: 12 }, { header: '結算時間', width: 20 }
+        ];
+        ws.getRow(1).font = { bold: true };
+        ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B4F72' } };
+        ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+        const gradeColor = { S: 'FFF1C40F', A: 'FF27AE60', B: 'FFE67E22', C: 'FFE74C3C' };
+        rows.forEach((r, i) => {
+            const row = ws.addRow([
+                i + 1, r.user_id, r.user_name, r.depart_id,
+                Number(r.total_score), r.grade,
+                Number(r.score_hours), Number(r.score_timeliness),
+                Number(r.score_workratio), Number(r.score_penalty),
+                r.avg_hours_achieve == null ? '-' : Number(r.avg_hours_achieve),
+                Number(r.annual_timeliness),
+                Number(r.months_submitted), Number(r.months_locked), Number(r.over_months),
+                r.generated_by_name || '', r.generated_time ? String(r.generated_time) : ''
+            ]);
+            const cell = row.getCell(6);
+            cell.font = { bold: true, color: { argb: gradeColor[r.grade] || 'FF333333' } };
+            row.alignment = { horizontal: 'center' };
+        });
+
+        const fileName = `${bu}_${yyyy}_年度績效.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+        await wb.xlsx.write(res);
+        res.end();
     } catch (err) { fail500(res, err); }
 });
 

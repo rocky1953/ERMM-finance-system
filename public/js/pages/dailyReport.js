@@ -106,7 +106,8 @@
                                  <button class="btn" style="background:#117a65;color:#fff;" onclick="DRApp.openSummary()">📋 ${t('dr.sum.title')}</button>
                                  <button class="btn" style="background:#b9770e;color:#fff;" onclick="DRApp.openTargets()">🎯 ${t('dr.tgt.title')}</button>
                                  <button class="btn" style="background:#1b4f72;color:#fff;" onclick="DRApp.openDashboard()">📈 ${t('dr.eff.title')}</button>
-                                 <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.openMgmtReport()">📑 ${t('dr.mbr.title')}</button>` : ''}
+                                 <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.openMgmtReport()">📑 ${t('dr.mbr.title')}</button>
+                                 <button class="btn" style="background:#7d6608;color:#fff;" onclick="DRApp.openAnnualReview()">🏆 ${t('dr.ar.title')}</button>` : ''}
                         <span style="margin-left:auto;color:#7f8c8d;font-size:0.9em;" id="drTotal"></span>
                     </div>
                     <div id="drTable">${t('loading')}</div>
@@ -1178,6 +1179,321 @@
                         </div>
                     </div>`;
             } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        // ============ M1 年度績效自動生成 + 分佈圖 ============
+        openAnnualReview() {
+            this.view = 'annualReview';
+            this.destroyCharts();
+            const now = new Date();
+            if (!this._arY) this._arY = String(now.getFullYear());
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.ar.year')}：</b><select id="arYear">${this.yearOptions(this._arY)}</select></label>
+                        <label>${t('dr.ar.grade')}：
+                            <select id="arGrade">
+                                <option value="">${t('dr.ar.all_grades')}</option>
+                                <option value="S">S</option><option value="A">A</option>
+                                <option value="B">B</option><option value="C">C</option>
+                            </select>
+                        </label>
+                        <label>${t('dr.sum.col.depart')}：
+                            <select id="arDept"><option value="">${t('dr.ar.all_depts')}</option></select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadAnnualReview()">🔍 ${t('dr.btn.query')}</button>
+                        <button class="btn" style="background:#7d6608;color:#fff;" onclick="DRApp.generateAnnualReview()">⚙️ ${t('dr.ar.generate')}</button>
+                        <button class="btn" style="background:#1b4f72;color:#fff;" onclick="DRApp.exportAnnualReview()">📥 ${t('dr.ar.export')}</button>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="arBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            // 部門下拉（從 meta 填充）
+            const deptSel = document.getElementById('arDept');
+            (this.meta?.depts || []).forEach(d => {
+                const o = document.createElement('option');
+                o.value = d.dept_id || d; o.textContent = d.dept_name || d.dept_id || d;
+                deptSel.appendChild(o);
+            });
+            this.loadAnnualReview();
+        },
+
+        async loadAnnualReview() {
+            const el = document.getElementById('arBody');
+            if (!el) return;
+            const y = document.getElementById('arYear').value;
+            const grade = document.getElementById('arGrade').value;
+            const dept = document.getElementById('arDept').value;
+            this._arY = y;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                let url = '/api/daily-report/annual-review?bu_no=' + encodeURIComponent(State.bu_no) + '&year=' + encodeURIComponent(y);
+                if (grade) url += '&grade=' + encodeURIComponent(grade);
+                if (dept) url += '&depart_id=' + encodeURIComponent(dept);
+                const res = await API.get(url);
+                const d = res.data;
+                this._arData = d;
+                const list = d.list || [];
+                const dist = d.distribution || { grade_counts: {}, histogram: [], dept_grade: [], avg_score: 0, total: 0 };
+                if (dist.total === 0) {
+                    el.innerHTML = `<div style="text-align:center;padding:40px;color:#95a5a6;">
+                        <p style="font-size:2em;">🏆</p>
+                        <p>${t('dr.ar.empty').replace('{year}', y)}</p>
+                        <p style="font-size:0.9em;">${t('dr.ar.empty_hint')}</p>
+                    </div>`;
+                    return;
+                }
+                const GRADE_STYLE = {
+                    S: 'background:#f1c40f;color:#7e5500;',
+                    A: 'background:#27ae60;color:#fff;',
+                    B: 'background:#e67e22;color:#fff;',
+                    C: 'background:#e74c3c;color:#fff;'
+                };
+                const badge = g => `<span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;text-align:center;font-weight:700;${GRADE_STYLE[g] || ''}">${esc(g)}</span>`;
+                const gc = dist.grade_counts;
+
+                el.innerHTML = `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;">
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#7f8c8d;font-size:0.85em;">${t('dr.ar.headcount')}</div>
+                            <div style="font-size:1.6em;font-weight:700;color:#2c3e50;">${dist.total}</div>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#7f8c8d;font-size:0.85em;">${t('dr.ar.avg_score')}</div>
+                            <div style="font-size:1.6em;font-weight:700;color:#1b4f72;">${UI.fmt(dist.avg_score)}</div>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#7f8c8d;font-size:0.85em;">S/A ${t('dr.ar.excellent')}</div>
+                            <div style="font-size:1.6em;font-weight:700;color:#27ae60;">${((gc.S || 0) + (gc.A || 0))} <span style="font-size:0.55em;color:#95a5a5;">(${dist.total ? Math.round(((gc.S || 0) + (gc.A || 0)) / dist.total * 1000) / 10 : 0}%)</span></div>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#7f8c8d;font-size:0.85em;">S / A / B / C</div>
+                            <div style="font-size:1.2em;font-weight:700;padding-top:6px;">
+                                <span style="color:#b7950b;">${gc.S || 0}</span> /
+                                <span style="color:#27ae60;">${gc.A || 0}</span> /
+                                <span style="color:#e67e22;">${gc.B || 0}</span> /
+                                <span style="color:#e74c3c;">${gc.C || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px;">
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                            <h4 style="margin:0 0 8px;text-align:center;font-size:0.95em;">${t('dr.ar.chart_grade')}</h4>
+                            <canvas id="arGradeChart" height="180"></canvas>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                            <h4 style="margin:0 0 8px;text-align:center;font-size:0.95em;">${t('dr.ar.chart_hist')}</h4>
+                            <canvas id="arHistChart" height="180"></canvas>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                            <h4 style="margin:0 0 8px;text-align:center;font-size:0.95em;">${t('dr.ar.chart_dept')}</h4>
+                            <canvas id="arDeptChart" height="180"></canvas>
+                        </div>
+                    </div>
+
+                    <table class="data-table" style="font-size:0.9em;">
+                        <thead><tr>
+                            <th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th>
+                            <th>${t('dr.ar.total')}</th><th>${t('dr.ar.grade')}</th>
+                            <th>${t('dr.ar.s_hours')}</th><th>${t('dr.ar.s_timely')}</th>
+                            <th>${t('dr.ar.s_work')}</th><th>${t('dr.ar.s_penalty')}</th>
+                            <th>${t('dr.ar.months')}</th><th>${t('dr.ar.over_m')}</th><th>${t('dr.ar.detail')}</th>
+                        </tr></thead>
+                        <tbody>${list.map((r, i) => `
+                            <tr style="cursor:pointer;" onclick="DRApp.viewAnnualDetail(${r.id})">
+                                <td class="num">${i + 1}</td>
+                                <td>${esc(r.user_id)} ${esc(r.user_name || '')}</td>
+                                <td>${esc(r.depart_id || '-')}</td>
+                                <td class="num" style="font-weight:700;font-size:1.05em;">${UI.fmt(r.total_score)}</td>
+                                <td style="text-align:center;">${badge(r.grade)}</td>
+                                <td class="num">${UI.fmt(r.score_hours)}</td>
+                                <td class="num">${UI.fmt(r.score_timeliness)}</td>
+                                <td class="num">${UI.fmt(r.score_workratio)}</td>
+                                <td class="num">${UI.fmt(r.score_penalty)}</td>
+                                <td class="num">${r.months_submitted}</td>
+                                <td class="num" style="color:${r.over_months > 0 ? '#e74c3c' : '#27ae60'};font-weight:700;">${r.over_months}</td>
+                                <td><button class="btn btn-primary" style="padding:2px 10px;font-size:0.8em;">${t('dr.ar.view')}</button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+
+                // 圖1：等第甜甜圈
+                this.charts.push(new Chart(document.getElementById('arGradeChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['S', 'A', 'B', 'C'],
+                        datasets: [{
+                            data: [gc.S || 0, gc.A || 0, gc.B || 0, gc.C || 0],
+                            backgroundColor: ['#f1c40f', '#27ae60', '#e67e22', '#e74c3c']
+                        }]
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+                }));
+                // 圖2：分數直方圖
+                this.charts.push(new Chart(document.getElementById('arHistChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: dist.histogram.map(h => h.bin),
+                        datasets: [{ label: t('dr.ar.headcount'), data: dist.histogram.map(h => h.count),
+                            backgroundColor: 'rgba(27,79,114,0.65)' }]
+                    },
+                    options: { responsive: true, plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+                }));
+                // 圖3：部門 × 等第堆疊
+                const deptRows = dist.dept_grade;
+                this.charts.push(new Chart(document.getElementById('arDeptChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: deptRows.map(x => x.depart_id || '-'),
+                        datasets: [
+                            { label: 'S', data: deptRows.map(x => x.S), backgroundColor: '#f1c40f' },
+                            { label: 'A', data: deptRows.map(x => x.A), backgroundColor: '#27ae60' },
+                            { label: 'B', data: deptRows.map(x => x.B), backgroundColor: '#e67e22' },
+                            { label: 'C', data: deptRows.map(x => x.C), backgroundColor: '#e74c3c' }
+                        ]
+                    },
+                    options: { responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
+                }));
+            } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
+        },
+
+        async generateAnnualReview() {
+            const y = document.getElementById('arYear').value;
+            if (!confirm(t('dr.ar.confirm_gen').replace('{year}', y))) return;
+            const btn = document.querySelector('#arBody')?.previousElementSibling?.querySelector('button[onclick^="DRApp.generateAnnualReview"]');
+            try {
+                if (btn) { btn.disabled = true; btn.textContent = '⏳ ' + t('loading'); }
+                const res = await API.post('/api/daily-report/annual-review/generate', { bu_no: State.bu_no, yyyy: y });
+                UI.toast(res.message || t('dr.ar.gen_ok'), 'success');
+                this.loadAnnualReview();
+            } catch (e) { UI.toast(e.message, 'error'); }
+            finally { if (btn) { btn.disabled = false; btn.textContent = '⚙️ ' + t('dr.ar.generate'); } }
+        },
+
+        exportAnnualReview() {
+            const y = document.getElementById('arYear').value;
+            API.download('/api/daily-report/export/annual-review.xlsx?bu_no=' + encodeURIComponent(State.bu_no) + '&year=' + encodeURIComponent(y))
+                .catch(e => UI.toast(e.message, 'error'));
+        },
+
+        async viewAnnualDetail(id) {
+            this.view = 'annualDetail';
+            this.destroyCharts();
+            this.c.innerHTML = `<div class="card"><p style="color:#7f8c8d;">${t('loading')}</p></div>`;
+            try {
+                const res = await API.get('/api/daily-report/annual-review/' + id);
+                const r = res.data;
+                const months = (r.review_data && r.review_data.months) || [];
+                const GRADE_STYLE = {
+                    S: 'background:#f1c40f;color:#7e5500;', A: 'background:#27ae60;color:#fff;',
+                    B: 'background:#e67e22;color:#fff;', C: 'background:#e74c3c;color:#fff;'
+                };
+                this.c.innerHTML = `
+                    <div class="card">
+                        <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                            <h3 style="margin:0;">🏆 ${esc(r.yyyy)} ${t('dr.ar.title')} · ${esc(r.user_id)} ${esc(r.user_name || '')}
+                                <span style="display:inline-block;width:30px;height:30px;line-height:30px;border-radius:50%;text-align:center;font-weight:700;margin-left:8px;${GRADE_STYLE[r.grade] || ''}">${esc(r.grade)}</span>
+                                <span style="font-size:0.8em;color:#7f8c8d;margin-left:8px;">${esc(r.depart_id || '')}</span>
+                            </h3>
+                            <button class="btn" style="margin-left:auto;" onclick="DRApp.openAnnualReview()">↩️ ${t('dr.ar.back_list')}</button>
+                        </div>
+                        <div style="margin-top:14px;">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;">
+                                <div style="background:#fef9e7;padding:14px;border-radius:8px;text-align:center;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;">${t('dr.ar.total')}</div>
+                                    <div style="font-size:1.8em;font-weight:700;color:#7d6608;">${UI.fmt(Number(r.total_score))}</div>
+                                </div>
+                                <div style="background:#eaf2f8;padding:14px;border-radius:8px;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">${t('dr.ar.s_hours')}（40%）</div>
+                                    <div style="font-size:1.3em;font-weight:700;">${UI.fmt(Number(r.score_hours))}</div>
+                                </div>
+                                <div style="background:#e8f8f5;padding:14px;border-radius:8px;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">${t('dr.ar.s_timely')}（30%）</div>
+                                    <div style="font-size:1.3em;font-weight:700;">${UI.fmt(Number(r.score_timeliness))}</div>
+                                </div>
+                                <div style="background:#f4ecf7;padding:14px;border-radius:8px;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">${t('dr.ar.s_work')}（20%）</div>
+                                    <div style="font-size:1.3em;font-weight:700;">${UI.fmt(Number(r.score_workratio))}</div>
+                                </div>
+                                <div style="background:#fdedec;padding:14px;border-radius:8px;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">${t('dr.ar.s_penalty')}（10%）</div>
+                                    <div style="font-size:1.3em;font-weight:700;">${UI.fmt(Number(r.score_penalty))}</div>
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+                                <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                                    <h4 style="margin:0 0 8px;text-align:center;font-size:0.95em;">${t('dr.ar.radar')}</h4>
+                                    <canvas id="arRadar" height="200"></canvas>
+                                </div>
+                                <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                                    <h4 style="margin:0 0 8px;text-align:center;font-size:0.95em;">${t('dr.ar.trend12')}</h4>
+                                    <canvas id="arLine" height="200"></canvas>
+                                </div>
+                            </div>
+                            <h4>${t('dr.ar.month_detail')}</h4>
+                            <table class="data-table" style="font-size:0.85em;">
+                                <thead><tr>
+                                    <th>${t('dr.ar.col_ym')}</th><th>${t('dr.sum.col.days')}</th>
+                                    <th>${t('dr.sum.col.hours')}</th><th>${t('dr.sum.col.target_h')}</th>
+                                    <th>${t('dr.sum.col.achieve')}</th><th>${t('dr.sum.col.work_ratio')}</th>
+                                    <th>${t('dr.sum.col.delays')}</th><th>${t('dr.sum.col.unresolved')}</th>
+                                    <th>${t('dr.ar.col_locked')}</th>
+                                </tr></thead>
+                                <tbody>${months.map(m => `
+                                    <tr${m.locked ? ' style="background:#fef9e7;"' : ''}>
+                                        <td><b>${esc(m.YYYY_MM)}</b></td>
+                                        <td class="num">${m.report_days}${m.due_days ? '/' + m.due_days : ''}</td>
+                                        <td class="num">${UI.fmt(m.total_hours)}</td>
+                                        <td class="num">${m.target_hours != null ? UI.fmt(m.target_hours) : '-'}</td>
+                                        <td class="num" style="color:${m.hours_achieve == null ? '#95a5a6' : m.hours_achieve >= 100 ? '#27ae60' : m.hours_achieve >= 85 ? '#e67e22' : '#e74c3c'};">${m.hours_achieve != null ? m.hours_achieve + '%' : '-'}</td>
+                                        <td class="num">${m.work_ratio}%</td>
+                                        <td class="num" style="color:${m.max_delays != null && m.delay_cnt > m.max_delays ? '#e74c3c' : ''};">${m.delay_cnt}${m.max_delays != null ? '/' + m.max_delays : ''}</td>
+                                        <td class="num" style="color:${m.max_unresolved != null && m.unresolved_cnt > m.max_unresolved ? '#e74c3c' : ''};">${m.unresolved_cnt}${m.max_unresolved != null ? '/' + m.max_unresolved : ''}</td>
+                                        <td style="text-align:center;">${m.locked ? '🔒' : ''}</td>
+                                    </tr>`).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>`;
+
+                // 雷達圖（四維標準化）
+                this.charts.push(new Chart(document.getElementById('arRadar'), {
+                    type: 'radar',
+                    data: {
+                        labels: [t('dr.ar.s_hours'), t('dr.ar.s_timely'), t('dr.ar.s_work'), t('dr.ar.s_penalty')],
+                        datasets: [{
+                            label: r.user_name || r.user_id,
+                            data: [Number(r.score_hours), Number(r.score_timeliness), Number(r.score_workratio), Number(r.score_penalty)],
+                            backgroundColor: 'rgba(125,102,8,0.2)', borderColor: '#7d6608', pointBackgroundColor: '#7d6608'
+                        }]
+                    },
+                    options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 25 } } } }
+                }));
+                // 12 月趨勢
+                this.charts.push(new Chart(document.getElementById('arLine'), {
+                    type: 'line',
+                    data: {
+                        labels: months.map(m => m.YYYY_MM),
+                        datasets: [
+                            { label: t('dr.sum.col.achieve'), data: months.map(m => m.hours_achieve),
+                              borderColor: '#2980b9', backgroundColor: 'rgba(41,128,185,0.1)', tension: 0.3, yAxisID: 'y' },
+                            { label: t('dr.sum.col.work_ratio'), data: months.map(m => m.work_ratio),
+                              borderColor: '#27ae60', backgroundColor: 'rgba(39,174,92,0.08)', tension: 0.3, yAxisID: 'y', borderDash: [5, 4] }
+                        ]
+                    },
+                    options: { responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                        scales: {
+                            y: { min: 0, max: 120, title: { display: true, text: '%' } }
+                        } }
+                }));
+            } catch (e) {
+                this.c.innerHTML = `<div class="card"><p style="color:#e74c3c;">${esc(e.message)}</p></div>`;
+            }
         },
 
         // ============ 签核管理面板 ============

@@ -136,6 +136,34 @@ async function ensureTables() {
             INDEX idx_bu_ym (bu_no, YYYY_MM)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+    // M1 年度绩效结算表
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_annual_review (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            bu_no VARCHAR(20) NOT NULL,
+            yyyy CHAR(4) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            user_name VARCHAR(100) DEFAULT NULL,
+            depart_id VARCHAR(50) DEFAULT NULL,
+            score_hours DECIMAL(5,2) DEFAULT 0,
+            score_timeliness DECIMAL(5,2) DEFAULT 0,
+            score_workratio DECIMAL(5,2) DEFAULT 0,
+            score_penalty DECIMAL(5,2) DEFAULT 0,
+            total_score DECIMAL(5,2) DEFAULT 0,
+            grade CHAR(1) DEFAULT 'C',
+            avg_hours_achieve DECIMAL(6,2) DEFAULT NULL,
+            annual_timeliness DECIMAL(5,2) DEFAULT 0,
+            months_submitted INT DEFAULT 0,
+            months_locked INT DEFAULT 0,
+            over_months INT DEFAULT 0,
+            review_data JSON,
+            generated_by VARCHAR(50) DEFAULT NULL,
+            generated_by_name VARCHAR(100) DEFAULT NULL,
+            generated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_bu_user_year (bu_no, user_id, yyyy),
+            INDEX idx_bu_year_grade (bu_no, yyyy, grade)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
 }
 
 async function seedReport(o) {
@@ -163,6 +191,7 @@ async function seedReport(o) {
 
 beforeAll(async () => {
     await ensureTables();
+    await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_target WHERE bu_no=?', [BU]);
@@ -211,6 +240,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+    await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_target WHERE bu_no=?', [BU]);
@@ -919,5 +949,171 @@ describe('P1 考核闭环', () => {
         const res = await as(MGR).post('/api/daily-report/targets')
             .send({ bu_no: BU, YYYY_MM: P1YM });
         expect(res.status).toBe(400);
+    });
+});
+
+// ============ M1 年度績效自動生成 + 分佈圖 ============
+describe('M1 年度績效自動生成', () => {
+    const ARY = '2000';   // 固定使用閏年（366 天）且明確過往的年度，口徑確定
+    const ARYM = '2000/01';
+
+    beforeAll(async () => {
+        // 清空該年度殘留（冪等）
+        await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=? AND yyyy=?', [BU, ARY]);
+        await pool.execute('DELETE FROM daily_report_target WHERE bu_no=? AND YYYY_MM=?', [BU, ARYM]);
+        await pool.execute("DELETE FROM daily_report_detail WHERE bu_no=? AND YYYY_MM=?", [BU, ARYM]);
+        await pool.execute("DELETE FROM daily_report WHERE bu_no=? AND YYYY_MM=?", [BU, ARYM]);
+
+        // EMP：1/5 共 9h（日常 8h + 健康 1h），1/6 無明細 → 2 個提交天
+        await seedReport({
+            bu: BU, dept: DEPT, uid: EMP, uname: '李员工', date: '2000-01-05', p1: '延误一',
+            details: [
+                { from: '08:00', to: '16:00', hours: 8, projects: '年度大项目', wk: '日常工作', client: '客户A' },
+                { from: '16:00', to: '17:00', hours: 1, projects: '健身', wk: '健康', client: '' }
+            ]
+        });
+        await seedReport({ bu: BU, dept: DEPT, uid: EMP, uname: '李员工', date: '2000-01-06' });
+        // MGR：1/7 日常 3h，不設目標（驗證無目標者口徑）
+        await seedReport({
+            bu: BU, dept: DEPT, uid: MGR, uname: '王经理', date: '2000-01-07',
+            details: [{ from: '08:00', to: '11:00', hours: 3, projects: '管理', wk: '日常工作', client: '' }]
+        });
+        // EMP 目標：9h 全達成、延誤上限 99 不超標、工作占比門檻 1%
+        await pool.execute(
+            `INSERT INTO daily_report_target (bu_no,user_id,YYYY_MM,target_hours,max_delays,max_unresolved,min_work_ratio,set_by,set_by_name,remark)
+             VALUES (?,?,?,?,?,?,?,?,?,?)`,
+            [BU, EMP, ARYM, 9, 99, 99, 1, MGR, '王经理', 'M1測試目標']);
+    });
+
+    test('權限：員工/部門主管不可結算 → 403；僅高階主管可結算', async () => {
+        const empRes = await as(EMP).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: ARY });
+        expect(empRes.status).toBe(403);
+        const supRes = await as(SUP).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: ARY });
+        expect(supRes.status).toBe(403);
+    });
+
+    test('非法年度 → 400；無資料年度結算 → 400', async () => {
+        const bad = await as(MGR).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: 'abc' });
+        expect(bad.status).toBe(400);
+        const empty = await as(MGR).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: '2001' });
+        expect(empty.status).toBe(400);
+    });
+
+    test('高管結算 2000 年 → upserted=2，等第人數合計=2', async () => {
+        const res = await as(MGR).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: ARY });
+        expect(res.status).toBe(200);
+        expect(res.body.data.upserted).toBe(2);
+        const gc = res.body.data.grade_counts;
+        expect(gc.S + gc.A + gc.B + gc.C).toBe(2);
+
+        // DB 落庫校驗
+        const [rows] = await pool.execute(
+            'SELECT user_id, grade, total_score FROM daily_report_annual_review WHERE bu_no=? AND yyyy=?',
+            [BU, ARY]);
+        expect(rows).toHaveLength(2);
+        expect(rows.map(r => r.user_id).sort()).toEqual([EMP, MGR]);
+    });
+
+    test('清單：按總分降序；分佈區口徑自洽', async () => {
+        const res = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}`);
+        expect(res.status).toBe(200);
+        const d = res.body.data;
+        expect(d.list).toHaveLength(2);
+        expect(d.list[0].user_id).toBe(EMP);          // 70 分排前
+        expect(d.list[1].user_id).toBe(MGR);          // 30 分在後
+        // 分佈區
+        expect(d.distribution.total).toBe(2);
+        const gc = d.distribution.grade_counts;
+        expect(gc.S + gc.A + gc.B + gc.C).toBe(2);
+        expect(d.distribution.histogram.reduce((s, h) => s + h.count, 0)).toBe(2);
+        expect(d.distribution.dept_grade.length).toBeGreaterThanOrEqual(1);
+        const deptRow = d.distribution.dept_grade.find(x => x.depart_id === DEPT);
+        expect(deptRow.S + deptRow.A + deptRow.B + deptRow.C).toBe(2);
+    });
+
+    test('計分口徑：EMP 工時/工作占比/合規滿分，及時率 0，總分 70=B', async () => {
+        const res = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}`);
+        const emp = res.body.data.list.find(r => r.user_id === EMP);
+        expect(emp.score_hours).toBe(100);
+        expect(emp.score_workratio).toBe(100);
+        expect(emp.score_penalty).toBe(100);
+        expect(emp.annual_timeliness).toBe(0);        // 補登於 2026 年，全部遲交
+        expect(emp.avg_hours_achieve).toBe(100);
+        expect(emp.months_submitted).toBe(1);
+        expect(emp.over_months).toBe(0);
+        expect(emp.total_score).toBeCloseTo(70, 5);
+        expect(emp.grade).toBe('B');
+    });
+
+    test('計分口徑：MGR 全年無目標 → avg_hours_achieve=null、工時 0 分、合規不罰', async () => {
+        const res = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}`);
+        const mgr = res.body.data.list.find(r => r.user_id === MGR);
+        expect(mgr.avg_hours_achieve).toBeNull();
+        expect(mgr.score_hours).toBe(0);
+        expect(mgr.score_penalty).toBe(100);
+        expect(mgr.score_workratio).toBe(100);
+        expect(mgr.over_months).toBe(0);
+        expect(mgr.grade).toBe('C');
+    });
+
+    test('篩選：grade=B 僅 EMP；部門篩選 2 人；員工清單僅見本人', async () => {
+        const byGrade = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}&grade=B`);
+        expect(byGrade.body.data.list).toHaveLength(1);
+        expect(byGrade.body.data.list[0].user_id).toBe(EMP);
+
+        const byDept = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}&depart_id=${encodeURIComponent(DEPT)}`);
+        expect(byDept.body.data.list).toHaveLength(2);
+
+        const empView = await as(EMP).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}`);
+        expect(empView.body.data.list).toHaveLength(1);
+        expect(empView.body.data.list[0].user_id).toBe(EMP);
+    });
+
+    test('詳情：含 12 月（實際 1 月）快取；員工不可查他人 → 403', async () => {
+        const listRes = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=${ARY}`);
+        const empRow = listRes.body.data.list.find(r => r.user_id === EMP);
+        const mgrRow = listRes.body.data.list.find(r => r.user_id === MGR);
+
+        const own = await as(EMP).get(`/api/daily-report/annual-review/${empRow.id}`);
+        expect(own.status).toBe(200);
+        expect(own.body.data.review_data.months).toHaveLength(1);
+        const m = own.body.data.review_data.months[0];
+        expect(m.YYYY_MM).toBe(ARYM);
+        expect(m.total_hours).toBe(9);
+        expect(m.hours_achieve).toBe(100);
+        expect(m.target_hours).toBe(9);
+
+        const forbid = await as(EMP).get(`/api/daily-report/annual-review/${mgrRow.id}`);
+        expect(forbid.status).toBe(403);
+
+        const mgrView = await as(MGR).get(`/api/daily-report/annual-review/${mgrRow.id}`);
+        expect(mgrView.status).toBe(200);
+
+        expect((await as(EMP).get('/api/daily-report/annual-review/abc')).status).toBe(400);
+    });
+
+    test('重複結算冪等：UPSERT 不產生重複列', async () => {
+        const res = await as(MGR).post('/api/daily-report/annual-review/generate').send({ bu_no: BU, yyyy: ARY });
+        expect(res.body.data.upserted).toBe(2);
+        const [rows] = await pool.execute(
+            'SELECT COUNT(*) AS c FROM daily_report_annual_review WHERE bu_no=? AND yyyy=?', [BU, ARY]);
+        expect(Number(rows[0].c)).toBe(2);
+    });
+
+    test('無資料年度清單：distribution.total=0', async () => {
+        const res = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=2001`);
+        expect(res.status).toBe(200);
+        expect(res.body.data.distribution.total).toBe(0);
+        expect(res.body.data.list).toHaveLength(0);
+    });
+
+    test('Excel 匯出：經理 200 回 xlsx；員工 403', async () => {
+        const res = await as(MGR).get(`/api/daily-report/export/annual-review.xlsx?bu_no=${BU}&year=${ARY}`);
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toContain('spreadsheetml');
+        expect(res.headers['content-disposition']).toContain('.xlsx');
+
+        const emp = await as(EMP).get(`/api/daily-report/export/annual-review.xlsx?bu_no=${BU}&year=${ARY}`);
+        expect(emp.status).toBe(403);
     });
 });
