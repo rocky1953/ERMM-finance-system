@@ -28,7 +28,8 @@ const ANNUAL = {
         { grade: 'B', min: 70 },
         { grade: 'C', min: -Infinity }
     ],
-    DEFAULT_MIN_WORK_RATIO: 70   // 當月未設工作占比目標時的預設達標線
+    DEFAULT_MIN_WORK_RATIO: 70,  // 當月未設工作占比目標時的預設達標線
+    MAX_OKR_BONUS: 5             // M2：OKR 平均完成率 100% 時的年度加分上限
 };
 
 function gradeOf(score) {
@@ -38,6 +39,85 @@ function gradeOf(score) {
 
 // 數值截斷到 [min,max]
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// ============ M2 OKR：完成率計算 ============
+// KR 完成率 = (actual-start)/(target-start)，截斷 0~120%
+function krProgress(kr) {
+    const start = Number(kr.start_val) || 0;
+    const target = Number(kr.target_val);
+    const actual = Number(kr.actual_val) || 0;
+    if (!(target > start)) return 0;
+    return Math.round(clamp((actual - start) / (target - start) * 100, 0, 120) * 10) / 10;
+}
+
+// 同 O 下 KR 依權重加平均（權重和<=0 時均分）
+function okrWeightedProgress(krs) {
+    if (!Array.isArray(krs) || krs.length === 0) return null;
+    let wsum = krs.reduce((s, k) => s + (Number(k.weight) || 0), 0);
+    if (wsum <= 0) wsum = krs.length;
+    const p = krs.reduce((s, k) => s + krProgress(k) * ((Number(k.weight) || 0) / wsum), 0);
+    return Math.round(p * 10) / 10;
+}
+
+// 批量查某月 OKR（含 KR + 加權完成率），回傳 Map: user_id -> okr
+async function loadMonthOkrs(bu, ym, userIds) {
+    if (!userIds || userIds.length === 0) return new Map();
+    const ph = userIds.map(() => '?').join(',');
+    const [os] = await pool.execute(
+        `SELECT * FROM daily_report_okr WHERE bu_no=? AND YYYY_MM=? AND user_id IN (${ph})`,
+        [bu, ym, ...userIds]);
+    if (os.length === 0) return new Map();
+    const ids = os.map(o => o.id);
+    const ph2 = ids.map(() => '?').join(',');
+    const [krs] = await pool.execute(
+        `SELECT * FROM daily_report_okr_kr WHERE okr_id IN (${ph2}) ORDER BY seq, id`, ids);
+    const krByOkr = new Map();
+    for (const k of krs) {
+        if (!krByOkr.has(k.okr_id)) krByOkr.set(k.okr_id, []);
+        krByOkr.get(k.okr_id).push({
+            id: k.id, seq: Number(k.seq) || 1, content: k.content,
+            start_val: Number(k.start_val) || 0, target_val: Number(k.target_val) || 0,
+            actual_val: Number(k.actual_val) || 0, unit: k.unit || '',
+            weight: Number(k.weight) || 0, progress: krProgress(k)
+        });
+    }
+    const m = new Map();
+    for (const o of os) {
+        const list = krByOkr.get(o.id) || [];
+        m.set(o.user_id, {
+            okr_id: o.id, objective: o.objective, status: o.status,
+            set_by_name: o.set_by_name || '', set_time: o.set_time,
+            krs: list, progress: okrWeightedProgress(list)
+        });
+    }
+    return m;
+}
+
+// 批次查全年 OKR，回傳 Map: `${user_id}|${YYYY_MM}` -> { objective, progress }
+async function loadYearOkrs(bu, yyyy) {
+    const [os] = await pool.execute(
+        `SELECT id, user_id, YYYY_MM, objective FROM daily_report_okr WHERE bu_no=? AND YYYY_MM LIKE ?`,
+        [bu, `${yyyy}/%`]);
+    if (os.length === 0) return new Map();
+    const ids = os.map(o => o.id);
+    const ph = ids.map(() => '?').join(',');
+    const [krs] = await pool.execute(
+        `SELECT okr_id, start_val, target_val, actual_val, weight FROM daily_report_okr_kr WHERE okr_id IN (${ph})`,
+        ids);
+    const krByOkr = new Map();
+    for (const k of krs) {
+        if (!krByOkr.has(k.okr_id)) krByOkr.set(k.okr_id, []);
+        krByOkr.get(k.okr_id).push(k);
+    }
+    const m = new Map();
+    for (const o of os) {
+        m.set(`${o.user_id}|${o.YYYY_MM}`, {
+            objective: o.objective,
+            progress: okrWeightedProgress(krByOkr.get(o.id) || [])
+        });
+    }
+    return m;
+}
 
 // 时间类别（生命平衡轮）固定 9 项，顺序即图表展示顺序
 const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
@@ -730,7 +810,9 @@ router.get('/monthly-summary', async (req, res) => {
                 life_hours: life,
                 work_ratio: total > 0 ? Math.round(work / total * 1000) / 10 : 0,
                 life_ratio: total > 0 ? Math.round(life / total * 1000) / 10 : 0,
-                avg_hours: Number(r.report_days) > 0 ? Math.round(total / Number(r.report_days) * 100) / 100 : 0
+                avg_hours: Number(r.report_days) > 0 ? Math.round(total / Number(r.report_days) * 100) / 100 : 0,
+                okr_progress: null,
+                okr_objective: ''
             };
         });
 
@@ -757,6 +839,16 @@ router.get('/monthly-summary', async (req, res) => {
                     item.hours_achieve = item.target_hours ? Math.round(total_safe(item.total_hours) / item.target_hours * 1000) / 10 : null;
                     item.delay_over = item.max_delays != null ? Math.max(0, item.delay_cnt - item.max_delays) : null;
                     item.unresolved_over = item.max_unresolved != null ? Math.max(0, item.unresolved_cnt - item.max_unresolved) : null;
+                }
+            }
+
+            // M2：附加當月 OKR 完成率
+            const okrMap = await loadMonthOkrs(bu, mo.ym, userIds);
+            for (const item of list) {
+                const o = okrMap.get(item.user_id);
+                if (o) {
+                    item.okr_progress = o.progress;
+                    item.okr_objective = o.objective;
                 }
             }
         }
@@ -866,6 +958,127 @@ router.delete('/targets/:id', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ M2 OKR 連結 ============
+// GET /okrs：經理可查全部/指定人；員工僅見本人
+router.get('/okrs', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const mo = parseYM(req.query.YYYY_MM) || normalizeMonth(Number(req.query.year), req.query.month);
+        if (!mo) return fail(res, 'YYYY_MM 格式不正确（如 2025/10）', 400);
+        const target = resolveTarget(actor, trimOrNull(req.query.user_id));
+
+        let sql = `SELECT o.user_id, MAX(u.xuser_name) AS user_name, MAX(u.xuser_dept) AS depart_id,
+                          o.id AS okr_id, o.objective, o.status, o.set_by_name, o.set_time
+                     FROM daily_report_okr o
+                     LEFT JOIN cams_xuser u ON u.xuser_id = o.user_id
+                    WHERE o.bu_no=? AND o.YYYY_MM=?`;
+        const params = [bu, mo.ym];
+        if (target) { sql += ' AND o.user_id=?'; params.push(target); }
+        sql += ' GROUP BY o.id ORDER BY o.user_id';
+        const [os] = await pool.execute(sql, params);
+        if (os.length === 0) return ok(res, []);
+
+        const okrMap = await loadMonthOkrs(bu, mo.ym, os.map(o => o.user_id));
+        const list = os.map(o => {
+            const okr = okrMap.get(o.user_id) || { krs: [], progress: null };
+            return {
+                user_id: o.user_id,
+                user_name: o.user_name || o.user_id,
+                depart_id: o.depart_id || '',
+                YYYY_MM: mo.ym,
+                objective: o.objective,
+                status: o.status,
+                set_by_name: o.set_by_name || '',
+                set_time: o.set_time,
+                krs: okr.krs,
+                progress: okr.progress
+            };
+        });
+        ok(res, list);
+    } catch (err) { fail500(res, err); }
+});
+
+// POST /okrs：整批 O+KR UPSERT（經理可替任何人設定）
+// body: { bu_no, YYYY_MM, okrs: [{ user_id, objective, status?, krs: [{content,start_val,target_val,actual_val,unit,weight}] }] }
+router.post('/okrs', async (req, res) => {
+    let conn;
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可设定 OKR', 403);
+        const b = req.body || {};
+        const bu = trimOrNull(b.bu_no) || 'HM';
+        const mo = parseYM(b.YYYY_MM);
+        if (!mo) return fail(res, 'YYYY_MM 格式不正确（如 2025/10）', 400);
+        const okrs = Array.isArray(b.okrs) ? b.okrs : (b.user_id ? [b] : []);
+        if (okrs.length === 0) return fail(res, '请指定 OKR 人员（okrs 数组或 user_id）', 400);
+
+        // 交易前先完成全部校驗與正規化
+        const norm = [];
+        for (const item of okrs) {
+            const uid = trimOrNull(item.user_id);
+            const objective = trimOrNull(item.objective);
+            if (!uid || !objective) continue;
+            const krs = Array.isArray(item.krs) ? item.krs.filter(k => trimOrNull(k.content)) : [];
+            if (krs.length === 0) return fail(res, `${uid} 的 OKR 至少需要 1 條關鍵結果(KR)`, 400);
+            if (krs.length > 5) return fail(res, `${uid} 的 KR 最多 5 條`, 400);
+            const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+            norm.push({
+                uid, objective: objective.slice(0, 300),
+                status: item.status === 'CLOSED' ? 'CLOSED' : 'ACTIVE',
+                krs: krs.map(k => ({
+                    content: trimOrNull(k.content).slice(0, 300),
+                    start_val: num(k.start_val), target_val: num(k.target_val), actual_val: num(k.actual_val),
+                    unit: trimOrNull(k.unit) || null,
+                    weight: Math.max(0, Math.min(100, num(k.weight))) || 100
+                }))
+            });
+        }
+        if (norm.length === 0) return fail(res, 'OKR 內容不完整（需 user_id 與 objective）', 400);
+
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+        let upserted = 0, krCount = 0;
+        for (const item of norm) {
+            const [ins] = await conn.execute(
+                `INSERT INTO daily_report_okr (bu_no, user_id, YYYY_MM, objective, status, set_by, set_by_name, set_time)
+                 VALUES (?,?,?,?,?,?,?,NOW())
+                 ON DUPLICATE KEY UPDATE objective=VALUES(objective), status=VALUES(status),
+                 set_by=VALUES(set_by), set_by_name=VALUES(set_by_name), set_time=NOW()`,
+                [bu, item.uid, mo.ym, item.objective, item.status, actor.user_id, actor.user_name]);
+            let okrId = ins.insertId;
+            if (!okrId) {
+                const [[ex]] = await conn.execute(
+                    'SELECT id FROM daily_report_okr WHERE bu_no=? AND user_id=? AND YYYY_MM=? LIMIT 1',
+                    [bu, item.uid, mo.ym]);
+                okrId = ex.id;
+            }
+            // KR 整批覆蓋：先刪舊再插新（同交易，順序 await）
+            await conn.execute('DELETE FROM daily_report_okr_kr WHERE okr_id=?', [okrId]);
+            for (let i = 0; i < item.krs.length; i++) {
+                const k = item.krs[i];
+                await conn.execute(
+                    `INSERT INTO daily_report_okr_kr
+                        (okr_id, bu_no, user_id, YYYY_MM, seq, content, start_val, target_val, actual_val, unit, weight)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+                    [okrId, bu, item.uid, mo.ym, i + 1, k.content,
+                     k.start_val, k.target_val, k.actual_val, k.unit, k.weight]);
+                krCount++;
+            }
+            upserted++;
+        }
+        await conn.commit();
+        ok(res, { upserted, kr_count: krCount }, `OKR 已儲存（${upserted} 人 / ${krCount} 條 KR）`);
+    } catch (err) {
+        if (conn) { try { await conn.rollback(); } catch (e2) { /* ignore */ } }
+        fail500(res, err);
+    } finally {
+        if (conn) conn.release();
+    }
+});
+
 // ============ P2-① 高管人效仪表盘 ============
 router.get('/efficiency-dashboard', async (req, res) => {
     try {
@@ -903,27 +1116,57 @@ router.get('/efficiency-dashboard', async (req, res) => {
               WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
         const totalHours = Number(hrs[0]?.total_hours) || 0;
 
-        // 3) 部门维度
-        const [depts] = await pool.execute(
-            `SELECT d.depart_id,
-                    COUNT(DISTINCT d.user_id) AS emp_cnt,
-                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+        // 3) 部门维度（先按人聚合再汇部门，避免 JOIN 明细后日期/标记计数放大）
+        const [dY, dM] = ym.split('/').map(Number);
+        const nowD = new Date();
+        const deptDueDays = dY < nowD.getFullYear() ? new Date(dY, dM, 0).getDate()
+            : dY === nowD.getFullYear()
+                ? (dM < (nowD.getMonth() + 1) ? new Date(dY, dM, 0).getDate()
+                   : dM === (nowD.getMonth() + 1) ? nowD.getDate() : 0)
+                : 0;
+
+        const [perUser] = await pool.execute(
+            `SELECT d.user_id, MAX(d.depart_id) AS depart_id,
+                    COUNT(DISTINCT d.report_date) AS days,
+                    COUNT(DISTINCT CASE WHEN d.create_time IS NOT NULL AND DATE(d.create_time)>d.report_date THEN d.report_date END) AS late_days,
+                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
+                    ROUND(COALESCE(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END),0),2) AS work_hours
                FROM daily_report d
                LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
               WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
-              GROUP BY d.depart_id ORDER BY total_hours DESC`, [bu, ym]);
+              GROUP BY d.user_id`, [bu, ym]);
 
-        const deptRows = depts.map(d => {
-            const ec = Number(d.emp_cnt) || 1;
-            const th = Number(d.total_hours) || 0;
+        // 當月 OKR（全公司有日報者），用於部門 OKR 平均分
+        const okrMap = await loadMonthOkrs(bu, ym, perUser.map(u => u.user_id));
+        const deptAgg = new Map();
+        for (const u of perUser) {
+            const dep = u.depart_id || '未分類';
+            if (!deptAgg.has(dep)) deptAgg.set(dep, { emp_cnt: 0, total_hours: 0, work_hours: 0, on_time_days: 0, due_days: 0, okr_sum: 0, okr_n: 0 });
+            const a = deptAgg.get(dep);
+            const days = Number(u.days) || 0, late = Number(u.late_days) || 0;
+            a.emp_cnt++;
+            a.total_hours += Number(u.total_hours) || 0;
+            a.work_hours += Number(u.work_hours) || 0;
+            a.on_time_days += Math.max(0, days - late);
+            a.due_days += deptDueDays;
+            const op = okrMap.get(u.user_id);
+            if (op && op.progress != null) { a.okr_sum += op.progress; a.okr_n++; }
+        }
+        const deptRows = Array.from(deptAgg.entries()).map(([dep, a]) => {
+            const th = Math.round(a.total_hours * 100) / 100;
             return {
-                depart_id: d.depart_id || '未分類',
-                emp_cnt: ec,
+                depart_id: dep,
+                emp_cnt: a.emp_cnt,
                 total_hours: th,
-                per_capita_hours: Math.round(th / ec * 100) / 100,
-                output_share: totalHours > 0 ? Math.round(th / totalHours * 1000) / 10 : 0
+                work_hours: Math.round(a.work_hours * 100) / 100,
+                per_capita_hours: Math.round(th / a.emp_cnt * 100) / 100,
+                output_share: totalHours > 0 ? Math.round(th / totalHours * 1000) / 10 : 0,
+                timeliness_rate: a.due_days > 0 ? Math.round(a.on_time_days / a.due_days * 1000) / 10 : 0,
+                work_ratio: a.total_hours > 0 ? Math.round(a.work_hours / a.total_hours * 1000) / 10 : 0,
+                okr_progress: a.okr_n > 0 ? Math.round(a.okr_sum / a.okr_n * 10) / 10 : null,
+                okr_users: a.okr_n
             };
-        });
+        }).sort((x, y) => y.total_hours - x.total_hours);
 
         // 4) 近 6 个月趋势
         const [y0, m0] = ym.split('/').map(Number);
@@ -1003,6 +1246,18 @@ router.get('/efficiency-dashboard', async (req, res) => {
             });
         }
 
+        // 6) M2 部門雷達：五維標準化 0-100（工時=人均工時相對最大值；及時率/工作占比/OKR 本身即百分比分；
+        //    產值維因 ERP 訂單無部門欄位，暫為 null，待 P5 ERP 整合）
+        const maxPch = Math.max(1, ...deptRows.map(d => d.per_capita_hours));
+        const deptRadar = deptRows.map(d => ({
+            depart_id: d.depart_id,
+            hours: Math.round(d.per_capita_hours / maxPch * 100),
+            output: null,
+            timeliness: d.timeliness_rate,
+            okr: d.okr_progress == null ? null : Math.min(100, Math.round(d.okr_progress)),
+            work_ratio: d.work_ratio
+        }));
+
         ok(res, {
             period: ym,
             kpi: {
@@ -1014,9 +1269,11 @@ router.get('/efficiency-dashboard', async (req, res) => {
                 per_capita_output: empCnt > 0 ? Math.round(totalOutput / empCnt) : 0,
                 per_capita_hours: empCnt > 0 ? Math.round(totalHours / empCnt * 100) / 100 : 0,
                 salary_total: salaryTotal,
-                per_capita_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0
+                per_capita_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0,
+                labor_cost_rate: totalOutput > 0 ? Math.round(salaryTotal / totalOutput * 1000) / 10 : null
             },
             departments: deptRows,
+            deptRadar,
             trend,
             crossValidation: {
                 report_item_cnt: reportItemCnt,
@@ -1281,6 +1538,9 @@ async function computeAnnualReview(bu, yyyy) {
         [bu, `${yyyy}/%`]);
     const lockSet = new Set(locks.map(l => `${l.user_id}|${l.YYYY_MM}`));
 
+    // 3.5) 當年度 OKR（M2：年度加分依據，完成率 100% → +5，上限 5 分）
+    const yearOkrMap = await loadYearOkrs(bu, yyyy);
+
     // 4) 按人分組計分
     const byUser = new Map();
     for (const r of agg) {
@@ -1317,6 +1577,8 @@ async function computeAnnualReview(bu, yyyy) {
             min_work_ratio: tgt && tgt.min_work_ratio != null ? Number(tgt.min_work_ratio) : null,
             hours_achieve: tgt && Number(tgt.target_hours) > 0
                 ? Math.round(totalHours / Number(tgt.target_hours) * 1000) / 10 : null,
+            okr_progress: yearOkrMap.get(`${r.user_id}|${r.YYYY_MM}`)?.progress ?? null,
+            okr_objective: yearOkrMap.get(`${r.user_id}|${r.YYYY_MM}`)?.objective || '',
             locked: lockSet.has(`${r.user_id}|${r.YYYY_MM}`)
         });
     }
@@ -1360,12 +1622,22 @@ async function computeAnnualReview(bu, yyyy) {
             ? Math.round(clamp(100 - overMonths / tgtMonths.length * 100, 0, 100) * 10) / 10
             : 100; // 全年未設目標者不扣分
 
-        const totalScore = Math.round((
+        // ⑤ M2 OKR 加分：有 OKR 月份的平均完成率 → progress/100 × 5，上限 +5
+        const okrMonths = submittedMonths.filter(m => m.okr_progress != null);
+        const okrAvgProgress = okrMonths.length > 0
+            ? Math.round(okrMonths.reduce((s, m) => s + m.okr_progress, 0) / okrMonths.length * 10) / 10
+            : null;
+        const okrBonus = okrAvgProgress != null
+            ? Math.round(clamp(okrAvgProgress, 0, 100) / 100 * ANNUAL.MAX_OKR_BONUS * 100) / 100
+            : 0;
+
+        const baseScore = Math.round((
             scoreHours * ANNUAL.W_HOURS +
             annualTimeliness * ANNUAL.W_TIMELINESS +
             scoreWorkRatio * ANNUAL.W_WORKRATIO +
             scorePenalty * ANNUAL.W_PENALTY
         ) * 10) / 10;
+        const totalScore = Math.round(clamp(baseScore + okrBonus, 0, 100) * 10) / 10;
 
         results.push({
             bu_no: bu, yyyy: String(yyyyNum),
@@ -1374,6 +1646,9 @@ async function computeAnnualReview(bu, yyyy) {
             score_timeliness: annualTimeliness,
             score_workratio: scoreWorkRatio,
             score_penalty: scorePenalty,
+            okr_bonus: okrBonus,
+            okr_avg_progress: okrAvgProgress,
+            base_score: baseScore,
             total_score: totalScore,
             grade: gradeOf(totalScore),
             avg_hours_achieve: avgHoursAchieve,
@@ -1381,7 +1656,7 @@ async function computeAnnualReview(bu, yyyy) {
             months_submitted: nMonths,
             months_locked: months.filter(m => m.locked).length,
             over_months: overMonths,
-            review_data: { months }
+            review_data: { months, okr_avg_progress: okrAvgProgress }
         });
     }
     return results.sort((a, b) => b.total_score - a.total_score);
@@ -1406,14 +1681,15 @@ router.post('/annual-review/generate', async (req, res) => {
                 `INSERT INTO daily_report_annual_review
                     (bu_no, yyyy, user_id, user_name, depart_id,
                      score_hours, score_timeliness, score_workratio, score_penalty,
-                     total_score, grade, avg_hours_achieve, annual_timeliness,
+                     okr_bonus, total_score, grade, avg_hours_achieve, annual_timeliness,
                      months_submitted, months_locked, over_months, review_data,
                      generated_by, generated_by_name, generated_time)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())
                  ON DUPLICATE KEY UPDATE
                      user_name=VALUES(user_name), depart_id=VALUES(depart_id),
                      score_hours=VALUES(score_hours), score_timeliness=VALUES(score_timeliness),
                      score_workratio=VALUES(score_workratio), score_penalty=VALUES(score_penalty),
+                     okr_bonus=VALUES(okr_bonus),
                      total_score=VALUES(total_score), grade=VALUES(grade),
                      avg_hours_achieve=VALUES(avg_hours_achieve), annual_timeliness=VALUES(annual_timeliness),
                      months_submitted=VALUES(months_submitted), months_locked=VALUES(months_locked),
@@ -1422,6 +1698,7 @@ router.post('/annual-review/generate', async (req, res) => {
                      generated_time=NOW()`,
                 [r.bu_no, r.yyyy, r.user_id, r.user_name, r.depart_id,
                  r.score_hours, r.score_timeliness, r.score_workratio, r.score_penalty,
+                 r.okr_bonus,
                  r.total_score, r.grade, r.avg_hours_achieve, r.annual_timeliness,
                  r.months_submitted, r.months_locked, r.over_months, JSON.stringify(r.review_data),
                  actor.user_id, actor.user_name]);
@@ -1454,7 +1731,7 @@ router.get('/annual-review', async (req, res) => {
         const [rows] = await pool.execute(
             `SELECT id, bu_no, yyyy, user_id, user_name, depart_id,
                     score_hours, score_timeliness, score_workratio, score_penalty,
-                    total_score, grade, avg_hours_achieve, annual_timeliness,
+                    okr_bonus, total_score, grade, avg_hours_achieve, annual_timeliness,
                     months_submitted, months_locked, over_months,
                     generated_by_name, generated_time
                FROM daily_report_annual_review
@@ -1465,6 +1742,7 @@ router.get('/annual-review', async (req, res) => {
             ...r,
             score_hours: Number(r.score_hours), score_timeliness: Number(r.score_timeliness),
             score_workratio: Number(r.score_workratio), score_penalty: Number(r.score_penalty),
+            okr_bonus: Number(r.okr_bonus) || 0,
             total_score: Number(r.total_score),
             avg_hours_achieve: r.avg_hours_achieve == null ? null : Number(r.avg_hours_achieve),
             annual_timeliness: Number(r.annual_timeliness),
@@ -1543,7 +1821,7 @@ router.get('/export/annual-review.xlsx', async (req, res) => {
         const [rows] = await pool.execute(
             `SELECT user_id, user_name, depart_id, total_score, grade,
                     score_hours, score_timeliness, score_workratio, score_penalty,
-                    avg_hours_achieve, annual_timeliness,
+                    okr_bonus, avg_hours_achieve, annual_timeliness,
                     months_submitted, months_locked, over_months,
                     generated_by_name, generated_time
                FROM daily_report_annual_review
@@ -1558,6 +1836,7 @@ router.get('/export/annual-review.xlsx', async (req, res) => {
             { header: '部門', width: 14 }, { header: '年度總分', width: 10 }, { header: '等第', width: 8 },
             { header: '工時達成(40%)', width: 14 }, { header: '及時率(30%)', width: 12 },
             { header: '工作占比(20%)', width: 14 }, { header: '合規(10%)', width: 12 },
+            { header: 'OKR加分', width: 10 },
             { header: '平均工時達成率%', width: 16 }, { header: '年度及時率%', width: 12 },
             { header: '提交月數', width: 10 }, { header: '鎖定月數', width: 10 }, { header: '超標月數', width: 10 },
             { header: '結算人', width: 12 }, { header: '結算時間', width: 20 }
@@ -1573,6 +1852,7 @@ router.get('/export/annual-review.xlsx', async (req, res) => {
                 Number(r.total_score), r.grade,
                 Number(r.score_hours), Number(r.score_timeliness),
                 Number(r.score_workratio), Number(r.score_penalty),
+                Number(r.okr_bonus) || 0,
                 r.avg_hours_achieve == null ? '-' : Number(r.avg_hours_achieve),
                 Number(r.annual_timeliness),
                 Number(r.months_submitted), Number(r.months_locked), Number(r.over_months),

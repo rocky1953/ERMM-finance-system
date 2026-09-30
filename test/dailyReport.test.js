@@ -149,6 +149,7 @@ async function ensureTables() {
             score_timeliness DECIMAL(5,2) DEFAULT 0,
             score_workratio DECIMAL(5,2) DEFAULT 0,
             score_penalty DECIMAL(5,2) DEFAULT 0,
+            okr_bonus DECIMAL(5,2) DEFAULT 0,
             total_score DECIMAL(5,2) DEFAULT 0,
             grade CHAR(1) DEFAULT 'C',
             avg_hours_achieve DECIMAL(6,2) DEFAULT NULL,
@@ -162,6 +163,48 @@ async function ensureTables() {
             generated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             UNIQUE KEY uk_bu_user_year (bu_no, user_id, yyyy),
             INDEX idx_bu_year_grade (bu_no, yyyy, grade)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    // 已存在的測試表冪等補 okr_bonus 欄位（M2）
+    const [[col]] = await pool.query(
+        `SELECT COUNT(*) AS c FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='daily_report_annual_review' AND COLUMN_NAME='okr_bonus'`);
+    if (Number(col.c) === 0) {
+        await pool.query(`ALTER TABLE daily_report_annual_review ADD COLUMN okr_bonus DECIMAL(5,2) DEFAULT 0 AFTER score_penalty`);
+    }
+    // M2 OKR 主表（每人每月 1 個 Objective）
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_okr (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            bu_no VARCHAR(20) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            YYYY_MM CHAR(7) NOT NULL,
+            objective VARCHAR(300) NOT NULL,
+            status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE',
+            set_by VARCHAR(50) DEFAULT NULL,
+            set_by_name VARCHAR(100) DEFAULT '',
+            set_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY uk_bu_user_ym (bu_no, user_id, YYYY_MM),
+            INDEX idx_bu_ym (bu_no, YYYY_MM)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    // M2 OKR 關鍵結果（1–5 條 KR）
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS daily_report_okr_kr (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            okr_id BIGINT NOT NULL,
+            bu_no VARCHAR(20) NOT NULL,
+            user_id VARCHAR(50) NOT NULL,
+            YYYY_MM CHAR(7) NOT NULL,
+            seq INT NOT NULL DEFAULT 1,
+            content VARCHAR(300) NOT NULL,
+            start_val DECIMAL(18,2) DEFAULT 0,
+            target_val DECIMAL(18,2) DEFAULT 0,
+            actual_val DECIMAL(18,2) DEFAULT 0,
+            unit VARCHAR(20) DEFAULT '',
+            weight INT NOT NULL DEFAULT 100,
+            INDEX idx_okr (okr_id),
+            INDEX idx_bu_user_ym (bu_no, user_id, YYYY_MM)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 }
@@ -191,6 +234,8 @@ async function seedReport(o) {
 
 beforeAll(async () => {
     await ensureTables();
+    await pool.execute('DELETE FROM daily_report_okr_kr WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_okr WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
@@ -240,6 +285,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+    await pool.execute('DELETE FROM daily_report_okr_kr WHERE bu_no=?', [BU]);
+    await pool.execute('DELETE FROM daily_report_okr WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_audit_log WHERE bu_no=?', [BU]);
     await pool.execute('DELETE FROM daily_report_lock WHERE bu_no=?', [BU]);
@@ -1115,5 +1162,221 @@ describe('M1 年度績效自動生成', () => {
 
         const emp = await as(EMP).get(`/api/daily-report/export/annual-review.xlsx?bu_no=${BU}&year=${ARY}`);
         expect(emp.status).toBe(403);
+    });
+});
+
+describe('M2 OKR 連結', () => {
+    const YM = '2099/01';
+    const postOkrs = (uid, body) => as(uid).post('/api/daily-report/okrs').send(body);
+    const kr = (content, actual, target = 100, start = 0, weight = 100) =>
+        ({ content, start_val: start, target_val: target, actual_val: actual, unit: '%', weight });
+
+    beforeEach(async () => {
+        await pool.execute('DELETE FROM daily_report_okr_kr WHERE bu_no=? AND YYYY_MM=?', [BU, YM]);
+        await pool.execute('DELETE FROM daily_report_okr WHERE bu_no=? AND YYYY_MM=?', [BU, YM]);
+    });
+    afterAll(async () => {
+        await pool.execute('DELETE FROM daily_report_okr_kr WHERE bu_no=?', [BU, YM]);
+        await pool.execute('DELETE FROM daily_report_okr WHERE bu_no=? AND YYYY_MM=?', [BU, YM]);
+        // 2000/01 的 OKR 也要清，避免汙染 M1 年度資料
+        await pool.execute('DELETE FROM daily_report_okr_kr WHERE bu_no=? AND YYYY_MM=?', [BU, '2000/01']);
+        await pool.execute('DELETE FROM daily_report_okr WHERE bu_no=? AND YYYY_MM=?', [BU, '2000/01']);
+        await pool.execute('DELETE FROM daily_report_annual_review WHERE bu_no=? AND yyyy=?', [BU, '2000']);
+    });
+
+    test('權限：員工不可設定 OKR → 403', async () => {
+        const res = await postOkrs(EMP, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: 'O', krs: [kr('KR1', 50)] }]
+        });
+        expect(res.status).toBe(403);
+    });
+
+    test('缺 YYYY_MM → 400', async () => {
+        const res = await postOkrs(MGR, {
+            bu_no: BU,
+            okrs: [{ user_id: EMP, objective: 'O', krs: [kr('KR1', 50)] }]
+        });
+        expect(res.status).toBe(400);
+    });
+
+    test('無 KR → 400', async () => {
+        const res = await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: 'O', krs: [] }]
+        });
+        expect(res.status).toBe(400);
+    });
+
+    test('6 條 KR → 400', async () => {
+        const res = await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{
+                user_id: EMP, objective: 'O',
+                krs: Array.from({ length: 6 }, (_, i) => kr('KR' + (i + 1), 10))
+            }]
+        });
+        expect(res.status).toBe(400);
+    });
+
+    test('單人 UPSERT：KR 0→100、actual 50 → 完成率 50%', async () => {
+        const res = await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: '本月目標', krs: [kr('完成專案', 50)] }]
+        });
+        expect(res.status).toBe(200);
+        expect(res.body.data.upserted).toBe(1);
+        expect(res.body.data.kr_count).toBe(1);
+
+        const got = await as(MGR).get(`/api/daily-report/okrs?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        const o = got.body.data.find(x => x.user_id === EMP);
+        expect(o).toBeTruthy();
+        expect(o.objective).toBe('本月目標');
+        expect(o.krs).toHaveLength(1);
+        expect(o.krs[0].progress).toBeCloseTo(50, 5);
+        expect(o.progress).toBeCloseTo(50, 5);
+    });
+
+    test('超額完成截斷 120%（actual 130 / target 100）', async () => {
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: 'O', krs: [kr('衝刺', 130)] }]
+        });
+        const got = await as(MGR).get(`/api/daily-report/okrs?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(got.body.data.find(x => x.user_id === EMP).progress).toBeCloseTo(120, 5);
+    });
+
+    test('權重加權：KR1=50%（權重 60）+ KR2=100%（權重 40）→ 70%', async () => {
+        const res = await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{
+                user_id: EMP, objective: 'O',
+                krs: [
+                    { content: 'KR1', start_val: 0, target_val: 100, actual_val: 50, unit: '%', weight: 60 },
+                    { content: 'KR2', start_val: 0, target_val: 100, actual_val: 100, unit: '%', weight: 40 }
+                ]
+            }]
+        });
+        expect(res.status).toBe(200);
+        const got = await as(MGR).get(`/api/daily-report/okrs?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(got.body.data.find(x => x.user_id === EMP).progress).toBeCloseTo(70, 5);
+    });
+
+    test('批量 UPSERT（2 人）；冪等覆蓋：EMP 由 1 條 KR 改 2 條，舊 KR 被刪', async () => {
+        // 先建 EMP 1 條 KR
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: 'O1', krs: [kr('舊KR', 10)] }]
+        });
+        // 批量：EMP 改 2 條 KR + MGR 新建
+        const res = await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [
+                { user_id: EMP, objective: 'O2', krs: [kr('新KR1', 20), kr('新KR2', 40, 200, 100, 0)] },
+                { user_id: MGR, objective: '主管O', krs: [kr('主管KR', 80)] }
+            ]
+        });
+        expect(res.status).toBe(200);
+        expect(res.body.data.upserted).toBe(2);
+        expect(res.body.data.kr_count).toBe(3);
+
+        const got = await as(MGR).get(`/api/daily-report/okrs?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(got.body.data).toHaveLength(2);
+        const empO = got.body.data.find(x => x.user_id === EMP);
+        expect(empO.objective).toBe('O2');
+        expect(empO.krs).toHaveLength(2);
+        // 第二條 KR：(40-100)/(200-100) = -60% → 截 0
+        expect(empO.krs[1].progress).toBeCloseTo(0, 5);
+
+        // DB 層確認無殘留舊 KR
+        const [[cntRow]] = await pool.execute(
+            `SELECT COUNT(*) AS c FROM daily_report_okr_kr k
+               JOIN daily_report_okr o ON o.id=k.okr_id
+              WHERE o.bu_no=? AND o.user_id=? AND o.YYYY_MM=?`, [BU, EMP, YM]);
+        expect(Number(cntRow.c)).toBe(2);
+        // 主表仍只有一列（UK 冪等）
+        const [[oRow]] = await pool.execute(
+            'SELECT COUNT(*) AS c FROM daily_report_okr WHERE bu_no=? AND user_id=? AND YYYY_MM=?',
+            [BU, EMP, YM]);
+        expect(Number(oRow.c)).toBe(1);
+    });
+
+    test('GET 員工僅見本人（即使經理建了 2 人 OKR）', async () => {
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [
+                { user_id: EMP, objective: '員工O', krs: [kr('KR', 50)] },
+                { user_id: MGR, objective: '主管O', krs: [kr('KR', 50)] }
+            ]
+        });
+        const got = await as(EMP).get(`/api/daily-report/okrs?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(got.status).toBe(200);
+        expect(got.body.data.every(x => x.user_id === EMP)).toBe(true);
+        expect(got.body.data).toHaveLength(1);
+    });
+
+    test('月度績效彙總附 okr_progress', async () => {
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: '月O', krs: [kr('KR', 50)] }]
+        });
+        const res = await as(MGR).get(`/api/daily-report/monthly-summary?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(res.status).toBe(200);
+        const emp = res.body.data.find(r => r.user_id === EMP);
+        expect(emp).toBeTruthy();
+        expect(emp.okr_progress).toBeCloseTo(50, 5);
+        expect(emp.okr_objective).toBe('月O');
+        // 無 OKR 者為 null
+        const mgr = res.body.data.find(r => r.user_id === MGR);
+        expect(mgr.okr_progress).toBeNull();
+    });
+
+    test('人效儀表盤：部門含及時率/工作占比/OKR + 雷達資料；員工 403', async () => {
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: YM,
+            okrs: [{ user_id: EMP, objective: 'O', krs: [kr('KR', 50)] }]
+        });
+        const forbid = await as(EMP).get(`/api/daily-report/efficiency-dashboard?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(forbid.status).toBe(403);
+
+        const res = await as(MGR).get(`/api/daily-report/efficiency-dashboard?bu_no=${BU}&YYYY_MM=${encodeURIComponent(YM)}`);
+        expect(res.status).toBe(200);
+        const dep = res.body.data.departments.find(d => d.depart_id === DEPT);
+        expect(dep).toBeTruthy();
+        expect(dep.timeliness_rate).toBeGreaterThanOrEqual(0);
+        expect(dep.work_ratio).toBeGreaterThan(0);       // 2099/01 幾乎全為日常工時
+        expect(dep.okr_progress).toBeCloseTo(50, 5);
+        expect(Array.isArray(res.body.data.deptRadar)).toBe(true);
+        const radar = res.body.data.deptRadar.find(r => r.depart_id === DEPT);
+        expect(radar.output).toBeNull();                 // 部門產值待 P5
+        expect(radar.okr).toBe(50);
+        expect(radar.hours).toBeGreaterThanOrEqual(0);
+    });
+
+    test('年度結算 OKR 加分：EMP 完成率 100% → +5，總分 70→75（B）', async () => {
+        // M1 的 2000/01 資料仍在（EMP 基本分 70）
+        await postOkrs(MGR, {
+            bu_no: BU, YYYY_MM: '2000/01',
+            okrs: [{ user_id: EMP, objective: '年度貢獻O', krs: [kr('滿分KR', 100)] }]
+        });
+        const gen = await as(MGR).post('/api/daily-report/annual-review/generate')
+            .send({ bu_no: BU, yyyy: '2000' });
+        expect(gen.status).toBe(200);
+
+        const list = await as(MGR).get(`/api/daily-report/annual-review?bu_no=${BU}&year=2000`);
+        const emp = list.body.data.list.find(r => r.user_id === EMP);
+        expect(Number(emp.okr_bonus)).toBeCloseTo(5, 5);
+        expect(Number(emp.total_score)).toBeCloseTo(75, 5);
+        expect(emp.grade).toBe('B');
+
+        // 無 OKR 的 MGR 加分為 0
+        const mgr = list.body.data.list.find(r => r.user_id === MGR);
+        expect(Number(mgr.okr_bonus)).toBe(0);
+
+        // 詳情 review_data 含逐月 okr_progress
+        const detail = await as(MGR).get(`/api/daily-report/annual-review/${emp.id}`);
+        const m0 = detail.body.data.review_data.months[0];
+        expect(m0.okr_progress).toBeCloseTo(100, 5);
+        expect(detail.body.data.review_data.okr_avg_progress).toBeCloseTo(100, 5);
     });
 });

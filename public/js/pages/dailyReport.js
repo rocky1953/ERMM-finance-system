@@ -685,7 +685,7 @@
                         <th>${t('dr.sum.col.delays')}</th><th>${t('dr.sum.col.max_delays')}</th>
                         <th>${t('dr.sum.col.unresolved')}</th><th>${t('dr.sum.col.max_unsolved')}</th>
                         <th>${t('dr.sum.col.work_ratio')}</th><th>${t('dr.sum.col.min_work')}</th>
-                        <th>${t('dr.sum.col.avg_h')}</th>
+                        <th>${t('dr.sum.col.avg_h')}</th><th>🎯 ${t('dr.okr.progress')}</th>
                     </tr></thead>
                     <tbody>${rows.map(r => `
                         <tr>
@@ -702,6 +702,7 @@
                             <td class="num">${r.work_ratio}%</td>
                             <td class="num">${r.min_work_ratio != null ? r.min_work_ratio + '%' : '-'}</td>
                             <td class="num">${UI.fmt(r.avg_hours)}</td>
+                            <td class="num" style="font-weight:700;color:${achieveColor(r.okr_progress)};" title="${esc(r.okr_objective || '')}">${r.okr_progress != null ? Math.round(r.okr_progress * 10) / 10 + '%' : '-'}</td>
                         </tr>`).join('')}
                     </tbody></table>`;
             } catch (e) {
@@ -717,26 +718,56 @@
             if (!this._tgtYM) {
                 this._tgtYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
             }
+            if (!this._tgtMode) this._tgtMode = 'threshold';
             this.c.innerHTML = `
                 <div class="card">
                     <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <div style="display:inline-flex;border:1px solid #bdc3c7;border-radius:6px;overflow:hidden;">
+                            <button id="modeThreshold" class="btn" style="border:none;border-radius:0;">📏 ${t('dr.okr.mode_threshold')}</button>
+                            <button id="modeOkr" class="btn" style="border:none;border-radius:0;border-left:1px solid #bdc3c7;">🎯 ${t('dr.okr.mode_okr')}</button>
+                        </div>
                         <label><b>${t('dr.tgt.period')}：</b>
                             <select id="tgtYear">${this.yearOptions(this._tgtYM.year)}</select> /
                             <select id="tgtMonth">${this.monthOptions(this._tgtYM.mm)}</select>
                         </label>
                         <button class="btn btn-primary" onclick="DRApp.loadTargets()">🔍 ${t('dr.btn.query')}</button>
-                        <button class="btn btn-success" onclick="DRApp.addTargetRow()">➕ ${t('dr.tgt.add_row')}</button>
-                        <button class="btn btn-primary" onclick="DRApp.saveTargets()">💾 ${t('save')}</button>
+                        <span id="tgtActions"></span>
                         <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
                     </div>
                     <div id="tgtBody" style="margin-top:12px;">${t('loading')}</div>
                 </div>`;
-            this.loadTargets();
+            document.getElementById('modeThreshold').addEventListener('click', () => this.switchTgtMode('threshold'));
+            document.getElementById('modeOkr').addEventListener('click', () => this.switchTgtMode('okr'));
+            this.renderTgtMode();
+        },
+
+        switchTgtMode(mode) {
+            if (this._tgtMode === mode) return;
+            this._tgtMode = mode;
+            this.renderTgtMode();
+        },
+
+        renderTgtMode() {
+            const isOkr = this._tgtMode === 'okr';
+            const btnThr = document.getElementById('modeThreshold');
+            const btnOkr = document.getElementById('modeOkr');
+            if (btnThr) btnThr.style.background = isOkr ? '' : '#1B4F72', btnThr.style.color = isOkr ? '' : '#fff';
+            if (btnOkr) btnOkr.style.background = isOkr ? '#1B4F72' : '', btnOkr.style.color = isOkr ? '#fff' : '';
+            const act = document.getElementById('tgtActions');
+            if (act) {
+                act.innerHTML = isOkr
+                    ? `<button class="btn btn-success" onclick="DRApp.addOkrRow()">➕ ${t('dr.okr.add_person')}</button>
+                       <button class="btn btn-primary" id="okrSaveBtn" onclick="DRApp.saveOkrs()">💾 ${t('save')}</button>`
+                    : `<button class="btn btn-success" onclick="DRApp.addTargetRow()">➕ ${t('dr.tgt.add_row')}</button>
+                       <button class="btn btn-primary" onclick="DRApp.saveTargets()">💾 ${t('save')}</button>`;
+            }
+            if (isOkr) this.loadOkrs(); else this.loadTargets();
         },
 
         async loadTargets() {
             const el = document.getElementById('tgtBody');
             if (!el) return;
+            if (this._tgtMode === 'okr') return this.loadOkrs();
             const y = document.getElementById('tgtYear').value;
             const mm = document.getElementById('tgtMonth').value;
             this._tgtYM = { year: y, mm };
@@ -826,6 +857,218 @@
             } catch (e) { UI.toast(e.message, 'error'); }
         },
 
+        // ============ M2 OKR 模式 ============
+        async loadOkrs() {
+            const el = document.getElementById('tgtBody');
+            if (!el) return;
+            const y = document.getElementById('tgtYear').value;
+            const mm = document.getElementById('tgtMonth').value;
+            this._tgtYM = { year: y, mm };
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const res = await API.get('/api/daily-report/okrs?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                this._okrRows = (res.data || []).map(o => ({
+                    user_id: o.user_id, user_name: o.user_name || o.user_id,
+                    depart_id: o.depart_id || '', objective: o.objective || '',
+                    status: o.status || 'ACTIVE',
+                    set_by_name: o.set_by_name || '', set_time: o.set_time,
+                    krs: (o.krs || []).map(k => ({
+                        content: k.content || '',
+                        start_val: k.start_val != null ? Number(k.start_val) : 0,
+                        target_val: k.target_val != null ? Number(k.target_val) : 0,
+                        actual_val: k.actual_val != null ? Number(k.actual_val) : 0,
+                        unit: k.unit || '', weight: Number(k.weight) || 0
+                    }))
+                }));
+                this.renderOkrCards();
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
+        },
+
+        // KR 完成率（與後端同口徑，截斷 0–120%）
+        krProgress(k) {
+            const s = Number(k.start_val), g = Number(k.target_val), a = Number(k.actual_val);
+            if (!isFinite(s) || !isFinite(g) || !isFinite(a) || g <= s) return 0;
+            return Math.max(0, Math.min(120, (a - s) / (g - s) * 100));
+        },
+
+        okrWeighted(krs) {
+            if (!krs || krs.length === 0) return null;
+            const wsum = krs.reduce((s, k) => s + (Number(k.weight) || 0), 0);
+            if (wsum > 0) return krs.reduce((s, k) => s + this.krProgress(k) * (Number(k.weight) || 0), 0) / wsum;
+            return krs.reduce((s, k) => s + this.krProgress(k), 0) / krs.length;
+        },
+
+        renderOkrCards() {
+            const el = document.getElementById('tgtBody');
+            if (!el) return;
+            const rows = this._okrRows || [];
+            if (rows.length === 0) {
+                el.innerHTML = UI.empty('🎯', t('dr.okr.empty'));
+                return;
+            }
+            const pctColor = v => v == null ? '#7f8c8d' : v >= 100 ? '#27ae60' : v >= 70 ? '#2980b9' : v >= 40 ? '#e67e22' : '#e74c3c';
+            el.innerHTML = rows.map((r, oi) => {
+                const wp = this.okrWeighted(r.krs);
+                return `<div class="okr-card" data-oi="${oi}" style="border:1px solid #d5dbdb;border-radius:8px;padding:12px 14px;margin-bottom:14px;background:#fcfdfd;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+                        <b style="font-size:1.05em;">${esc(r.user_id)} - ${esc(r.user_name)}</b>
+                        <span style="color:#7f8c8d;font-size:0.85em;">${esc(r.depart_id || '')}</span>
+                        <span style="font-size:0.8em;color:#95a5a6;margin-left:auto;">${esc(r.set_by_name || '')} ${this.fmtDT(r.set_time)}</span>
+                        <button class="btn btn-danger btn-sm" data-okr-del="${oi}">✕</button>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+                        <span style="font-weight:700;color:#1B4F72;white-space:nowrap;">O</span>
+                        <input class="okr-o" style="flex:1;" value="${esc(r.objective)}" placeholder="${esc(t('dr.okr.objective_ph'))}">
+                        <span style="font-size:0.85em;font-weight:700;color:${pctColor(wp)};white-space:nowrap;" class="okr-wp">
+                            ${wp == null ? '' : t('dr.okr.progress') + ': ' + Math.round(wp * 10) / 10 + '%'}
+                        </span>
+                    </div>
+                    <table class="data-table" style="font-size:0.85em;">
+                        <thead><tr>
+                            <th style="width:30px;">#</th>
+                            <th>KR</th>
+                            <th style="width:80px;">${t('dr.okr.start')}</th>
+                            <th style="width:80px;">${t('dr.okr.target')}</th>
+                            <th style="width:80px;">${t('dr.okr.actual')}</th>
+                            <th style="width:70px;">${t('dr.okr.unit')}</th>
+                            <th style="width:70px;">${t('dr.okr.weight')}</th>
+                            <th style="width:80px;">${t('dr.okr.progress')}</th>
+                            <th style="width:40px;"></th>
+                        </tr></thead>
+                        <tbody>${r.krs.map((k, ki) => `
+                            <tr data-ki="${ki}">
+                                <td class="num">${ki + 1}</td>
+                                <td><input class="kr-c" style="width:100%;min-width:220px;" value="${esc(k.content)}"></td>
+                                <td><input class="kr-s" type="number" style="width:70px;" value="${k.start_val}"></td>
+                                <td><input class="kr-g" type="number" style="width:70px;" value="${k.target_val}"></td>
+                                <td><input class="kr-a" type="number" style="width:70px;" value="${k.actual_val}"></td>
+                                <td><input class="kr-u" style="width:60px;" value="${esc(k.unit)}"></td>
+                                <td><input class="kr-w" type="number" min="0" max="100" style="width:55px;" value="${k.weight}"></td>
+                                <td class="num kr-p" style="font-weight:700;color:${pctColor(this.krProgress(k))};">${Math.round(this.krProgress(k) * 10) / 10}%</td>
+                                <td><button class="btn btn-danger btn-sm" data-kr-del="${ki}">✕</button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                    <div style="margin-top:8px;display:flex;align-items:center;gap:12px;">
+                        <button class="btn btn-sm" data-kr-add="${oi}">➕ ${t('dr.okr.add_kr')}</button>
+                        <span class="kr-wsum" style="font-size:0.85em;color:#7f8c8d;">${t('dr.okr.weight_sum')}: ${r.krs.reduce((s, k) => s + (Number(k.weight) || 0), 0)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // 事件：欄位即時重算完成率
+            el.querySelectorAll('.okr-card').forEach(card => {
+                const oi = Number(card.dataset.oi);
+                card.querySelectorAll('input[class^="kr-"]').forEach(inp => {
+                    inp.addEventListener('input', () => this.refreshOkrCard(oi));
+                });
+                card.querySelectorAll('button[data-kr-del]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this._okrRows[oi].krs.splice(Number(btn.dataset.krDel), 1);
+                        this.renderOkrCards();
+                    });
+                });
+                const addBtn = card.querySelector('button[data-kr-add]');
+                if (addBtn) addBtn.addEventListener('click', () => this.addKrRow(oi));
+                card.querySelector('button[data-okr-del]').addEventListener('click', () => {
+                    this._okrRows.splice(oi, 1);
+                    this.renderOkrCards();
+                });
+            });
+        },
+
+        // 不重繪、只依 DOM 當前值更新某張卡的進度顏色（輸入中即時回饋）
+        refreshOkrCard(oi) {
+            const card = document.querySelector(`.okr-card[data-oi="${oi}"]`);
+            if (!card) return;
+            const row = this._okrRows[oi];
+            const pctColor = v => v >= 100 ? '#27ae60' : v >= 70 ? '#2980b9' : v >= 40 ? '#e67e22' : '#e74c3c';
+            const trs = card.querySelectorAll('tbody tr');
+            trs.forEach(tr => {
+                const ki = Number(tr.dataset.ki);
+                const k = row.krs[ki];
+                if (!k) return;
+                k.content = tr.querySelector('.kr-c').value;
+                k.start_val = tr.querySelector('.kr-s').value === '' ? 0 : Number(tr.querySelector('.kr-s').value);
+                k.target_val = tr.querySelector('.kr-g').value === '' ? 0 : Number(tr.querySelector('.kr-g').value);
+                k.actual_val = tr.querySelector('.kr-a').value === '' ? 0 : Number(tr.querySelector('.kr-a').value);
+                k.unit = tr.querySelector('.kr-u').value;
+                k.weight = tr.querySelector('.kr-w').value === '' ? 0 : Number(tr.querySelector('.kr-w').value);
+                const p = this.krProgress(k);
+                const pc = tr.querySelector('.kr-p');
+                pc.textContent = Math.round(p * 10) / 10 + '%';
+                pc.style.color = pctColor(p);
+            });
+            row.objective = card.querySelector('.okr-o').value;
+            const wp = this.okrWeighted(row.krs);
+            const wpe = card.querySelector('.okr-wp');
+            if (wpe) {
+                wpe.textContent = wp == null ? '' : t('dr.okr.progress') + ': ' + Math.round(wp * 10) / 10 + '%';
+                wpe.style.color = wp == null ? '#7f8c8d' : pctColor(wp);
+            }
+            const ws = card.querySelector('.kr-wsum');
+            if (ws) ws.textContent = `${t('dr.okr.weight_sum')}: ${row.krs.reduce((s, k) => s + (Number(k.weight) || 0), 0)}`;
+        },
+
+        addOkrRow() {
+            const uid = prompt(t('dr.okr.input_uid'));
+            if (!uid) return;
+            if (!this._okrRows) this._okrRows = [];
+            if (this._okrRows.find(r => r.user_id === uid)) { UI.toast(t('dr.tgt.duplicate'), 'error'); return; }
+            this._okrRows.push({ user_id: uid, user_name: uid, depart_id: '', objective: '', status: 'ACTIVE', krs: [], set_by_name: '', set_time: null });
+            this.renderOkrCards();
+        },
+
+        addKrRow(oi) {
+            const row = this._okrRows[oi];
+            if (!row) return;
+            if (row.krs.length >= 5) { UI.toast(t('dr.okr.kr_max'), 'error'); return; }
+            // 先同步目前 DOM 值，再新增空列
+            this.refreshOkrCard(oi);
+            row.krs.push({ content: '', start_val: 0, target_val: 100, actual_val: 0, unit: '', weight: row.krs.length === 0 ? 100 : 0 });
+            this.renderOkrCards();
+        },
+
+        async saveOkrs() {
+            const rows = this._okrRows || [];
+            if (rows.length === 0) { UI.toast(t('dr.okr.empty_rows'), 'error'); return; }
+            // 從 DOM 收集最新值
+            const okrs = [];
+            for (let oi = 0; oi < rows.length; oi++) {
+                const card = document.querySelector(`.okr-card[data-oi="${oi}"]`);
+                if (!card) continue;
+                const row = rows[oi];
+                row.objective = card.querySelector('.okr-o').value;
+                const krs = [];
+                card.querySelectorAll('tbody tr').forEach(tr => {
+                    krs.push({
+                        content: tr.querySelector('.kr-c').value.trim(),
+                        start_val: tr.querySelector('.kr-s').value === '' ? 0 : Number(tr.querySelector('.kr-s').value),
+                        target_val: tr.querySelector('.kr-g').value === '' ? 0 : Number(tr.querySelector('.kr-g').value),
+                        actual_val: tr.querySelector('.kr-a').value === '' ? 0 : Number(tr.querySelector('.kr-a').value),
+                        unit: tr.querySelector('.kr-u').value.trim(),
+                        weight: tr.querySelector('.kr-w').value === '' ? 0 : Number(tr.querySelector('.kr-w').value)
+                    });
+                });
+                if (!row.objective.trim()) { UI.toast(t('dr.okr.need_objective') + ' (' + row.user_id + ')', 'error'); return; }
+                if (krs.length < 1 || krs.length > 5) { UI.toast(t('dr.okr.kr_count') + ' (' + row.user_id + ')', 'error'); return; }
+                if (krs.some(k => !k.content)) { UI.toast(t('dr.okr.kr_content') + ' (' + row.user_id + ')', 'error'); return; }
+                okrs.push({ user_id: row.user_id, objective: row.objective.trim(), status: row.status || 'ACTIVE', krs });
+            }
+            const ym = this._tgtYM.year + '/' + this._tgtYM.mm;
+            const btn = document.getElementById('okrSaveBtn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+            try {
+                const res = await API.post('/api/daily-report/okrs', { bu_no: State.bu_no, YYYY_MM: ym, okrs });
+                UI.toast(res.message || 'OK', 'success');
+                await this.loadOkrs();
+            } catch (e) { UI.toast(e.message, 'error'); }
+            finally { const b2 = document.getElementById('okrSaveBtn'); if (b2) { b2.disabled = false; b2.style.opacity = ''; } }
+        },
+
         // ============ P2-① 人效仪表盘 ============
         openDashboard() {
             this.view = 'dashboard';
@@ -879,23 +1122,37 @@
                         ${kpiCard(t('dr.eff.kpi.per_output'), fmtMoney(k.per_capita_output), t('dr.eff.kpi.per_output_sub'), '#27ae60')}
                         ${kpiCard(t('dr.eff.kpi.per_hours'), UI.fmt(k.per_capita_hours) + ' h', `${t('dr.eff.kpi.total_hours')}: ${UI.fmt(k.total_hours)} h`, '#e67e22')}
                         ${kpiCard(t('dr.eff.kpi.salary'), fmtMoney(k.salary_total), `${t('dr.eff.kpi.per_salary')}: ${fmtMoney(k.per_capita_salary)}`, '#c0392b')}
+                        ${kpiCard(t('dr.eff.dept_labor_rate'), k.labor_cost_rate == null ? '-' : k.labor_cost_rate + '%', t('dr.eff.dept_p5_tip'), '#16a085')}
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <h4 style="margin:0 0 10px 0;">${t('dr.eff.dept_title')}</h4>
+                        <div style="overflow-x:auto;">
+                        <table class="data-table" style="font-size:0.85em;white-space:nowrap;" id="deptSortTable">
+                            <thead><tr>
+                                <th data-sort="depart_id" style="cursor:pointer;">${t('dr.sum.col.depart')}</th>
+                                <th data-sort="emp_cnt" style="cursor:pointer;">${t('dr.eff.kpi.emp')}</th>
+                                <th data-sort="total_hours" style="cursor:pointer;">${t('dr.eff.kpi.hours')}</th>
+                                <th data-sort="per_capita_hours" style="cursor:pointer;">${t('dr.eff.kpi.per_hours')}</th>
+                                <th data-sort="output_share" style="cursor:pointer;">${t('dr.eff.dept_share')}</th>
+                                <th data-sort="timeliness_rate" style="cursor:pointer;">${t('dr.eff.dept_timely')}</th>
+                                <th data-sort="work_ratio" style="cursor:pointer;">${t('dr.eff.dept_workratio')}</th>
+                                <th data-sort="okr_progress" style="cursor:pointer;">🎯 ${t('dr.okr.progress')}</th>
+                                <th title="${esc(t('dr.eff.dept_p5_tip'))}">${t('dr.eff.dept_per_output')}</th>
+                                <th title="${esc(t('dr.eff.dept_p5_tip'))}">${t('dr.eff.dept_per_salary')}</th>
+                                <th title="${esc(t('dr.eff.dept_p5_tip'))}">${t('dr.eff.dept_labor_rate')}</th>
+                            </tr></thead>
+                            <tbody id="deptSortBody"></tbody>
+                        </table>
+                        </div>
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;">
                         <div>
-                            <h4 style="margin:0 0 10px 0;">${t('dr.eff.dept_title')}</h4>
-                            <table class="data-table" style="font-size:0.9em;">
-                                <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th><th>${t('dr.eff.kpi.per_hours')}</th><th>${t('dr.eff.dept_share')}</th></tr></thead>
-                                <tbody>${d.departments.map(dp => `
-                                    <tr>
-                                        <td>${esc(dp.depart_id)}</td>
-                                        <td class="num">${dp.emp_cnt}</td>
-                                        <td class="num">${UI.fmt(dp.total_hours)}</td>
-                                        <td class="num">${UI.fmt(dp.per_capita_hours)}</td>
-                                        <td class="num" style="color:#1a5276;font-weight:700;">${dp.output_share}%</td>
-                                    </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`}
-                                </tbody>
-                            </table>
+                            <h4 style="margin:0 0 10px 0;">${t('dr.eff.radar_title')}</h4>
+                            <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                                <canvas id="deptRadar" height="220"></canvas>
+                            </div>
                         </div>
                         <div>
                             <h4 style="margin:0 0 10px 0;">${t('dr.eff.cross_title')}</h4>
@@ -928,6 +1185,40 @@
                         </div>
                     </div>`;
 
+                // M2：部門表可點擊排序
+                this._dashDepts = d.departments || [];
+                if (!this._deptSort) this._deptSort = { key: 'total_hours', dir: 'desc' };
+                this.renderDeptTable();
+                document.querySelectorAll('#deptSortTable th[data-sort]').forEach(th => {
+                    th.addEventListener('click', () => {
+                        const key = th.dataset.sort;
+                        if (this._deptSort.key === key) this._deptSort.dir = this._deptSort.dir === 'asc' ? 'desc' : 'asc';
+                        else { this._deptSort = { key, dir: 'asc' }; }
+                        this.renderDeptTable();
+                    });
+                });
+
+                // M2：部門雷達圖（五維標準化 0–100；產值維暫無部門數據）
+                const radarColors = ['#2980b9', '#27ae60', '#e67e22', '#8e44ad', '#c0392b', '#16a085', '#d35400', '#2c3e50'];
+                this.charts.push(new Chart(document.getElementById('deptRadar'), {
+                    type: 'radar',
+                    data: {
+                        labels: [t('dr.eff.radar_hours'), t('dr.eff.radar_output'), t('dr.eff.radar_timely'), t('dr.eff.radar_okr'), t('dr.eff.radar_workratio')],
+                        datasets: (d.deptRadar || []).map((r, i) => ({
+                            label: r.depart_id,
+                            data: [r.hours ?? 0, r.output ?? 0, r.timeliness ?? 0, r.okr ?? 0, r.work_ratio ?? 0],
+                            borderColor: radarColors[i % radarColors.length],
+                            backgroundColor: radarColors[i % radarColors.length] + '22',
+                            pointBackgroundColor: radarColors[i % radarColors.length]
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: { r: { min: 0, max: 100, ticks: { stepSize: 20 } } }
+                    }
+                }));
+
                 // 趋势双轴图：产值（柱）+ 工时（线）
                 const labels = d.trend.map(t => t.YYYY_MM);
                 this.charts.push(new Chart(document.getElementById('dashTrend'), {
@@ -951,7 +1242,42 @@
             } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
         },
 
-        // ============ P2-② 月度经营+人效报告 ============
+        // M2：部門橫向對比表（表頭點擊排序）
+        renderDeptTable() {
+            const tb = document.getElementById('deptSortBody');
+            if (!tb) return;
+            const { key, dir } = this._deptSort || { key: 'total_hours', dir: 'desc' };
+            const rows = (this._dashDepts || []).slice().sort((a, b) => {
+                let va = a[key], vb = b[key];
+                if (va == null) va = -Infinity;
+                if (vb == null) vb = -Infinity;
+                if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+                return dir === 'asc' ? va - vb : vb - va;
+            });
+            // 表頭排序箭頭
+            document.querySelectorAll('#deptSortTable th[data-sort]').forEach(th => {
+                const base = th.textContent.replace(/\s*[▲▼]\s*$/, '');
+                th.textContent = base + (th.dataset.sort === key ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
+            });
+            const rateColor = v => v == null ? '#7f8c8d' : v >= 90 ? '#27ae60' : v >= 70 ? '#e67e22' : '#e74c3c';
+            const dash = `<span style="color:#bdc3c7;" title="${esc(t('dr.eff.dept_p5_tip'))}">-</span>`;
+            tb.innerHTML = rows.map(dp => `
+                <tr>
+                    <td>${esc(dp.depart_id)}</td>
+                    <td class="num">${dp.emp_cnt}</td>
+                    <td class="num">${UI.fmt(dp.total_hours)}</td>
+                    <td class="num">${UI.fmt(dp.per_capita_hours)}</td>
+                    <td class="num" style="color:#1a5276;font-weight:700;">${dp.output_share}%</td>
+                    <td class="num" style="color:${rateColor(dp.timeliness_rate)};font-weight:700;">${dp.timeliness_rate}%</td>
+                    <td class="num">${dp.work_ratio}%</td>
+                    <td class="num" style="color:${rateColor(dp.okr_progress)};font-weight:700;">${dp.okr_progress != null ? Math.round(dp.okr_progress * 10) / 10 + '%' : '-'}</td>
+                    <td class="num">${dash}</td>
+                    <td class="num">${dash}</td>
+                    <td class="num">${dash}</td>
+                </tr>`).join('')
+                || `<tr><td colspan="11" style="text-align:center;color:#95a5a6;">${t('dr.empty')}</td></tr>`;
+        },
+
         openMgmtReport() {
             this.view = 'mgmtReport';
             this.destroyCharts();
@@ -1297,7 +1623,7 @@
                             <th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th>
                             <th>${t('dr.ar.total')}</th><th>${t('dr.ar.grade')}</th>
                             <th>${t('dr.ar.s_hours')}</th><th>${t('dr.ar.s_timely')}</th>
-                            <th>${t('dr.ar.s_work')}</th><th>${t('dr.ar.s_penalty')}</th>
+                            <th>${t('dr.ar.s_work')}</th><th>${t('dr.ar.s_penalty')}</th><th>🎯 ${t('dr.okr.bonus')}</th>
                             <th>${t('dr.ar.months')}</th><th>${t('dr.ar.over_m')}</th><th>${t('dr.ar.detail')}</th>
                         </tr></thead>
                         <tbody>${list.map((r, i) => `
@@ -1311,6 +1637,7 @@
                                 <td class="num">${UI.fmt(r.score_timeliness)}</td>
                                 <td class="num">${UI.fmt(r.score_workratio)}</td>
                                 <td class="num">${UI.fmt(r.score_penalty)}</td>
+                                <td class="num" style="color:${Number(r.okr_bonus) > 0 ? '#27ae60' : '#95a5a6'};font-weight:700;">+${UI.fmt(Number(r.okr_bonus) || 0)}</td>
                                 <td class="num">${r.months_submitted}</td>
                                 <td class="num" style="color:${r.over_months > 0 ? '#e74c3c' : '#27ae60'};font-weight:700;">${r.over_months}</td>
                                 <td><button class="btn btn-primary" style="padding:2px 10px;font-size:0.8em;">${t('dr.ar.view')}</button></td>
@@ -1423,6 +1750,11 @@
                                     <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">${t('dr.ar.s_penalty')}（10%）</div>
                                     <div style="font-size:1.3em;font-weight:700;">${UI.fmt(Number(r.score_penalty))}</div>
                                 </div>
+                                <div style="background:#e9f7ef;padding:14px;border-radius:8px;">
+                                    <div style="color:#7f8c8d;font-size:0.85em;margin-bottom:6px;">🎯 ${t('dr.okr.bonus')}（+5）</div>
+                                    <div style="font-size:1.3em;font-weight:700;color:#27ae60;">+${UI.fmt(Number(r.okr_bonus) || 0)}</div>
+                                    <div style="font-size:0.78em;color:#7f8c8d;margin-top:2px;">${r.review_data && r.review_data.okr_avg_progress != null ? t('dr.okr.progress') + ' ' + Math.round(r.review_data.okr_avg_progress * 10) / 10 + '%' : ''}</div>
+                                </div>
                             </div>
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
                                 <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
@@ -1441,11 +1773,12 @@
                                     <th>${t('dr.sum.col.hours')}</th><th>${t('dr.sum.col.target_h')}</th>
                                     <th>${t('dr.sum.col.achieve')}</th><th>${t('dr.sum.col.work_ratio')}</th>
                                     <th>${t('dr.sum.col.delays')}</th><th>${t('dr.sum.col.unresolved')}</th>
+                                    <th>🎯 ${t('dr.okr.progress')}</th>
                                     <th>${t('dr.ar.col_locked')}</th>
                                 </tr></thead>
                                 <tbody>${months.map(m => `
                                     <tr${m.locked ? ' style="background:#fef9e7;"' : ''}>
-                                        <td><b>${esc(m.YYYY_MM)}</b></td>
+                                        <td><b>${esc(m.YYYY_MM)}</b><div style="font-size:0.78em;color:#95a5a6;">${esc(m.okr_objective || '')}</div></td>
                                         <td class="num">${m.report_days}${m.due_days ? '/' + m.due_days : ''}</td>
                                         <td class="num">${UI.fmt(m.total_hours)}</td>
                                         <td class="num">${m.target_hours != null ? UI.fmt(m.target_hours) : '-'}</td>
@@ -1453,6 +1786,7 @@
                                         <td class="num">${m.work_ratio}%</td>
                                         <td class="num" style="color:${m.max_delays != null && m.delay_cnt > m.max_delays ? '#e74c3c' : ''};">${m.delay_cnt}${m.max_delays != null ? '/' + m.max_delays : ''}</td>
                                         <td class="num" style="color:${m.max_unresolved != null && m.unresolved_cnt > m.max_unresolved ? '#e74c3c' : ''};">${m.unresolved_cnt}${m.max_unresolved != null ? '/' + m.max_unresolved : ''}</td>
+                                        <td class="num" style="font-weight:700;color:${m.okr_progress == null ? '#95a5a6' : m.okr_progress >= 100 ? '#27ae60' : m.okr_progress >= 70 ? '#2980b9' : '#e67e22'};">${m.okr_progress != null ? Math.round(m.okr_progress * 10) / 10 + '%' : '-'}</td>
                                         <td style="text-align:center;">${m.locked ? '🔒' : ''}</td>
                                     </tr>`).join('')}
                                 </tbody>
@@ -1482,7 +1816,9 @@
                             { label: t('dr.sum.col.achieve'), data: months.map(m => m.hours_achieve),
                               borderColor: '#2980b9', backgroundColor: 'rgba(41,128,185,0.1)', tension: 0.3, yAxisID: 'y' },
                             { label: t('dr.sum.col.work_ratio'), data: months.map(m => m.work_ratio),
-                              borderColor: '#27ae60', backgroundColor: 'rgba(39,174,92,0.08)', tension: 0.3, yAxisID: 'y', borderDash: [5, 4] }
+                              borderColor: '#27ae60', backgroundColor: 'rgba(39,174,92,0.08)', tension: 0.3, yAxisID: 'y', borderDash: [5, 4] },
+                            { label: '🎯 ' + t('dr.okr.progress'), data: months.map(m => m.okr_progress),
+                              borderColor: '#8e44ad', backgroundColor: 'rgba(142,68,173,0.08)', tension: 0.3, yAxisID: 'y', spanGaps: true }
                         ]
                     },
                     options: { responsive: true,

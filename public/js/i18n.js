@@ -1373,7 +1373,43 @@ const I18N = {
             'dr.ar.trend12': '12 個月達成趨勢',
             'dr.ar.month_detail': '逐月明細',
             'dr.ar.col_ym': '月份',
-            'dr.ar.col_locked': '鎖定'
+            'dr.ar.col_locked': '鎖定',
+
+            // M2 OKR 連結
+            'dr.okr.mode_threshold': '閾值模式',
+            'dr.okr.mode_okr': 'OKR 模式',
+            'dr.okr.add_person': '新增人員',
+            'dr.okr.empty': '本月尚無 OKR 設定，點「➕ 新增人員」開始設定',
+            'dr.okr.objective_ph': '本月目標 Objective（1 個）',
+            'dr.okr.start': '起始值',
+            'dr.okr.target': '目標值',
+            'dr.okr.actual': '完成值',
+            'dr.okr.unit': '單位',
+            'dr.okr.weight': '權重',
+            'dr.okr.progress': 'OKR 完成率',
+            'dr.okr.bonus': 'OKR 加分',
+            'dr.okr.add_kr': '新增 KR',
+            'dr.okr.weight_sum': '權重合計',
+            'dr.okr.input_uid': '請輸入員工編號',
+            'dr.okr.kr_max': '每人最多 5 條 KR',
+            'dr.okr.empty_rows': '請至少設定一位人員的 OKR',
+            'dr.okr.need_objective': 'Objective 不能為空',
+            'dr.okr.kr_count': 'KR 需為 1–5 條',
+            'dr.okr.kr_content': 'KR 內容不能為空',
+
+            // M2 部門橫向對比增強
+            'dr.eff.dept_timely': '及時率',
+            'dr.eff.dept_workratio': '工作占比',
+            'dr.eff.dept_per_output': '人均產值',
+            'dr.eff.dept_per_salary': '人均薪資',
+            'dr.eff.dept_labor_rate': '人事費用率',
+            'dr.eff.dept_p5_tip': '部門級產值/薪資數據待 P5 ERP 整合',
+            'dr.eff.radar_title': '部門五維雷達（標準化 0–100）',
+            'dr.eff.radar_hours': '工時',
+            'dr.eff.radar_output': '產值',
+            'dr.eff.radar_timely': '及時率',
+            'dr.eff.radar_okr': 'OKR 完成率',
+            'dr.eff.radar_workratio': '工作占比'
         },
 
         'zh-CN': {
@@ -2738,7 +2774,43 @@ const I18N = {
             'dr.ar.trend12': '12 个月达成趋势',
             'dr.ar.month_detail': '逐月明细',
             'dr.ar.col_ym': '月份',
-            'dr.ar.col_locked': '锁定'
+            'dr.ar.col_locked': '锁定',
+
+            // M2 OKR 连结
+            'dr.okr.mode_threshold': '阈值模式',
+            'dr.okr.mode_okr': 'OKR 模式',
+            'dr.okr.add_person': '新增人员',
+            'dr.okr.empty': '本月暂无 OKR 设置，点击「➕ 新增人员」开始设置',
+            'dr.okr.objective_ph': '本月目标 Objective（1 个）',
+            'dr.okr.start': '起始值',
+            'dr.okr.target': '目标值',
+            'dr.okr.actual': '完成值',
+            'dr.okr.unit': '单位',
+            'dr.okr.weight': '权重',
+            'dr.okr.progress': 'OKR 完成率',
+            'dr.okr.bonus': 'OKR 加分',
+            'dr.okr.add_kr': '新增 KR',
+            'dr.okr.weight_sum': '权重合计',
+            'dr.okr.input_uid': '请输入员工编号',
+            'dr.okr.kr_max': '每人最多 5 条 KR',
+            'dr.okr.empty_rows': '请至少设置一位人员的 OKR',
+            'dr.okr.need_objective': 'Objective 不能为空',
+            'dr.okr.kr_count': 'KR 需为 1–5 条',
+            'dr.okr.kr_content': 'KR 内容不能为空',
+
+            // M2 部门横向对比增强
+            'dr.eff.dept_timely': '及时率',
+            'dr.eff.dept_workratio': '工作占比',
+            'dr.eff.dept_per_output': '人均产值',
+            'dr.eff.dept_per_salary': '人均薪资',
+            'dr.eff.dept_labor_rate': '人事费用率',
+            'dr.eff.dept_p5_tip': '部门级产值/薪资数据待 P5 ERP 整合',
+            'dr.eff.radar_title': '部门五维雷达（标准化 0–100）',
+            'dr.eff.radar_hours': '工时',
+            'dr.eff.radar_output': '产值',
+            'dr.eff.radar_timely': '及时率',
+            'dr.eff.radar_okr': 'OKR 完成率',
+            'dr.eff.radar_workratio': '工作占比'
         },
 
         'en': {
@@ -4103,7 +4175,43 @@ const I18N = {
             'dr.ar.trend12': '12-month trend',
             'dr.ar.month_detail': 'Monthly detail',
             'dr.ar.col_ym': 'Month',
-            'dr.ar.col_locked': 'Locked'
+            'dr.ar.col_locked': 'Locked',
+
+            // M2 OKR linkage
+            'dr.okr.mode_threshold': 'Threshold',
+            'dr.okr.mode_okr': 'OKR',
+            'dr.okr.add_person': 'Add person',
+            'dr.okr.empty': 'No OKR this month. Click "➕ Add person" to start.',
+            'dr.okr.objective_ph': 'Objective for this month (1)',
+            'dr.okr.start': 'Start',
+            'dr.okr.target': 'Target',
+            'dr.okr.actual': 'Actual',
+            'dr.okr.unit': 'Unit',
+            'dr.okr.weight': 'Weight',
+            'dr.okr.progress': 'OKR progress',
+            'dr.okr.bonus': 'OKR bonus',
+            'dr.okr.add_kr': 'Add KR',
+            'dr.okr.weight_sum': 'Weight total',
+            'dr.okr.input_uid': 'Enter employee ID',
+            'dr.okr.kr_max': 'Up to 5 KRs per person',
+            'dr.okr.empty_rows': 'Please set OKR for at least one person',
+            'dr.okr.need_objective': 'Objective is required',
+            'dr.okr.kr_count': 'KR count must be 1–5',
+            'dr.okr.kr_content': 'KR content is required',
+
+            // M2 department comparison
+            'dr.eff.dept_timely': 'Timeliness',
+            'dr.eff.dept_workratio': 'Work ratio',
+            'dr.eff.dept_per_output': 'Output/head',
+            'dr.eff.dept_per_salary': 'Salary/head',
+            'dr.eff.dept_labor_rate': 'Labor cost rate',
+            'dr.eff.dept_p5_tip': 'Department-level output/salary data pending P5 ERP integration',
+            'dr.eff.radar_title': 'Department 5-dimension radar (normalized 0–100)',
+            'dr.eff.radar_hours': 'Hours',
+            'dr.eff.radar_output': 'Output',
+            'dr.eff.radar_timely': 'Timeliness',
+            'dr.eff.radar_okr': 'OKR',
+            'dr.eff.radar_workratio': 'Work ratio'
         }
     },
 
