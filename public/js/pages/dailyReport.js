@@ -371,6 +371,31 @@
             return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
         },
 
+        // 可选时间点：08:00 ~ 18:00，每半小时一个（分钟只有 00/30）
+        timeSlots() {
+            const list = [];
+            for (let h = 8; h <= 18; h++) {
+                list.push(String(h).padStart(2, '0') + ':00');
+                if (h < 18) list.push(String(h).padStart(2, '0') + ':30');
+            }
+            return list;
+        },
+
+        // 渲染时间下拉（替代原生 input[type=time]，确保分钟只能选 00/30）
+        timeSelect(cls, cur) {
+            const slots = this.timeSlots();
+            let extra = '';
+            if (!cur) {
+                extra = '<option value="" selected>--:--</option>';
+            } else if (!slots.includes(cur)) {
+                // 历史异常值兜底：保留原值选项，避免下拉空白
+                extra = '<option value="' + esc(cur) + '" selected>' + esc(cur) + '</option>';
+            }
+            const opts = slots.map(v =>
+                `<option value="${v}" ${v === cur ? 'selected' : ''}>${v}</option>`).join('');
+            return `<select class="${cls}" style="width:95px;min-height:48px;" onchange="DRApp.syncRowTimes()">${extra}${opts}</select>`;
+        },
+
         syncRowTimes() {
             // 先把 from/to 分钟对齐到 00/30 并回写，防止手动键入非半点值
             document.querySelectorAll('#drFormRows tr.dr-row').forEach(tr => {
@@ -436,8 +461,8 @@
                 <tr class="dr-row" data-idx="${i}">
                     <td>${i + 1}</td>
                     <td><input class="dr-f-project" style="width:100%;min-width:200px;min-height:48px;" value="${esc(r.projects || '')}"></td>
-                    <td><input type="time" class="dr-f-from" style="width:95px;min-height:48px;" min="08:00" max="18:00" step="1800" value="${esc(r.from_time || '')}" onchange="DRApp.syncRowTimes()"></td>
-                    <td><input type="time" class="dr-f-to" style="width:95px;min-height:48px;" min="08:00" max="18:00" step="1800" value="${esc(r.to_time || '')}" onchange="DRApp.syncRowTimes()"></td>
+                    <td>${this.timeSelect('dr-f-from', r.from_time || '')}</td>
+                    <td>${this.timeSelect('dr-f-to', r.to_time || '')}</td>
                     <td><select class="dr-f-wk" style="min-height:48px;">${wks.map(w => `<option value="${esc(w)}" ${r.wk_type === w ? 'selected' : ''}>${this.wkLabel(w)}</option>`).join('')}</select></td>
                     <td class="num dr-f-hours" style="min-height:48px;">-</td>
                     <td><input class="dr-f-client" style="width:125px;min-height:48px;" list="drClientList" value="${esc(r.client_id || '')}"></td>
