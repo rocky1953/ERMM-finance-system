@@ -16,6 +16,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, pagination, n } = require('../utils/response');
+const { sendMgmtReport, getRecipients } = require('../utils/mailer');
 
 // 时间类别（生命平衡轮）固定 9 项，顺序即图表展示顺序
 const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
@@ -1008,6 +1009,101 @@ router.get('/efficiency-dashboard', async (req, res) => {
 });
 
 // ============ P2-② 月度经营+人效报告 ============
+// 提取为可复用函数，供 GET 查看与 POST 推送共用
+async function buildMgmtReport(bu, ym) {
+    // 经营数据
+    const [fin] = await pool.execute(
+        `SELECT employee_cnt, salary_amt, avg_salary FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+    const [so] = await pool.execute(
+        `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output, COUNT(*) AS so_cnt FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+    const [inv] = await pool.execute(
+        `SELECT COALESCE(ROUND(SUM(sub_amt),2),0) AS invoice_amt, COUNT(*) AS inv_cnt FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
+    const [po] = await pool.execute(
+        `SELECT COALESCE(ROUND(SUM(po_qty*unit_price),2),0) AS po_amt, COUNT(*) AS po_cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`, [bu, ym]);
+
+    const empCnt = Number(fin[0]?.employee_cnt) || 84;
+    const salaryTotal = Number(fin[0]?.salary_amt) || 0;
+    const output = Number(so[0]?.output) || 0;
+    const invoiceAmt = Number(inv[0]?.invoice_amt) || 0;
+    const poAmt = Number(po[0]?.po_amt) || 0;
+
+    // 人效汇总
+    const [eff] = await pool.execute(
+        `SELECT COUNT(DISTINCT d.user_id) AS report_users,
+                COUNT(DISTINCT d.report_date) AS report_days,
+                ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
+                ROUND(COALESCE(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END),0),2) AS work_hours
+           FROM daily_report d
+           LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+          WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
+
+    // 部门表现
+    const [depts] = await pool.execute(
+        `SELECT d.depart_id,
+                COUNT(DISTINCT d.user_id) AS emp_cnt,
+                ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+           FROM daily_report d
+           LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+          WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
+          GROUP BY d.depart_id ORDER BY total_hours DESC`, [bu, ym]);
+
+    // Top / Bottom 员工（按总工时）
+    const [users] = await pool.execute(
+        `SELECT d.user_id, MAX(d.user_name) AS user_name, MAX(d.depart_id) AS depart_id,
+                ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
+           FROM daily_report d
+           LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
+          WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
+          GROUP BY d.user_id ORDER BY total_hours DESC`, [bu, ym]);
+    const top5 = users.slice(0, 5);
+    const bottom5 = users.slice(-5).reverse();
+
+    // 上月对比（产值环比）
+    const [y0, m0] = ym.split('/').map(Number);
+    const prev = new Date(y0, m0 - 2, 1);
+    const prevYm = `${prev.getFullYear()}/${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    const [prevSo] = await pool.execute(
+        `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, prevYm]);
+    const prevOutput = Number(prevSo[0]?.output) || 0;
+    const outputMom = prevOutput > 0 ? Math.round((output - prevOutput) / prevOutput * 1000) / 10 : null;
+
+    const totalHours = Number(eff[0]?.total_hours) || 0;
+    const workHours = Number(eff[0]?.work_hours) || 0;
+
+    return {
+        period: ym,
+        bu_no: bu,
+        business: {
+            output, output_mom: outputMom,
+            invoice_amt: invoiceAmt, invoice_cnt: Number(inv[0]?.inv_cnt) || 0,
+            po_amt: poAmt, po_cnt: Number(po[0]?.po_cnt) || 0,
+            so_cnt: Number(so[0]?.so_cnt) || 0
+        },
+        hr: {
+            employee_cnt: empCnt,
+            salary_total: salaryTotal,
+            avg_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0
+        },
+        efficiency: {
+            report_users: Number(eff[0]?.report_users) || 0,
+            report_days: Number(eff[0]?.report_days) || 0,
+            total_hours: totalHours,
+            work_hours: workHours,
+            work_ratio: totalHours > 0 ? Math.round(workHours / totalHours * 1000) / 10 : 0,
+            per_capita_output: empCnt > 0 ? Math.round(output / empCnt) : 0,
+            per_capita_hours: empCnt > 0 ? Math.round(totalHours / empCnt * 100) / 100 : 0
+        },
+        departments: depts.map(d => ({
+            depart_id: d.depart_id || '未分類',
+            emp_cnt: Number(d.emp_cnt) || 0,
+            total_hours: Number(d.total_hours) || 0
+        })),
+        top_performers: top5,
+        bottom_performers: bottom5,
+        generated_at: new Date().toISOString()
+    };
+}
+
 router.get('/monthly-business-report', async (req, res) => {
     try {
         const actor = await resolveActor(req);
@@ -1019,103 +1115,12 @@ router.get('/monthly-business-report', async (req, res) => {
         })();
         const ym = mo.ym;
 
-        // 经营数据
-        const [fin] = await pool.execute(
-            `SELECT employee_cnt, salary_amt, avg_salary FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
-        const [so] = await pool.execute(
-            `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output, COUNT(*) AS so_cnt FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
-        const [inv] = await pool.execute(
-            `SELECT COALESCE(ROUND(SUM(sub_amt),2),0) AS invoice_amt, COUNT(*) AS inv_cnt FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
-        const [po] = await pool.execute(
-            `SELECT COALESCE(ROUND(SUM(po_qty*unit_price),2),0) AS po_amt, COUNT(*) AS po_cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`, [bu, ym]);
-
-        const empCnt = Number(fin[0]?.employee_cnt) || 84;
-        const salaryTotal = Number(fin[0]?.salary_amt) || 0;
-        const output = Number(so[0]?.output) || 0;
-        const invoiceAmt = Number(inv[0]?.invoice_amt) || 0;
-        const poAmt = Number(po[0]?.po_amt) || 0;
-
-        // 人效汇总
-        const [eff] = await pool.execute(
-            `SELECT COUNT(DISTINCT d.user_id) AS report_users,
-                    COUNT(DISTINCT d.report_date) AS report_days,
-                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours,
-                    ROUND(COALESCE(SUM(CASE WHEN dt.wk_type='日常工作' THEN dt.use_time ELSE 0 END),0),2) AS work_hours
-               FROM daily_report d
-               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
-              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
-
-        // 部门表现
-        const [depts] = await pool.execute(
-            `SELECT d.depart_id,
-                    COUNT(DISTINCT d.user_id) AS emp_cnt,
-                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
-               FROM daily_report d
-               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
-              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
-              GROUP BY d.depart_id ORDER BY total_hours DESC`, [bu, ym]);
-
-        // Top / Bottom 员工（按总工时）
-        const [users] = await pool.execute(
-            `SELECT d.user_id, MAX(d.user_name) AS user_name, MAX(d.depart_id) AS depart_id,
-                    ROUND(COALESCE(SUM(dt.use_time),0),2) AS total_hours
-               FROM daily_report d
-               LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
-              WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'
-              GROUP BY d.user_id ORDER BY total_hours DESC`, [bu, ym]);
-        const top5 = users.slice(0, 5);
-        const bottom5 = users.slice(-5).reverse();
-
-        // 上月对比（产值环比）
-        const [y0, m0] = ym.split('/').map(Number);
-        const prev = new Date(y0, m0 - 2, 1);
-        const prevYm = `${prev.getFullYear()}/${String(prev.getMonth() + 1).padStart(2, '0')}`;
-        const [prevSo] = await pool.execute(
-            `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, prevYm]);
-        const prevOutput = Number(prevSo[0]?.output) || 0;
-        const outputMom = prevOutput > 0 ? Math.round((output - prevOutput) / prevOutput * 1000) / 10 : null;
-
-        const totalHours = Number(eff[0]?.total_hours) || 0;
-        const workHours = Number(eff[0]?.work_hours) || 0;
-
-        const report = {
-            period: ym,
-            bu_no: bu,
-            business: {
-                output, output_mom: outputMom,
-                invoice_amt: invoiceAmt, invoice_cnt: Number(inv[0]?.inv_cnt) || 0,
-                po_amt: poAmt, po_cnt: Number(po[0]?.po_cnt) || 0,
-                so_cnt: Number(so[0]?.so_cnt) || 0
-            },
-            hr: {
-                employee_cnt: empCnt,
-                salary_total: salaryTotal,
-                avg_salary: empCnt > 0 ? Math.round(salaryTotal / empCnt) : 0
-            },
-            efficiency: {
-                report_users: Number(eff[0]?.report_users) || 0,
-                report_days: Number(eff[0]?.report_days) || 0,
-                total_hours: totalHours,
-                work_hours: workHours,
-                work_ratio: totalHours > 0 ? Math.round(workHours / totalHours * 1000) / 10 : 0,
-                per_capita_output: empCnt > 0 ? Math.round(output / empCnt) : 0,
-                per_capita_hours: empCnt > 0 ? Math.round(totalHours / empCnt * 100) / 100 : 0
-            },
-            departments: depts.map(d => ({
-                depart_id: d.depart_id || '未分類',
-                emp_cnt: Number(d.emp_cnt) || 0,
-                total_hours: Number(d.total_hours) || 0
-            })),
-            top_performers: top5,
-            bottom_performers: bottom5,
-            generated_at: new Date().toISOString()
-        };
-
+        const report = await buildMgmtReport(bu, ym);
         ok(res, report);
     } catch (err) { fail500(res, err); }
 });
 
-// ============ P2-② 推送月度报告 ============
+// ============ P2-② 推送月度报告（發送郵件 + 落庫送達回執） ============
 router.post('/monthly-business-report/push', async (req, res) => {
     try {
         const actor = await resolveActor(req);
@@ -1126,35 +1131,86 @@ router.post('/monthly-business-report/push', async (req, res) => {
         if (!mo) return fail(res, 'YYYY_MM 格式不正确（YYYY/MM）', 400);
         const ym = mo.ym;
 
-        // 复用 GET 的数据（模拟内部调用）
-        const [fin] = await pool.execute(`SELECT employee_cnt, salary_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
-        const [so] = await pool.execute(`SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
-        const [eff] = await pool.execute(`SELECT COUNT(DISTINCT d.user_id) AS ru, ROUND(COALESCE(SUM(dt.use_time),0),2) AS th FROM daily_report d LEFT JOIN daily_report_detail dt ON dt.ruid=d.id WHERE d.bu_no=? AND d.YYYY_MM=? AND d.status1='USE'`, [bu, ym]);
-        const empCnt = Number(fin[0]?.employee_cnt) || 84;
-        const output = Number(so[0]?.output) || 0;
-        const reportData = {
-            period: ym, bu_no: bu,
-            business: { output },
-            hr: { employee_cnt: empCnt, salary_total: Number(fin[0]?.salary_amt) || 0 },
-            efficiency: {
-                report_users: Number(eff[0]?.ru) || 0,
-                total_hours: Number(eff[0]?.th) || 0,
-                per_capita_output: empCnt > 0 ? Math.round(output / empCnt) : 0
-            }
-        };
+        // 1) 產生完整報告（與 GET 一致）
+        const report = await buildMgmtReport(bu, ym);
+        const reportData = JSON.stringify(report);
+
+        // 2) 發送郵件給高管
+        const recipients = getRecipients();
+        const mailResult = await sendMgmtReport(report);
+
+        // 3) 落庫送達回執
+        const status = mailResult.success ? 'PUSHED' : 'FAILED';
+        const deliveredTime = mailResult.success ? 'NOW()' : 'NULL';
+        const errorMsg = mailResult.success ? null : (mailResult.message || '').slice(0, 500);
+        const recipientsStr = recipients.join(',');
 
         const [exist] = await pool.execute(`SELECT id FROM daily_report_mgmt_report WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
         if (exist.length > 0) {
             await pool.execute(
-                `UPDATE daily_report_mgmt_report SET report_data=?, pushed_by=?, pushed_by_name=?, pushed_time=NOW(), status='PUSHED' WHERE id=?`,
-                [JSON.stringify(reportData), actor.user_id, actor.user_name, exist[0].id]);
+                `UPDATE daily_report_mgmt_report
+                    SET report_data=?, pushed_by=?, pushed_by_name=?, pushed_time=NOW(),
+                        status=?, recipients=?, delivered_time=${deliveredTime}, error_msg=?
+                  WHERE id=?`,
+                [reportData, actor.user_id, actor.user_name, status, recipientsStr, errorMsg, exist[0].id]);
         } else {
             await pool.execute(
-                `INSERT INTO daily_report_mgmt_report (bu_no, YYYY_MM, report_data, pushed_by, pushed_by_name, pushed_time, status)
-                 VALUES (?,?,?,?,?,NOW(),'PUSHED')`,
-                [bu, ym, JSON.stringify(reportData), actor.user_id, actor.user_name]);
+                `INSERT INTO daily_report_mgmt_report
+                    (bu_no, YYYY_MM, report_data, pushed_by, pushed_by_name, pushed_time, status, recipients, delivered_time, error_msg)
+                 VALUES (?,?,?,?,?,NOW(),?,?,${deliveredTime},?)`,
+                [bu, ym, reportData, actor.user_id, actor.user_name, status, recipientsStr, errorMsg]);
         }
-        ok(res, { bu_no: bu, YYYY_MM: ym, status: 'PUSHED', pushed_by: actor.user_name, pushed_time: new Date().toISOString() }, '報告已推送给高管');
+
+        const result = {
+            bu_no: bu, YYYY_MM: ym, status,
+            pushed_by: actor.user_name,
+            pushed_time: new Date().toISOString(),
+            recipients: recipients,
+            delivered: mailResult.success,
+            message: mailResult.message
+        };
+        if (mailResult.success) {
+            ok(res, result, `報告已推送给 ${recipients.length} 位高管`);
+        } else {
+            ok(res, result, `報告已存檔，但郵件發送失敗：${mailResult.message}`);
+        }
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ P2-② 高管報告收件箱（推送歷史） ============
+router.get('/mgmt-reports', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可查看推送记录', 403);
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const [rows] = await pool.execute(
+            `SELECT id, bu_no, YYYY_MM, status, pushed_by, pushed_by_name,
+                    pushed_time, recipients, delivered_time, error_msg,
+                    JSON_EXTRACT(report_data, '$.business.output') AS output,
+                    JSON_EXTRACT(report_data, '$.hr.employee_cnt') AS employee_cnt,
+                    JSON_EXTRACT(report_data, '$.efficiency.per_capita_output') AS per_capita_output
+               FROM daily_report_mgmt_report
+              WHERE bu_no=?
+              ORDER BY YYYY_MM DESC LIMIT 24`, [bu]);
+        ok(res, rows);
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ P2-② 查看單筆推送報告詳情 ============
+router.get('/mgmt-reports/:id', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可查看', 403);
+        const id = Number(req.params.id);
+        if (!id) return fail(res, 'id 不正确', 400);
+        const [rows] = await pool.execute(
+            `SELECT * FROM daily_report_mgmt_report WHERE id=? LIMIT 1`, [id]);
+        if (rows.length === 0) return fail(res, '报告不存在', 404);
+        const r = rows[0];
+        try { r.report_data = JSON.parse(r.report_data); } catch (e) { /* keep raw */ }
+        ok(res, r);
     } catch (err) { fail500(res, err); }
 });
 

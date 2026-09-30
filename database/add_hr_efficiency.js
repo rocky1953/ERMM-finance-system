@@ -34,7 +34,10 @@ async function run() {
                 pushed_by VARCHAR(50) DEFAULT NULL,
                 pushed_by_name VARCHAR(100) DEFAULT NULL,
                 pushed_time DATETIME DEFAULT NULL,
-                status VARCHAR(20) DEFAULT 'PENDING' COMMENT 'PENDING/PUSHED',
+                status VARCHAR(20) DEFAULT 'PENDING' COMMENT 'PENDING/PUSHED/FAILED',
+                recipients VARCHAR(500) DEFAULT NULL COMMENT '实际收件邮箱列表',
+                delivered_time DATETIME DEFAULT NULL COMMENT '邮件实际送达时间',
+                error_msg VARCHAR(500) DEFAULT NULL COMMENT '推送失败原因',
                 create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
                 update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY uk_bu_ym (bu_no, YYYY_MM),
@@ -42,6 +45,19 @@ async function run() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='月度经营+人效报告推送记录'
         `);
         console.log('✅ daily_report_mgmt_report 已建立');
+
+        // 補充欄位（舊版表結構升級，幂等）
+        const cols = await conn.execute(`SHOW COLUMNS FROM daily_report_mgmt_report`);
+        const colNames = cols[0].map(c => c.Field);
+        const addCol = async (name, ddl) => {
+            if (!colNames.includes(name)) {
+                await conn.execute(`ALTER TABLE daily_report_mgmt_report ADD COLUMN ${name} ${ddl}`);
+                console.log(`  + 新增欄位 ${name}`);
+            }
+        };
+        await addCol('recipients', "VARCHAR(500) DEFAULT NULL COMMENT '實際收件郵箱列表'");
+        await addCol('delivered_time', "DATETIME DEFAULT NULL COMMENT '郵件實際送達時間'");
+        await addCol('error_msg', "VARCHAR(500) DEFAULT NULL COMMENT '推送失敗原因'");
 
         // 初始 seed 映射（HM 公司常用 items_id）
         const seeds = [

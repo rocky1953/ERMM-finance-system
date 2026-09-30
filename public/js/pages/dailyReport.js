@@ -967,6 +967,7 @@
                         </label>
                         <button class="btn btn-primary" onclick="DRApp.loadMgmtReport()">🔍 ${t('dr.btn.query')}</button>
                         <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.pushMgmtReport()">📤 ${t('dr.mbr.push')}</button>
+                        <button class="btn" style="background:#1a5276;color:#fff;" onclick="DRApp.openMgmtInbox()">📨 ${t('dr.mbr.inbox')}</button>
                         <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
                     </div>
                     <div id="mbrBody" style="margin-top:12px;">${t('loading')}</div>
@@ -1060,7 +1061,122 @@
             const ym = y + '/' + mm;
             try {
                 const res = await API.post('/api/daily-report/monthly-business-report/push', { bu_no: State.bu_no, YYYY_MM: ym });
-                UI.toast(`${t('dr.mbr.pushed_ok')}：${esc(res.data.YYYY_MM)}`, 'success');
+                const d = res.data;
+                if (d.delivered) {
+                    UI.toast(`${t('dr.mbr.pushed_ok')}：${esc(ym)} → ${d.recipients.length} 位高管`, 'success');
+                } else {
+                    UI.toast(`${t('dr.mbr.push_failed')}：${esc(d.message || '')}`, 'error');
+                }
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        // ============ P2-② 高管報告收件箱 ============
+        openMgmtInbox() {
+            this.view = 'mgmtInbox';
+            this.destroyCharts();
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <h3 style="margin:0;">📨 ${t('dr.mbr.inbox')}</h3>
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.openMgmtReport()">↩️ ${t('dr.mbr.back_to_report')}</button>
+                    </div>
+                    <div id="inboxBody" style="margin-top:12px;">${t('loading')}</div>
+                </div>`;
+            this.loadMgmtInbox();
+        },
+
+        async loadMgmtInbox() {
+            const el = document.getElementById('inboxBody');
+            if (!el) return;
+            try {
+                const res = await API.get('/api/daily-report/mgmt-reports?bu_no=' + encodeURIComponent(State.bu_no));
+                const rows = res.data || [];
+                if (rows.length === 0) {
+                    el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:30px;">${t('dr.empty')}</p>`;
+                    return;
+                }
+                const statusBadge = s => {
+                    if (s === 'PUSHED') return '<span style="background:#d4efdf;color:#196f3d;padding:2px 8px;border-radius:10px;font-size:0.8em;">✓ ' + t('dr.mbr.st_pushed') + '</span>';
+                    if (s === 'FAILED') return '<span style="background:#fadbd8;color:#922b21;padding:2px 8px;border-radius:10px;font-size:0.8em;">✗ ' + t('dr.mbr.st_failed') + '</span>';
+                    return '<span style="background:#fcf3cf;color:#7d6608;padding:2px 8px;border-radius:10px;font-size:0.8em;">' + t('dr.mbr.st_pending') + '</span>';
+                };
+                el.innerHTML = `
+                    <table class="data-table" style="font-size:0.9em;">
+                        <thead><tr>
+                            <th>${t('dr.mbr.col_period')}</th><th>${t('dr.mbr.col_status')}</th>
+                            <th>${t('dr.mbr.col_output')}</th><th>${t('dr.mbr.col_emp')}</th><th>${t('dr.mbr.col_per_output')}</th>
+                            <th>${t('dr.mbr.col_pusher')}</th><th>${t('dr.mbr.col_push_time')}</th>
+                            <th>${t('dr.mbr.col_delivered')}</th><th>${t('dr.mbr.col_recipients')}</th>
+                            <th>${t('dr.mbr.col_action')}</th>
+                        </tr></thead>
+                        <tbody>${rows.map(r => `
+                            <tr>
+                                <td><b>${esc(r.YYYY_MM)}</b></td>
+                                <td>${statusBadge(r.status)}</td>
+                                <td class="num">${UI.fmt(Number(r.output) || 0)}</td>
+                                <td class="num">${Number(r.employee_cnt) || 0}</td>
+                                <td class="num">${UI.fmt(Number(r.per_capita_output) || 0)}</td>
+                                <td>${esc(r.pushed_by_name || r.pushed_by || '-')}</td>
+                                <td style="font-size:0.8em;">${esc(r.pushed_time || '-')}</td>
+                                <td style="font-size:0.8em;">${esc(r.delivered_time || '-')}${r.error_msg ? `<div style="color:#e74c3c;font-size:0.75em;">${esc(r.error_msg)}</div>` : ''}</td>
+                                <td style="font-size:0.75em;max-width:180px;word-break:break-all;">${esc(r.recipients || '-')}</td>
+                                <td><button class="btn btn-primary" style="padding:2px 10px;font-size:0.8em;" onclick="DRApp.viewMgmtReport(${r.id})">${t('dr.mbr.col_view')}</button></td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
+        },
+
+        async viewMgmtReport(id) {
+            try {
+                const res = await API.get('/api/daily-report/mgmt-reports/' + id);
+                const r = res.data;
+                const rd = r.report_data || {};
+                const b = rd.business || {}, h = rd.hr || {}, e = rd.efficiency || {};
+                const deptRows = (rd.departments || []).map(d => `
+                    <tr><td>${esc(d.depart_id)}</td><td class="num">${d.emp_cnt}</td><td class="num">${UI.fmt(d.total_hours)}</td></tr>`).join('');
+                const topRows = (rd.top_performers || []).map((u, i) => `
+                    <tr><td>${i + 1}</td><td>${esc(u.user_id)} ${esc(u.user_name || '')}</td><td>${esc(u.depart_id || '-')}</td><td class="num">${UI.fmt(u.total_hours)}</td></tr>`).join('');
+                this.c.innerHTML = `
+                    <div class="card">
+                        <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                            <h3 style="margin:0;">📑 ${esc(r.bu_no)} · ${esc(r.YYYY_MM)}</h3>
+                            <button class="btn" style="margin-left:auto;" onclick="DRApp.openMgmtInbox()">↩️ ${t('dr.mbr.back_to_inbox')}</button>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+                                <div style="background:#eaf2f8;padding:14px;border-radius:8px;">
+                                    <div style="font-weight:700;color:#1a5276;margin-bottom:6px;">💰 ${t('dr.mbr.business')}</div>
+                                    <div>${t('dr.eff.kpi.output')}: <b>${UI.fmt(b.output)}</b></div>
+                                    <div>${t('dr.mbr.invoice')}: ${UI.fmt(b.invoice_amt)}</div>
+                                    <div>${t('dr.mbr.po')}: ${UI.fmt(b.po_amt)}</div>
+                                </div>
+                                <div style="background:#f4ecf7;padding:14px;border-radius:8px;">
+                                    <div style="font-weight:700;color:#6c3483;margin-bottom:6px;">👥 ${t('dr.mbr.hr')}</div>
+                                    <div>${t('dr.eff.kpi.emp')}: <b>${h.employee_cnt}</b></div>
+                                    <div>${t('dr.eff.kpi.salary')}: ${UI.fmt(h.salary_total)}</div>
+                                </div>
+                                <div style="background:#e8f8f5;padding:14px;border-radius:8px;">
+                                    <div style="font-weight:700;color:#117a65;margin-bottom:6px;">⚙️ ${t('dr.mbr.efficiency')}</div>
+                                    <div>${t('dr.eff.kpi.per_output')}: <b>${UI.fmt(e.per_capita_output)}</b></div>
+                                    <div>${t('dr.eff.kpi.per_hours')}: ${e.per_capita_hours} h</div>
+                                </div>
+                            </div>
+                            <h4>🏆 Top 5</h4>
+                            <table class="data-table" style="font-size:0.9em;margin-bottom:16px;">
+                                <thead><tr><th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th><th>${t('dr.sum.col.hours')}</th></tr></thead>
+                                <tbody>${topRows}</tbody>
+                            </table>
+                            <h4>🏢 部門</h4>
+                            <table class="data-table" style="font-size:0.9em;">
+                                <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th></tr></thead>
+                                <tbody>${deptRows}</tbody>
+                            </table>
+                            <div style="margin-top:14px;font-size:0.8em;color:#7f8c8d;">
+                                ${t('dr.mbr.col_push_time')}: ${esc(r.pushed_time)} · ${t('dr.mbr.col_pusher')}: ${esc(r.pushed_by_name)}
+                            </div>
+                        </div>
+                    </div>`;
             } catch (e) { UI.toast(e.message, 'error'); }
         },
 
