@@ -70,10 +70,10 @@ router.get('/:uid', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const d = req.body;
-        // 從 YYYY_MM 自動解析 YYYY/MM
+        // 從 YYYY_MM 自動解析 YYYY-MM
         let YYYY = d.YYYY, MM = d.MM;
-        if (d.YYYY_MM && !YYYY) { YYYY = d.YYYY_MM.split('/')[0]; }
-        if (d.YYYY_MM && !MM) { MM = d.YYYY_MM.split('/')[1]; }
+        if (d.YYYY_MM && !YYYY) { YYYY = d.YYYY_MM.split('-')[0]; }
+        if (d.YYYY_MM && !MM) { MM = d.YYYY_MM.split('-')[1]; }
         await pool.execute(`
             INSERT INTO mgm_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, cash_amt, deposite_amt,
                AR_amt, stock_P_amt, stock_M_amt, stock_S_amt, ttl_asset_amt, AP_amt, loan_amt,
@@ -148,7 +148,7 @@ router.post('/addon', async (req, res) => {
 
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
-            const ym = `${year}/${mm}`;
+            const ym = `${year}-${mm}`;
             await conn.execute(`
                 INSERT IGNORE INTO mgm_finance_summary (bu_no, YYYY_MM, YYYY, MM, flag, batch_id)
                 VALUES (?,?,?,?,?,?)

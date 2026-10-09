@@ -1,5 +1,5 @@
 /**
- * KPI 門檻定義頁面
+ * KPI 门槛定义页面
  */
 registerPage('kpi', async (c) => {
     const _mgr = Auth.isManager();

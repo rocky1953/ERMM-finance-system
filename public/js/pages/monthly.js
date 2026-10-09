@@ -1,5 +1,5 @@
 /**
- * 月度項目 monthly_items CRUD
+ * 月度项目 monthly_items CRUD
  */
 registerPage('monthly', async (c) => {
     const _mgr = Auth.isManager();
@@ -10,7 +10,7 @@ registerPage('monthly', async (c) => {
                     <option>HM</option><option>HN</option><option>SZ</option></select></label>
                 <label>${t('monthly.ym')}：<input type="month" id="mYM" onchange="loadMonthly()"></label>
                 <label>${t('relation.th.type')}：<select id="mType" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
-                    <option>租金</option><option>水電</option><option>薪資</option><option>保險</option><option>其他</option></select></label>
+                    <option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="MonthlyForm.open()">➕ ${t('monthly.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadMonthly()">🔄 ${t('refresh')}</button>
             </div>
@@ -18,7 +18,7 @@ registerPage('monthly', async (c) => {
         </div>
     `;
     document.getElementById('mBU').value = State.bu_no;
-    if (State.YYYY_MM) document.getElementById('mYM').value = State.YYYY_MM.replace('/', '-');
+    if (State.YYYY_MM) document.getElementById('mYM').value = State.YYYY_MM;
     loadMonthly();
 });
 
@@ -27,7 +27,7 @@ async function loadMonthly() {
     const el = document.getElementById('monthlyTable');
     try {
         const bu = document.getElementById('mBU').value;
-        const ym = document.getElementById('mYM').value.replace('-','/');
+        const ym = document.getElementById('mYM').value;
         const type = document.getElementById('mType').value;
         const res = await API.get(`/api/monthly?bu_no=${bu}&YYYY_MM=${ym}&item_type=${encodeURIComponent(type)}`);
         const rows = res.data || [];
@@ -63,9 +63,9 @@ const MonthlyForm = {
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.business')}</label>
                     <select id="mf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
+                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'')}"></div>
                 <div class="form-group"><label>${t('relation.th.type')}</label>
-                    <select id="mf_type"><option>租金</option><option>水電</option><option>薪資</option><option>保險</option><option>其他</option></select></div>
+                    <select id="mf_type"><option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group" style="flex:1"><label>${t('monthly.th.name')}</label><input id="mf_name" value="${d.item_name||''}" style="width:100%"></div>
@@ -82,7 +82,7 @@ const MonthlyForm = {
         if (d.DB_CR) document.getElementById('mf_dc').value = d.DB_CR;
     },
     async save(uid) {
-        const ym = document.getElementById('mf_ym').value.replace('-','/');
+        const ym = document.getElementById('mf_ym').value;
         const body = {
             bu_no: document.getElementById('mf_bu').value,
             YYYY_MM: ym,

@@ -1,7 +1,7 @@
 /**
- * 年度趨勢分析頁面
- * 模式1：單年度 12 個月趨勢（折線圖）
- * 模式2：跨年度 3/5/10 年匯總對比（柱狀圖）
+ * 年度趋势分析页面
+ * 模式1：单年度 12 个月趋势（折线图）
+ * 模式2：跨年度 3/5/10 年汇总对比（柱状图）
  */
 registerPage('trend', async (c) => {
     const { bu_no } = State;
@@ -47,7 +47,7 @@ registerPage('trend', async (c) => {
         </div>
     `;
 
-    // 檢查有哪些年份
+    // 检查有哪些年份
     const [yearResp] = await Promise.allSettled([
         API.get(`/api/summary?bu_no=${bu_no}&limit=200`)
     ]);
@@ -61,10 +61,10 @@ registerPage('trend', async (c) => {
         opt.value = y; opt.textContent = y + ' ' + t('trend.year');
         yearSel.appendChild(opt);
     });
-    // 預設選最新年份
+    // 预设选最新年份
     if (years.length > 0) yearSel.value = years[0];
 
-    // 模式切換
+    // 模式切换
     document.querySelectorAll('input[name="trendMode"]').forEach(el => {
         el.addEventListener('change', () => {
             document.getElementById('monthlyYearBox').style.display = el.value === 'monthly' ? 'flex' : 'none';
@@ -88,7 +88,7 @@ registerPage('trend', async (c) => {
             document.getElementById('trendChartTitle').textContent =
                 `${bu_no} — ${year} ${t('trend.yearly_monthly')} ${metricLabel}`;
 
-            // 用現有接口 /api/summary?bu_no=X&YYYY=Y
+            // 用现有接口 /api/summary?bu_no=X&YYYY=Y
             const monthly = allRows
                 .filter(r => String(r.YYYY) === year)
                 .sort((a, b) => Number(a.MM) - Number(b.MM));
@@ -101,12 +101,12 @@ registerPage('trend', async (c) => {
             for (let m = 1; m <= 12; m++) {
                 const row = monthly.find(r => Number(r.MM) === m);
                 labels.push(monthNames[m - 1]);
-                // equity 在 summary 表的實際欄位名是 stockholder_amt
+                // equity 在 summary 表的实际字段名是 stockholder_amt
                 const val = row ? Number(row[metric === 'equity' ? 'stockholder_amt' : metric] || 0) : 0;
                 values.push(val);
             }
 
-            // 匯總統計
+            // 汇总统计
             const sum = values.reduce((a, b) => a + b, 0);
             const hasData = values.filter(v => v !== 0).length;
             summary = {
@@ -133,7 +133,7 @@ registerPage('trend', async (c) => {
                 }
             }
 
-            // 匯總統計
+            // 汇总统计
             const sum = values.reduce((a, b) => a + b, 0);
             const hasData = values.filter(v => v !== 0).length;
             const growth = values.length >= 2 && values[0] !== 0
@@ -147,7 +147,7 @@ registerPage('trend', async (c) => {
             };
         }
 
-        // 繪製卡片
+        // 绘制卡片
         const sumDiv = document.getElementById('trendSummary');
         if (mode === 'monthly') {
             const min = summary.min || 0;
@@ -166,7 +166,7 @@ registerPage('trend', async (c) => {
             `;
         }
 
-        // 銷毀舊圖
+        // 销毁旧图
         if (chart) { chart.destroy(); chart = null; }
 
         const ctx = document.getElementById('trendChart').getContext('2d');

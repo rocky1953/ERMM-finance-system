@@ -70,6 +70,48 @@ function buildReportHtml(r) {
             <td style="padding:6px 10px;border:1px solid #ddd;text-align:right;">${fmt(u.total_hours)}</td>
         </tr>`).join('');
 
+    // M3-B 下月預警區塊
+    const METRIC_LABEL = {
+        HOURS: '總工時(h)', PER_CAPITA_HOURS: '人均工時(h)',
+        DELAYS: '延誤(日)', UNRESOLVED: '未解(日)'
+    };
+    const risks = (r.forecast && Array.isArray(r.forecast.risks)) ? r.forecast.risks : [];
+    const forecastYm = r.forecast && r.forecast.target_ym;
+    const fmt1 = (v, metric) => {
+        const isInt = metric === 'DELAYS' || metric === 'UNRESOLVED';
+        return Number(v || 0).toLocaleString('zh-TW', isInt
+            ? { maximumFractionDigits: 0 }
+            : { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    };
+    let forecastSection = '';
+    if (forecastYm && !r.forecast.error) {
+        if (risks.length > 0) {
+            const riskRows = risks.map(x => {
+                const ic = x.risk_level === 'DANGER' ? '🔴' : '🟠';
+                const dir = x.risk_dir === 'OVER' ? ' ↑超載' : x.risk_dir === 'UNDER' ? ' ↓輕載' : '';
+                return `<tr>
+                  <td style="padding:6px 10px;border:1px solid #ddd;text-align:center;">${ic}</td>
+                  <td style="padding:6px 10px;border:1px solid #ddd;">${x.scope_type === 'DEPT' ? '部門' : '人員'} ${x.scope_name || x.scope_id}</td>
+                  <td style="padding:6px 10px;border:1px solid #ddd;">${METRIC_LABEL[x.metric] || x.metric}${dir}</td>
+                  <td style="padding:6px 10px;border:1px solid #ddd;text-align:right;"><b>${fmt1(x.forecast_val, x.metric)}</b></td>
+                  <td style="padding:6px 10px;border:1px solid #ddd;text-align:right;color:#7f8c8d;">${fmt1(x.lower_bound, x.metric)} ~ ${fmt1(x.upper_bound, x.metric)}</td>
+                </tr>`;
+            }).join('');
+            forecastSection = `
+      <h2 style="margin:0 0 14px 0;font-size:16px;color:#2c3e50;border-left:4px solid #9b59b6;padding-left:10px;">🔮 ${forecastYm} 下月預警</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:22px;font-size:13px;">
+        <tr style="background:#f8f9fa;"><th style="padding:6px 10px;border:1px solid #ddd;">級別</th><th style="padding:6px 10px;border:1px solid #ddd;">對象</th><th style="padding:6px 10px;border:1px solid #ddd;">指標</th><th style="padding:6px 10px;border:1px solid #ddd;">預測值</th><th style="padding:6px 10px;border:1px solid #ddd;">80%區間</th></tr>
+        ${riskRows}
+      </table>`;
+        } else {
+            forecastSection = `
+      <h2 style="margin:0 0 14px 0;font-size:16px;color:#2c3e50;border-left:4px solid #9b59b6;padding-left:10px;">🔮 ${forecastYm} 下月預警</h2>
+      <div style="background:#f4ecf7;border:1px solid #ebdef0;border-radius:6px;padding:12px;font-size:13px;color:#6c3483;margin-bottom:22px;">
+        ✅ 下月各項指標預測均於正常範圍（統計外推僅供參考）。
+      </div>`;
+        }
+    }
+
     return `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -121,6 +163,8 @@ function buildReportHtml(r) {
         ${deptRows}
       </table>
 
+      ${forecastSection}
+
       <div style="background:#f8f9fa;border-radius:6px;padding:14px;font-size:13px;color:#555;margin-top:20px;">
         本報告由 ERMM 財務系統自動產生並推送。如需查看完整圖表與趨勢，請登入系統至「工作日报 → 月度报告」。
       </div>
@@ -158,4 +202,74 @@ async function sendMgmtReport(report) {
     }
 }
 
-module.exports = { sendMgmtReport, getRecipients, buildReportHtml };
+/**
+ * M3-A 產生日報告警彙總郵件 HTML（一個 BU 一封，逐條列出）
+ * @param {object} p - { bu_no, as_of, items:[{level,scope_name,title,message,suggestion}] }
+ */
+function buildAlertHtml(p) {
+    const rows = (p.items || []).map(it => {
+        const ic = it.level === 'danger' ? '🔴' : it.level === 'warning' ? '🟡' : '🔵';
+        const bar = it.level === 'danger' ? '#e74c3c' : it.level === 'warning' ? '#f39c12' : '#2980b9';
+        return `
+        <tr>
+          <td style="padding:8px 10px;border:1px solid #ddd;text-align:center;font-size:16px;">${ic}</td>
+          <td style="padding:8px 10px;border:1px solid #ddd;border-left:4px solid ${bar};">
+            <div style="font-weight:bold;color:#2c3e50;">${it.title || ''}</div>
+            <div style="font-size:13px;color:#555;margin-top:3px;">對象：${it.scope_name || '-'}</div>
+            <div style="font-size:13px;color:#555;margin-top:3px;">${it.message || ''}</div>
+            ${it.suggestion ? `<div style="font-size:13px;color:#8e44ad;margin-top:3px;">💡 ${it.suggestion}</div>` : ''}
+          </td>
+        </tr>`;
+    }).join('');
+
+    return `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="font-family:'Microsoft JhengHei','PingFang TC',sans-serif;background:#f5f6fa;margin:0;padding:20px;">
+  <div style="max-width:760px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+    <div style="background:linear-gradient(135deg,#c0392b,#e67e22);color:#fff;padding:22px 28px;">
+      <h1 style="margin:0;font-size:20px;">🚨 ERMM 日報告警通知</h1>
+      <div style="margin-top:6px;font-size:14px;opacity:0.9;">公司：${p.bu_no}　·　掃描時間：${new Date(p.as_of).toLocaleString('zh-TW')}　·　共 ${p.items.length} 項</div>
+    </div>
+    <div style="padding:24px 28px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <tr style="background:#f8f9fa;"><th style="padding:6px 10px;border:1px solid #ddd;width:40px;">級別</th><th style="padding:6px 10px;border:1px solid #ddd;text-align:left;">告警內容</th></tr>
+        ${rows}
+      </table>
+      <div style="background:#f8f9fa;border-radius:6px;padding:14px;font-size:13px;color:#555;margin-top:20px;">
+        本郵件由 ERMM 財務系統自動掃描發送。請登入系統「預警通知中心」查看詳情與處理。
+      </div>
+    </div>
+  </div>
+</body></html>`;
+}
+
+/**
+ * M3-A 發送日報告警彙總郵件
+ * @param {object} p - { bu_no, as_of, items, recipients }
+ * @returns {Promise<{success:boolean,message:string}>}
+ */
+async function sendAlertMail(p) {
+    const tp = getTransporter();
+    if (!tp) return { success: false, message: 'SMTP 未配置，郵件未發送' };
+    const recipients = (p.recipients || getRecipients()).filter(Boolean);
+    if (recipients.length === 0) return { success: false, message: '未設定告警收件人' };
+
+    const subject = `【ERMM 日報告警】${p.bu_no} · ${new Date(p.as_of).toLocaleDateString('zh-TW')}（${p.items.length} 項）`;
+    const html = buildAlertHtml(p);
+    try {
+        const info = await tp.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: recipients.join(', '),
+            subject,
+            html
+        });
+        console.log(`[mailer] 告警郵件已發送: ${p.bu_no}（${p.items.length} 項）→ ${recipients.join(', ')} messageId=${info.messageId}`);
+        return { success: true, message: `已發送給 ${recipients.length} 位主管`, info: { messageId: info.messageId, recipients } };
+    } catch (err) {
+        console.error('[mailer] 告警郵件發送失敗:', err.message);
+        return { success: false, message: err.message };
+    }
+}
+
+module.exports = { sendMgmtReport, getRecipients, buildReportHtml, sendAlertMail, buildAlertHtml };

@@ -1,8 +1,8 @@
 /**
- * AI 問答頁面
- * 兩種模式：
- *   1. 未勾選 LLM：規則引擎自然語言查詢 ermm_db
- *   2. 勾選 LLM：Kimi / DeepSeek 依財務資料上下文回答
+ * AI 问答页面
+ * 两种模式：
+ *   1. 未勾选 LLM：规则引擎自然语言查询 ermm_db
+ *   2. 勾选 LLM：Kimi / DeepSeek 依财务资料上下文回答
  */
 registerPage('aiqa', async (c) => {
     c.innerHTML = `
@@ -47,7 +47,7 @@ registerPage('aiqa', async (c) => {
         </div>
     `;
     document.getElementById('aiBu').value = State.bu_no;
-    const defMonth = State.YYYY_MM ? State.YYYY_MM.replace('/', '-') : '2025-07';
+    const defMonth = State.YYYY_MM || '2025-07';
     document.getElementById('aiMonth').value = defMonth;
     loadSuggestions();
     LLMKeyMgr.refreshStatus();
@@ -66,13 +66,13 @@ async function loadSuggestions() {
 }
 
 const AIQA = {
-    // 點擊建議問題：填入輸入框並立即提問
+    // 点击建议问题：填入输入框并立即提问
     fillSuggestion(el) {
         document.getElementById('aiInput').value = el.dataset.sg || '';
         this.ask();
     },
 
-    // 勾選 LLM 後顯示模型選擇 + Key 管理按鈕
+    // 勾选 LLM 后显示模型选择 + Key 管理按钮
     toggleLLM() {
         const useLLM = document.getElementById('aiUseLLM').checked;
         document.getElementById('aiProvider').style.display = useLLM ? '' : 'none';
@@ -80,7 +80,7 @@ const AIQA = {
         this.renderStatus();
     },
 
-    // 顯示當前選擇模型的 Key 設定狀態
+    // 显示当前选择模型的 Key 设定状态
     renderStatus() {
         const el = document.getElementById('aiLLMStatus');
         if (!el) return;
@@ -97,13 +97,13 @@ const AIQA = {
         const q = input.value.trim();
         if (!q) return;
         const bu = document.getElementById('aiBu').value;
-        // 讀取月份並標準化為 YYYY/MM 格式
+        // 读取月份并标准化为 YYYY-MM 格式
         const mRaw = document.getElementById('aiMonth').value;
         let mm = null;
         if (mRaw) {
-            // 支援 YYYY-MM, YYYY/MM, YYYYMM 三種格式
+            // 支援 YYYY-MM, YYYY/MM, YYYYMM 三种格式
             const m = mRaw.match(/^(\d{4})[-/]?(\d{1,2})/);
-            if (m) mm = `${m[1]}/${m[2].padStart(2, '0')}`;
+            if (m) mm = `${m[1]}-${m[2].padStart(2, '0')}`;
         }
         const useLLM = document.getElementById('aiUseLLM').checked;
         const provider = document.getElementById('aiProvider').value;
@@ -111,14 +111,14 @@ const AIQA = {
 
         const chat = document.getElementById('aiChat');
         const askBtn = document.getElementById('aiAskBtn');
-        // 使用者訊息
+        // 使用者讯息
         chat.innerHTML += `<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
             <div style="background:#2563eb;color:#fff;padding:10px 14px;border-radius:12px 12px 2px 12px;max-width:70%;">${q}</div>
         </div>`;
         input.value = '';
         chat.scrollTop = chat.scrollHeight;
 
-        // LLM 模式顯示思考中佔位
+        // LLM 模式显示思考中占位
         let thinkingEl = null;
         if (useLLM) {
             askBtn.disabled = true;
@@ -129,7 +129,7 @@ const AIQA = {
             chat.scrollTop = chat.scrollHeight;
         }
 
-        // AI 回覆
+        // AI 回复
         try {
             const res = await API.post('/api/aiqa/ask', {
                 question: q, bu_no: bu, YYYY_MM: mm,
@@ -141,7 +141,7 @@ const AIQA = {
             const a = res.data;
             const color = a.metric === 'llm' ? '#7c3aed'
                 : (a.metric && (a.metric.includes('margin') || a.metric.includes('ratio') || a.metric.includes('roe'))) ? '#2563eb' : '#667eea';
-            // LLM 回答可能含換行，使用 pre-wrap 保留格式
+            // LLM 回答可能含换行，使用 pre-wrap 保留格式
             const answerStyle = a.metric === 'llm' ? 'white-space:pre-wrap;line-height:1.7;' : '';
             chat.innerHTML += `<div style="display:flex;margin-bottom:12px;">
                 <div style="background:#f1f5f9;padding:12px 16px;border-radius:12px 12px 12px 2px;max-width:80%;">
@@ -166,7 +166,7 @@ const AIQA = {
 const LLMKeyMgr = {
     configs: [],
 
-    // 頁面載入時拉取服務商設定狀態
+    // 页面载入时拉取服务商设定状态
     async refreshStatus() {
         try {
             const res = await API.get('/api/llm/providers');
@@ -227,7 +227,7 @@ const LLMKeyMgr = {
 
     async test(provider) {
         try {
-            // 彈窗中若有臨時輸入新 Key 一併帶入測試
+            // 弹窗中若有临时输入新 Key 一并带入测试
             const keyEl = document.getElementById(`llm_key_${provider}`);
             const api_key = keyEl ? keyEl.value.trim() : '';
             UI.toast(t('llm.testing'), 'info');
@@ -237,7 +237,7 @@ const LLMKeyMgr = {
     }
 };
 
-// ====== AI 對談記錄查詢 ======
+// ====== AI 对谈记录查询 ======
 const AIRecords = {
     page: 1,
     pageSize: 10,
@@ -257,7 +257,7 @@ const AIRecords = {
             </div>
             <div id="airPager" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;"></div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('llm.close')}</button>`);
-        // 加寬彈窗
+        // 加宽弹窗
         const m = document.querySelector('#modalOverlay .modal');
         if (m) { m.style.width = '820px'; m.style.maxWidth = '94vw'; }
         document.getElementById('airBu').value = State.bu_no || '';
@@ -300,7 +300,7 @@ const AIRecords = {
                     ${page} / ${totalPages}
                     <button class="btn btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="AIRecords.go(${page + 1})">${t('airecords.next')} ›</button>
                 </span>`;
-            // 快取當前頁資料供複製使用
+            // 快取当前页资料供复制使用
             this._cache = {};
             (list || []).forEach(r => { this._cache[r.uid] = r; });
         } catch (e) {

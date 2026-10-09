@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 銷售訂單 ermm_erp_so CRUD
  */
 const express = require('express');
@@ -34,7 +34,7 @@ router.post('/', async (req, res) => {
         let YYYY = d.YYYY, MM = d.MM, YYYY_MM = d.YYYY_MM;
         if (!YYYY_MM && d.so_date) {
             const dt = new Date(d.so_date);
-            YYYY_MM = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+            YYYY_MM = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
             YYYY = String(dt.getFullYear());
             MM = String(dt.getMonth()+1).padStart(2,'0');
         }

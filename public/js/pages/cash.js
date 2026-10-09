@@ -1,5 +1,5 @@
 /**
- * 現金日記帳頁面
+ * 现金日记账页面
  */
 registerPage('cash', async (c) => {
     const { bu_no } = State;
@@ -10,7 +10,7 @@ registerPage('cash', async (c) => {
                 ${_mgr ? `<button class="btn btn-primary" onclick="CashForm.open()">➕ ${t('cash.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadCash()">🔄 ${t('refresh')}</button>
                 <div class="spacer"></div>
-                <input type="month" id="cashMonth" value="${State.YYYY_MM.replace('/','-')}" onchange="loadCash()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
+                <input type="month" id="cashMonth" value="${State.YYYY_MM}" onchange="loadCash()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
             </div>
             <div id="cashTable">${t('loading')}</div>
         </div>
@@ -27,7 +27,7 @@ async function loadCash() {
     const _mgr = Auth.isManager();
     const el = document.getElementById('cashTable');
     try {
-        const ym = document.getElementById('cashMonth')?.value.replace('-', '/') || State.YYYY_MM;
+        const ym = document.getElementById('cashMonth')?.value || State.YYYY_MM;
         const res = await API.get(`/api/cash?bu_no=${State.bu_no}&YYYY_MM=${ym}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('💵', t('cash.no_records')); return; }
@@ -83,7 +83,7 @@ const CashForm = {
             wk_date: wk,
             wk_YYYY: wk.substring(0,4),
             wk_MM: wk.substring(5,7),
-            YYYY_MM: wk.substring(0,7).replace('-','/'),
+            YYYY_MM: wk.substring(0,7),
             in_amt: Number(document.getElementById('cf_in').value) || 0,
             out_amt: Number(document.getElementById('cf_out').value) || 0,
             remark: document.getElementById('cf_remark').value

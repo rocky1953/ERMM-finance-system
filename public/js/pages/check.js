@@ -1,5 +1,5 @@
 /**
- * 票據管理頁面
+ * 票据管理页面
  */
 registerPage('check', async (c) => {
     const _mgr = Auth.isManager();
@@ -11,8 +11,8 @@ registerPage('check', async (c) => {
                 <div class="spacer"></div>
                 <select id="chkStatus" onchange="loadChk()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
                     <option value="">${t('chk.all')}</option>
-                    <option value="未兌現">${t('chk.uncleared')}</option>
-                    <option value="已兌現">${t('chk.cleared')}</option>
+                    <option value="未兑现">${t('chk.uncleared')}</option>
+                    <option value="已兑现">${t('chk.cleared')}</option>
                 </select>
             </div>
             <div id="chkTable">${t('loading')}</div>
@@ -33,7 +33,7 @@ async function loadChk() {
         el.innerHTML = `<table class="data-table">
             <thead><tr><th>${t('chk.no')}</th><th>${t('chk.type')}</th><th>${t('chk.issue_date')}</th><th>${t('chk.due_date')}</th><th>${t('chk.amount')}</th><th>${t('chk.payee')}</th><th>${t('chk.status')}</th>${_mgr ? `<th>${t('delete')}</th>` : ''}</tr></thead>
             <tbody>${rows.map(r => {
-                const isCleared = r.status === '已兌現';
+                const isCleared = r.status === '已兑现';
                 return `<tr>
                 <td>${r.check_num || '-'}</td>
                 <td>${r.check_type || '-'}</td>
@@ -56,7 +56,7 @@ const ChkForm = {
     open() {
         UI.modal(t('chk.add'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('chk.type')}</label><select id="cf_type"><option>轉帳支票</option><option>現金支票</option><option>本票</option></select></div>
+                <div class="form-group"><label>${t('chk.type')}</label><select id="cf_type"><option>转账支票</option><option>现金支票</option><option>本票</option></select></div>
                 <div class="form-group"><label>${t('chk.no')}</label><input id="cf_num"></div>
                 <div class="form-group"><label>${t('chk.amount')}</label><input type="number" id="cf_amt" value="0"></div>
             </div>
@@ -77,7 +77,7 @@ const ChkForm = {
             check_date: d,
             due_date: document.getElementById('cf_due').value,
             to_company: document.getElementById('cf_to').value,
-            status: '未兌現',
+            status: '未兑现',
             remark: ''
         };
         try { await API.post('/api/check', body); UI.toast(t('chk.added'),'success'); UI.closeModal(); loadChk(); }

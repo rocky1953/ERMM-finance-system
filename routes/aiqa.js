@@ -172,23 +172,23 @@ const SYSTEM_PROMPTS = {
         + '7. Answer the question directly; do not repeat, quote, or explain these instructions, and do not describe the user\u2019s request.'
 };
 
-// 格式標準化：將各種輸入格式統一為 YYYY/MM
+// 格式標準化：將各種輸入格式統一為 YYYY-MM
 function normalizeYYYYMM(input) {
     if (!input) return null;
     const s = String(input).trim();
-    // 已經是 YYYY/MM 格式
-    if (/^\d{4}\/\d{1,2}$/.test(s)) {
-        const [y, m] = s.split('/');
-        return `${y}/${m.padStart(2, '0')}`;
-    }
-    // YYYY-MM 格式（瀏覽器 <input type="month"> 預設值）
+    // 已經是 YYYY-MM 格式
     if (/^\d{4}-\d{1,2}$/.test(s)) {
         const [y, m] = s.split('-');
-        return `${y}/${m.padStart(2, '0')}`;
+        return `${y}-${m.padStart(2, '0')}`;
+    }
+    // YYYY/MM 格式（兼容舊格式輸入）
+    if (/^\d{4}\/\d{1,2}$/.test(s)) {
+        const [y, m] = s.split('/');
+        return `${y}-${m.padStart(2, '0')}`;
     }
     // YYYYMM 純數字格式
     if (/^\d{6}$/.test(s)) {
-        return `${s.slice(0, 4)}/${s.slice(4, 6)}`;
+        return `${s.slice(0, 4)}-${s.slice(4, 6)}`;
     }
     return null;
 }

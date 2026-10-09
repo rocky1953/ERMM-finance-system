@@ -1,5 +1,5 @@
 /**
- * 銀行貸款頁面
+ * 银行贷款页面
  */
 registerPage('bank', async (c) => {
     const _mgr = Auth.isManager();

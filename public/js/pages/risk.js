@@ -1,5 +1,5 @@
 /**
- * 風險預警模型頁面
+ * 风险预警模型页面
  */
 registerPage('risk', async (c) => {
     c.innerHTML = `
@@ -26,34 +26,34 @@ async function loadRisk() {
         const r = rows[0];
         _riskData = r;
         const zVal = Number(r.Z_score || 0);
-        // 從 Z 值重算顏色與狀態，不依賴 DB 可能過時的 risk_color / wall_mode
+        // 从 Z 值重算颜色与状态，不依赖 DB 可能过时的 risk_color / wall_mode
         const zColor = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
         const zWallMode = zVal >= 2.9 ? t('dash.safe') : (zVal >= 1.23 ? t('dash.grey') : t('dash.bankrupt'));
-        // Z2-Score: >=2.9 安全, >=1.23 灰色, <1.23 破產區
+        // Z2-Score: >=2.9 安全, >=1.23 灰色, <1.23 破产区
         const z2 = Number(r.Z2_score || 0);
         const z2Color = z2 >= 2.9 ? 'green' : (z2 >= 1.23 ? 'yellow' : 'red');
         const z2Mode = z2 >= 2.9 ? t('dash.safe') : (z2 >= 1.23 ? t('dash.grey') : t('dash.bankrupt'));
-        // Z3-Score: >=2.6 安全, >=1.1 灰色, <1.1 破產區
+        // Z3-Score: >=2.6 安全, >=1.1 灰色, <1.1 破产区
         const z3 = Number(r.Z3_score || 0);
         const z3Color = z3 >= 2.6 ? 'green' : (z3 >= 1.1 ? 'yellow' : 'red');
         const z3Mode = z3 >= 2.6 ? t('dash.safe') : (z3 >= 1.1 ? t('dash.grey') : t('dash.bankrupt'));
-        // BZ: >=0 安全, <0 破產區
+        // BZ: >=0 安全, <0 破产区
         const bz = Number(r.BZ_model || 0);
         const bzColor = bz >= 0 ? 'green' : 'red';
         const bzMode = bz >= 0 ? t('dash.safe') : t('dash.bankrupt');
-        // JZ: >=0 安全, <0 破產區
+        // JZ: >=0 安全, <0 破产区
         const jz = Number(r.JZ_model || 0);
         const jzColor = jz >= 0 ? 'green' : 'red';
         const jzMode = jz >= 0 ? t('dash.safe') : t('dash.bankrupt');
-        // 流動比率: >=1.5 安全, >=1 灰色, <1 破產區
+        // 流动比率: >=1.5 安全, >=1 灰色, <1 破产区
         const cr = Number(r.current_ratio || 0);
         const crColor = cr >= 1.5 ? 'green' : (cr >= 1 ? 'yellow' : 'red');
         const crMode = cr >= 1.5 ? t('dash.safe') : (cr >= 1 ? t('dash.grey') : t('dash.bankrupt'));
-        // 負債比: <=50 安全, <=70 灰色, >70 破產區
+        // 负债比: <=50 安全, <=70 灰色, >70 破产区
         const dr = Number(r.debt_ratio || 0);
         const drColor = dr <= 50 ? 'green' : (dr <= 70 ? 'yellow' : 'red');
         const drMode = dr <= 50 ? t('dash.safe') : (dr <= 70 ? t('dash.grey') : t('dash.bankrupt'));
-        // ROE: >=0 安全, <0 破產區
+        // ROE: >=0 安全, <0 破产区
         const roe = Number(r.ROE || 0);
         const roeColor = roe >= 0 ? 'green' : 'red';
         const roeMode = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
@@ -107,10 +107,10 @@ async function loadRisk() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 
-// ===== 風險指標說明彈窗 =====
+// ===== 风险指标说明弹窗 =====
 const RiskHelp = {
     open(key, data) {
-        // data 為選填：由儀表板等其他頁面傳入風險資料；風險預警頁本身用 _riskData
+        // data 为选填：由仪表板等其他页面传入风险资料；风险预警页本身用 _riskData
         const r = data || _riskData || {};
         const v = (k) => Number(r[k] || 0);
         const cfg = {
@@ -287,7 +287,7 @@ const RiskHelp = {
                 <div style="margin-bottom:14px">
                     <strong>📊 ${t('risk.desc.variables')}：</strong>
                     <table class="data-table" style="margin-top:6px">
-                        <thead><tr><th>變數</th><th>說明</th><th>${t('risk.desc.value')}</th></tr></thead>
+                        <thead><tr><th>变数</th><th>说明</th><th>${t('risk.desc.value')}</th></tr></thead>
                         <tbody>${varsRows}</tbody>
                     </table>
                 </div>` : ''}

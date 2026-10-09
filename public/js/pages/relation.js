@@ -1,5 +1,5 @@
 /**
- * 往來對象 relation_detail CRUD（客戶 / 供應商 / 關係人主檔）
+ * 往来对象 relation_detail CRUD（客户 / 供应商 / 关系人主档）
  */
 registerPage('relation', async (c) => {
     const _mgr = Auth.isManager();
@@ -9,7 +9,7 @@ registerPage('relation', async (c) => {
                 <label>${t('sys.business')}：<select id="relBU" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
                     <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
                 <label>${t('relation.th.type')}：<select id="relType" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
-                    <option value="客戶">${t('relation.type.customer')}</option><option value="供應商">${t('relation.type.supplier')}</option><option value="關係人">${t('relation.type.related')}</option></select></label>
+                    <option value="客户">${t('relation.type.customer')}</option><option value="供应商">${t('relation.type.supplier')}</option><option value="关系人">${t('relation.type.related')}</option></select></label>
                 <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
                     <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>` : ''}
@@ -41,7 +41,7 @@ async function loadRelation() {
                 <tr>
                     <td>${r.bu_no}</td>
                     <td><span style="padding:2px 8px;border-radius:10px;font-size:0.8em;background:${
-                        r.relation_type==='客戶' ? '#e8f6f3' : r.relation_type==='供應商' ? '#fef5e7' : '#f4ecf7'
+                        r.relation_type==='客户' ? '#e8f6f3' : r.relation_type==='供应商' ? '#fef5e7' : '#f4ecf7'
                     };color:#333">${r.relation_type||'-'}</span></td>
                     <td>${r.relation_id}</td><td>${r.relation_name||'-'}</td>
                     <td>${r.contact_person||'-'}</td><td>${r.contact_phone||'-'}</td>
@@ -63,7 +63,7 @@ const RelationForm = {
             API.get(`/api/relation/${uid}`).then(res => this._render(res.data))
                .catch(e => UI.toast(e.message,'error'));
         } else {
-            this._render({ bu_no: State.bu_no, inuse_flag: 'USE', relation_type: '供應商' });
+            this._render({ bu_no: State.bu_no, inuse_flag: 'USE', relation_type: '供应商' });
         }
     },
     _render(d) {
@@ -73,7 +73,7 @@ const RelationForm = {
                 <div class="form-group"><label>${t('sys.business')}</label>
                     <select id="rf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
                 <div class="form-group"><label>${t('relation.th.type')}</label>
-                    <select id="rf_type"><option>客戶</option><option>供應商</option><option>關係人</option></select></div>
+                    <select id="rf_type"><option>客户</option><option>供应商</option><option>关系人</option></select></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
                     <select id="rf_flag"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
             </div>

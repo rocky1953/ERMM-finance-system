@@ -1,4 +1,4 @@
-﻿/**
+/**
  * AR/AP 彙總路由
  */
 const express = require('express');
@@ -70,7 +70,7 @@ router.post('/', async (req, res) => {
         const d = req.body;
         const { bu_no, YYYY_MM } = d;
         if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 和 YYYY_MM');
-        const YYYY = YYYY_MM.split('/')[0];
+        const YYYY = YYYY_MM.split('-')[0];
         await pool.execute(`
             INSERT INTO ermm_arap_detail (bu_no, YYYY, YYYY_MM, AR_amt, AP_amt, AR_ageing, AP_ageing, update_time)
             VALUES (?,?,?,?,?,?,?,NOW())

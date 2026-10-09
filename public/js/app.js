@@ -2,34 +2,34 @@
  * ERMM 前端核心框架
  */
 
-// ===== 登入驗證模組 =====
+// ===== 登入验证模组 =====
 const TOKEN_KEY = 'ermm_token';
 const USER_KEY = 'ermm_user';
 const Auth = {
     getToken() { return localStorage.getItem(TOKEN_KEY) || ''; },
     isLoggedIn() { return !!this.getToken(); },
 
-    // 讀取登入 session（user_id / user_name / admin）
+    // 读取登入 session（user_id / user_name / admin）
     getUser() {
         try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }
         catch (e) { return null; }
     },
-    // 簡繁體歸一化（避免 DB 中簡繁體混雜導致權限漏判）
+    // 简繁体归一化（避免 DB 中简繁体混杂导致权限漏判）
     _normRole(s) {
         return String(s || '')
-            .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
-            .replace(/管理员/g, '管理員');
+            .replace(/部门/g, '部门').replace(/经理/g, '经理').replace(/高阶/g, '高阶')
+            .replace(/管理员/g, '管理员');
     },
-    // 是否為管理員（cams_xuser.admin === '管理員'，兼容簡體）
+    // 是否为管理员（cams_xuser.admin === '管理员'，兼容简体）
     isAdmin() {
         const u = this.getUser();
-        return !!(u && this._normRole(u.admin) === '管理員');
+        return !!(u && this._normRole(u.admin) === '管理员');
     },
-    // 是否為部門主管或高階主管（可操作 CRUD 功能模組，兼容簡繁體）
+    // 是否为部门主管或高阶主管（可操作 CRUD 功能模组，兼容简繁体）
     isManager() {
         const u = this.getUser();
         const t = this._normRole(u && u.user_type);
-        return !!(u && (t === '部門主管' || t === '高階主管'));
+        return !!(u && (t === '部门主管' || t === '高阶主管'));
     },
 
     showLogin() {
@@ -65,14 +65,14 @@ const Auth = {
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-            throw new Error(data.message || '登入失敗');
+            throw new Error(data.message || '登入失败');
         }
         localStorage.setItem(TOKEN_KEY, data.data.token);
         localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
         this.enterApp(data.data.user);
     },
 
-    // 收到 401 時呼叫：清除過期 token 並回到登入畫面
+    // 收到 401 时呼叫：清除过期 token 并回到登入画面
     handle401() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
@@ -82,20 +82,20 @@ const Auth = {
     async logout() {
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
-        } catch (e) { /* 無狀態登出，失敗也照樣清除本地狀態 */ }
+        } catch (e) { /* 无状态登出，失败也照样清除本地状态 */ }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
         this.showLogin();
     },
 
-    // 啟動時檢查既有 token 是否仍有效
+    // 启动时检查既有 token 是否仍有效
     async init() {
         this.renderUser();
         if (!this.getToken()) { this.showLogin(); return; }
         try {
             const res = await fetch('/api/auth/me');
             if (!res.ok) throw new Error('token invalid');
-            // 以資料庫最新資料同步本地 session（含 admin 身分）
+            // 以数据库最新资料同步本地 session（含 admin 身份）
             const j = await res.json();
             if (j && j.success && j.data) {
                 localStorage.setItem(USER_KEY, JSON.stringify(j.data));
@@ -109,7 +109,7 @@ const Auth = {
     }
 };
 
-// ===== 全域 fetch 注入 JWT（涵蓋所有頁面直接呼叫 fetch 的場景）=====
+// ===== 全域 fetch 注入 JWT（涵盖所有页面直接呼叫 fetch 的场景）=====
 (function () {
     const origFetch = window.fetch.bind(window);
     window.fetch = function (input, init = {}) {
@@ -123,7 +123,7 @@ const Auth = {
             }
         }
         return origFetch(input, init).then(res => {
-            // 登入請求本身的 401 交給表單處理，其餘 401 → 登入逾時
+            // 登入请求本身的 401 交给表单处理，其余 401 → 登入逾时
             if (res.status === 401 && isApi && url.indexOf('/api/auth/login') === -1) {
                 Auth.handle401();
             }
@@ -148,9 +148,9 @@ const API = (() => {
         put: (u, b) => req('PUT', u, b),
         del: (u) => req('DELETE', u),
         download: async (u) => {
-            // 帶 JWT 的檔案下載（fetch blob），避免 window.open 無法帶 Authorization
+            // 带 JWT 的档案下载（fetch blob），避免 window.open 无法带 Authorization
             const res = await fetch(u);
-            if (res.status === 401) { Auth.handle401(); throw new Error('未登入或登入已過期'); }
+            if (res.status === 401) { Auth.handle401(); throw new Error('未登入或登入已过期'); }
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             let filename = u.split('/').pop() || 'download';
             const cd = res.headers.get('Content-Disposition') || '';
@@ -197,10 +197,10 @@ const UI = {
     }
 };
 
-// ===== 異常診斷（點擊 KPI 紅燈展開 Top3 原因）=====
+// ===== 异常诊断（点击 KPI 红灯展开 Top3 原因）=====
 const Diagnosis = {
     async open(kpi_id) {
-        UI.modal('🔍 異常自動診斷', '<div style="text-align:center;padding:30px;">分析中...</div>', '');
+        UI.modal('🔍 异常自动诊断', '<div style="text-align:center;padding:30px;">分析中...</div>', '');
         try {
             const res = await API.get(`/api/diagnosis/kpi?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}&kpi_id=${kpi_id}`);
             const d = res.data;
@@ -210,30 +210,30 @@ const Diagnosis = {
                     <div style="width:30px;height:30px;border-radius:50%;background:${r.rank===1?'#e74c3c':r.rank===2?'#f39c12':'#3498db'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${r.rank}</div>
                     <div style="flex:1;">
                         <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${r.dim}：${r.desc}</div>
-                        <div style="font-size:12px;color:#555;margin-bottom:4px;">📊 影響：${r.impact}</div>
+                        <div style="font-size:12px;color:#555;margin-bottom:4px;">📊 影响：${r.impact}</div>
                         <div style="font-size:12px;color:#2980b9;background:#eaf2f8;padding:5px 8px;border-radius:5px;">💡 ${r.suggestion}</div>
                     </div>
                 </div>
             `).join('');
-            UI.modal(`🔍 ${d.kpi_name} 異常診斷`, `
+            UI.modal(`🔍 ${d.kpi_name} 异常诊断`, `
                 <div style="margin-bottom:16px;">
-                    <div style="font-size:12px;color:#7f8c8d;">當期值</div>
+                    <div style="font-size:12px;color:#7f8c8d;">当期值</div>
                     <div style="font-size:28px;font-weight:800;color:${lvlColor};">${d.current_value}${d.unit} 
-                        <span style="font-size:14px;color:#95a5a6;">／ 門檻 ${d.threshold}${d.unit}</span>
+                        <span style="font-size:14px;color:#95a5a6;">／ 门槛 ${d.threshold}${d.unit}</span>
                     </div>
-                    ${d.change !== null ? `<div style="font-size:13px;color:${d.change>=0?'#27ae60':'#e74c3c'};">較上期 ${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}${d.unit}</div>` : ''}
+                    ${d.change !== null ? `<div style="font-size:13px;color:${d.change>=0?'#27ae60':'#e74c3c'};">较上期 ${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}${d.unit}</div>` : ''}
                 </div>
                 <div style="font-weight:700;margin-bottom:10px;">Top 3 拖累原因</div>
                 ${reasonsHtml}
-            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">關閉</button>
-                <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">建立行動任務 →</button>`);
+            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
+                <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">建立行动任务 →</button>`);
         } catch (e) {
-            UI.modal('診斷失敗', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">關閉</button>');
+            UI.modal('诊断失败', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>');
         }
     }
 };
 
-// ===== 頁面管理 =====
+// ===== 页面管理 =====
 const pages = {};
 function registerPage(id, fn) { pages[id] = fn; }
 
@@ -255,5 +255,5 @@ async function navigate(pageId, params = {}) {
 // ===== 全局状态 =====
 const State = {
     bu_no: 'HM',
-    YYYY_MM: new Date().getFullYear() + '/' + String(new Date().getMonth() + 1).padStart(2, '0')
+    YYYY_MM: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0')
 };

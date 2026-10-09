@@ -1,5 +1,5 @@
 /**
- * 三大財務報表頁面
+ * 三大财务报表页面
  */
 registerPage('report', async (c) => {
     c.innerHTML = `
@@ -125,7 +125,7 @@ async function loadReport() {
 async function exportReport() {
     const type = currentReportTab === 'bs' ? 'balance-sheet' : currentReportTab === 'pl' ? 'pl-table' : 'cash-flow';
     const url = `/api/report/export/${type}.xlsx?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}`;
-    // 改用帶 Authorization 標頭的 fetch 下載（window.open 無法帶 JWT，會被 401 擋下）
+    // 改用带 Authorization 标头的 fetch 下载（window.open 无法带 JWT，会被 401 挡下）
     try {
         const res = await fetch(url);
         if (res.status === 401) { Auth.handle401(); return; }
@@ -133,7 +133,7 @@ async function exportReport() {
             const j = await res.json().catch(() => null);
             throw new Error(j?.message || `HTTP ${res.status}`);
         }
-        // 優先使用伺服器給的檔名，否則用規則組一個
+        // 优先使用服务器给的档名，否则用规则组一个
         let filename = `${type}_${State.bu_no}_${State.YYYY_MM.replace('/', '')}.xlsx`;
         const cd = res.headers.get('Content-Disposition') || '';
         const m = /filename\*?=(?:UTF-8'')?["']?([^;"']+)/i.exec(cd);
@@ -149,6 +149,6 @@ async function exportReport() {
         a.remove();
         URL.revokeObjectURL(objUrl);
     } catch (e) {
-        UI.toast((typeof t === 'function' ? t('export_fail') : '匯出失敗') + ': ' + e.message, 'error');
+        UI.toast((typeof t === 'function' ? t('export_fail') : '汇出失败') + ': ' + e.message, 'error');
     }
 }

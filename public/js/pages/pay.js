@@ -1,5 +1,5 @@
 /**
- * 付款明細頁面
+ * 付款明细页面
  */
 registerPage('pay', async (c) => {
     const _mgr = Auth.isManager();
@@ -60,7 +60,7 @@ const PayForm = {
         const body = {
             bu_no: State.bu_no,
             pay_date: d,
-            YYYY_MM: d.substring(0,7).replace('-','/'),
+            YYYY_MM: d.substring(0,7),
             payee: document.getElementById('pf_payee').value,
             amt: Number(document.getElementById('pf_amt').value) || 0,
             currency: document.getElementById('pf_cur').value,

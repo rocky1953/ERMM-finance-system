@@ -67,6 +67,8 @@ const aiqaRoutes = require('./routes/aiqa');
 const scenarioRoutes = require('./routes/scenario');
 const llmRoutes = require('./routes/llm');
 const dailyReportRoutes = require('./routes/dailyReport');
+const financeRoutes = require('./routes/finance');
+const integrationRoutes = require('./routes/integration');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -113,6 +115,8 @@ app.use('/api/aiqa', aiqaRoutes);
 app.use('/api/scenario', scenarioRoutes);
 app.use('/api/llm', llmRoutes);
 app.use('/api/daily-report', dailyReportRoutes);
+app.use('/api/finance', financeRoutes);
+app.use('/api/integration', integrationRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {
@@ -184,6 +188,12 @@ async function start() {
         console.log(`\n🚀 ERMM 財務模組 API 已啟動: http://localhost:${PORT}`);
         console.log(`📖 API 文件: http://localhost:${PORT}/api/health`);
     });
+
+    // M3-A：日報異常告警排程（測試環境不啟動）
+    if (process.env.NODE_ENV !== 'test') {
+        const { startScheduler } = require('./scheduler');
+        startScheduler();
+    }
 }
 
 // 只在直接執行時啟動 (測試時 require 不會觸發)

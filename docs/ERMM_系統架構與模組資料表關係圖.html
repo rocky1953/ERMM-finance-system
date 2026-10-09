@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 财务模组 · 系统架构图与模块-资料表关系图</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --primary: #1e3a5f;
+    --accent: #2563eb;
+    --bg: #f5f7fa;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    color: #fff;
+    padding: 32px 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px rgba(30, 58, 95, 0.15);
+  }
+  header h1 { margin: 0 0 8px 0; font-size: 26px; }
+  header p { margin: 0; opacity: 0.85; font-size: 14px; }
+  h2 {
+    color: var(--primary);
+    border-left: 5px solid var(--accent);
+    padding-left: 12px;
+    margin-top: 40px;
+    font-size: 22px;
+  }
+  h3 {
+    color: var(--primary);
+    margin-top: 32px;
+    font-size: 18px;
+  }
+  h4 { color: var(--accent); margin-top: 20px; font-size: 15px; }
+  blockquote {
+    background: #eff6ff;
+    border-left: 4px solid var(--accent);
+    padding: 10px 16px;
+    margin: 16px 0;
+    border-radius: 0 6px 6px 0;
+    color: #1e40af;
+  }
+  blockquote p { margin: 4px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  thead { background: var(--primary); color: #fff; }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th { font-weight: 600; white-space: nowrap; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  tbody tr:nth-child(even):hover { background: #f1f5f9; }
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  code {
+    background: #e2e8f0;
+    color: #c2410c;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: "Consolas", monospace;
+    font-size: 0.9em;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  .mermaid {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin: 16px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  .tag {
+    display: inline-block;
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .warn {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 10px 16px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    color: #92400e;
+  }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+  .toc h3 { margin-top: 0; }
+  .toc ul { margin: 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>ERMM 财务模组 · 系统架构图与模块-资料表关系图</h1>
+  <p>基于代码事实抽取（routes/*.js、database/add_*.js、public/index.html 菜单、public/js/pages/*.js）｜生成日期：2026-10-06｜更新日期：2026-10-09（补充第三方资料整合模块）</p>
+</header>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ul>
+    <li><a href="#s1">一、系统整体架构图（分层架构）</a></li>
+    <li><a href="#s2">二、模块 → 路由 → 前端页 → 资料表 关系总表</a></li>
+    <li><a href="#s3">三、核心模块资料表关系图（ER 图）</a>
+      <ul>
+        <li>3.1 工作日报表模块</li>
+        <li>3.2 预警与预测模块（M3）</li>
+        <li>3.3 财务入账/报税/勾稽模块（RUID 全链路）</li>
+        <li>3.4 报税明细表模块（年度汇总 + CSV 导出）</li>
+        <li>3.5 现金流模块</li>
+        <li>3.6 预算/管理会计/合并模块</li>
+        <li>3.7 业务单据模块（PO/SO/DN）</li>
+        <li>3.8 第三方资料整合模块（Excel 导入 / SQL 直连 · Online + Batch）</li>
+      </ul>
+    </li>
+    <li><a href="#s4">四、RUID 全链路追溯图（财务核心）</a></li>
+    <li><a href="#s5">五、跨模块共用资料表</a></li>
+    <li><a href="#s6">六、技术栈汇总</a></li>
+    <li><a href="#s7">七、资料表清单（共 65+ 张）</a></li>
+  </ul>
+</div>
+
+<!-- ============ 一、系统整体架构图 ============ -->
+<h2 id="s1">一、系统整体架构图（分层架构）</h2>
+<div class="mermaid">
+flowchart TB
+    subgraph CLIENT["① 客户端层"]
+        Browser["浏览器 (Chrome/Edge)<br/>HTTP + JWT"]
+    end
+
+    subgraph FRONTEND["② 前端 SPA 层 (public/)"]
+        Index["index.html 入口<br/>+ 侧边栏菜单 (43 页)"]
+        App["app.js<br/>路由/导航/弹窗/通用 UI"]
+        I18n["i18n.js<br/>简/繁/英 三语"]
+        Pages["pages/*.js (40 个功能页)<br/>dashboard / dailyReport / finance / integration / ..."]
+        Chart["Chart.js 图表引擎"]
+    end
+
+    subgraph GATEWAY["③ API 网关层 (app.js)"]
+        Auth["/api/auth<br/>登录/登出/JWT"]
+        AuthReq["authRequired 中间件<br/>JWT 校验 + 权限"]
+        Static["静态资源服务<br/>public/"]
+    end
+
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 41 个路由)"]
+        direction LR
+        S1["📊 绩效闭环<br/>dailyReport"]
+        S2["🔔 预警引擎<br/>alert"]
+        S3["📈 趋势预测<br/>forecast"]
+        S4["📒 财务核心<br/>finance"]
+        S5["💰 现金预测<br/>cashForecast"]
+        S6["🧾 财务核算<br/>cash/invoice/pay/check/bank/account"]
+        S7["📋 预算/管会/合并<br/>budget/mgmtAccounting/consolidation"]
+        S8["🤖 AI 能力<br/>aiqa/llm/diagnosis"]
+        S9["📦 业务单据<br/>po/so/dn/tempPo"]
+        S10["⚙️ 系统支撑<br/>system/user/batch/kpi/action"]
+        S11["🔌 第三方资料整合<br/>integration"]
+    end
+
+    subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
+        direction TB
+        CoreT["核心交易表<br/>daily_report / fin_voucher / fin_tax_return / ..."]
+        AuditT["审计与配置表<br/>daily_report_audit_log / alert_rule / llm_config / ..."]
+        BaseT["基础资料表<br/>cams_xuser / mgm_account_details / mgmt_dept / ..."]
+        Ledger["fin_ruid_ledger<br/>RUID 全链路主台账"]
+        IntgT["第三方整合表<br/>intg_source / intg_job / intg_log"]
+    end
+
+    subgraph EXTERNAL["⑥ 外部/支撑"]
+        LLM["LLM 服务<br/>(AI 问答/诊断)"]
+        Mailer["邮件服务<br/>nodemailer 告警通知"]
+        Scheduler["node-cron 排程器<br/>工作日 09:30/16:30 告警扫描"]
+        ThirdPartyDB["第三方数据库<br/>(MySQL 连线池缓存)"]
+        ExcelFile["Excel 文件<br/>(ExcelJS 解析/导入)"]
+        IntgSched["整合排程器<br/>(setInterval 分钟级)"]
+    end
+
+    Browser --> Index
+    Index --> App --> Pages --> Chart
+    App --> Auth --> AuthReq
+    AuthReq --> S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11
+    S1 --> CoreT & AuditT
+    S2 --> AuditT & Scheduler --> Mailer
+    S3 --> CoreT
+    S4 --> Ledger & CoreT
+    S5 --> CoreT
+    S6 --> CoreT
+    S7 --> CoreT
+    S8 --> LLM & CoreT
+    S9 --> CoreT
+    S10 --> BaseT & AuditT
+    S11 --> IntgT & CoreT
+    S11 --> ThirdPartyDB & ExcelFile & IntgSched
+    Ledger --> CoreT
+
+    style CLIENT fill:#e3f2fd,stroke:#1976d2
+    style FRONTEND fill:#e8f5e9,stroke:#388e3c
+    style GATEWAY fill:#fff3e0,stroke:#f57c00
+    style SERVICE fill:#fce4ec,stroke:#c2185b
+    style DATA fill:#f3e5f5,stroke:#7b1fa2
+    style EXTERNAL fill:#efebe9,stroke:#5d4037
+</div>
+
+<hr>
+
+<!-- ============ 二、模块关系总表 ============ -->
+<h2 id="s2">二、模块 → 路由 → 前端页 → 资料表 关系总表</h2>
+<blockquote>每张表归属于「主要操作模块」；跨模块共用表在说明列标注。</blockquote>
+
+<table>
+<thead><tr><th>#</th><th>功能模块</th><th>API 路由</th><th>前端页面</th><th>主要资料表</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><b>认证授权</b></td><td><code>/api/auth</code></td><td>login</td><td><code>cams_xuser</code> <code>login_user_record</code> <code>leader_user</code></td><td>JWT 签发、登录日志</td></tr>
+<tr><td>2</td><td><b>系统管理</b></td><td><code>/api/system</code></td><td>system</td><td><code>cams_system_codes</code> <code>schema_migrations</code></td><td>系统码、迁移版本</td></tr>
+<tr><td>3</td><td><b>用户管理</b></td><td><code>/api/user</code></td><td>user</td><td><code>cams_xuser</code></td><td>用户/部门/角色维护</td></tr>
+<tr><td>4</td><td><b>工作日报表</b></td><td><code>/api/daily-report</code></td><td>dailyReport</td><td><code>daily_report</code> <code>daily_report_detail</code> <code>daily_report_lock</code> <code>daily_report_audit_log</code> <code>daily_report_target</code> <code>daily_report_okr</code> <code>daily_report_okr_kr</code> <code>daily_report_erp_xref</code> <code>daily_report_mgmt_report</code> <code>daily_report_annual_review</code> <code>cams_xuser</code></td><td><span class="tag">核心模块</span> 日报主表+10 张支撑表</td></tr>
+<tr><td>5</td><td><b>未完成分析</b></td><td><code>/api/daily-report</code></td><td>dailyReportUnfinished</td><td><code>daily_report</code> <code>daily_report_detail</code></td><td>基于日报明细统计延误/未解</td></tr>
+<tr><td>6</td><td><b>预警通知</b></td><td><code>/api/alert</code></td><td>alerts</td><td><code>alert_rule</code> <code>alert_log</code></td><td>5 条内置告警规则 + 告警记录</td></tr>
+<tr><td>7</td><td><b>趋势预测</b></td><td><code>/api/forecast</code></td><td>trend</td><td><code>daily_report_forecast_log</code> <code>daily_report</code></td><td>WMA+LR 混合预测，结果落库</td></tr>
+<tr><td>8</td><td><b>行动追踪</b></td><td><code>/api/action</code></td><td>actions</td><td><code>action_task</code></td><td>行动项追踪</td></tr>
+<tr><td>9</td><td><b>财务入账/报税/勾稽</b></td><td><code>/api/finance</code></td><td>finance</td><td><code>fin_ruid_ledger</code> <code>fin_account_subject</code> <code>fin_voucher</code> <code>fin_voucher_entry</code> <code>fin_tax_return</code> <code>fin_tax_return_item</code> <code>fin_reconciliation</code></td><td><span class="tag">RUID 全链路</span> 7 张表</td></tr>
+<tr><td>9a</td><td><b>报税明细表（年度汇总+导出）</b></td><td><code>/api/finance/tax-detail</code></td><td>finance（报税 Tab）</td><td><code>fin_tax_return</code> <code>fin_tax_return_item</code></td><td><span class="tag">只读聚合</span> JOIN 报税主表+明细，年度汇总，支持 CSV 导出，无新增表</td></tr>
+<tr><td>10</td><td><b>现金流量预测</b></td><td><code>/api/cash-forecast</code></td><td>cashForecast</td><td><code>mgm_casher_details</code> <code>mgm_cash_safe_level</code></td><td>13 周预测 + 安全水位</td></tr>
+<tr><td>11</td><td><b>现金日记账</b></td><td><code>/api/cash</code></td><td>cash</td><td><code>mgm_casher_details</code></td><td>与现金预测共用 casher 表</td></tr>
+<tr><td>12</td><td><b>应收应付</b></td><td><code>/api/arap</code></td><td>arap</td><td><code>ermm_arap_detail</code> <code>ermm_erp_so</code> <code>ermm_erp_po</code></td><td>关联 SO/PO 自动产生 AR/AP</td></tr>
+<tr><td>13</td><td><b>发票管理</b></td><td><code>/api/invoice</code></td><td>invoice</td><td><code>mgm_invoice_details</code></td><td>销项/进项发票</td></tr>
+<tr><td>14</td><td><b>付款明细</b></td><td><code>/api/pay</code></td><td>pay</td><td><code>pay_detail</code></td><td>付款流水</td></tr>
+<tr><td>15</td><td><b>票据管理</b></td><td><code>/api/check</code></td><td>check</td><td><code>check_detail</code></td><td>应收/应付票据</td></tr>
+<tr><td>16</td><td><b>银行贷款</b></td><td><code>/api/bank</code></td><td>bank</td><td><code>mgm_bank_loan_details</code></td><td>贷款本金/利息</td></tr>
+<tr><td>17</td><td><b>会计科目</b></td><td><code>/api/account</code></td><td>account</td><td><code>mgm_account_details</code> <code>MGM_account_details</code></td><td>科目余额（与 finance.fin_account_subject 互补）</td></tr>
+<tr><td>18</td><td><b>预算编制</b></td><td><code>/api/budget</code></td><td>budget</td><td><code>budget</code> <code>budget_detail</code></td><td>预算主表+明细</td></tr>
+<tr><td>19</td><td><b>管理会计</b></td><td><code>/api/mgmt-accounting</code></td><td>mgmtAccounting</td><td><code>mgmt_dept</code> <code>mgmt_dept_pl</code></td><td>部门损益</td></tr>
+<tr><td>20</td><td><b>合并报表</b></td><td><code>/api/consolidation</code></td><td>consolidation</td><td><code>mgm_finance_summary</code> <code>mgmt_dept_pl</code></td><td>多 BU 合并</td></tr>
+<tr><td>21</td><td><b>财务摘要</b></td><td><code>/api/summary</code></td><td>summary</td><td><code>mgm_finance_summary</code></td><td>月度财务摘要</td></tr>
+<tr><td>22</td><td><b>三大报表</b></td><td><code>/api/report</code></td><td>report</td><td><code>mgm_finance_summary</code></td><td>资产负债/利润/现金流量</td></tr>
+<tr><td>23</td><td><b>风险预警</b></td><td><code>/api/risk</code></td><td>risk</td><td><code>mgm_finance_summary</code> <code>ermm_arap_detail</code></td><td>财务风险指标</td></tr>
+<tr><td>24</td><td><b>财务预测</b></td><td><code>/api/forecast</code></td><td>forecast</td><td><code>forecast_detail</code></td><td>财务数据预测</td></tr>
+<tr><td>25</td><td><b>年度趋势</b></td><td><code>/api/forecast</code></td><td>trend</td><td><code>mgm_finance_summary</code> <code>forecast_detail</code></td><td>年度趋势图表</td></tr>
+<tr><td>26</td><td><b>月度报表</b></td><td><code>/api/monthly</code></td><td>monthly</td><td><code>monthly_items</code></td><td>月度项目</td></tr>
+<tr><td>27</td><td><b>损益平衡</b></td><td><code>/api/bep</code></td><td>bep</td><td><code>mgm_bep_threshold</code></td><td>BEP 阈值</td></tr>
+<tr><td>28</td><td><b>AI 问答</b></td><td><code>/api/aiqa</code></td><td>aiqa</td><td><code>ermm_ai_records</code> <code>llm_config</code> <code>mgm_finance_summary</code> <code>budget_detail</code> <code>mgmt_dept_pl</code></td><td>AI 对话记录+配置</td></tr>
+<tr><td>29</td><td><b>情景模拟</b></td><td><code>/api/scenario</code></td><td>scenario</td><td><code>budget_detail</code> <code>mgm_finance_summary</code></td><td>多情景测算</td></tr>
+<tr><td>30</td><td><b>异常诊断</b></td><td><code>/api/diagnosis</code></td><td>(内嵌)</td><td><code>mgm_finance_summary</code> <code>mgm_kpi_desc</code></td><td>KPI 异常自动诊断</td></tr>
+<tr><td>31</td><td><b>采购单 PO</b></td><td><code>/api/po</code></td><td>po</td><td><code>ermm_erp_po</code></td><td>采购订单</td></tr>
+<tr><td>32</td><td><b>销售订单 SO</b></td><td><code>/api/so</code></td><td>so</td><td><code>ermm_erp_so</code></td><td>销售订单</td></tr>
+<tr><td>33</td><td><b>送货单 DN</b></td><td><code>/api/dn</code></td><td>dn</td><td><code>ERMM_erp_so_DN</code> <code>ermm_erp_so</code></td><td>送货通知</td></tr>
+<tr><td>34</td><td><b>PO 暂存</b></td><td><code>/api/temp-po</code></td><td>tempPo</td><td><code>ermm_temp_po</code></td><td>PO 暂存草稿</td></tr>
+<tr><td>35</td><td><b>分公司</b></td><td><code>/api/branch</code></td><td>branch</td><td><code>branch_detail</code></td><td>分公司资料</td></tr>
+<tr><td>36</td><td><b>往来关系</b></td><td><code>/api/relation</code></td><td>relation</td><td><code>relation_detail</code></td><td>客户/供应商关系</td></tr>
+<tr><td>37</td><td><b>批次管控</b></td><td><code>/api/batch</code> <code>/api/batch-ctrl</code></td><td>batch</td><td><code>cams_batch_control</code></td><td>批次控制</td></tr>
+<tr><td>38</td><td><b>KPI 管理</b></td><td><code>/api/kpi</code> <code>/api/kpi-query</code></td><td>kpi</td><td><code>mgm_kpi_desc</code> <code>mgm_finance_summary</code></td><td>KPI 定义与查询</td></tr>
+<tr><td>39</td><td><b>多维下钻</b></td><td><code>/api/kpi-query</code></td><td>drilldown</td><td><code>mgm_finance_summary</code> <code>ermm_erp_so</code> <code>mgm_invoice_details</code></td><td>多维度数据下钻</td></tr>
+<tr><td>40</td><td><b>存货管理</b></td><td><code>/api/xitems</code></td><td>xitems</td><td><code>e2_xitems_daily_status</code> <code>e2_xitems_daily_status_chart</code></td><td>存货日状态</td></tr>
+<tr><td>41</td><td><b>仪表板</b></td><td><code>/api/summary</code> <code>/api/daily-report</code></td><td>dashboard</td><td>跨模块聚合</td><td>首页汇总（日报+财务）</td></tr>
+<tr><td>42</td><td><b>第三方资料整合</b></td><td><code>/api/integration</code></td><td>integration</td><td><code>intg_source</code> <code>intg_job</code> <code>intg_log</code> + 任意本地目标表</td><td><span class="tag">双通道</span> Excel 导入 / SQL 直连第三方库；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<!-- ============ 三、核心模块 ER 图 ============ -->
+<h2 id="s3">三、核心模块资料表关系图（ER 图）</h2>
+
+<h3>3.1 工作日报表模块（P0/P1 核心）</h3>
+<div class="mermaid">
+erDiagram
+    cams_xuser ||--o{ daily_report : "提交日报"
+    daily_report ||--o{ daily_report_detail : "1:N 工时明细"
+    daily_report ||--o{ daily_report_lock : "1:1 签核锁定"
+    daily_report ||--o{ daily_report_audit_log : "1:N 审计日志"
+    daily_report ||--o{ daily_report_erp_xref : "1:N ERP 对照"
+    cams_xuser ||--o{ daily_report_target : "按月设定目标"
+    cams_xuser ||--o{ daily_report_okr : "按月 OKR"
+    daily_report_okr ||--o{ daily_report_okr_kr : "1:N KR"
+    daily_report ||--o{ daily_report_mgmt_report : "1:N 管理报表"
+    cams_xuser ||--o{ daily_report_annual_review : "年度评鉴"
+
+    daily_report {
+        bigint id PK
+        varchar bu_no
+        varchar user_id FK
+        varchar YYYY_MM
+        date work_date
+        varchar ruid UK
+        varchar depart_id
+        text projects
+        varchar status
+    }
+    daily_report_detail {
+        bigint id PK
+        varchar ruid FK
+        time from_time
+        time to_time
+        varchar items_id
+        varchar client_id
+        decimal work_hours
+        varchar work_text
+    }
+    daily_report_lock {
+        bigint id PK
+        varchar bu_no
+        varchar user_id FK
+        varchar YYYY_MM
+        tinyint locked
+        varchar locked_by
+        datetime locked_time
+    }
+    daily_report_audit_log {
+        bigint id PK
+        varchar action
+        varchar operator_id FK
+        varchar owner_id
+        varchar ip
+        json old_value
+        json new_value
+        datetime create_time
+    }
+    daily_report_target {
+        bigint id PK
+        varchar bu_no
+        varchar user_id FK
+        varchar YYYY_MM
+        decimal target_hours
+        int delay_limit
+        int unresolved_limit
+        decimal work_ratio_min
+    }
+</div>
+
+<hr>
+
+<h3>3.2 预警与预测模块（M3）</h3>
+<div class="mermaid">
+erDiagram
+    alert_rule ||--o{ alert_log : "1:N 触发记录"
+    alert_rule }o--|| cams_xuser : "责任人"
+    alert_log }o--|| cams_xuser : "被告警人"
+    cams_xuser ||--o{ daily_report_forecast_log : "预测记录"
+
+    alert_rule {
+        int uid PK
+        varchar alert_domain
+        varchar rule_code
+        varchar rule_name
+        decimal threshold
+        int cooldown_hours
+        tinyint enabled
+    }
+    alert_log {
+        bigint id PK
+        varchar bu_no
+        varchar user_id FK
+        varchar rule_code FK
+        varchar alert_level
+        varchar message
+        tinyint is_read
+        datetime create_time
+    }
+    daily_report_forecast_log {
+        bigint id PK
+        varchar bu_no
+        varchar user_id FK
+        varchar target_month
+        varchar metric
+        decimal forecast_value
+        decimal lower_80
+        decimal upper_80
+        varchar risk_level
+        varchar algo
+    }
+</div>
+
+<hr>
+
+<h3>3.3 财务入账 / 报税 / 勾稽模块（RUID 全链路）</h3>
+<blockquote><code>fin_ruid_ledger</code> 为全链路中枢，凭证、报税、勾稽均通过 RUID 回指主台账。</blockquote>
+<div class="mermaid">
+erDiagram
+    fin_account_subject ||--o{ fin_voucher_entry : "科目被引用"
+    fin_voucher ||--o{ fin_voucher_entry : "1:N 分录"
+    fin_voucher ||--|| fin_ruid_ledger : "RUID 主台账"
+    fin_tax_return ||--o{ fin_tax_return_item : "1:N 申报明细"
+    fin_tax_return ||--|| fin_ruid_ledger : "RUID 主台账"
+    fin_reconciliation }o--|| fin_voucher : "入账 RUID"
+    fin_reconciliation }o--o| fin_tax_return : "报税 RUID"
+
+    fin_ruid_ledger {
+        varchar ruid PK
+        varchar bu_no
+        varchar biz_type
+        varchar source_id
+        decimal amount
+        varchar remark
+    }
+    fin_voucher {
+        bigint voucher_id PK
+        varchar bu_no
+        varchar ruid FK
+        varchar voucher_no UK
+        date voucher_date
+        varchar YYYY_MM
+        varchar summary
+        decimal total_debit
+        decimal total_credit
+        varchar status
+    }
+    fin_voucher_entry {
+        bigint entry_id PK
+        bigint voucher_id FK
+        varchar ruid FK
+        varchar subject_code FK
+        decimal debit
+        decimal credit
+        varchar summary
+    }
+    fin_tax_return {
+        bigint return_id PK
+        varchar bu_no
+        varchar ruid FK
+        varchar tax_type
+        varchar tax_period
+        decimal taxable_amount
+        decimal tax_amount
+        varchar status
+        varchar receipt_no
+    }
+    fin_tax_return_item {
+        bigint item_id PK
+        bigint return_id FK
+        varchar ruid FK
+        varchar item_name
+        decimal taxable_amount
+        decimal tax_rate
+        decimal tax_amount
+    }
+    fin_reconciliation {
+        bigint recon_id PK
+        varchar bu_no
+        varchar period
+        varchar voucher_ruid FK
+        varchar tax_ruid FK
+        decimal voucher_amount
+        decimal tax_amount
+        decimal diff_amount
+        varchar match_status
+        tinyint handled
+    }
+</div>
+
+<hr>
+
+<h3>3.4 报税明细表模块（年度汇总 + CSV 导出）</h3>
+<blockquote><b>模块性质</b>：只读聚合查询 + 前端导出，<b>不新增资料表</b>，复用 <code>fin_tax_return</code> 与 <code>fin_tax_return_item</code>。</blockquote>
+
+<h4>3.4.1 数据流</h4>
+<div class="mermaid">
+flowchart LR
+    U["用户选 BU + 年度"] --> A["GET /api/finance/tax-detail<br/>?bu_no=HM&year=2025"]
+    A --> SQL["SQL: fin_tax_return r<br/>LEFT JOIN fin_tax_return_item i<br/>ON i.return_id = r.return_id<br/>WHERE r.bu_no=? AND r.tax_period LIKE '2025/%'"]
+    SQL --> AGG["后端聚合:<br/>• 按 return_id 去重算各税种应税/税额小计<br/>• 按 tax_type 汇总<br/>• 全年应税合计 / 全年税额合计"]
+    AGG --> UI["前端弹窗:<br/>税种汇总卡片 + 明细表 9 列"]
+    UI --> EXP["📥 导出 CSV<br/>(带 BOM, Excel 不乱码)"]
+</div>
+
+<h4>3.4.2 SQL 关联口径（来自 routes/finance.js L251-318）</h4>
+<pre><code>SELECT r.return_id, r.ruid, r.tax_type, r.tax_period, r.status,
+       r.taxable_amount AS return_taxable, r.tax_amount   AS return_tax,
+       r.receipt_no, r.filed_time,
+       i.item_name, i.subject_code,
+       i.taxable_amount AS item_taxable, i.tax_rate, i.tax_amount AS item_tax
+FROM fin_tax_return r
+LEFT JOIN fin_tax_return_item i ON i.return_id = r.return_id
+WHERE r.bu_no = ? AND r.tax_period LIKE '2025/%'
+ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre>
+
+<table>
+<thead><tr><th>关联项</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>主表</td><td><code>fin_tax_return</code>（r）— 每笔申报 1 行</td></tr>
+<tr><td>子表</td><td><code>fin_tax_return_item</code>（i）— 每笔申报 N 条明细</td></tr>
+<tr><td>JOIN 键</td><td><code>i.return_id = r.return_id</code>（LEFT JOIN，无明细的申报也保留）</td></tr>
+<tr><td>期间过滤</td><td><code>r.tax_period LIKE '{year}/%'</code>（精确到年）</td></tr>
+<tr><td>排序</td><td>期间 → return_id → item_id</td></tr>
+</tbody>
+</table>
+
+<h4>3.4.3 字段级数据字典（API 返回结构）</h4>
+<p><b>顶层返回对象：</b></p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>来源</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>bu_no</code></td><td>string</td><td>请求参数</td><td>公司别</td></tr>
+<tr><td><code>year</code></td><td>string</td><td>请求参数</td><td>年度（如 2025）</td></tr>
+<tr><td><code>generated_at</code></td><td>string(ISO)</td><td>后端 <code>new Date()</code></td><td>生成时间戳</td></tr>
+<tr><td><code>return_count</code></td><td>int</td><td><code>returnsMap.size</code></td><td>该年度申报表笔数（去重）</td></tr>
+<tr><td><code>item_count</code></td><td>int</td><td><code>details.length</code></td><td>明细行数</td></tr>
+<tr><td><code>summary.by_type</code></td><td>object</td><td>按 <code>tax_type</code> 聚合</td><td>各税种小计</td></tr>
+<tr><td><code>summary.total_taxable</code></td><td>decimal</td><td>Σ return_taxable（按 return_id 去重）</td><td>全年应税合计</td></tr>
+<tr><td><code>summary.total_tax</code></td><td>decimal</td><td>Σ return_tax（按 return_id 去重）</td><td>全年税额合计</td></tr>
+</tbody>
+</table>
+
+<p><b><code>summary.by_type.{tax_type}</code> 子对象：</b></p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>计算方式</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>tax_name</code></td><td>string</td><td>映射表 <code>{VAT:'增值税', IT:'企业所得税', ST:'印花税'}</code></td><td>税种中文名</td></tr>
+<tr><td><code>taxable</code></td><td>decimal</td><td>Σ <code>fin_tax_return.taxable_amount</code>（同税种）</td><td>该税种应税合计</td></tr>
+<tr><td><code>tax</code></td><td>decimal</td><td>Σ <code>fin_tax_return.tax_amount</code>（同税种）</td><td>该税种税额合计</td></tr>
+<tr><td><code>count</code></td><td>int</td><td>该税种申报表行数</td><td>笔数</td></tr>
+</tbody>
+</table>
+
+<p><b><code>details[]</code> 数组元素</b>（每行对应一条 <code>fin_tax_return_item</code>，无明细时用主表值兜底）：</p>
+<table>
+<thead><tr><th>字段</th><th>类型</th><th>取值来源</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>return_id</code></td><td>bigint</td><td><code>r.return_id</code></td><td>申报表主键</td></tr>
+<tr><td><code>ruid</code></td><td>varchar</td><td><code>r.ruid</code></td><td>报税 RUID（关联 fin_ruid_ledger）</td></tr>
+<tr><td><code>tax_type</code></td><td>varchar</td><td><code>r.tax_type</code></td><td>税种代码 VAT/IT/ST</td></tr>
+<tr><td><code>tax_name</code></td><td>string</td><td>映射表</td><td>税种中文名</td></tr>
+<tr><td><code>tax_period</code></td><td>varchar</td><td><code>r.tax_period</code></td><td>课税期间（如 2025/01）</td></tr>
+<tr><td><code>status</code></td><td>varchar</td><td><code>r.status</code></td><td>CALCULATED/APPROVED/FILED</td></tr>
+<tr><td><code>receipt_no</code></td><td>varchar</td><td><code>r.receipt_no</code></td><td>税务回执号（FILED 后有值）</td></tr>
+<tr><td><code>filed_time</code></td><td>datetime</td><td><code>r.filed_time</code></td><td>申报时间</td></tr>
+<tr><td><code>subject_code</code></td><td>varchar</td><td><code>i.subject_code</code></td><td>明细科目代码（可空）</td></tr>
+<tr><td><code>item_name</code></td><td>varchar</td><td><code>i.item_name</code></td><td>明细项目名</td></tr>
+<tr><td><code>taxable_amount</code></td><td>decimal</td><td><code>COALESCE(i.taxable_amount, r.taxable_amount, 0)</code></td><td>应税金额（明细优先，无明细取主表）</td></tr>
+<tr><td><code>tax_rate</code></td><td>decimal</td><td><code>i.tax_rate</code></td><td>税率（如 0.13）</td></tr>
+<tr><td><code>tax_amount</code></td><td>decimal</td><td><code>COALESCE(i.tax_amount, r.tax_amount, 0)</code></td><td>税额（明细优先）</td></tr>
+</tbody>
+</table>
+
+<div class="warn"><b>⚠️ 关键计算规则</b>（避免多明细行重复计算全年合计）：<br>
+全年应税/税额合计 = 按 <code>return_id</code> 去重后再 Σ，<b>不是</b>直接 SUM 所有明细行（一张申报若有 N 条明细，直接 SUM 会重复 N 次主表金额）。<br>
+实现：用 <code>Map&lt;return_id, {taxable, tax, type}&gt;</code> 去重后再聚合。</div>
+
+<h4>3.4.4 页面字段映射表（弹窗明细表 9 列）</h4>
+<table>
+<thead><tr><th>页面列</th><th>对应 API 字段</th><th>显示格式</th></tr></thead>
+<tbody>
+<tr><td>期间</td><td><code>tax_period</code></td><td>原值（2025/01）</td></tr>
+<tr><td>税种</td><td><code>tax_name</code></td><td>中文名</td></tr>
+<tr><td>项目</td><td><code>item_name</code></td><td>空值显示 —</td></tr>
+<tr><td>RUID</td><td><code>ruid</code></td><td>11px 灰色字体</td></tr>
+<tr><td>应税金额</td><td><code>taxable_amount</code></td><td><code>UI.fmt(x, 2)</code> 右对齐</td></tr>
+<tr><td>税率</td><td><code>tax_rate</code></td><td><code>(rate×100).toFixed(2) + '%'</code> 右对齐</td></tr>
+<tr><td>税额</td><td><code>tax_amount</code></td><td><code>UI.fmt(x, 2)</code> 右对齐，加粗</td></tr>
+<tr><td>状态</td><td><code>status</code></td><td>彩色徽章（FILED 绿/CALCULATED 蓝/APPROVED 橙）</td></tr>
+<tr><td>回执号</td><td><code>receipt_no</code></td><td>空值显示 —</td></tr>
+</tbody>
+</table>
+
+<h4>3.4.5 CSV 导出格式</h4>
+<table>
+<thead><tr><th>项目</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>文件名</td><td><code>报税明细表_{bu_no}_{year}.csv</code>（如 <code>报税明细表_HM_2025.csv</code>）</td></tr>
+<tr><td>编码</td><td>UTF-8 + BOM（<code>\uFEFF</code>），Excel 打开不乱码</td></tr>
+<tr><td>换行</td><td><code>\r\n</code>（Windows 兼容）</td></tr>
+<tr><td>转义</td><td>含逗号/引号/换行的字段用双引号包裹，内部引号转义为 <code>""</code></td></tr>
+<tr><td>内容结构</td><td>标题行 → 生成时间 → 空行 → 表头（9 列）→ 全部明细行 → 空行 → 各税种小计 → 全年合计</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h3>3.5 现金流模块</h3>
+<div class="mermaid">
+erDiagram
+    mgm_casher_details ||--o| mgm_cash_safe_level : "BU 安全水位"
+
+    mgm_casher_details {
+        bigint uid PK
+        varchar bu_no
+        date vdate
+        varchar num_vman
+        varchar DB_CR
+        decimal sub_amt
+        varchar acct_hint
+    }
+    mgm_cash_safe_level {
+        varchar bu_no PK
+        decimal safe_amount
+        varchar set_by
+        datetime set_time
+        varchar remark
+    }
+</div>
+
+<hr>
+
+<h3>3.6 预算 / 管理会计 / 合并模块</h3>
+<div class="mermaid">
+erDiagram
+    budget ||--o{ budget_detail : "1:N 预算明细"
+    mgmt_dept ||--o{ mgmt_dept_pl : "1:N 部门损益"
+
+    budget {
+        bigint id PK
+        varchar bu_no
+        varchar YYYY_MM
+        varchar version
+    }
+    budget_detail {
+        bigint id PK
+        bigint budget_id FK
+        varchar account_name
+        decimal budget_amt
+        decimal actual_amt
+    }
+    mgmt_dept {
+        int id PK
+        varchar bu_no
+        varchar dept_code
+        varchar dept_name
+        varchar dept_type
+        varchar manager
+    }
+    mgmt_dept_pl {
+        bigint id PK
+        varchar bu_no
+        varchar dept_code FK
+        varchar YYYY_MM
+        decimal revenue_amt
+        decimal cost_amt
+        decimal profit_amt
+    }
+</div>
+
+<hr>
+
+<h3>3.7 业务单据模块（PO/SO/DN）</h3>
+<div class="mermaid">
+erDiagram
+    ermm_erp_so ||--o{ ERMM_erp_so_DN : "1:N 送货单"
+    ermm_erp_so ||--o{ ermm_arap_detail : "产生应收"
+    ermm_erp_po ||--o{ ermm_arap_detail : "产生应付"
+
+    ermm_erp_so {
+        bigint id PK
+        varchar bu_no
+        varchar so_no
+        date so_date
+        varchar YYYY_MM
+        decimal so_qty
+        decimal unit_price
+    }
+    ermm_erp_po {
+        bigint id PK
+        varchar bu_no
+        varchar po_no
+        date po_date
+        decimal po_qty
+        decimal unit_price
+    }
+    ermm_arap_detail {
+        bigint uid PK
+        varchar bu_no
+        varchar YYYY_MM
+        varchar ar_ap
+        decimal ar_amt
+        decimal ap_amt
+    }
+</div>
+
+<hr>
+
+<!-- ============ 3.8 第三方资料整合模块 ============ -->
+<h3>3.8 第三方资料整合模块（Excel 导入 / SQL 直连 · Online + Batch）</h3>
+<blockquote><b>模块性质</b>：支持从 Excel 文件导入或 SQL 直连第三方数据库，将资料写入本地任意目标表；支持 Online 即时执行与 Batch 排程自动执行。引擎统一走 <code>services/dataIntegrator.js</code>，核心包含栏位白名单、类型转换、UPSERT（先查存在键→拆分 INSERT/UPDATE）。</blockquote>
+
+<h4>3.8.1 资料表 ER 图</h4>
+<div class="mermaid">
+erDiagram
+    intg_source ||--o{ intg_job : "1:N 整合作业"
+    intg_job ||--o{ intg_log : "1:N 执行日志"
+    intg_job }o--o| intg_source : "SQL 通道数据源"
+
+    intg_source {
+        int id PK
+        varchar name UK
+        varchar db_type
+        varchar host
+        int port
+        varchar db_name
+        varchar db_user
+        varchar db_password
+        varchar charset
+        tinyint enabled
+        varchar remark
+    }
+    intg_job {
+        int id PK
+        varchar name
+        varchar channel
+        int source_id FK
+        mediumtext source_sql
+        varchar target_table
+        json column_mapping
+        varchar key_columns
+        varchar write_mode
+        varchar mode
+        varchar schedule
+        tinyint enabled
+        datetime last_run_at
+        varchar last_status
+    }
+    intg_log {
+        bigint id PK
+        int job_id FK
+        varchar job_name
+        varchar channel
+        varchar run_type
+        varchar source_name
+        varchar target_table
+        varchar file_name
+        int total_rows
+        int insert_rows
+        int update_rows
+        int error_rows
+        varchar status
+        mediumtext error_msg
+        varchar triggered_by
+        datetime started_at
+        datetime finished_at
+        int duration_ms
+    }
+</div>
+
+<h4>3.8.2 整合引擎数据流</h4>
+<div class="mermaid">
+flowchart TB
+    subgraph SRC["数据来源（双通道）"]
+        EXCEL["📊 Excel 文件<br/>前端上传 base64<br/>后端 ExcelJS 解析"]
+        SQLDB["🗄️ 第三方数据库<br/>SQL 直连查询<br/>(仅 SELECT)"]
+    end
+
+    subgraph ENGINE["整合引擎 services/dataIntegrator.js"]
+        MAP["栏位映射<br/>同名自动 / 手动下拉"]
+        WHITE["栏位白名单<br/>information_schema.COLUMNS"]
+        COERCE["类型转换<br/>日期/数字/JSON/字串"]
+        UPSERT["UPSERT 写入<br/>先查存在键 → 拆分 INSERT/UPDATE"]
+    end
+
+    subgraph TGT["本地目标表"]
+        LOCAL["任意本地表<br/>(ermm_db 内)"]
+    end
+
+    subgraph LOG["执行日志"]
+        INTGLOG["intg_log<br/>读取/新增/更新/失败/耗时"]
+    end
+
+    EXCEL --> MAP
+    SQLDB --> MAP
+    MAP --> WHITE --> COERCE --> UPSERT --> LOCAL
+    UPSERT --> INTGLOG
+
+    subgraph TRIG["触发方式"]
+        ONLINE["Online 手动执行<br/>POST /jobs/:id/run"]
+        BATCH["Batch 排程执行<br/>setInterval 分钟级<br/>daily HH:MM / every Nm"]
+    end
+
+    ONLINE --> ENGINE
+    BATCH --> ENGINE
+
+    style SRC fill:#e3f2fd,stroke:#1976d2
+    style ENGINE fill:#e8f5e9,stroke:#388e3c
+    style TGT fill:#f3e5f5,stroke:#7b1fa2
+    style LOG fill:#fff3e0,stroke:#f57c00
+    style TRIG fill:#fce4ec,stroke:#c2185b
+</div>
+
+<h4>3.8.3 API 端点清单（routes/integration.js）</h4>
+<table>
+<thead><tr><th>分组</th><th>方法</th><th>路径</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>本地表结构</td><td>GET</td><td><code>/api/integration/tables</code></td><td>列出本地所有表</td></tr>
+<tr><td>本地表结构</td><td>GET</td><td><code>/api/integration/tables/:name/columns</code></td><td>查询指定表的栏位定义</td></tr>
+<tr><td>数据源</td><td>GET</td><td><code>/api/integration/sources</code></td><td>列出所有第三方数据源</td></tr>
+<tr><td>数据源</td><td>POST</td><td><code>/api/integration/sources</code></td><td>新建数据源连线</td></tr>
+<tr><td>数据源</td><td>PUT</td><td><code>/api/integration/sources/:id</code></td><td>更新数据源</td></tr>
+<tr><td>数据源</td><td>DELETE</td><td><code>/api/integration/sources/:id</code></td><td>删除数据源（含关闭连线池）</td></tr>
+<tr><td>数据源</td><td>POST</td><td><code>/api/integration/sources/:id/test</code></td><td>测试已存数据源连线</td></tr>
+<tr><td>数据源</td><td>POST</td><td><code>/api/integration/sources-test</code></td><td>测试未存数据源连线（预检）</td></tr>
+<tr><td>数据源</td><td>POST</td><td><code>/api/integration/sources/query</code></td><td>SQL 预览（前 100 行）</td></tr>
+<tr><td>作业</td><td>GET</td><td><code>/api/integration/jobs</code></td><td>列出所有整合作业</td></tr>
+<tr><td>作业</td><td>POST</td><td><code>/api/integration/jobs</code></td><td>新建作业</td></tr>
+<tr><td>作业</td><td>PUT</td><td><code>/api/integration/jobs/:id</code></td><td>更新作业</td></tr>
+<tr><td>作业</td><td>DELETE</td><td><code>/api/integration/jobs/:id</code></td><td>删除作业</td></tr>
+<tr><td>作业</td><td>POST</td><td><code>/api/integration/jobs/:id/run</code></td><td>立即执行作业（Online）</td></tr>
+<tr><td>Excel</td><td>POST</td><td><code>/api/integration/excel/parse</code></td><td>Excel base64 解析（预览前 5 行 + total_rows）</td></tr>
+<tr><td>Excel</td><td>POST</td><td><code>/api/integration/excel/import</code></td><td>Excel 导入写入本地表</td></tr>
+<tr><td>日志</td><td>GET</td><td><code>/api/integration/logs</code></td><td>查询执行日志</td></tr>
+</tbody>
+</table>
+
+<h4>3.8.4 前端 5 Tab 页面结构</h4>
+<table>
+<thead><tr><th>Tab</th><th>标题</th><th>功能</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>📊 Excel 导入</td><td>选目标表 → 上传 .xlsx → 解析 Sheet → 栏位映射（同名自动映射）→ 预览 → 写入</td></tr>
+<tr><td>2</td><td>🔌 SQL 线上整合</td><td>选数据源 → 输入 SQL → 测试读取 → 栏位映射 → 立即执行 / 存为批次作业</td></tr>
+<tr><td>3</td><td>⏰ 批次作业</td><td>作业列表 → 启用/停用 → 编辑 → 立即执行</td></tr>
+<tr><td>4</td><td>🗄️ 数据源</td><td>数据源 CRUD → 连线测试</td></tr>
+<tr><td>5</td><td>📜 执行日志</td><td>日志查询（含 SQL + Excel 两通道记录）</td></tr>
+</tbody>
+</table>
+
+<h4>3.8.5 关键技术要点</h4>
+<table>
+<thead><tr><th>要点</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><b>栏位白名单</b></td><td>从 <code>information_schema.COLUMNS</code> 读取目标表全部栏位，只允许映射到存在的栏（防注入）</td></tr>
+<tr><td><b>类型转换</b></td><td>Excel serial 日期 → JS Date → 日期字串；千分位数字 → Number；空字串 → NULL；JSON 字串 → 对象</td></tr>
+<tr><td><b>UPSERT 策略</b></td><td>统一走「先 SELECT 已存在键 → 拆分 INSERT / UPDATE」，避免 MySQL <code>ON DUPLICATE KEY</code> 的 affectedRows 在「值未变」时为 0 导致统计偏差</td></tr>
+<tr><td><b>SQL 安全</b></td><td>仅允许单 SELECT（正则校验 <code>^\s*select</code>）、禁多语句（<code>/;\s*\S/</code>）、包成子查询加 LIMIT</td></tr>
+<tr><td><b>批次大小</b></td><td>BATCH_SIZE=200，大批量资料分批写入</td></tr>
+<tr><td><b>排程器</b></td><td>零依赖分钟级 <code>setInterval</code>，支持 <code>daily HH:MM</code> / <code>every Nm</code>，防重入（<code>ticking</code> 标志 + <code>runningJobs</code> Set） + 防重复触发（<code>firedKeys</code> Set）</td></tr>
+<tr><td><b>连接池缓存</b></td><td>第三方连接池按 <code>sourceId</code> 缓存于 <code>sourcePools</code> Map，复用连线避免反复握手</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<!-- ============ 四、RUID 全链路追溯图 ============ -->
+<h2 id="s4">四、RUID 全链路追溯图（财务核心）</h2>
+<div class="mermaid">
+flowchart LR
+    A["📒 会计凭证<br/>fin_voucher"] -->|产生 RUID| R["🗂️ fin_ruid_ledger<br/>RUID 主台账"]
+    A -->|分录| AE["fin_voucher_entry"]
+    B["🧾 纳税申报<br/>fin_tax_return"] -->|产生 RUID| R
+    B -->|明细| TI["fin_tax_return_item"]
+    R -->|被勾稽引用| C["🔗 勾稽对账<br/>fin_reconciliation"]
+    A -.->|voucher_ruid| C
+    B -.->|tax_ruid| C
+
+    style R fill:#ffeb3b,stroke:#f57f17,stroke-width:3px
+    style A fill:#e3f2fd,stroke:#1976d2
+    style B fill:#e8f5e9,stroke:#388e3c
+    style C fill:#fce4ec,stroke:#c2185b
+</div>
+
+<p><b>追溯示例：</b></p>
+<ul>
+<li>已知报税回执号 <code>RXHM20250101</code> → 查 <code>fin_tax_return</code> 得 RUID → 查 <code>fin_ruid_ledger</code> 确认 → 查 <code>fin_reconciliation</code> 找到匹配的入账凭证 RUID → 查 <code>fin_voucher</code> + <code>fin_voucher_entry</code> 看到完整分录。</li>
+</ul>
+
+<hr>
+
+<!-- ============ 五、跨模块共用资料表 ============ -->
+<h2 id="s5">五、跨模块共用资料表</h2>
+<table>
+<thead><tr><th>资料表</th><th>被哪些模块共用</th></tr></thead>
+<tbody>
+<tr><td><code>cams_xuser</code></td><td>认证、用户、日报、预警、预测（几乎所有涉及"人"的模块）</td></tr>
+<tr><td><code>mgm_finance_summary</code></td><td>摘要、三大报表、风险、年度趋势、AI 问答、异常诊断、多维下钻</td></tr>
+<tr><td><code>mgm_casher_details</code></td><td>现金日记账、现金流量预测</td></tr>
+<tr><td><code>ermm_erp_so</code></td><td>销售订单、应收应付、送货单、多维下钻、日报经营数据</td></tr>
+<tr><td><code>ermm_erp_po</code></td><td>采购单、应收应付、PO 暂存、日报经营数据</td></tr>
+<tr><td><code>mgm_invoice_details</code></td><td>发票、财务分析、多维下钻、日报经营数据</td></tr>
+<tr><td><code>budget_detail</code></td><td>预算编制、情景模拟、AI 问答</td></tr>
+<tr><td><code>mgmt_dept_pl</code></td><td>管理会计、合并报表、AI 问答</td></tr>
+<tr><td><code>mgmt_dept</code></td><td>管理会计、合并报表、日报部门维度</td></tr>
+<tr><td><b>任意本地表</b></td><td>第三方资料整合模块可通过栏位映射写入 <code>ermm_db</code> 内的任意目标表（按栏位白名单约束）</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<!-- ============ 六、技术栈汇总 ============ -->
+<h2 id="s6">六、技术栈汇总</h2>
+<table>
+<thead><tr><th>层</th><th>技术</th></tr></thead>
+<tbody>
+<tr><td>前端</td><td>原生 JavaScript SPA + Chart.js + 三语 i18n（简/繁/英）</td></tr>
+<tr><td>后端</td><td>Node.js + Express 5 + mysql2（连接池）</td></tr>
+<tr><td>数据库</td><td>MySQL 8 · <code>ermm_db</code> · utf8mb4</td></tr>
+<tr><td>认证</td><td>JWT（HS256）+ 权限分级中间件</td></tr>
+<tr><td>排程</td><td>node-cron（工作日 09:30/16:30 告警扫描，月末 16:00）+ setInterval 分钟级（第三方整合 Batch 作业）</td></tr>
+<tr><td>邮件</td><td>nodemailer（告警通知）</td></tr>
+<tr><td>Excel</td><td>ExcelJS（导入解析 + 导出 CSV 带 BOM）</td></tr>
+<tr><td>AI</td><td>LLM API（aiqa / diagnosis 路由）</td></tr>
+<tr><td>部署</td><td><code>node app.js</code>（端口 3008）/ 可 pm2 守护</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<!-- ============ 七、资料表清单 ============ -->
+<h2 id="s7">七、资料表清单（共 68+ 张）</h2>
+<table>
+<thead><tr><th>模块域</th><th>表名</th></tr></thead>
+<tbody>
+<tr><td><b>系统/基础</b></td><td>cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config</td></tr>
+<tr><td><b>日报绩效</b></td><td>daily_report, daily_report_detail, daily_report_lock, daily_report_audit_log, daily_report_target, daily_report_okr, daily_report_okr_kr, daily_report_erp_xref, daily_report_mgmt_report, daily_report_annual_review</td></tr>
+<tr><td><b>预警预测</b></td><td>alert_rule, alert_log, daily_report_forecast_log</td></tr>
+<tr><td><b>财务核心</b></td><td>fin_ruid_ledger, fin_account_subject, fin_voucher, fin_voucher_entry, fin_tax_return, fin_tax_return_item, fin_reconciliation</td></tr>
+<tr><td><b>现金流</b></td><td>mgm_casher_details, mgm_cash_safe_level</td></tr>
+<tr><td><b>财务核算</b></td><td>mgm_account_details, MGM_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, MGM_production_details, BH_MGM_TX_detail</td></tr>
+<tr><td><b>预算管会</b></td><td>budget, budget_detail, mgmt_dept, mgmt_dept_pl</td></tr>
+<tr><td><b>业务单据</b></td><td>ermm_erp_so, ermm_erp_po, ermm_temp_po, ERMM_erp_so_DN, ermm_arap_detail, ermm_erp_documents, transit_price</td></tr>
+<tr><td><b>分析预测</b></td><td>forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc</td></tr>
+<tr><td><b>第三方整合</b></td><td>intg_source, intg_job, intg_log</td></tr>
+<tr><td><b>AI/其他</b></td><td>ermm_ai_records, e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<footer style="text-align:center;color:var(--muted);font-size:13px;padding:24px 0;">
+本文件所有关系均来自代码事实（routes/*.js 的 SQL 语句、database/add_*.js 的 DDL、index.html 菜单），未作臆造。<br>
+Mermaid 图由 mermaid.js 实时渲染。<br>
+2026-10-09 更新：补充第三方资料整合模块（3.8 节 · intg_source / intg_job / intg_log）。
+</footer>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' }, er: { useMaxWidth: true } });
+</script>
+</body>
+</html>

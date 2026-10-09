@@ -1,6 +1,6 @@
 /**
- * BEP 損益平衡分析頁面
- * 對應 routes/bep.js
+ * BEP 损益平衡分析页面
+ * 对应 routes/bep.js
  */
 (() => {
     const fmt = v => {
@@ -94,7 +94,7 @@
         document.getElementById('bep_service_part_comp').value = d.service_part_comp || 0;
         document.getElementById('bep_variable_expense').value  = d.variable_expense || 0;
 
-        // 固定成本明細：舊資料僅有 fixed_cost 總額時，依 65/22/13 預設比例拆分
+        // 固定成本明细：旧资料仅有 fixed_cost 总额时，依 65/22/13 预设比例拆分
         let salary   = Number(d.fixed_salary)   || 0;
         let rent     = Number(d.fixed_rent)     || 0;
         let interest = Number(d.fixed_interest) || 0;
@@ -131,7 +131,7 @@
         const ym = document.getElementById('bepYM').value;
         const v = getInputVals();
 
-        // 防呆：本次提交所有成本欄位皆為 0，但該月份已載入過非零門檻值時，要求二次確認
+        // 防呆：本次提交所有成本字段皆为 0，但该月份已载入过非零门槛值时，要求二次确认
         const costFields = ['consumable','packaging','processing','misc_purchase',
             'freight','customs','service_part_comp','variable_expense',
             'fixed_salary','fixed_rent','fixed_interest'];
@@ -157,8 +157,8 @@
             });
             const j = await r.json();
             if (!j.success) { UI.toast(j.message, 'error'); return; }
-            // 後端回傳結構為 { saved:true, data: result }（見 routes/bep.js），
-            // 需取內層 result；相容直接回傳 result 的情況
+            // 后端回传结构为 { saved:true, data: result }（见 routes/bep.js），
+            // 需取内层 result；相容直接回传 result 的情况
             BEP = (j.data && j.data.data) ? j.data.data : j.data;
             fillInputs(BEP);
             const saleInput = document.getElementById('bep_sale_input');
@@ -182,7 +182,7 @@
             + '<label>' + t('bep.toolbar.bu') + ':</label>'
             + '<select id="bepBU"><option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option></select>'
             + '<label>' + t('bep.toolbar.ym') + ':</label>'
-            + '<input type="text" id="bepYM" placeholder="YYYY/MM" value="' + defYM + '">'
+            + '<input type="text" id="bepYM" placeholder="YYYY-MM" value="' + defYM + '">'
             + '<button class="btn-refresh" onclick="bepLoad()">' + t('bep.toolbar.load') + '</button>'
             + '<button class="btn-live" onclick="bepLiveCalc()">' + t('bep.toolbar.recalc') + '</button>'
             + '<button class="btn-save" onclick="bepSave()">' + t('bep.toolbar.save') + '</button>'
@@ -254,7 +254,7 @@
 
             + '</div></div>'
 
-            // === 變動成本明細彈窗 ===
+            // === 变动成本明细弹窗 ===
             + '<div id="bep_modal" class="bep-modal-overlay" onclick="bepCloseVarCostDetail(event)">'
             + '<div class="bep-modal-card" onclick="event.stopPropagation()">'
             + '<div class="bep-modal-header">'
@@ -267,7 +267,7 @@
             + '</div>'
             + '</div></div>'
 
-            // === 項目歷史趨勢子彈窗 (z-index 更高) ===
+            // === 项目历史趋势子弹窗 (z-index 更高) ===
             + '<div id="bep_item_modal" class="bep-modal-overlay" style="z-index:10000;" onclick="bepCloseItemDetail(event)">'
             + '<div class="bep-modal-card" onclick="event.stopPropagation()">'
             + '<div class="bep-modal-header" id="bep_item_modal_header">'
@@ -280,7 +280,7 @@
             + '</div>'
             + '</div></div>'
 
-            // === 固定成本明細彈窗（紫色，欄位可編輯） ===
+            // === 固定成本明细弹窗（紫色，字段可编辑） ===
             + '<div id="bep_fixed_modal" class="bep-modal-overlay" onclick="bepCloseFixedCostDetail(event)">'
             + '<div class="bep-modal-card" onclick="event.stopPropagation()">'
             + '<div class="bep-modal-header purple">'
@@ -377,11 +377,11 @@
             + '.bep-gap-note{text-align:right;margin-top:10px;font-size:0.9em;}'
             + '.bep-gap-note .amt{font-size:1.2em;font-weight:700;}'
 
-            // 可點擊卡片樣式
+            // 可点击卡片样式
             + '.bep-clickable{cursor:pointer;transition:transform .15s,box-shadow .15s;}'
             + '.bep-clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15);}'
 
-            // === Modal 彈窗樣式 ===
+            // === Modal 弹窗样式 ===
             + '.bep-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:9999;align-items:center;justify-content:center;}'
             + '.bep-modal-overlay.show{display:flex;}'
             + '.bep-modal-card{background:#fff;border-radius:12px;width:90%;max-width:620px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}'
@@ -395,13 +395,13 @@
             + '.bep-btn-close{padding:6px 20px;background:#7f8c8d;color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;}'
             + '.bep-btn-close:hover{background:#5d6d7e;}'
 
-            // 固定成本明細彈窗專用
+            // 固定成本明细弹窗专用
             + '.bep-input-fixed{width:100%;padding:6px 8px;border:1px solid #bb8fce;border-radius:4px;font-size:.95em;font-weight:600;background:#faf5fc;color:#6c3483;box-sizing:border-box;}'
             + '.bep-input-fixed:focus{outline:none;border-color:#8e44ad;background:#fff;box-shadow:0 0 0 2px rgba(142,68,173,.18);}'
             + '.bep-btn-detail{padding:3px 10px;background:#8e44ad;color:#fff;border:none;border-radius:5px;font-size:.82em;font-weight:600;cursor:pointer;white-space:nowrap;}'
             + '.bep-btn-detail:hover{background:#6c3483;}'
 
-            // 彈窗內表格
+            // 弹窗内表格
             + '.bep-detail-table{width:100%;border-collapse:collapse;font-size:.92em;}'
             + '.bep-detail-table th,.bep-detail-table td{padding:8px 12px;text-align:right;border-bottom:1px solid #ecf0f1;}'
             + '.bep-detail-table th:first-child,.bep-detail-table td:first-child{text-align:left;}'
@@ -413,11 +413,11 @@
             + '.bep-detail-table .label-cell{display:flex;align-items:center;gap:6px;}'
             + '.bep-detail-table .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}'
 
-            // 可點擊 row
+            // 可点击 row
             + '.bep-row-clickable{cursor:pointer;transition:background .15s;}'
             + '.bep-row-clickable:hover{background:#f0f4f8 !important;}'
 
-            // 趨勢柱狀圖
+            // 趋势柱状图
             + '.bep-trend-wrap{margin-top:14px;}'
             + '.bep-trend-title{font-weight:700;color:#2c3e50;margin-bottom:8px;}'
             + '.bep-bar-chart{display:flex;align-items:flex-end;gap:4px;height:140px;padding:0 6px;border-bottom:2px solid #bdc3c7;border-left:2px solid #bdc3c7;margin-bottom:6px;}'
@@ -440,7 +440,7 @@
             + '.bep-stat-card.orange{background:#fef9e7;}'
             + '.bep-stat-card.red{background:#fadbd8;}'
 
-            // Tab 切換
+            // Tab 切换
             + '.bep-tab-bar{display:flex;gap:0;border-bottom:2px solid #bdc3c7;margin-bottom:14px;}'
             + '.bep-tab-btn{flex:1;padding:8px 16px;background:none;border:none;font-weight:600;cursor:pointer;color:#7f8c8d;font-size:.95em;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;}'
             + '.bep-tab-btn:hover{color:#2c3e50;background:#f8f9fa;}'
@@ -453,14 +453,14 @@
     window.bepSave = save;
     window.bepLiveCalc = liveCalc;
 
-    // === 變動成本明細彈窗 ===
-    // 把名稱編碼為可安全放進 onclick="..." 屬性的 JS 字串（雙引號轉 &quot;，
-    // 避免名稱裡的雙引號截斷 HTML 屬性導致點擊無反應）
+    // === 变动成本明细弹窗 ===
+    // 把名称编码为可安全放进 onclick="..." 属性的 JS 字串（双引号转 &quot;，
+    // 避免名称里的双引号截断 HTML 属性导致点击无反应）
     function J(s) {
         return JSON.stringify(String(s == null ? '' : s)).replace(/"/g, '&quot;');
     }
     function showVarCostDetail() {
-        // 優先用閉包 BEP；若尚未初始化則從 DOM 顯示值解析
+        // 优先用闭包 BEP；若尚未初始化则从 DOM 显示值解析
         let sale = 0;
         const saleInput = document.getElementById('bep_sale_input');
         if (saleInput && saleInput.value) {
@@ -492,7 +492,7 @@
             return (Number(amt) / Number(base) * 100).toFixed(2) + '%';
         }
 
-        // 組裝表格 HTML
+        // 组装表格 HTML
         let html = '<div style="margin-bottom:14px;padding:10px 14px;background:#f8f9fa;border-radius:6px;border-left:4px solid #2980b9;">'
                  + '<strong>' + t('bep.vcm.period_label') + ':</strong> ' + (document.getElementById('bepBU').value || 'HM') + ' / ' + (document.getElementById('bepYM').value || '-')
                  + '&nbsp;&nbsp;|&nbsp;&nbsp;'
@@ -509,7 +509,7 @@
              + '<th class="pct">' + t('bep.vcm.col.pct_sale') + '</th>'
              + '</tr></thead><tbody>';
 
-        // 材料明細（每行可點擊看趨勢）
+        // 材料明细（每行可点击看趋势）
         for (let i = 0; i < materialItems.length; i++) {
             const it = materialItems[i];
             const amt = vals[it.key];
@@ -521,7 +521,7 @@
                   + '</tr>';
         }
 
-        // 材料合計 row（可點擊）
+        // 材料合计 row（可点击）
         html += '<tr class="subtotal bep-row-clickable" onclick="bepShowItemDetail(\'material_sum\',' + J(t('bep.vcm.item.material')) + ',\'#7f8c8d\')">'
               + '<td>' + t('bep.vcm.item.material') + '</td>'
               + '<td>' + fmt(matTotal) + '</td>'
@@ -529,7 +529,7 @@
               + '<td class="pct">' + pctOf(matTotal, sale) + '</td>'
               + '</tr>';
 
-        // 變動費用 row（可點擊）
+        // 变动费用 row（可点击）
         html += '<tr class="bep-row-clickable" onclick="bepShowItemDetail(\'variable_expense\',' + J(t('bep.vcm.item.variable_expense')) + ',\'#f1c40f\')">'
               + '<td><span class="label-cell"><span class="dot" style="background:#f1c40f;"></span>' + t('bep.vcm.item.variable_expense') + '</span></td>'
               + '<td>' + fmt(vb) + '</td>'
@@ -540,7 +540,7 @@
         // 分隔
         html += '<tr style="height:6px;"><td colspan="4" style="border:none;"></td></tr>';
 
-        // 變動成本總計（可點擊）
+        // 变动成本总计（可点击）
         html += '<tr class="total bep-row-clickable" onclick="bepShowItemDetail(\'variable_cost\',' + J(t('bep.vcm.item.variable_cost')) + ',\'#c0392b\')">'
               + '<td>' + t('bep.vcm.total_formula') + '</td>'
               + '<td>' + fmt(grandTotal) + '</td>'
@@ -550,7 +550,7 @@
 
         html += '</tbody></table>';
 
-        // 附加公式鏈小提示
+        // 附加公式链小提示
         html += '<div style="margin-top:14px;padding:10px 14px;background:#e8daef;border-radius:6px;font-size:.88em;color:#6c3483;">'
               + '<strong>' + t('bep.formula_title') + ':</strong><br>'
               + t('bep.formula.vc_eq') + t('bep.vcm.item.material') + ' (' + fmt(matTotal) + ') + ' + t('bep.vcm.item.variable_expense') + ' (' + fmt(vb) + ') = <strong>' + fmt(grandTotal) + '</strong><br>'
@@ -563,10 +563,10 @@
     }
 
     function closeVarCostDetail(e) {
-        // 從遮罩點擊或按鈕觸發都安全，不影響 stopPropagation
+        // 从遮罩点击或按钮触发都安全，不影响 stopPropagation
         if (e && e.target && e.target.id !== 'bep_modal' && e.type === 'click') {
-            // 只在遮罩本身觸發時關閉（card 內部用 stopPropagation 擋住了）
-            // 這裡是額外保護：遮罩 onclick 也會調用 closeVarCostDetail(event)
+            // 只在遮罩本身触发时关闭（card 内部用 stopPropagation 挡住了）
+            // 这里是额外保护：遮罩 onclick 也会调用 closeVarCostDetail(event)
             // stopPropagation 在 card onclick 上，所以冒泡到 overlay 的是遮罩本身的 click
         }
         document.getElementById('bep_modal').classList.remove('show');
@@ -575,7 +575,7 @@
     window.bepShowVarCostDetail = showVarCostDetail;
     window.bepCloseVarCostDetail = closeVarCostDetail;
 
-    // === 固定成本明細彈窗（欄位可編輯 + 可鑽取交易明細/趨勢） ===
+    // === 固定成本明细弹窗（字段可编辑 + 可钻取交易明细/趋势） ===
     const FIXED_ITEMS = [
         { key: 'fixed_salary',   name: t('bep.fcm.item.fixed_salary'),     color: '#8e44ad' },
         { key: 'fixed_rent',     name: t('bep.fcm.item.fixed_rent'),       color: '#af7ac5' },
@@ -642,7 +642,7 @@
     window.bepShowFixedCostDetail = showFixedCostDetail;
     window.bepCloseFixedCostDetail = closeFixedCostDetail;
 
-    // === 項目明細子彈窗（交易明細 + 歷史趨勢 tab） ===
+    // === 项目明细子弹窗（交易明细 + 历史趋势 tab） ===
     let _itemDetailCache = {};
 
     function showItemDetail(key, itemName, color) {
@@ -650,18 +650,18 @@
         const ym = document.getElementById('bepYM').value || '';
         const year = ym.substring(0, 4) || '2025';
 
-        // 設定子彈窗 header 顏色 + 標題
+        // 设定子弹窗 header 颜色 + 标题
         var header = document.getElementById('bep_item_modal_header');
         if (header) header.style.background = 'linear-gradient(135deg,' + color + ',' + color + 'cc)';
         var title = document.getElementById('bep_item_modal_title');
         if (title) title.textContent = itemName + t('bep.item.detail_suffix');
 
-        // loading + tab 結構
+        // loading + tab 结构
         document.getElementById('bep_item_modal_body').innerHTML =
             '<div style="text-align:center;padding:40px;color:#7f8c8d;">' + t('loading') + '</div>';
         document.getElementById('bep_item_modal').classList.add('show');
 
-        // 同時 fetch 兩個 API
+        // 同时 fetch 两个 API
         Promise.all([
             fetch('/api/bep/detail?bu_no=' + bu + '&YYYY_MM=' + ym + '&item_key=' + encodeURIComponent(key))
                 .then(function(r) { return r.json(); }),
@@ -685,8 +685,8 @@
     function switchItemTab(tabName) {
         var c = _itemDetailCache;
         if (!c) return;
-        // 重新 fetch（快取已在 render 時存好，這裡直接重叫 showItemDetail 的 render 部分不太方便，
-        // 簡化做法：保存 state 後重觸發渲染）
+        // 重新 fetch（快取已在 render 时存好，这里直接重叫 showItemDetail 的 render 部分不太方便，
+        // 简化做法：保存 state 后重触发渲染）
         var itemKey = c.key;
         var itemName = c.itemName;
         var color = c.color;
@@ -704,7 +704,7 @@
         });
     }
 
-    // 主渲染：tab + 交易明細 + 趨勢圖
+    // 主渲染：tab + 交易明细 + 趋势图
     function renderItemModalWithTabs(key, itemName, color, detailData, historyData, currentYM, activeTab) {
         activeTab = activeTab || 'detail';
 
@@ -723,11 +723,11 @@
         document.getElementById('bep_item_modal_body').innerHTML = html;
     }
 
-    // === 交易明細表（跟用戶圖片一致的格式） ===
+    // === 交易明细表（跟用户图片一致的格式） ===
     function renderDetailTable(data, itemName, color) {
         var html = '';
 
-        // 映射說明 header（僅在既無現金科目映射、也無門檻資料可勾稽時提示）
+        // 映射说明 header（仅在既无现金科目映射、也无门槛资料可勾稽时提示）
         if (data.no_mapping && !data.reconcile && data.records.length === 0) {
             html += '<div style="padding:12px 16px;background:#fef9e7;border-radius:6px;border-left:4px solid #f1c40f;margin-bottom:12px;">'
                   + '💡 <strong>' + itemName + '</strong><br>'
@@ -747,7 +747,7 @@
               + t('bep.item.balance') + ': ' + fmt(data.summary.final_balance) + '</span>'
               + '</div>';
 
-        // 與門檻值勾稽說明（變動費用）
+        // 与门槛值勾稽说明（变动费用）
         if (data.reconcile) {
             var rc = data.reconcile;
             html += '<div style="padding:12px 16px;background:#fff8e1;border:1px solid #f1c40f;border-radius:6px;margin-bottom:12px;font-size:.88em;">'
@@ -763,7 +763,7 @@
             return html;
         }
 
-        // 表格（跟用戶圖片一樣的格式：日期 | 憑證號 | 摘要 | 收入 | 支出 | 餘額）
+        // 表格（跟用户图片一样的格式：日期 | 凭证号 | 摘要 | 收入 | 支出 | 余额）
         html += '<table class="bep-trend-table">'
              + '<thead><tr>'
              + '<th style="width:12%;">' + t('bep.im.col.date') + '</th>'
@@ -777,7 +777,7 @@
         for (var i = 0; i < data.records.length; i++) {
             var r = data.records[i];
             if (r.is_adjustment) {
-                // 勾稽調整行（非真實憑證）：無日期/憑證號，淡黃底＋斜體標示
+                // 勾稽调整行（非真实凭证）：无日期/凭证号，淡黄底＋斜体标示
                 html += '<tr style="background:#fffdf2;font-style:italic;color:#7d6608;">'
                       + '<td style="color:#b0b0b0;">—</td>'
                       + '<td style="color:#b0b0b0;">—</td>'
@@ -798,7 +798,7 @@
                   + '</tr>';
         }
 
-        // 合計 row（含調整行時，合計＝門檻值）
+        // 合计 row（含调整行时，合计＝门槛值）
         var totalLabel = t('bep.item.total_count').replace('{count}', data.summary.count);
         if (data.summary.adjustment_count > 0) totalLabel += ' (+' + data.summary.adjustment_count + ')';
         html += '<tr style="background:#f8f9fa;font-weight:700;">'
@@ -812,7 +812,7 @@
         return html;
     }
 
-    // 簡化版趨勢渲染（單獨 tab 用）
+    // 简化版趋势渲染（单独 tab 用）
     function renderTrendInline(key, itemName, color, data, currentYM) {
         if (!data.months || data.months.length === 0) {
             return '<div style="text-align:center;padding:30px;color:#7f8c8d;">' + t('bep.item.no_history').replace('{year}', data.year) + '</div>';
@@ -881,7 +881,7 @@
     window.bepCloseItemDetail = closeItemDetail;
     window.bepSwitchItemTab = switchItemTab;
 
-    // ESC 鍵關閉 — 優先級：先子彈窗，再固定成本彈窗，最後變動成本彈窗
+    // ESC 键关闭 — 优先级：先子弹窗，再固定成本弹窗，最后变动成本弹窗
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             var itemModal = document.getElementById('bep_item_modal');

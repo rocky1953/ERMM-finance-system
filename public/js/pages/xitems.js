@@ -1,6 +1,6 @@
 /**
- * 每日庫存狀態 e2_xitems_daily_status CRUD
- * ageing_days × reduce_percentage → 自動算 current_value / current_lose
+ * 每日库存状态 e2_xitems_daily_status CRUD
+ * ageing_days × reduce_percentage → 自动算 current_value / current_lose
  */
 registerPage('xitems', async (c) => {
     const _mgr = Auth.isManager();
@@ -9,7 +9,7 @@ registerPage('xitems', async (c) => {
         { value: 'A 正常',     label: t('xi.aging_A') },
         { value: 'B 31-90天',  label: t('xi.aging_B') },
         { value: 'C 91-180天', label: t('xi.aging_C') },
-        { value: 'D 超過180天', label: t('xi.aging_D') }
+        { value: 'D 超过180天', label: t('xi.aging_D') }
     ];
     c.innerHTML = `
         <div class="card">
@@ -87,7 +87,7 @@ const XitemsForm = {
             { value: 'A 正常',     label: t('xi.aging_A') },
             { value: 'B 31-90天',  label: t('xi.aging_B') },
             { value: 'C 91-180天', label: t('xi.aging_C') },
-            { value: 'D 超過180天', label: t('xi.aging_D') }
+            { value: 'D 超过180天', label: t('xi.aging_D') }
         ];
         UI.modal((isEdit ? t('modal.edit_po') : t('xi.add')), `
             <div class="form-row">

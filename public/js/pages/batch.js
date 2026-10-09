@@ -1,5 +1,5 @@
 /**
- * 批次管線頁面
+ * 批次管线页面
  */
 registerPage('batch', async (c) => {
     const steps = [
@@ -22,10 +22,11 @@ registerPage('batch', async (c) => {
             </div>
             <div class="toolbar">
                 <button class="btn btn-success" onclick="runAllBatch()">🚀 ${t('batch.run_all')}</button>
-                <button class="btn btn-primary" onclick="runStep(1)">${t('batch.run_step')}</button>
+                <button class="btn btn-primary" id="btnStepNext" onclick="runStepNext()">${t('batch.run_step')} (Step 1)</button>
+                <button class="btn btn-info" onclick="BatchHelp.open()">📖 ${t('batch.help')}</button>
                 <div class="spacer"></div>
                 <label style="font-size:0.85em;color:#7f8c8d">${t('topbar.month')}</label>
-                <input type="month" id="batchMonth" value="${State.YYYY_MM.replace('/','-')}" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
+                <input type="month" id="batchMonth" value="${State.YYYY_MM}" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
             </div>
             <div id="batchLog" style="background:#1e1e1e;color:#0f0;padding:15px;border-radius:8px;font-family:Consolas,monospace;font-size:0.85em;max-height:400px;overflow-y:auto;margin-top:15px;">
                 <div>=== ${t('batch.log')} ===</div>
@@ -33,6 +34,8 @@ registerPage('batch', async (c) => {
             </div>
         </div>
     `;
+    _currentStep = 1;
+    updateStepNextButton();
 });
 
 function batchLog(msg, type = 'info') {
@@ -50,8 +53,34 @@ function setStepStatus(step, status) {
     el.classList.add(status);
 }
 
+let _currentStep = 1;
+
+function updateStepNextButton() {
+    const btn = document.getElementById('btnStepNext');
+    if (!btn) return;
+    if (_currentStep > 7) {
+        btn.textContent = t('batch.run_step') + ' ✅';
+        btn.disabled = true;
+    } else {
+        btn.textContent = t('batch.run_step') + ` (Step ${_currentStep})`;
+        btn.disabled = false;
+    }
+}
+
+async function runStepNext() {
+    if (_currentStep > 7) {
+        batchLog('⚠️ ' + t('batch.done'), 'warn');
+        return;
+    }
+    const ok = await runStep(_currentStep);
+    if (ok) {
+        _currentStep++;
+        updateStepNextButton();
+    }
+}
+
 async function runStep(stepId) {
-    const ym = document.getElementById('batchMonth')?.value.replace('-', '/') || State.YYYY_MM;
+    const ym = document.getElementById('batchMonth')?.value || State.YYYY_MM;
     batchLog(`▶ Step ${stepId}...`);
     setStepStatus(stepId, 'active');
     try {
@@ -72,5 +101,34 @@ async function runAllBatch() {
         const ok = await runStep(i);
         if (!ok) { batchLog('⚠️ ' + t('batch.interrupted'), 'warn'); return; }
     }
+    _currentStep = 8;
+    updateStepNextButton();
     batchLog('🎉 ' + t('batch.done'), 'success');
 }
+
+// ===== 操作说明弹窗 =====
+const BatchHelp = {
+    open() {
+        const rows = [1, 2, 3, 4, 5, 6, 7].map(i => `
+            <tr>
+                <td style="white-space:nowrap;font-weight:600;color:#1a3c5e;">
+                    <span style="display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:#1a3c5e;color:#fff;font-size:12px;margin-right:6px;">${i}</span>
+                    ${t('batch.step' + i)}
+                </td>
+                <td style="vertical-align:top;">${t(`batch.help.s${i}.purpose`)}</td>
+                <td style="vertical-align:top;color:#555;line-height:1.7;">${t(`batch.help.s${i}.points`)}</td>
+            </tr>`).join('');
+        const body = `
+            <div style="max-width:860px;">
+                <table class="data-table">
+                    <thead><tr>
+                        <th style="width:150px;"># / ${t('batch.title')}</th>
+                        <th style="width:200px;">${t('batch.help.purpose_col')}</th>
+                        <th>${t('batch.help.points_col')}</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+        UI.modal(t('batch.help.title'), body, `<button class="btn" onclick="UI.closeModal()">${t('modal.close')}</button>`);
+    }
+};

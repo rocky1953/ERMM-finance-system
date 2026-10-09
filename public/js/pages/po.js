@@ -1,5 +1,5 @@
 /**
- * 採購單 PO 頁面
+ * 采购单 PO 页面
  */
 registerPage('po', async (c) => {
     const _mgr = Auth.isManager();
@@ -43,7 +43,7 @@ async function loadPO() {
                     <td class="num">${UI.fmt(r.unit_price, 2)}</td>
                     <td class="num">${UI.fmt(r.po_amount)}</td>
                     <td class="num">${UI.fmt(r.po_amount_local)}</td>
-                    <td><span style="padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-size:12px">${I18N.statusLabel('po_status', r.po_status || '未審核')}</span></td>
+                    <td><span style="padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-size:12px">${I18N.statusLabel('po_status', r.po_status || '未审核')}</span></td>
                     <td>${I18N.statusLabel('po_sub_status', r.po_sub_status || '未交付')}</td>
                     ${_mgr ? `<td>
                         <button class="btn btn-primary btn-sm" onclick='editPO(${JSON.stringify(r)})'>✏️</button>
@@ -69,7 +69,7 @@ const POForm = {
 
         const statusOpts = I18N.statusOptions('po_status');
         const subOpts = I18N.statusOptions('po_sub_status');
-        const curStatus = d.po_status || '未審核';
+        const curStatus = d.po_status || '未审核';
         const curSub = d.po_sub_status || '未交付';
 
         UI.modal(this._uid ? `✏️ ${t('po.form.title_edit')} ${d.po_id || ''}` : `➕ ${t('po.form.title_new')}`, `

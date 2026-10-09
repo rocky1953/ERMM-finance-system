@@ -1,11 +1,11 @@
 /**
- * 使用者管理頁面
+ * 使用者管理页面
  * tab 1: cams_xuser 使用者 CRUD
- * tab 2: leader_user 權限編輯
- * tab 3: login_user_record 登入紀錄（唯讀 + 清除）
+ * tab 2: leader_user 权限编辑
+ * tab 3: login_user_record 登入纪录（只读 + 清除）
  */
 registerPage('user', async (c) => {
-    // 權限攔截：僅管理員可進入「使用者管理」
+    // 权限拦截：仅管理员可进入“使用者管理”
     if (!Auth.isAdmin()) {
         c.innerHTML = `
             <div class="card" style="text-align:center;padding:60px 20px;">
@@ -82,7 +82,7 @@ async function loadUsers() {
             <tbody>${rows.map(r => `
                 <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${r.xuser_dept||'-'}</td>
                     <td>${r.xuser_type||t('user.type.staff')}</td>
-                    <td>${r.admin==='管理員' ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>' : '<span style="color:#95a5a6">'+t('user.admin.normal')+'</span>'}</td>
+                    <td>${r.admin==='管理员' ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>' : '<span style="color:#95a5a6">'+t('user.admin.normal')+'</span>'}</td>
                     <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● '+t('system.status.active')+'</span>' : '<span style="color:#95a5a6">○ '+t('system.status.inactive')+'</span>'}</td>
                     <td>${r.create_time||'-'}</td>
                     <td>
@@ -90,7 +90,7 @@ async function loadUsers() {
                         <button class="btn btn-danger btn-sm" onclick="delUser(${r.id},'${r.xuser_id}')">🗑</button>
                     </td></tr>`).join('')}</tbody>
         </table>`;
-        // 同步填權限 tab 下拉
+        // 同步填权限 tab 下拉
         const sel = document.getElementById('puUser');
         if (sel && sel.options.length <= 1) {
             sel.innerHTML = rows.map(r => `<option value="${r.xuser_id}">${r.xuser_id} — ${r.xuser_name||''}</option>`).join('');
@@ -104,9 +104,9 @@ async function loadUsers() {
 
 const UserForm = {
     async open(id) {
-        // 新增：直接開空白表單
-        if (!id) { this._render({ inuse_flag: 'USE', admin: '普通者', xuser_type: '一般員工' }); return; }
-        // 編輯：/api/user 清單含數字主鍵 id，按 id 精確找到該列後回填
+        // 新增：直接开空白表单
+        if (!id) { this._render({ inuse_flag: 'USE', admin: '普通者', xuser_type: '一般员工' }); return; }
+        // 编辑：/api/user 清单含数字主键 id，按 id 精确找到该列后回填
         try {
             const res = await API.get('/api/user');
             const u = (res.data || []).find(x => x.id === id);
@@ -132,7 +132,7 @@ const UserForm = {
                 <div class="form-group"><label>${t('system.col.status')}</label>
                     <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
                 <div class="form-group"><label>${t('user.col.admin')}</label>
-                    <select id="uf_admin"><option value="管理員">${t('user.admin.manager')}</option><option value="普通者">${t('user.admin.normal')}</option></select></div>
+                    <select id="uf_admin"><option value="管理员">${t('user.admin.manager')}</option><option value="普通者">${t('user.admin.normal')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('user.col.name')}</label><input id="uf_name" value="${u.xuser_name||''}"></div>
@@ -143,12 +143,12 @@ const UserForm = {
                 <div class="form-group"><label>${t('user.col.email')}</label><input id="uf_email" type="email" value="${u.email||''}"></div>
                 <div class="form-group"><label>${t('user.col.tel_no')}</label><input id="uf_tel" value="${u.tel_no||''}"></div>
                 <div class="form-group"><label>${t('user.col.xuser_type')}</label>
-                    <select id="uf_type"><option value="一般員工">${t('user.type.staff')}</option><option value="部門主管">${t('user.type.manager')}</option><option value="高階主管">${t('user.type.executive')}</option></select></div>
+                    <select id="uf_type"><option value="一般员工">${t('user.type.staff')}</option><option value="部门主管">${t('user.type.manager')}</option><option value="高阶主管">${t('user.type.executive')}</option></select></div>
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">${t('save')}</button>`);
         if (u.inuse_flag) document.getElementById('uf_stat').value = u.inuse_flag;
-        document.getElementById('uf_admin').value = (u.admin === '管理員') ? '管理員' : '普通者';
-        document.getElementById('uf_type').value = (u.xuser_type === '部門主管' || u.xuser_type === '部門經理' || u.xuser_type === '高階主管') ? u.xuser_type : '一般員工';
+        document.getElementById('uf_admin').value = (u.admin === '管理员') ? '管理员' : '普通者';
+        document.getElementById('uf_type').value = (u.xuser_type === '部门主管' || u.xuser_type === '部门经理' || u.xuser_type === '高阶主管') ? u.xuser_type : '一般员工';
     },
     async save(id) {
         const body = {
@@ -181,7 +181,7 @@ async function delUser(id, uid) {
     catch(e) { UI.toast(e.message,'error'); }
 }
 
-// ── Tab 2: 權限編輯 ──
+// ── Tab 2: 权限编辑 ──
 async function loadPerms() {
     const el = document.getElementById('permsTable');
     const uid = document.getElementById('puUser')?.value;
@@ -224,7 +224,7 @@ async function savePerms() {
     catch(e) { UI.toast(e.message,'error'); }
 }
 
-// ── Tab 3: 登入紀錄 ──
+// ── Tab 3: 登入纪录 ──
 async function loadLogins() {
     const el = document.getElementById('loginTable');
     const uid = document.getElementById('luUser')?.value;

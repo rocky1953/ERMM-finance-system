@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 現金日記帳路由
  */
 const express = require('express');
@@ -21,11 +21,14 @@ router.get('/', async (req, res) => {
         sql += ' ORDER BY wk_date ASC, uid ASC LIMIT 500';
         const [rows] = await pool.execute(sql, params);
 
-        // 轉換欄位 + 計算餘額
+        // 轉換欄位 + 計算餘額（相容「借/貸」中文與「DR/CR」英文）
         let balance = 0;
         const out = rows.map(r => {
-            const in_amt = String(r.DB_CR || '').toUpperCase() === 'DR' ? Number(r.sub_amt || 0) : 0;
-            const out_amt = String(r.DB_CR || '').toUpperCase() === 'CR' ? Number(r.sub_amt || 0) : 0;
+            const dc = String(r.DB_CR || '').toUpperCase();
+            const isDebit = dc === 'DR' || dc === '借';
+            const isCredit = dc === 'CR' || dc === '貸' || dc === '贷';
+            const in_amt = isDebit ? Number(r.sub_amt || 0) : 0;
+            const out_amt = isCredit ? Number(r.sub_amt || 0) : 0;
             balance += in_amt - out_amt;
             return {
                 ...r,
@@ -58,13 +61,13 @@ router.post('/', async (req, res) => {
             return fail(res, `num_vman ${d.num_vman} 已存在`);
         }
 
-        // 從 wk_date 自動拆分 YYYY/MM/YYYY_MM
+        // 從 wk_date 自動拆分 YYYY-MM/YYYY_MM
         let YYYY = d.YYYY, MM = d.MM, YYYY_MM = d.YYYY_MM;
         if (d.wk_date) {
             const dt = new Date(d.wk_date);
             YYYY = String(dt.getFullYear());
             MM = String(dt.getMonth() + 1).padStart(2, '0');
-            YYYY_MM = `${YYYY}/${MM}`;
+            YYYY_MM = `${YYYY}-${MM}`;
         }
 
         const [result] = await conn.execute(
@@ -93,7 +96,7 @@ router.put('/:uid', async (req, res) => {
             const dt = new Date(d.wk_date);
             YYYY = String(dt.getFullYear());
             MM = String(dt.getMonth() + 1).padStart(2, '0');
-            YYYY_MM = `${YYYY}/${MM}`;
+            YYYY_MM = `${YYYY}-${MM}`;
         }
         await pool.execute(
             `UPDATE mgm_casher_details SET bu_no=?, amt_type=?, client_id=?, num_vman=?, sub_amt=?,
@@ -126,7 +129,8 @@ router.get('/summary', async (req, res) => {
 
         let total_in = 0, total_out = 0;
         for (const r of rows) {
-            if (String(r.DB_CR || '').toUpperCase() === 'DR') total_in = Number(r.total || 0);
+            const dc = String(r.DB_CR || '').toUpperCase();
+            if (dc === 'DR' || dc === '借') total_in = Number(r.total || 0);
             else total_out = Number(r.total || 0);
         }
 
@@ -140,7 +144,8 @@ router.get('/summary', async (req, res) => {
                 GROUP BY DB_CR
             `, [bu_no, YYYY_MM]);
             for (const r of balRows) {
-                if (String(r.DB_CR || '').toUpperCase() === 'DR') balance += Number(r.total || 0);
+                const dc = String(r.DB_CR || '').toUpperCase();
+                if (dc === 'DR' || dc === '借') balance += Number(r.total || 0);
                 else balance -= Number(r.total || 0);
             }
         }

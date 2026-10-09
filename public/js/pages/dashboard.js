@@ -1,5 +1,5 @@
 /**
- * 儀表板頁面
+ * 仪表板页面
  */
 registerPage('dashboard', async (c) => {
     const { bu_no, YYYY_MM } = State;
@@ -22,7 +22,7 @@ registerPage('dashboard', async (c) => {
         </div>
     `;
 
-    // ===== 彈窗共用基礎設施（明細鑽取 / Z-Score 說明）=====
+    // ===== 弹窗共用基础设施（明细钻取 / Z-Score 说明）=====
     function ensureDashStyles() {
         if (document.getElementById('dashDetailStyle')) return;
         const st = document.createElement('style');
@@ -93,14 +93,14 @@ registerPage('dashboard', async (c) => {
             </div>`;
         c.appendChild(ov);
         const card = ov.firstElementChild;
-        // 點擊遮罩（卡片以外）關閉
+        // 点击遮罩（卡片以外）关闭
         ov.addEventListener('click', (e) => { if (!card.contains(e.target)) ov.classList.remove('show'); });
         ov.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => ov.classList.remove('show')));
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.classList.remove('show'); });
         return ov;
     }
 
-    // ===== 損益柱狀圖明細鑽取彈窗（銷貨收入＝AR 銷項發票／銷貨成本＝AP 進項發票）=====
+    // ===== 损益柱状图明细钻取弹窗（销货收入＝AR 销项发票／销货成本＝AP 进项发票）=====
     function ensureDashDetailModal() {
         let ov = document.getElementById('dashDetailOverlay');
         if (ov) return ov;
@@ -108,7 +108,7 @@ registerPage('dashboard', async (c) => {
         return ov;
     }
 
-    // ===== Z-Score 風險等級說明彈窗 =====
+    // ===== Z-Score 风险等级说明弹窗 =====
     function openZDetail(r) {
         const zVal = Number(r.Z_score || 0);
         const zone = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
@@ -289,7 +289,7 @@ registerPage('dashboard', async (c) => {
                 </div>
             `;
 
-            // 損益圖
+            // 损益图
             const plData = [
                 Number(s.sale_amt || 0),
                 Number(s.sale_cost_amt || 0),
@@ -308,7 +308,7 @@ registerPage('dashboard', async (c) => {
                     responsive: true,
                     plugins: { legend: { display: false } },
                     scales: { y: { beginAtZero: true } },
-                    // 僅銷貨收入(0)、銷貨成本(1) 可點擊鑽取
+                    // 仅销货收入(0)、销货成本(1) 可点击钻取
                     onHover: (evt, elements) => {
                         evt.native.target.style.cursor = elements.length && elements[0].index <= 1 ? 'pointer' : 'default';
                     },
@@ -321,7 +321,7 @@ registerPage('dashboard', async (c) => {
                 }
             });
 
-            // 資產負債圖
+            // 资产负债图
             new Chart(document.getElementById('bsChart'), {
                 type: 'doughnut',
                 data: {
@@ -343,23 +343,23 @@ registerPage('dashboard', async (c) => {
             kpi.innerHTML = UI.empty('📭', `${YYYY_MM} ${t('dash.no_summary')}`);
         }
 
-        // 風險面板
+        // 风险面板
         const rp = document.getElementById('riskPanel');
         if (risk.status === 'fulfilled' && risk.value.data && risk.value.data.length > 0) {
             const r = risk.value.data[0];
             const zVal = Number(r.Z_score || 0);
-            // 直接由 Z 值重算判定（與彈窗 openZDetail 邏輯一致），不依賴可能過時的 DB risk_color / wall_mode
+            // 直接由 Z 值重算判定（与弹窗 openZDetail 逻辑一致），不依赖可能过时的 DB risk_color / wall_mode
             const zZone = zVal >= 2.9 ? 'green' : (zVal >= 1.23 ? 'yellow' : 'red');
             const zZoneLabel = zZone === 'green' ? t('dash.safe') : (zZone === 'yellow' ? t('dash.grey') : t('dash.bankrupt'));
-            // 流動比率: >=1.5 安全, >=1 灰色, <1 破產區
+            // 流动比率: >=1.5 安全, >=1 灰色, <1 破产区
             const cr = Number(r.current_ratio || 0);
             const crZone = cr >= 1.5 ? 'green' : (cr >= 1 ? 'yellow' : 'red');
             const crLabel = cr >= 1.5 ? t('dash.safe') : (cr >= 1 ? t('dash.grey') : t('dash.bankrupt'));
-            // 負債比: <=50 安全, <=70 灰色, >70 破產區
+            // 负债比: <=50 安全, <=70 灰色, >70 破产区
             const dr = Number(r.debt_ratio || 0);
             const drZone = dr <= 50 ? 'green' : (dr <= 70 ? 'yellow' : 'red');
             const drLabel = dr <= 50 ? t('dash.safe') : (dr <= 70 ? t('dash.grey') : t('dash.bankrupt'));
-            // ROE: >=0 安全, <0 破產區
+            // ROE: >=0 安全, <0 破产区
             const roe = Number(r.ROE || 0);
             const roeZone = roe >= 0 ? 'green' : 'red';
             const roeLabel = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
@@ -375,28 +375,28 @@ registerPage('dashboard', async (c) => {
                         <div class="kpi-label">${t('dash.current_ratio')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
                         <div class="kpi-badge ${crZone}">${crLabel}</div>
-                        <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)} ${crZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'current_ratio\')" style="color:#2563eb;">🔍診斷</a>' : ''}</div>
+                        <div class="kpi-sub">${t('dash.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)} ${crZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'current_ratio\')" style="color:#2563eb;">🔍诊断</a>' : ''}</div>
                     </div>
                     <div class="kpi-card ${drZone} clickable" id="drCard" title="${t('dash.zmodal.hint')}">
                         <div class="kpi-label">${t('dash.debt_ratio_label')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
                         <div class="kpi-badge ${drZone}">${drLabel}</div>
-                        <div class="kpi-sub">${drZone !== 'green' ? '<a href="#" onclick="event.stopPropagation();Diagnosis.open(\'debt_ratio\')" style="color:#2563eb;">🔍 異常診斷</a>' : ''}</div>
+                        <div class="kpi-sub">${drZone !== 'green' ? '<a href="#" onclick="event.stopPropagation();Diagnosis.open(\'debt_ratio\')" style="color:#2563eb;">🔍 异常诊断</a>' : ''}</div>
                     </div>
                     <div class="kpi-card ${roeZone} clickable" id="roeCard" title="${t('dash.zmodal.hint')}">
                         <div class="kpi-label">${t('dash.roe')} ${hint}</div>
                         <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
                         <div class="kpi-badge ${roeZone}">${roeLabel}</div>
-                        <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}% ${roeZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'roe\')" style="color:#2563eb;">🔍診斷</a>' : ''}</div>
+                        <div class="kpi-sub">${t('dash.roa')} ${UI.fmt(r.ROA, 2)}% ${roeZone !== 'green' ? '· <a href="#" onclick="event.stopPropagation();Diagnosis.open(\'roe\')" style="color:#2563eb;">🔍诊断</a>' : ''}</div>
                     </div>
                 </div>
             `;
-            // 四張風險燈號卡片皆可點擊查看風險等級說明
+            // 四张风险灯号卡片皆可点击查看风险等级说明
             const zCard = document.getElementById('zScoreCard');
             if (zCard) zCard.addEventListener('click', () => openZDetail(r));
             const bindHelp = (id, key) => {
                 const el = document.getElementById(id);
-                // RiskHelp 定義於 risk.js（全域詞法作用域，const 不掛 window，故用 typeof 判斷）
+                // RiskHelp 定义于 risk.js（全域词法作用域，const 不挂 window，故用 typeof 判断）
                 if (el && typeof RiskHelp !== 'undefined') el.addEventListener('click', () => RiskHelp.open(key, r));
             };
             bindHelp('crCard', 'cr');

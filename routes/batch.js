@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 7 步批次管線路由
  * Step1 erp2ermm_po → Step2 proc_po → Step3 proc_supplier → Step4 proc_xitems_link_lawbook
  * → Step5 cal_daily_stock_balance → Step6 batch_ARAP_upd → Step7 batch_finance_summary
@@ -233,7 +233,7 @@ router.post('/step6', async (req, res) => {
                 SELECT SUBSTRING(ym,1,4) AS YYYY, ym AS YYYY_MM,
                        ROUND(SUM(unit_price * dn_qty),2) AS AR_amt
                   FROM (
-                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(so_date,'%Y/%m')) AS ym,
+                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(so_date,'%Y-%m')) AS ym,
                            unit_price, dn_qty
                       FROM ermm_erp_so WHERE bu_no=? AND dn_qty > 0
                   ) t
@@ -257,7 +257,7 @@ router.post('/step6', async (req, res) => {
         if (arapAR === 0) {
             try {
                 const [invAR] = await conn.execute(`
-                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y/%m')) AS ym,
+                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y-%m')) AS ym,
                            ROUND(SUM(sub_amt),2) AS AR_amt
                       FROM mgm_invoice_details
                      WHERE bu_no=? AND TX_type='AR'
@@ -277,7 +277,7 @@ router.post('/step6', async (req, res) => {
         // 先算 PO，若沒資料再從發票 AP 推算
         let arapAP = 0;
         const [poAP] = await conn.execute(`
-            SELECT COALESCE(YYYY_MM, DATE_FORMAT(po_date,'%Y/%m')) AS ym,
+            SELECT COALESCE(YYYY_MM, DATE_FORMAT(po_date,'%Y-%m')) AS ym,
                    ROUND(SUM(po_amount + vat_amt),2) AS AP_amt
               FROM ermm_erp_po
              WHERE bu_no=? AND po_status='審核通過' AND po_sub_status='交付完成'
@@ -297,7 +297,7 @@ router.post('/step6', async (req, res) => {
         if (arapAP === 0) {
             try {
                 const [invAP] = await conn.execute(`
-                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y/%m')) AS ym,
+                    SELECT COALESCE(YYYY_MM, DATE_FORMAT(wk_date,'%Y-%m')) AS ym,
                            ROUND(SUM(sub_amt),2) AS AP_amt
                       FROM mgm_invoice_details
                      WHERE bu_no=? AND TX_type='AP'
@@ -349,7 +349,7 @@ router.post('/step7', async (req, res) => {
                 SELECT TX_type, SUM(sub_amt) AS total
                   FROM mgm_invoice_details
                  WHERE bu_no=?
-                   AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y/%m')=?)
+                   AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y-%m')=?)
                  GROUP BY TX_type
             `, sanitizeParams([bu_no, a.YYYY_MM, a.YYYY_MM]));
             const invMap = {};
@@ -360,7 +360,7 @@ router.post('/step7', async (req, res) => {
                 SELECT DB_CR, SUM(sub_amt) AS total
                   FROM mgm_casher_details
                  WHERE bu_no=?
-                   AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y/%m')=?)
+                   AND (YYYY_MM=? OR DATE_FORMAT(wk_date,'%Y-%m')=?)
                  GROUP BY DB_CR
             `, sanitizeParams([bu_no, a.YYYY_MM, a.YYYY_MM]));
             const cashMap = {};

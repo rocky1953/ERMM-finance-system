@@ -1,12 +1,12 @@
 /**
- * 行動追蹤看板頁面
- * 待處理 / 進行中 / 已完成 三欄 Kanban
+ * 行动追踪看板页面
+ * 待处理 / 进行中 / 已完成 三栏 Kanban
  */
 registerPage('actions', async (c) => {
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 style="margin:0;font-size:20px;">行動追蹤看板 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">從紅燈到行動的閉環管理</small></h2>
-            <button class="btn btn-primary" onclick="ActionForm.open()">➕ 新建行動</button>
+            <h2 style="margin:0;font-size:20px;">行动追踪看板 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">从红灯到行动的闭环管理</small></h2>
+            <button class="btn btn-primary" onclick="ActionForm.open()">➕ 新建行动</button>
         </div>
         <div class="kanban-board" id="kanbanBoard">${t('loading')}</div>
     `;
@@ -25,16 +25,16 @@ async function loadActions() {
         });
         el.innerHTML = `
             <div class="kanban-col">
-                <div class="kanban-col-hd"><span>⏳ 待處理</span><span class="kb-cnt">${cols.pending.length}</span></div>
-                ${cols.pending.map(taskCard).join('') || '<div class="kb-empty">暫無任務</div>'}
+                <div class="kanban-col-hd"><span>⏳ 待处理</span><span class="kb-cnt">${cols.pending.length}</span></div>
+                ${cols.pending.map(taskCard).join('') || '<div class="kb-empty">暂无任务</div>'}
             </div>
             <div class="kanban-col">
-                <div class="kanban-col-hd"><span>🔄 進行中</span><span class="kb-cnt">${cols.doing.length}</span></div>
-                ${cols.doing.map(taskCard).join('') || '<div class="kb-empty">暫無任務</div>'}
+                <div class="kanban-col-hd"><span>🔄 进行中</span><span class="kb-cnt">${cols.doing.length}</span></div>
+                ${cols.doing.map(taskCard).join('') || '<div class="kb-empty">暂无任务</div>'}
             </div>
             <div class="kanban-col">
                 <div class="kanban-col-hd"><span>✅ 已完成</span><span class="kb-cnt">${cols.done.length}</span></div>
-                ${cols.done.map(taskCard).join('') || '<div class="kb-empty">暫無任務</div>'}
+                ${cols.done.map(taskCard).join('') || '<div class="kb-empty">暂无任务</div>'}
             </div>
         `;
     } catch (e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
@@ -55,22 +55,22 @@ function taskCard(t) {
     </div>`;
 }
 
-// 新建任務表單
+// 新建任务表单
 const ActionForm = {
     open() {
-        UI.modal('新建行動任務', `
-            <div class="form-row"><label>任務標題 *</label><input id="af_title" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+        UI.modal('新建行动任务', `
+            <div class="form-row"><label>任务标题 *</label><input id="af_title" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             <div class="form-row"><label>描述</label><textarea id="af_desc" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea></div>
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div><label>負責人</label><input id="af_assignee" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+                <div><label>负责人</label><input id="af_assignee" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
                 <div><label>截止日</label><input type="date" id="af_due" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div><label>優先級</label><select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>
-                <div><label>來源指標</label><input id="af_kpi" placeholder="如 gross_profit" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+                <div><label>优先级</label><select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>
+                <div><label>来源指标</label><input id="af_kpi" placeholder="如 gross_profit" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
         `, `<button class="btn btn-ghost" onclick="UI.closeModal()">取消</button>
-            <button class="btn btn-primary" onclick="ActionForm.save()">儲存</button>`);
+            <button class="btn btn-primary" onclick="ActionForm.save()">储存</button>`);
     },
     async save() {
         const data = {
@@ -83,40 +83,40 @@ const ActionForm = {
             source_kpi: document.getElementById('af_kpi').value,
             created_by: Auth.getUser()?.user_name || ''
         };
-        if (!data.title) { UI.toast('請輸入標題', 'error'); return; }
+        if (!data.title) { UI.toast('请输入标题', 'error'); return; }
         try {
             await API.post('/api/action', data);
-            UI.toast('行動任務已建立', 'success');
+            UI.toast('行动任务已建立', 'success');
             UI.closeModal();
             loadActions();
         } catch (e) { UI.toast(e.message, 'error'); }
     }
 };
 
-// 任務詳情（更新狀態/進度）
+// 任务详情（更新状态/进度）
 const ActionDetail = {
     open(uid) {
         API.get(`/api/action/${uid}`).then(res => {
             const t = res.data;
-            UI.modal(`任務：${t.title}`, `
+            UI.modal(`任务：${t.title}`, `
                 <p><b>描述：</b>${t.description || '-'}</p>
-                <p><b>負責人：</b>${t.assignee || '-'} ｜ <b>截止日：</b>${t.due_date || '-'} ｜ <b>優先級：</b>${t.priority}</p>
+                <p><b>负责人：</b>${t.assignee || '-'} ｜ <b>截止日：</b>${t.due_date || '-'} ｜ <b>优先级：</b>${t.priority}</p>
                 <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-                    <div><label>狀態</label>
+                    <div><label>状态</label>
                         <select id="ad_status" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="pending" ${t.status==='pending'?'selected':''}>待處理</option>
-                            <option value="doing" ${t.status==='doing'?'selected':''}>進行中</option>
+                            <option value="pending" ${t.status==='pending'?'selected':''}>待处理</option>
+                            <option value="doing" ${t.status==='doing'?'selected':''}>进行中</option>
                             <option value="done" ${t.status==='done'?'selected':''}>已完成</option>
                         </select>
                     </div>
-                    <div><label>進度 ${t.progress}%</label>
+                    <div><label>进度 ${t.progress}%</label>
                         <input type="range" id="ad_prg" min="0" max="100" value="${t.progress}" oninput="document.getElementById('ad_prg_v').textContent=this.value+'%'">
                         <span id="ad_prg_v">${t.progress}%</span>
                     </div>
                 </div>
-            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">關閉</button>
-                <button class="btn btn-danger" onclick="ActionDetail.del(${t.uid})">刪除</button>
-                <button class="btn btn-primary" onclick="ActionDetail.save(${t.uid})">儲存</button>`);
+            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
+                <button class="btn btn-danger" onclick="ActionDetail.del(${t.uid})">删除</button>
+                <button class="btn btn-primary" onclick="ActionDetail.save(${t.uid})">储存</button>`);
         });
     },
     async save(uid) {
@@ -131,10 +131,10 @@ const ActionDetail = {
         } catch (e) { UI.toast(e.message, 'error'); }
     },
     async del(uid) {
-        if (!confirm('確認刪除此任務?')) return;
+        if (!confirm('确认删除此任务?')) return;
         try {
             await API.del(`/api/action/${uid}`);
-            UI.toast('已刪除', 'success');
+            UI.toast('已删除', 'success');
             UI.closeModal();
             loadActions();
         } catch (e) { UI.toast(e.message, 'error'); }

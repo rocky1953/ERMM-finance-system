@@ -65,9 +65,9 @@ router.get('/kpi', async (req, res) => {
         const curVal = def.formula(cur);
 
         // 上月資料（計算變動）
-        const dt = new Date(YYYY_MM.replace('/', '-'));
+        const dt = new Date(YYYY_MM + '-01');
         dt.setMonth(dt.getMonth() - 1);
-        const prevYM = `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, '0')}`;
+        const prevYM = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
         const [prevRows] = await pool.execute(
             'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, prevYM]
         );

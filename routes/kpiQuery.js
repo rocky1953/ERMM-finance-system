@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 財務 KPI 查詢路由（YG001~YG004）
  *
  * 從 mgm_finance_summary 動態計算財務比率
@@ -264,7 +264,7 @@ router.get('/query', async (req, res) => {
 
         // 取上月（成長率用）
         const [prev] = await pool.execute(
-            `SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM = DATE_FORMAT(DATE_SUB(STR_TO_DATE(?, '%Y/%m'), INTERVAL 1 MONTH), '%Y/%m')`,
+            `SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM = DATE_FORMAT(DATE_SUB(STR_TO_DATE(?, '%Y-%m'), INTERVAL 1 MONTH), '%Y-%m')`,
             [bu_no, YYYY_MM]
         );
 

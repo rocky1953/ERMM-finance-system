@@ -1,5 +1,5 @@
 /**
- * 帳戶明細 mgm_account_details CRUD
+ * 账户明细 mgm_account_details CRUD
  */
 registerPage('account', async (c) => {
     const _mgr = Auth.isManager();
@@ -16,14 +16,14 @@ registerPage('account', async (c) => {
         </div>
     `;
     document.getElementById('aBU').value = State.bu_no;
-    if (State.YYYY_MM) document.getElementById('aYM').value = State.YYYY_MM.replace('/', '-');
+    if (State.YYYY_MM) document.getElementById('aYM').value = State.YYYY_MM;
     loadAccount();
 });
 async function loadAccount() {
     const _mgr = Auth.isManager();
     const el = document.getElementById('accountTable');
     try {
-        const res = await API.get(`/api/account?bu_no=${document.getElementById('aBU').value}&YYYY_MM=${document.getElementById('aYM').value.replace('-','/')}`);
+        const res = await API.get(`/api/account?bu_no=${document.getElementById('aBU').value}&YYYY_MM=${document.getElementById('aYM').value}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">💰 ${t('account.no_data')}</p>`; return; }
         el.innerHTML = `<table class="data-table">
@@ -55,7 +55,7 @@ const AccountForm = {
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('account.title'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.business')}</label><select id="af_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="af_ym" value="${(d.YYYY_MM||'').replace('/','-')}"></div>
+                <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="af_ym" value="${(d.YYYY_MM||'')}"></div>
                 <div class="form-group"><label>${t('account.th.type')}</label><input id="af_type" value="${d.acct_type||''}"></div>
             </div>
             <div class="form-row">
@@ -77,7 +77,7 @@ const AccountForm = {
     async save(uid) {
         const body = {
             bu_no: document.getElementById('af_bu').value,
-            YYYY_MM: document.getElementById('af_ym').value.replace('-','/'),
+            YYYY_MM: document.getElementById('af_ym').value,
             acct_type: document.getElementById('af_type').value,
             group_id: document.getElementById('af_grp').value,
             sub_group: document.getElementById('af_sub').value,

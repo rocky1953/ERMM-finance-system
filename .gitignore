@@ -46,3 +46,9 @@ database/ERMM_第三方資料匯出_*.xlsx
 # Excel 暫存鎖檔
 ~$*.xlsx
 ~$*.xls
+
+# 本機備份與測試產物
+ermm_db_backup_*.sql
+public_backup_*/
+tmp_*.js
+exports/

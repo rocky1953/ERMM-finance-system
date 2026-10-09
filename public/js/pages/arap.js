@@ -1,5 +1,5 @@
 /**
- * 應收應付頁面（真實 DB 結構：每月一行，AR_amt + AP_amt 兩欄）
+ * 应收应付页面（真实 DB 结构：每月一行，AR_amt + AP_amt 两栏）
  */
 registerPage('arap', async (c) => {
     const _mgr = Auth.isManager();

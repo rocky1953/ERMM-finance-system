@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * 三大財務報表路由
  * 資產負債表、損益表、現金流量表
  */
@@ -217,7 +217,7 @@ router.get('/export/pl-table.xlsx', async (req, res) => {
         add('營業利潤', d.operation_profit_amt, true);
         add('本期淨利', d.net_profit_amt, true);
 
-        const fileName = `${YYYY_MM.replace('/', '-')}_損益表.xlsx`;
+        const fileName = `${YYYY_MM}_損益表.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
         await wb.xlsx.write(res);
@@ -269,7 +269,7 @@ router.get('/export/cash-flow.xlsx', async (req, res) => {
         row++;
         add('本期現金淨增減', d.net_cash_change, true);
 
-        const fileName = `${YYYY_MM.replace('/', '-')}_現金流量表.xlsx`;
+        const fileName = `${YYYY_MM}_現金流量表.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
         await wb.xlsx.write(res);
@@ -331,7 +331,7 @@ router.get('/export/balance-sheet.xlsx', async (req, res) => {
         ws.getCell(`A${row}`).value = '負債及股東權益總額'; ws.getCell(`A${row}`).font = { bold: true };
         ws.getCell(`B${row}`).value = bs.liabilities_equity.total;
 
-        const fileName = `${YYYY_MM.replace('/', '-')}_資產負債表.xlsx`;
+        const fileName = `${YYYY_MM}_資產負債表.xlsx`;
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
         await wb.xlsx.write(res);

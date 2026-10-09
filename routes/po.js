@@ -32,13 +32,13 @@ router.post('/', async (req, res) => {
     try {
         const d = req.body;
         let YYYY = d.YYYY, MM = d.MM;
-        if (d.YYYY_MM && !YYYY) YYYY = d.YYYY_MM.split('/')[0];
-        if (d.YYYY_MM && !MM) MM = d.YYYY_MM.split('/')[1];
+        if (d.YYYY_MM && !YYYY) YYYY = d.YYYY_MM.split('-')[0];
+        if (d.YYYY_MM && !MM) MM = d.YYYY_MM.split('-')[1];
         // 若給了 po_date 但沒給 YYYY_MM，自動從日期派生
         let YYYY_MM = d.YYYY_MM;
         if (!YYYY_MM && d.po_date) {
             const dt = new Date(d.po_date);
-            YYYY_MM = `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}`;
+            YYYY_MM = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
             YYYY = String(dt.getFullYear());
             MM = String(dt.getMonth()+1).padStart(2,'0');
         }

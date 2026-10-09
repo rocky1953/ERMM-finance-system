@@ -1,5 +1,5 @@
 /**
- * PO 暫存 ermm_temp_po CRUD
+ * PO 暂存 ermm_temp_po CRUD
  */
 registerPage('tempPo', async (c) => {
     const _mgr = Auth.isManager();
@@ -112,7 +112,7 @@ async function batchStep1() {
     } catch(e) { UI.toast(e.message,'error'); }
 }
 
-// ===== Step1 同步操作說明彈窗 =====
+// ===== Step1 同步操作说明弹窗 =====
 const TempPoHelp = {
     open() {
         const body = `

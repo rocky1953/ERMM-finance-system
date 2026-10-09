@@ -1,5 +1,5 @@
 /**
- * 銷售訂單 SO 頁面
+ * 销售订单 SO 页面
  */
 registerPage('so', async (c) => {
     const _mgr = Auth.isManager();
@@ -39,7 +39,7 @@ async function loadSO() {
                     <td class="num">${UI.fmt(r.dn_qty)}</td>
                     <td class="num">${UI.fmt(r.unit_price, 2)}</td>
                     <td class="num positive">${UI.fmt(total)}</td>
-                    <td><span style="padding:2px 8px;border-radius:10px;background:#dcfce7;color:#166534;font-size:12px">${I18N.statusLabel('so_status', r.status || '新單')}</span></td>
+                    <td><span style="padding:2px 8px;border-radius:10px;background:#dcfce7;color:#166534;font-size:12px">${I18N.statusLabel('so_status', r.status || '新单')}</span></td>
                     ${_mgr ? `<td>
                         <button class="btn btn-primary btn-sm" onclick='editSO(${JSON.stringify(r)})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="delSO(${r.uid})">🗑</button>
@@ -60,7 +60,7 @@ const SOForm = {
     open(d) {
         d = d || {};
         const opts = I18N.statusOptions('so_status');
-        const cur = d.status || '新單';
+        const cur = d.status || '新单';
 
         UI.modal(this._uid ? `✏️ ${t('so.form.title_edit')} ${d.so_nbr || ''}` : `➕ ${t('so.form.title_new')}`, `
             <div class="form-row">

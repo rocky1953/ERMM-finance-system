@@ -106,6 +106,7 @@
                                  <button class="btn" style="background:#117a65;color:#fff;" onclick="DRApp.openSummary()">📋 ${t('dr.sum.title')}</button>
                                  <button class="btn" style="background:#b9770e;color:#fff;" onclick="DRApp.openTargets()">🎯 ${t('dr.tgt.title')}</button>
                                  <button class="btn" style="background:#1b4f72;color:#fff;" onclick="DRApp.openDashboard()">📈 ${t('dr.eff.title')}</button>
+                                 <button class="btn" style="background:#6c3483;color:#fff;" onclick="DRApp.openForecast()">🔮 ${t('dr.fc.title')}</button>
                                  <button class="btn" style="background:#78281f;color:#fff;" onclick="DRApp.openMgmtReport()">📑 ${t('dr.mbr.title')}</button>
                                  <button class="btn" style="background:#7d6608;color:#fff;" onclick="DRApp.openAnnualReview()">🏆 ${t('dr.ar.title')}</button>` : ''}
                         <span style="margin-left:auto;color:#7f8c8d;font-size:0.9em;" id="drTotal"></span>
@@ -340,7 +341,7 @@
                 const row = (res.data.list || [])[0];
                 if (!row) {
                     // 当天无日报：查本人当月签核锁，锁定则禁止新增
-                    const ym = dateStr.slice(0, 7).replace('-', '/');
+                    const ym = dateStr.slice(0, 7);
                     const lres = await API.get('/api/daily-report/locks?bu_no=' + encodeURIComponent(State.bu_no) +
                         '&YYYY_MM=' + encodeURIComponent(ym) + '&user_id=' + encodeURIComponent(this.me ? this.me.user_id : ''));
                     const lrow = (lres.data || [])[0];
@@ -560,13 +561,13 @@
                 <div style="line-height:1.8;margin-bottom:12px;">${t('dr.guide.unit_rule')}</div>
                 <div style="font-weight:700;color:#e74c3c;">${t('dr.guide.wrong')}</div>
                 <table class="data-table" style="margin:6px 0 12px;">
-                    <thead><tr><th>From~To</th><th>${t('dr.col.project')}</th><th>時數</th></tr></thead>
+                    <thead><tr><th>From~To</th><th>${t('dr.col.project')}</th><th>时数</th></tr></thead>
                     <tbody><tr><td>08:00 ~ 08:15</td>
                         <td>${t('dr.guide.example_tasks')}</td><td class="num">0.25</td></tr></tbody>
                 </table>
                 <div style="font-weight:700;color:#27ae60;">${t('dr.guide.right')}</div>
                 <table class="data-table" style="margin:6px 0 0;">
-                    <thead><tr><th>From~To</th><th>${t('dr.col.project')}</th><th>時數</th></tr></thead>
+                    <thead><tr><th>From~To</th><th>${t('dr.col.project')}</th><th>时数</th></tr></thead>
                     <tbody>
                         <tr><td>08:00 ~ 08:30</td><td>a</td><td class="num">0.50</td></tr>
                         <tr><td>08:30 ~ 09:00</td><td>b</td><td class="num">0.50</td></tr>
@@ -887,7 +888,7 @@
             }
         },
 
-        // KR 完成率（與後端同口徑，截斷 0–120%）
+        // KR 完成率（与后端同口径，截断 0–120%）
         krProgress(k) {
             const s = Number(k.start_val), g = Number(k.target_val), a = Number(k.actual_val);
             if (!isFinite(s) || !isFinite(g) || !isFinite(a) || g <= s) return 0;
@@ -959,7 +960,7 @@
                 </div>`;
             }).join('');
 
-            // 事件：欄位即時重算完成率
+            // 事件：字段即时重算完成率
             el.querySelectorAll('.okr-card').forEach(card => {
                 const oi = Number(card.dataset.oi);
                 card.querySelectorAll('input[class^="kr-"]').forEach(inp => {
@@ -980,7 +981,7 @@
             });
         },
 
-        // 不重繪、只依 DOM 當前值更新某張卡的進度顏色（輸入中即時回饋）
+        // 不重绘、只依 DOM 当前值更新某张卡的进度颜色（输入中即时回馈）
         refreshOkrCard(oi) {
             const card = document.querySelector(`.okr-card[data-oi="${oi}"]`);
             if (!card) return;
@@ -1035,7 +1036,7 @@
         async saveOkrs() {
             const rows = this._okrRows || [];
             if (rows.length === 0) { UI.toast(t('dr.okr.empty_rows'), 'error'); return; }
-            // 從 DOM 收集最新值
+            // 从 DOM 收集最新值
             const okrs = [];
             for (let oi = 0; oi < rows.length; oi++) {
                 const card = document.querySelector(`.okr-card[data-oi="${oi}"]`);
@@ -1090,6 +1091,263 @@
                     <div id="dashBody" style="margin-top:12px;">${t('loading')}</div>
                 </div>`;
             this.loadDashboard();
+        },
+
+        // ============ M3-B 趋势预测 ============
+        openForecast() {
+            this.view = 'forecast';
+            this.destroyCharts();
+            if (!this._fc) {
+                const d = new Date();
+                d.setMonth(d.getMonth() + 1); // 预设下月
+                this._fc = {
+                    year: d.getFullYear(), mm: String(d.getMonth() + 1).padStart(2, '0'),
+                    scope: 'DEPT', metric: 'HOURS', algo: 'WMA_LR', selected: ''
+                };
+            }
+            const fc = this._fc;
+            const senior = !!(this.me && this.me.isSenior);
+            this.c.innerHTML = `
+                <div class="card">
+                    <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
+                        <label><b>${t('dr.fc.target_month')}：</b>
+                            <select id="fcYear">${this.yearOptions(fc.year)}</select> /
+                            <select id="fcMonth">${this.monthOptions(fc.mm)}</select>
+                        </label>
+                        <label><b>${t('dr.fc.scope')}：</b>
+                            <select id="fcScope" onchange="DRApp.fcChangeScope(this.value)">
+                                <option value="DEPT" ${fc.scope === 'DEPT' ? 'selected' : ''}>${t('dr.fc.scope_dept')}</option>
+                                <option value="USER" ${fc.scope === 'USER' ? 'selected' : ''}>${t('dr.fc.scope_user')}</option>
+                            </select>
+                        </label>
+                        <label><b>${t('dr.fc.algo')}：</b>
+                            <select id="fcAlgo" onchange="DRApp.fcChangeAlgo(this.value)">
+                                <option value="WMA_LR" ${fc.algo === 'WMA_LR' ? 'selected' : ''}>${t('dr.fc.algo_mix')}</option>
+                                <option value="WMA" ${fc.algo === 'WMA' ? 'selected' : ''}>${t('dr.fc.algo_wma')}</option>
+                                <option value="LR" ${fc.algo === 'LR' ? 'selected' : ''}>${t('dr.fc.algo_lr')}</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-primary" onclick="DRApp.loadForecast()">🔍 ${t('dr.btn.query')}</button>
+                        ${senior ? `<button class="btn" style="background:#7d6608;color:#fff;" onclick="DRApp.rerunForecast()">⚙ ${t('dr.fc.rerun')}</button>` : ''}
+                        <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
+                    </div>
+                    <div id="fcMetricTabs" style="margin:12px 0 8px;display:flex;gap:6px;flex-wrap:wrap;"></div>
+                    <div id="fcBody">${t('loading')}</div>
+                </div>`;
+            this.renderFcMetricTabs();
+            this.loadForecast();
+        },
+
+        fcMetricsFor(scope) {
+            return scope === 'USER'
+                ? [['HOURS', t('dr.fc.metric_hours')], ['DELAYS', t('dr.fc.metric_delays')], ['UNRESOLVED', t('dr.fc.metric_unresolved')]]
+                : [['HOURS', t('dr.fc.metric_hours')], ['PER_CAPITA_HOURS', t('dr.fc.metric_percap')], ['DELAYS', t('dr.fc.metric_delays')], ['UNRESOLVED', t('dr.fc.metric_unresolved')]];
+        },
+
+        renderFcMetricTabs() {
+            const box = document.getElementById('fcMetricTabs');
+            if (!box) return;
+            box.innerHTML = this.fcMetricsFor(this._fc.scope).map(([m, label]) =>
+                `<button class="btn btn-sm ${m === this._fc.metric ? 'btn-primary' : 'btn-outline'}" onclick="DRApp.fcChangeMetric('${m}')">${label}</button>`
+            ).join('');
+        },
+
+        fcChangeScope(v) {
+            this._fc.scope = v;
+            this._fc.metric = v === 'USER' ? 'HOURS' : 'HOURS';
+            this._fc.selected = '';
+            this.renderFcMetricTabs();
+            this.loadForecast();
+        },
+        fcChangeMetric(m) { this._fc.metric = m; this._fc.selected = ''; this.renderFcMetricTabs(); this.loadForecast(); },
+        fcChangeAlgo(v) { this._fc.algo = v; },
+
+        async loadForecast() {
+            const el = document.getElementById('fcBody');
+            if (!el) return;
+            const y = document.getElementById('fcYear').value;
+            const mm = document.getElementById('fcMonth').value;
+            this._fc.year = y; this._fc.mm = mm;
+            const ym = y + '/' + mm;
+            el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            try {
+                const url = `/api/daily-report/efficiency-forecast?bu_no=${encodeURIComponent(State.bu_no)}`
+                    + `&target_ym=${encodeURIComponent(ym)}&scope=${this._fc.scope}&metric=${this._fc.metric}&algo=${this._fc.algo}`;
+                const res = await API.get(url);
+                this._fcData = res.data;
+                this.renderForecast();
+            } catch (e) { el.innerHTML = `<p style="color:#e74c3c">${esc(e.message)}</p>`; }
+        },
+
+        async rerunForecast() {
+            const y = this._fc.year, mm = this._fc.mm;
+            try {
+                const res = await API.post('/api/daily-report/efficiency-forecast/run',
+                    { bu_no: State.bu_no, target_ym: `${y}-${mm}`, algo: this._fc.algo });
+                const r = res.data || {};
+                UI.toast(`${t('dr.fc.rerun_done')}：${r.upserted || 0} / ⚠${r.danger || 0} / 🟠${r.warn || 0}`, 'success');
+                this.loadForecast();
+            } catch (e) { UI.toast(e.message, 'error'); }
+        },
+
+        renderForecast() {
+            const fc = this._fc;
+            const d = this._fcData;
+            const el = document.getElementById('fcBody');
+            if (!d) return;
+            const isInt = fc.metric === 'DELAYS' || fc.metric === 'UNRESOLVED';
+            const unit = isInt ? '' : ' h';
+            const rows = (d.rows || []).slice();
+            const insufficient = d.insufficient || [];
+
+            // 风险排序：DANGER > WARN > NORMAL
+            const order = { DANGER: 0, WARN: 1, NORMAL: 2 };
+            rows.sort((a, b) => (order[a.risk_level] - order[b.risk_level]) || String(a.scope_name).localeCompare(String(b.scope_name), 'zh-TW'));
+
+            if (!fc.selected || !rows.some(r => r.scope_id === fc.selected)) {
+                fc.selected = rows.length ? rows[0].scope_id : '';
+            }
+            const cur = rows.find(r => r.scope_id === fc.selected);
+
+            const riskBadge = lv => lv === 'DANGER'
+                ? '<span style="background:#fdecea;color:#c0392b;padding:2px 8px;border-radius:10px;font-size:12px;">🔴 DANGER</span>'
+                : lv === 'WARN'
+                    ? '<span style="background:#fef5e7;color:#b9770e;padding:2px 8px;border-radius:10px;font-size:12px;">🟠 WARN</span>'
+                    : '<span style="background:#eafaf1;color:#1e8449;padding:2px 8px;border-radius:10px;font-size:12px;">🟢 NORMAL</span>';
+            const dirArrow = dir => dir === 'OVER' ? '<span style="color:#c0392b;">↑</span>'
+                : dir === 'UNDER' ? '<span style="color:#5d6d7e;">↓</span>' : '';
+
+            el.innerHTML = `
+                <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:14px;">
+                    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:12px;">
+                        <div class="toolbar" style="margin-bottom:6px;gap:8px;">
+                            <b style="font-size:14px;">🔮 ${esc(d.target_ym)} ${t('dr.fc.chart_title')}</b>
+                            <select id="fcObject" style="margin-left:auto;max-width:200px;" onchange="DRApp.fcPick(this.value)">
+                                ${rows.map(r => `<option value="${esc(r.scope_id)}" ${r.scope_id === fc.selected ? 'selected' : ''}>${esc(r.scope_name || r.scope_id)}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div style="position:relative;height:300px;"><canvas id="fcChart"></canvas></div>
+                        <div style="font-size:12px;color:#95a5a6;margin-top:4px;text-align:center;">${t('dr.fc.band80_note')}</div>
+                    </div>
+                    <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px;">
+                        ${cur ? `
+                            <div style="color:#7f8c8d;font-size:0.85em;">${esc(cur.scope_name || cur.scope_id)} · ${esc(d.target_ym)}</div>
+                            <div style="font-size:2em;font-weight:700;color:#6c3483;margin:6px 0;">${UI.fmt(cur.forecast_val, isInt ? 0 : 1)}${unit}</div>
+                            <div style="margin:8px 0;">${riskBadge(cur.risk_level)} ${dirArrow(cur.risk_dir)}</div>
+                            <table style="width:100%;font-size:13px;margin-top:8px;">
+                                <tr><td style="color:#7f8c8d;">${t('dr.fc.band80')}</td><td style="text-align:right;">${UI.fmt(cur.lower_bound, isInt ? 0 : 1)} ~ ${UI.fmt(cur.upper_bound, isInt ? 0 : 1)}${unit}</td></tr>
+                                <tr><td style="color:#7f8c8d;">${t('dr.fc.hist_n')}</td><td style="text-align:right;">${cur.history_n} ${t('dr.fc.months_unit')}</td></tr>
+                                <tr><td style="color:#7f8c8d;">${t('dr.fc.algo')}</td><td style="text-align:right;">${cur.algo}</td></tr>
+                            </table>` : `<div style="color:#95a5a6;padding:30px 0;text-align:center;">${t('dr.fc.no_object')}</div>`}
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                <table class="data-table" style="font-size:0.88em;">
+                    <thead><tr>
+                        <th>${fc.scope === 'DEPT' ? t('dr.eff.dept_title') : t('dr.sum.col.writer')}</th>
+                        <th>${t('dr.fc.forecast')}</th>
+                        <th>${t('dr.fc.band80')}</th>
+                        <th>${t('dr.fc.risk')}</th>
+                        <th>${t('dr.fc.hist_n')}</th>
+                    </tr></thead>
+                    <tbody>
+                        ${rows.map(r => `<tr style="cursor:pointer;${r.scope_id === fc.selected ? 'background:#f4ecf7;' : ''}" onclick="DRApp.fcPick('${esc(r.scope_id).replace(/'/g, "\\'")}')">
+                            <td>${esc(r.scope_name || r.scope_id)}</td>
+                            <td style="text-align:right;font-weight:600;">${UI.fmt(r.forecast_val, isInt ? 0 : 1)}${unit}</td>
+                            <td style="text-align:right;color:#7f8c8d;">${UI.fmt(r.lower_bound, isInt ? 0 : 1)} ~ ${UI.fmt(r.upper_bound, isInt ? 0 : 1)}</td>
+                            <td style="text-align:center;">${riskBadge(r.risk_level)} ${dirArrow(r.risk_dir)}</td>
+                            <td style="text-align:center;">${r.history_n}</td>
+                        </tr>`).join('')}
+                        ${insufficient.map(x => `<tr style="color:#aaa;">
+                            <td>${esc(x.scope_name || x.scope_id)}</td>
+                            <td colspan="4" style="text-align:center;">${t('dr.fc.insufficient', { n: x.history_n })}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+                </div>
+                ${rows.length === 0 && insufficient.length === 0 ? UI.empty('🔮', t('dr.fc.empty')) : ''}`;
+
+            if (cur) this.drawFcChart(d, cur, isInt);
+        },
+
+        fcPick(scopeId) {
+            this._fc.selected = scopeId;
+            this.renderForecast();
+        },
+
+        drawFcChart(d, cur, isInt) {
+            const labels = [...d.history_months, d.target_ym];
+            const n = cur.history.length;
+            const hist = cur.history;
+            // 历史实际绿线（预测月留 null）
+            const actualData = [...hist, null];
+            // 预测紫虚线：最后历史点与预测点接续
+            const fcLineData = Array(n - 1).fill(null).concat([hist[n - 1], cur.forecast_val]);
+            // 80% 置信带（只在最后两个点有值，fill 两线之间）
+            const bandLow = Array(n - 1).fill(null).concat([hist[n - 1], cur.lower_bound]);
+            const bandHigh = Array(n - 1).fill(null).concat([hist[n - 1], cur.upper_bound]);
+            const fmtV = v => isInt ? Math.round(v) : (Math.round(v * 10) / 10);
+
+            // 数值范围（含预测与区间），用于计算 Y 轴上下界
+            const allVals = [...hist, cur.forecast_val, cur.lower_bound, cur.upper_bound].filter(v => v != null && !isNaN(v));
+            const dataMin = Math.min(...allVals);
+            const dataMax = Math.max(...allVals);
+            const span = dataMax - dataMin || Math.max(1, dataMax * 0.1);
+            const yMin = Math.floor((dataMin - span * 0.25) / (isInt ? 1 : 1)) * (isInt ? 1 : 1);
+            const yMax = Math.ceil((dataMax + span * 0.25) / (isInt ? 1 : 1)) * (isInt ? 1 : 1);
+            // nice 刻度：目标 5~6 条
+            const targetTicks = 6;
+            const rawStep = (yMax - yMin) / targetTicks;
+            const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+            const niceStep = rawStep / mag <= 1 ? mag
+                : rawStep / mag <= 2 ? 2 * mag
+                : rawStep / mag <= 5 ? 5 * mag : 10 * mag;
+            const tickMin = Math.floor(yMin / niceStep) * niceStep;
+            const tickMax = Math.ceil(yMax / niceStep) * niceStep;
+
+            const ch = new Chart(document.getElementById('fcChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: t('dr.fc.actual'), data: actualData, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.08)', tension: 0.25, pointRadius: 4, borderWidth: 2, spanGaps: false },
+                        { label: t('dr.fc.upper80'), data: bandHigh.map(fmtV), borderColor: 'rgba(155,89,182,0.4)', borderDash: [3, 3], backgroundColor: 'rgba(155,89,182,0.12)', pointRadius: 0, fill: '+1', borderWidth: 1 },
+                        { label: t('dr.fc.lower80'), data: bandLow.map(fmtV), borderColor: 'rgba(155,89,182,0.4)', borderDash: [3, 3], pointRadius: 0, fill: false, borderWidth: 1 },
+                        { label: t('dr.fc.forecast'), data: fcLineData.map(fmtV), borderColor: '#9b59b6', borderDash: [6, 4], borderWidth: 2.5, pointRadius: 5, pointBackgroundColor: '#9b59b6', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 14, font: { size: 11 }, usePointStyle: true } },
+                        tooltip: {
+                            filter: (item) => item.datasetIndex !== 1,
+                            callbacks: { label: (item) => `${item.dataset.label}: ${item.parsed.y == null ? '-' : fmtV(item.parsed.y)}${isInt ? '' : ' h'}` }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            ticks: { display: true, autoSkip: false, maxRotation: 0, font: { size: 11 }, color: '#555' }
+                        },
+                        y: {
+                            display: true,
+                            min: tickMin,
+                            max: tickMax,
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            ticks: {
+                                stepSize: niceStep,
+                                callback: v => fmtV(v),
+                                font: { size: 11 },
+                                color: '#555'
+                            }
+                        }
+                    }
+                }
+            });
+            this.charts.push(ch);
         },
 
         async loadDashboard() {
@@ -1185,7 +1443,7 @@
                         </div>
                     </div>`;
 
-                // M2：部門表可點擊排序
+                // M2：部门表可点击排序
                 this._dashDepts = d.departments || [];
                 if (!this._deptSort) this._deptSort = { key: 'total_hours', dir: 'desc' };
                 this.renderDeptTable();
@@ -1198,7 +1456,7 @@
                     });
                 });
 
-                // M2：部門雷達圖（五維標準化 0–100；產值維暫無部門數據）
+                // M2：部门雷达图（五维标准化 0–100；产值维暂无部门数据）
                 const radarColors = ['#2980b9', '#27ae60', '#e67e22', '#8e44ad', '#c0392b', '#16a085', '#d35400', '#2c3e50'];
                 this.charts.push(new Chart(document.getElementById('deptRadar'), {
                     type: 'radar',
@@ -1242,7 +1500,7 @@
             } catch (e) { el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`; }
         },
 
-        // M2：部門橫向對比表（表頭點擊排序）
+        // M2：部门横向对比表（表头点击排序）
         renderDeptTable() {
             const tb = document.getElementById('deptSortBody');
             if (!tb) return;
@@ -1254,7 +1512,7 @@
                 if (typeof va === 'string') return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
                 return dir === 'asc' ? va - vb : vb - va;
             });
-            // 表頭排序箭頭
+            // 表头排序箭头
             document.querySelectorAll('#deptSortTable th[data-sort]').forEach(th => {
                 const base = th.textContent.replace(/\s*[▲▼]\s*$/, '');
                 th.textContent = base + (th.dataset.sort === key ? (dir === 'asc' ? ' ▲' : ' ▼') : '');
@@ -1397,7 +1655,7 @@
             } catch (e) { UI.toast(e.message, 'error'); }
         },
 
-        // ============ P2-② 高管報告收件箱 ============
+        // ============ P2-② 高管报告收件箱 ============
         openMgmtInbox() {
             this.view = 'mgmtInbox';
             this.destroyCharts();
@@ -1494,7 +1752,7 @@
                                 <thead><tr><th>#</th><th>${t('dr.sum.col.writer')}</th><th>${t('dr.sum.col.depart')}</th><th>${t('dr.sum.col.hours')}</th></tr></thead>
                                 <tbody>${topRows}</tbody>
                             </table>
-                            <h4>🏢 部門</h4>
+                            <h4>🏢 部门</h4>
                             <table class="data-table" style="font-size:0.9em;">
                                 <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th></tr></thead>
                                 <tbody>${deptRows}</tbody>
@@ -1507,7 +1765,7 @@
             } catch (e) { UI.toast(e.message, 'error'); }
         },
 
-        // ============ M1 年度績效自動生成 + 分佈圖 ============
+        // ============ M1 年度绩效自动生成 + 分布图 ============
         openAnnualReview() {
             this.view = 'annualReview';
             this.destroyCharts();
@@ -1534,7 +1792,7 @@
                     </div>
                     <div id="arBody" style="margin-top:12px;">${t('loading')}</div>
                 </div>`;
-            // 部門下拉（從 meta 填充）
+            // 部门下拉（从 meta 填充）
             const deptSel = document.getElementById('arDept');
             (this.meta?.depts || []).forEach(d => {
                 const o = document.createElement('option');
@@ -1645,7 +1903,7 @@
                         </tbody>
                     </table>`;
 
-                // 圖1：等第甜甜圈
+                // 图1：等第甜甜圈
                 this.charts.push(new Chart(document.getElementById('arGradeChart'), {
                     type: 'doughnut',
                     data: {
@@ -1657,7 +1915,7 @@
                     },
                     options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
                 }));
-                // 圖2：分數直方圖
+                // 图2：分数直方图
                 this.charts.push(new Chart(document.getElementById('arHistChart'), {
                     type: 'bar',
                     data: {
@@ -1668,7 +1926,7 @@
                     options: { responsive: true, plugins: { legend: { display: false } },
                         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
                 }));
-                // 圖3：部門 × 等第堆疊
+                // 图3：部门 × 等第堆叠
                 const deptRows = dist.dept_grade;
                 this.charts.push(new Chart(document.getElementById('arDeptChart'), {
                     type: 'bar',
@@ -1794,7 +2052,7 @@
                         </div>
                     </div>`;
 
-                // 雷達圖（四維標準化）
+                // 雷达图（四维标准化）
                 this.charts.push(new Chart(document.getElementById('arRadar'), {
                     type: 'radar',
                     data: {
@@ -1807,7 +2065,7 @@
                     },
                     options: { responsive: true, scales: { r: { min: 0, max: 100, ticks: { stepSize: 25 } } } }
                 }));
-                // 12 月趨勢
+                // 12 月趋势
                 this.charts.push(new Chart(document.getElementById('arLine'), {
                     type: 'line',
                     data: {
@@ -1861,7 +2119,7 @@
             const y = document.getElementById('drsYear').value;
             const mm = document.getElementById('drsMonth').value;
             this._signYM = { year: y, mm };
-            return `${y}/${mm}`;
+            return `${y}-${mm}`;
         },
 
         async loadLocks() {
@@ -2001,7 +2259,7 @@
             f.action = document.getElementById('draAction').value;
             f.page = page || 1;
             const qs = new URLSearchParams({ bu_no: State.bu_no, page: f.page, pageSize: 15 });
-            if (f.year && f.mm) qs.set('YYYY_MM', f.year + '/' + f.mm);
+            if (f.year && f.mm) qs.set('YYYY_MM', f.year + '-' + f.mm);
             if (f.action) qs.set('action', f.action);
             el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
             try {

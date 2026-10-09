@@ -1,5 +1,5 @@
 /**
- * SO 交貨單 ermm_erp_so_dn CRUD
+ * SO 交货单 ermm_erp_so_dn CRUD
  */
 registerPage('dn', async (c) => {
     const _mgr = Auth.isManager();

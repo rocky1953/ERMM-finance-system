@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
             finance_type AS pay_method,
             pay_date, should_date, invoice_date, expense_content, remark, data_year,
             CASE WHEN pay_date IS NOT NULL THEN 'paid' ELSE 'unpaid' END AS status1,
-            DATE_FORMAT(should_date,'%Y/%m') AS YYYY_MM,
+            DATE_FORMAT(should_date,'%Y-%m') AS YYYY_MM,
             create_time, update_time
             FROM pay_detail WHERE 1=1`;
         const params = [];
@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
         if (status === 'paid') { sql += ' AND pay_date IS NOT NULL'; }
         if (status === 'unpaid') { sql += ' AND pay_date IS NULL'; }
         // 關鍵：pay_detail 沒有 YYYY_MM 欄位，用 should_date 推導
-        if (YYYY_MM) { sql += ' AND DATE_FORMAT(should_date,\'%Y/%m\')=?'; params.push(YYYY_MM); }
+        if (YYYY_MM) { sql += ' AND DATE_FORMAT(should_date,\'%Y-%m\')=?'; params.push(YYYY_MM); }
         sql += ' ORDER BY should_date DESC LIMIT 500';
         const [rows] = await pool.execute(sql, params);
         ok(res, rows);

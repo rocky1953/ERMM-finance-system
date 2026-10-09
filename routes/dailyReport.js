@@ -18,6 +18,7 @@ const ExcelJS = require('exceljs');
 const { pool } = require('../config/db');
 const { ok, fail, fail500, pagination, n } = require('../utils/response');
 const { sendMgmtReport, getRecipients } = require('../utils/mailer');
+const drForecast = require('../services/drForecast');
 
 // ============ M1 年度績效：計分模型常量（分數線/權重可於此調整） ============
 const ANNUAL = {
@@ -97,7 +98,7 @@ async function loadMonthOkrs(bu, ym, userIds) {
 async function loadYearOkrs(bu, yyyy) {
     const [os] = await pool.execute(
         `SELECT id, user_id, YYYY_MM, objective FROM daily_report_okr WHERE bu_no=? AND YYYY_MM LIKE ?`,
-        [bu, `${yyyy}/%`]);
+        [bu, `${yyyy}-%`]);
     if (os.length === 0) return new Map();
     const ids = os.map(o => o.id);
     const ph = ids.map(() => '?').join(',');
@@ -210,7 +211,7 @@ function validDateStr(s) {
 }
 
 function deriveYM(dateStr) {
-    return { year: Number(dateStr.slice(0, 4)), ym: dateStr.slice(0, 7).replace('-', '/') };
+    return { year: Number(dateStr.slice(0, 4)), ym: dateStr.slice(0, 7) };
 }
 
 // 0=同一天；>7 表示超出 7 天可编辑窗口
@@ -230,7 +231,7 @@ function normalizeMonth(year, monthRaw) {
         if (m) mm = String(Number(m[1])).padStart(2, '0');
     }
     if (!mm || Number(mm) < 1 || Number(mm) > 12) return null;
-    return { mm, ym: `${year}/${mm}` };
+    return { mm, ym: `${year}-${mm}` };
 }
 
 // 解析当前登录身份（含经理级判定）
@@ -430,13 +431,13 @@ router.post('/relink', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
-// ============ 签核锁定：宽松解析 YYYY/MM、YYYY-MM ============
+// ============ 签核锁定：宽松解析 YYYY-MM、YYYY/MM ============
 function parseYM(s) {
     const m = /^(\d{4})[-/](\d{1,2})$/.exec(String(s || '').trim());
     if (!m) return null;
     const mm = String(Number(m[2])).padStart(2, '0');
     if (Number(mm) < 1 || Number(mm) > 12) return null;
-    return { year: Number(m[1]), mm, ym: `${m[1]}/${mm}` };
+    return { year: Number(m[1]), mm, ym: `${m[1]}-${mm}` };
 }
 
 // ============ 签核锁定（经理：单人 user_id 或整批 batch=当月有日报者） ============
@@ -450,7 +451,7 @@ router.post('/lock', async (req, res) => {
         const b = req.body || {};
         const bu = trimOrNull(b.bu_no) || 'HM';
         const mo = parseYM(b.YYYY_MM || b.month);
-        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+        if (!mo) return fail(res, '月份格式不正确(YYYY-MM)', 400);
         const wantUser = trimOrNull(b.user_id);
         const wantUsers = Array.isArray(b.user_ids)
             ? [...new Set(b.user_ids.map(trimOrNull).filter(Boolean))] : [];
@@ -525,7 +526,7 @@ router.post('/unlock', async (req, res) => {
         const b = req.body || {};
         const bu = trimOrNull(b.bu_no) || 'HM';
         const mo = parseYM(b.YYYY_MM || b.month);
-        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+        if (!mo) return fail(res, '月份格式不正确(YYYY-MM)', 400);
         const wantUser = trimOrNull(b.user_id);
         const reason = trimOrNull(b.reason);
         if (!wantUser) return fail(res, '请指定要解锁的撰写人', 400);
@@ -576,7 +577,7 @@ router.get('/locks', async (req, res) => {
         const q = req.query;
         const bu = trimOrNull(q.bu_no) || 'HM';
         const mo = parseYM(q.YYYY_MM || q.month);
-        if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+        if (!mo) return fail(res, '月份格式不正确(YYYY-MM)', 400);
 
         // 员工仅能查本人；经理可查全部
         const onlySelf = actor.isManager ? trimOrNull(q.user_id) : actor.user_id;
@@ -638,7 +639,7 @@ router.get('/audit-logs', async (req, res) => {
 
         if (trimOrNull(q.YYYY_MM || q.month)) {
             const mo = parseYM(q.YYYY_MM || q.month);
-            if (!mo) return fail(res, '月份格式不正确(YYYY/MM)', 400);
+            if (!mo) return fail(res, '月份格式不正确(YYYY-MM)', 400);
             where.push('a.YYYY_MM=?'); params.push(mo.ym);
         }
         if (trimOrNull(q.action)) { where.push('a.action=?'); params.push(trimOrNull(q.action)); }
@@ -686,9 +687,9 @@ router.get('/timeliness', async (req, res) => {
         const bu = trimOrNull(q.bu_no) || 'HM';
         const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
             const d = new Date();
-            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+            return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
         })();
-        const [y, m] = mo.ym.split('/').map(Number);
+        const [y, m] = mo.ym.split('-').map(Number);
 
         // 计算应交天数（当月已过去的日历日，含今日）
         const now = new Date();
@@ -764,7 +765,7 @@ router.get('/monthly-summary', async (req, res) => {
         const bu = trimOrNull(q.bu_no) || 'HM';
         const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
             const d = new Date();
-            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+            return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
         })();
 
         let where = ['d.bu_no=?', 'd.YYYY_MM=?', "d.status1='USE'"];
@@ -869,7 +870,7 @@ router.get('/targets', async (req, res) => {
         const bu = trimOrNull(q.bu_no) || 'HM';
         const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
             const d = new Date();
-            return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+            return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
         })();
 
         const where = ['bu_no=?', 'YYYY_MM=?'];
@@ -1087,7 +1088,7 @@ router.get('/efficiency-dashboard', async (req, res) => {
         if (!actor.isManager) return fail(res, '权限不足，仅主管可查看人效仪表盘', 403);
         const bu = trimOrNull(req.query.bu_no) || 'HM';
         const mo = parseYM(req.query.YYYY_MM) || (() => {
-            const d = new Date(); return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+            const d = new Date(); return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
         })();
         const ym = mo.ym;
 
@@ -1117,7 +1118,7 @@ router.get('/efficiency-dashboard', async (req, res) => {
         const totalHours = Number(hrs[0]?.total_hours) || 0;
 
         // 3) 部门维度（先按人聚合再汇部门，避免 JOIN 明细后日期/标记计数放大）
-        const [dY, dM] = ym.split('/').map(Number);
+        const [dY, dM] = ym.split('-').map(Number);
         const nowD = new Date();
         const deptDueDays = dY < nowD.getFullYear() ? new Date(dY, dM, 0).getDate()
             : dY === nowD.getFullYear()
@@ -1169,11 +1170,11 @@ router.get('/efficiency-dashboard', async (req, res) => {
         }).sort((x, y) => y.total_hours - x.total_hours);
 
         // 4) 近 6 个月趋势
-        const [y0, m0] = ym.split('/').map(Number);
+        const [y0, m0] = ym.split('-').map(Number);
         const trendMonths = [];
         for (let i = 5; i >= 0; i--) {
             const d = new Date(y0, m0 - 1 - i, 1);
-            trendMonths.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`);
+            trendMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
         }
         const ph = trendMonths.map(() => '?').join(',');
         const [trendSo] = await pool.execute(
@@ -1230,7 +1231,7 @@ router.get('/efficiency-dashboard', async (req, res) => {
                 } catch (e) { /* PO 表无 YYYY_MM 字段时用 po_date 兜底 */
                     if (mapping.erp_doc_type === 'PO') {
                         const [[c2]] = await pool.execute(
-                            `SELECT COUNT(*) AS cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`,
+                            `SELECT COUNT(*) AS cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y-%m')=?`,
                             [bu, ym]);
                         erpDocCnt = Number(c2.cnt);
                     }
@@ -1297,7 +1298,7 @@ async function buildMgmtReport(bu, ym) {
     const [inv] = await pool.execute(
         `SELECT COALESCE(ROUND(SUM(sub_amt),2),0) AS invoice_amt, COUNT(*) AS inv_cnt FROM mgm_invoice_details WHERE bu_no=? AND YYYY_MM=?`, [bu, ym]);
     const [po] = await pool.execute(
-        `SELECT COALESCE(ROUND(SUM(po_qty*unit_price),2),0) AS po_amt, COUNT(*) AS po_cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y/%m')=?`, [bu, ym]);
+        `SELECT COALESCE(ROUND(SUM(po_qty*unit_price),2),0) AS po_amt, COUNT(*) AS po_cnt FROM ermm_erp_po WHERE bu_no=? AND DATE_FORMAT(po_date,'%Y-%m')=?`, [bu, ym]);
 
     const empCnt = Number(fin[0]?.employee_cnt) || 84;
     const salaryTotal = Number(fin[0]?.salary_amt) || 0;
@@ -1337,9 +1338,9 @@ async function buildMgmtReport(bu, ym) {
     const bottom5 = users.slice(-5).reverse();
 
     // 上月对比（产值环比）
-    const [y0, m0] = ym.split('/').map(Number);
+    const [y0, m0] = ym.split('-').map(Number);
     const prev = new Date(y0, m0 - 2, 1);
-    const prevYm = `${prev.getFullYear()}/${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    const prevYm = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
     const [prevSo] = await pool.execute(
         `SELECT COALESCE(ROUND(SUM(so_qty*unit_price),2),0) AS output FROM ermm_erp_so WHERE bu_no=? AND YYYY_MM=?`, [bu, prevYm]);
     const prevOutput = Number(prevSo[0]?.output) || 0;
@@ -1348,7 +1349,7 @@ async function buildMgmtReport(bu, ym) {
     const totalHours = Number(eff[0]?.total_hours) || 0;
     const workHours = Number(eff[0]?.work_hours) || 0;
 
-    return {
+    const report = {
         period: ym,
         bu_no: bu,
         business: {
@@ -1380,6 +1381,21 @@ async function buildMgmtReport(bu, ym) {
         bottom_performers: bottom5,
         generated_at: new Date().toISOString()
     };
+
+    // M3-B：下月預警（失敗不影響報告產生）
+    try {
+        const nextYm = drForecast.nextYM(ym);
+        const fc = await drForecast.forecastBu(bu, nextYm, { persist: false });
+        report.forecast = {
+            target_ym: nextYm,
+            risks: fc.rows.filter(r => r.risk_level !== 'NORMAL')
+        };
+    } catch (e) {
+        console.error('[monthly-report] 下月預測失敗（略過）:', e.message);
+        report.forecast = { target_ym: null, risks: [], error: e.message };
+    }
+
+    return report;
 }
 
 router.get('/monthly-business-report', async (req, res) => {
@@ -1389,7 +1405,7 @@ router.get('/monthly-business-report', async (req, res) => {
         if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可查看经营报告', 403);
         const bu = trimOrNull(req.query.bu_no) || 'HM';
         const mo = parseYM(req.query.YYYY_MM) || (() => {
-            const d = new Date(); return { ym: `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}` };
+            const d = new Date(); return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
         })();
         const ym = mo.ym;
 
@@ -1406,7 +1422,7 @@ router.post('/monthly-business-report/push', async (req, res) => {
         if (!actor.isSenior) return fail(res, '权限不足，仅高階主管可推送报告', 403);
         const bu = trimOrNull(req.body?.bu_no) || 'HM';
         const mo = parseYM(req.body?.YYYY_MM);
-        if (!mo) return fail(res, 'YYYY_MM 格式不正确（YYYY/MM）', 400);
+        if (!mo) return fail(res, 'YYYY_MM 格式不正确（YYYY-MM）', 400);
         const ym = mo.ym;
 
         // 1) 產生完整報告（與 GET 一致）
@@ -1518,14 +1534,14 @@ async function computeAnnualReview(bu, yyyy) {
           LEFT JOIN daily_report_detail dt ON dt.ruid = d.id
          WHERE d.bu_no=? AND d.YYYY_MM LIKE ? AND d.status1='USE'
          GROUP BY d.user_id, d.YYYY_MM`,
-        [bu, `${yyyy}/%`]);
+        [bu, `${yyyy}-%`]);
 
     // 2) 當年度目標
     const [targets] = await pool.execute(`
         SELECT user_id, YYYY_MM, target_hours, max_delays, max_unresolved, min_work_ratio
           FROM daily_report_target
          WHERE bu_no=? AND YYYY_MM LIKE ?`,
-        [bu, `${yyyy}/%`]);
+        [bu, `${yyyy}-%`]);
     const tMap = {};
     for (const t of targets) {
         tMap[`${t.user_id}|${t.YYYY_MM}`] = t;
@@ -1535,7 +1551,7 @@ async function computeAnnualReview(bu, yyyy) {
     const [locks] = await pool.execute(`
         SELECT user_id, YYYY_MM FROM daily_report_lock
          WHERE bu_no=? AND YYYY_MM LIKE ? AND lock_status='LOCKED'`,
-        [bu, `${yyyy}/%`]);
+        [bu, `${yyyy}-%`]);
     const lockSet = new Set(locks.map(l => `${l.user_id}|${l.YYYY_MM}`));
 
     // 3.5) 當年度 OKR（M2：年度加分依據，完成率 100% → +5，上限 5 分）
@@ -1550,7 +1566,7 @@ async function computeAnnualReview(bu, yyyy) {
                 depart_id: r.depart_id || '未分類', months: []
             });
         }
-        const mmNum = Number(r.YYYY_MM.split('/')[1]);
+        const mmNum = Number(r.YYYY_MM.split('-')[1]);
         // 應交天數：過往月整月天數；當月=今天日號；未來月=0
         let dueDays = 0;
         if (yyyyNum < curY) dueDays = new Date(yyyyNum, mmNum, 0).getDate();
@@ -1868,6 +1884,60 @@ router.get('/export/annual-review.xlsx', async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
         await wb.xlsx.write(res);
         res.end();
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ M3-B 下月工時與延誤趨勢預測（靜態路由須在 /:id 之前） ============
+// 預設目標月：目前月份的下一個月
+function defaultTargetYM(now = new Date()) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+router.get('/efficiency-forecast', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '權限不足，僅主管可查看趨勢預測', 403);
+
+        const bu = trimOrNull(req.query.bu_no) || 'HM';
+        const mo = parseYM(req.query.target_ym);
+        if (req.query.target_ym && !mo) return fail(res, 'target_ym 格式不正確（YYYY-MM）', 400);
+        const targetYm = mo ? mo.ym : defaultTargetYM();
+        const algo = ['WMA', 'LR', 'WMA_LR'].includes(req.query.algo) ? req.query.algo : 'WMA_LR';
+        const scope = req.query.scope === 'USER' ? 'USER' : 'DEPT';
+        const wantMetric = trimOrNull(req.query.metric);
+        const validMetrics = scope === 'USER'
+            ? drForecast.USER_METRICS : drForecast.METRICS;
+        if (wantMetric && !validMetrics.includes(wantMetric)) {
+            return fail(res, `metric 須為 ${validMetrics.join('/')}`, 400);
+        }
+
+        const result = await drForecast.forecastBu(bu, targetYm, { algo, persist: true });
+        // 依 scope / metric 過濾回應
+        result.rows = result.rows.filter(r =>
+            r.scope_type === scope && (!wantMetric || r.metric === wantMetric));
+        result.insufficient = result.insufficient.filter(r =>
+            r.scope_type === scope && (!wantMetric || r.metric === wantMetric));
+        ok(res, result);
+    } catch (err) { fail500(res, err); }
+});
+
+// 全量重算預測快取（僅高階）
+router.post('/efficiency-forecast/run', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isSenior) return fail(res, '權限不足，僅高階主管可全量重算', 403);
+
+        const bu = trimOrNull(req.body?.bu_no) || 'HM';
+        const mo = parseYM(req.body?.target_ym);
+        if (req.body?.target_ym && !mo) return fail(res, 'target_ym 格式不正確（YYYY-MM）', 400);
+        const targetYm = mo ? mo.ym : defaultTargetYM();
+        const algo = ['WMA', 'LR', 'WMA_LR'].includes(req.body?.algo) ? req.body.algo : 'WMA_LR';
+
+        const result = await drForecast.runAll(bu, targetYm, { algo });
+        ok(res, result);
     } catch (err) { fail500(res, err); }
 });
 
@@ -2267,7 +2337,7 @@ router.get('/analysis/monthly-hours', async (req, res) => {
         const yy = String(year).slice(2);
         const list = Array.from({ length: 12 }, (_, i) => {
             const mm = String(i + 1).padStart(2, '0');
-            return { label: `${yy}-${mm}`, YYYY_MM: `${year}/${mm}`, hours: map[`${year}/${mm}`] || 0 };
+            return { label: `${yy}-${mm}`, YYYY_MM: `${year}-${mm}`, hours: map[`${year}-${mm}`] || 0 };
         });
         ok(res, list);
     } catch (err) { fail500(res, err); }

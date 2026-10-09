@@ -1,5 +1,5 @@
 /**
- * 財務預測頁面
+ * 财务预测页面
  */
 registerPage('forecast', async (c) => {
     c.innerHTML = `
@@ -35,7 +35,7 @@ function switchFcTab(tab) {
 async function loadFcDetail() {
     const el = document.getElementById('fcDetail');
     try {
-        const year = State.YYYY_MM.split('/')[0];
+        const year = State.YYYY_MM.split('-')[0];
         const res = await API.get(`/api/forecast/detail?bu_no=${State.bu_no}&year=${year}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('📋', t('forecast.no_detail')); return; }
@@ -96,7 +96,7 @@ async function delFc(uid) {
 async function loadForecast() {
     const el = document.getElementById('fcTable');
     try {
-        const res = await API.get(`/api/forecast?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('/')[0]}`);
+        const res = await API.get(`/api/forecast?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('-')[0]}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('🔮', t('fc.no_data')); return; }
         const monthLabels = Array.from({length:12},(_,i)=>`${i+1}`);
@@ -115,11 +115,11 @@ async function loadCompare(fcType) {
     const type = fcType || window._fcCompareType || 'Sales';
     window._fcCompareType = type;
     try {
-        const res = await API.get(`/api/forecast/compare?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('/')[0]}&forecast_type=${encodeURIComponent(type)}`);
+        const res = await API.get(`/api/forecast/compare?bu_no=${State.bu_no}&year=${State.YYYY_MM.split('-')[0]}&forecast_type=${encodeURIComponent(type)}`);
         const d = res.data;
         if (!d || !d.labels || d.labels.length === 0) { el.innerHTML = `<p style="color:#7f8c8d">${t('fc.need_both')}</p>`; return; }
 
-        // 預測類型切換器
+        // 预测类型切换器
         const typeOptions = ['Sales', 'Cost', 'Cash Flow'].map(tp =>
             `<option value="${tp}" ${tp === type ? 'selected' : ''}>${tp}</option>`
         ).join('');
@@ -151,7 +151,7 @@ const FcForm = {
         UI.modal(t('fc.add'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('fc.type')}</label><select id="ff_type"><option value="Sales">${t('fc.sale_fc')}</option><option value="Cost">${t('fc.cost_fc')}</option><option value="Cash Flow">${t('fc.cash_fc')}</option></select></div>
-                <div class="form-group"><label>${t('fc.year')}</label><input id="ff_year" value="${State.YYYY_MM.split('/')[0]}"></div>
+                <div class="form-group"><label>${t('fc.year')}</label><input id="ff_year" value="${State.YYYY_MM.split('-')[0]}"></div>
             </div>
             <div class="form-row">${months}</div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="FcForm.save()">${t('save')}</button>`);

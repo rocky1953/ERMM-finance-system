@@ -1,5 +1,5 @@
 /**
- * 系統設定頁面（碼表 CRUD + KPI）
+ * 系统设定页面（码表 CRUD + KPI）
  */
 registerPage('system', async (c) => {
     const _mgr = Auth.isManager();
@@ -34,7 +34,7 @@ registerPage('system', async (c) => {
     loadSysKPI();
 });
 
-// ============ 系統碼表 ============
+// ============ 系统码表 ============
 async function loadCodes() {
     const _mgr = Auth.isManager();
     const el = document.getElementById('codeTable');
@@ -212,7 +212,7 @@ const KpiForm = {
         };
         if (!body.KPI_id) { UI.toast(t('system.msg.kpi_id_empty'),'error'); return; }
         try {
-            // POST route 已用 ON DUPLICATE KEY UPDATE，新舊都走同一條
+            // POST route 已用 ON DUPLICATE KEY UPDATE，新旧都走同一条
             await API.post('/api/system/kpi', body);
             UI.toast(isNaN(uid) ? t('system.msg.added') : t('saved'), 'success');
             UI.closeModal(); loadSysKPI();

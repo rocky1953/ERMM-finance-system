@@ -1,11 +1,11 @@
 /**
- * 管理會計頁面
- * 部門損益、成本結構、人效分析
+ * 管理会计页面
+ * 部门损益、成本结构、人效分析
  */
 registerPage('mgmtAccounting', async (c) => {
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h2 style="margin:0;font-size:20px;">管理會計 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">部門損益 · 成本結構 · 人效分析</small></h2>
+            <h2 style="margin:0;font-size:20px;">管理会计 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">部门损益 · 成本结构 · 人效分析</small></h2>
             <div>
                 <select id="maBu" onchange="loadMA()" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
                     <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
@@ -15,8 +15,8 @@ registerPage('mgmtAccounting', async (c) => {
                 </select>
             </div>
         </div>
-        <div class="card"><div class="card-title">部門損益彙總</div><div id="maDept">${t('loading')}</div></div>
-        <div class="card" style="margin-top:16px;"><div class="card-title">成本結構分析</div><div id="maCost">${t('loading')}</div></div>
+        <div class="card"><div class="card-title">部门损益汇总</div><div id="maDept">${t('loading')}</div></div>
+        <div class="card" style="margin-top:16px;"><div class="card-title">成本结构分析</div><div id="maCost">${t('loading')}</div></div>
         <div class="card" style="margin-top:16px;"><div class="card-title">人效分析</div><div id="maEff">${t('loading')}</div></div>
     `;
     document.getElementById('maBu').value = State.bu_no;
@@ -34,19 +34,19 @@ async function loadMA() {
             API.get(`/api/mgmt-accounting/efficiency?bu_no=${bu}`)
         ]);
 
-        // 部門損益
+        // 部门损益
         const depts = deptRes.data || [];
         const maxProfit = Math.max(...depts.map(d => Math.abs(Number(d.total_profit || 0))), 1);
-        document.getElementById('maDept').innerHTML = depts.length === 0 ? UI.empty('🏢', '暫無部門資料') : `
+        document.getElementById('maDept').innerHTML = depts.length === 0 ? UI.empty('🏢', '暂无部门资料') : `
             <table class="data-table">
-                <thead><tr><th>排名</th><th>部門</th><th>類型</th><th class="num">收入</th><th class="num">利潤</th><th class="num">利潤率</th><th class="num">人均利潤</th><th>貢獻度</th></tr></thead>
+                <thead><tr><th>排名</th><th>部门</th><th>类型</th><th class="num">收入</th><th class="num">利润</th><th class="num">利润率</th><th class="num">人均利润</th><th>贡献度</th></tr></thead>
                 <tbody>${depts.map((d, i) => {
                     const noCls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
                     const barW = Math.abs(Number(d.total_profit)) / maxProfit * 100;
                     return `<tr>
                         <td><span class="rank-no ${noCls}">${i+1}</span></td>
                         <td><b>${d.dept_name}</b><br><span style="font-size:11px;color:#95a5a6;">${d.manager || '-'} · ${Number(d.avg_headcount||0).toFixed(0)}人</span></td>
-                        <td><span class="badge ${d.dept_type==='profit'?'bg-success':'bg-warning'}">${d.dept_type==='profit'?'利潤中心':'成本中心'}</span></td>
+                        <td><span class="badge ${d.dept_type==='profit'?'bg-success':'bg-warning'}">${d.dept_type==='profit'?'利润中心':'成本中心'}</span></td>
                         <td class="num">${UI.fmt(d.total_revenue)}</td>
                         <td class="num" style="color:${Number(d.total_profit)>=0?'#27ae60':'#e74c3c'}">${UI.fmt(d.total_profit)}</td>
                         <td class="num">${UI.fmt(d.profit_margin,1)}%</td>
@@ -56,13 +56,13 @@ async function loadMA() {
                 }).join('')}</tbody>
             </table>`;
 
-        // 成本結構
+        // 成本结构
         const cost = costRes.data;
         if (cost && cost.items) {
             document.getElementById('maCost').innerHTML = `
-                <div style="margin-bottom:12px;font-size:13px;color:#555;">總營收 ${UI.fmt(cost.total_sale)} · 員工數 ${cost.employee_cnt} 人</div>
+                <div style="margin-bottom:12px;font-size:13px;color:#555;">总营收 ${UI.fmt(cost.total_sale)} · 员工数 ${cost.employee_cnt} 人</div>
                 <table class="data-table">
-                    <thead><tr><th>成本項目</th><th class="num">金額</th><th class="num">佔營收比</th><th>結構</th></tr></thead>
+                    <thead><tr><th>成本项目</th><th class="num">金额</th><th class="num">占营收比</th><th>结构</th></tr></thead>
                     <tbody>${cost.items.map(it => `<tr>
                         <td><b>${it.item}</b></td>
                         <td class="num">${UI.fmt(it.amount)}</td>
@@ -71,14 +71,14 @@ async function loadMA() {
                     </tr>`).join('')}</tbody>
                 </table>`;
         } else {
-            document.getElementById('maCost').innerHTML = UI.empty('💰', '暫無成本資料');
+            document.getElementById('maCost').innerHTML = UI.empty('💰', '暂无成本资料');
         }
 
         // 人效分析
         const eff = effRes.data || [];
-        document.getElementById('maEff').innerHTML = eff.length === 0 ? UI.empty('👥', '暫無人效資料') : `
+        document.getElementById('maEff').innerHTML = eff.length === 0 ? UI.empty('👥', '暂无人效资料') : `
             <table class="data-table">
-                <thead><tr><th>月份</th><th class="num">員工人數</th><th class="num">人均營收</th><th class="num">人均淨利</th><th class="num">人均薪資</th><th class="num">薪資報酬率</th></tr></thead>
+                <thead><tr><th>月份</th><th class="num">员工人数</th><th class="num">人均营收</th><th class="num">人均净利</th><th class="num">人均薪资</th><th class="num">薪资报酬率</th></tr></thead>
                 <tbody>${eff.map(e => `<tr>
                     <td>${e.YYYY_MM}</td>
                     <td class="num">${e.employee_cnt || 0}</td>

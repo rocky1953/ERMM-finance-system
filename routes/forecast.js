@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * 預測明細路由 forecast_detail
  */
 const express = require('express');
@@ -14,7 +14,7 @@ router.get('/detail', async (req, res) => {
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
-        if (year) { sql += ' AND YYYY_MM LIKE ?'; params.push(`${year}/%`); }
+        if (year) { sql += ' AND YYYY_MM LIKE ?'; params.push(`${year}-%`); }
         if (forecast_type) { sql += ' AND forecast_type=?'; params.push(forecast_type); }
         sql += ' ORDER BY YYYY_MM, forecast_type';
         const [rows] = await pool.execute(sql, params);
@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
-        if (year) { sql += ' AND YYYY_MM LIKE ?'; params.push(`${year}/%`); }
+        if (year) { sql += ' AND YYYY_MM LIKE ?'; params.push(`${year}-%`); }
         if (forecast_type) { sql += ' AND forecast_type=?'; params.push(forecast_type); }
         sql += ' ORDER BY YYYY_MM DESC';
         const [rows] = await pool.execute(sql, params);
@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
         const grouped = {};
         rows.forEach(r => {
             if (!grouped[r.forecast_type]) grouped[r.forecast_type] = { forecast_type: r.forecast_type };
-            const mm = r.YYYY_MM ? r.YYYY_MM.split('/')[1] : '';
+            const mm = r.YYYY_MM ? r.YYYY_MM.split('-')[1] : '';
             grouped[r.forecast_type]['M' + mm] = Number(r.forecast_amt || 0);
         });
         ok(res, Object.values(grouped));
@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
 
         // months 應該是 { '01': 100000, '02': 120000, ... } 格式
         for (const [mm, amt] of Object.entries(months)) {
-            const ym = `${year}/${mm}`;
+            const ym = `${year}-${mm}`;
             await conn.execute(`
                 INSERT INTO forecast_detail (bu_no, YYYY_MM, forecast_type, forecast_amt, diff_amt)
                 VALUES (?,?,?,?,0) ON DUPLICATE KEY UPDATE forecast_amt=VALUES(forecast_amt)
@@ -113,7 +113,7 @@ router.get('/compare', async (req, res) => {
         for (const t of fcTypesToTry) {
             const [rows] = await pool.execute(
                 'SELECT * FROM forecast_detail WHERE bu_no=? AND forecast_type=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM',
-                [bu_no, t, `${year}/%`]
+                [bu_no, t, `${year}-%`]
             );
             if (rows.length > 0) { fc = rows; break; }
         }
@@ -128,7 +128,7 @@ router.get('/compare', async (req, res) => {
 
         const [actuals] = await pool.execute(
             `SELECT YYYY_MM, ${actualField} as actual_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM`,
-            [bu_no, `${year}/%`]
+            [bu_no, `${year}-%`]
         );
         const actualMap = {};
         actuals.forEach(a => actualMap[a.YYYY_MM] = Number(a.actual_amt || 0));
@@ -138,7 +138,7 @@ router.get('/compare', async (req, res) => {
         const actualData = [];
         for (let m = 1; m <= 12; m++) {
             const mm = String(m).padStart(2, '0');
-            const ym = `${year}/${mm}`;
+            const ym = `${year}-${mm}`;
             labels.push(`${m}月`);
             const fcRow = fc.find(f => f.YYYY_MM === ym);
             forecastData.push(fcRow ? Number(fcRow.forecast_amt || 0) : 0);

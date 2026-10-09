@@ -1,5 +1,5 @@
 /**
- * 發票管理頁面
+ * 发票管理页面
  */
 registerPage('invoice', async (c) => {
     const _mgr = Auth.isManager();
@@ -72,7 +72,7 @@ const InvForm = {
             type1: document.getElementById('if_type').value,
             inv_no: document.getElementById('if_no').value,
             inv_date: d,
-            YYYY_MM: d.substring(0,7).replace('-','/'),
+            YYYY_MM: d.substring(0,7),
             cust_name: document.getElementById('if_cust').value,
             amt: amt,
             tax_amt: amt * taxRate / 100,

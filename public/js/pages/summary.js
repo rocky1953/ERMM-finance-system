@@ -1,5 +1,5 @@
 /**
- * 財務摘要頁面
+ * 财务摘要页面
  */
 registerPage('summary', async (c) => {
     const _mgr = Auth.isManager();
@@ -22,7 +22,7 @@ async function loadSummary() {
     const _mgr = Auth.isManager();
     const el = document.getElementById('sumTable');
     try {
-        const res = await API.get(`/api/summary?bu_no=${State.bu_no}&YYYY=${State.YYYY_MM.split('/')[0]}`);
+        const res = await API.get(`/api/summary?bu_no=${State.bu_no}&YYYY=${State.YYYY_MM.split('-')[0]}`);
         const rows = res.data || [];
         if (rows.length === 0) { el.innerHTML = UI.empty('📋', t('sum.no_data')); return; }
         el.innerHTML = `<table class="data-table">
@@ -51,7 +51,7 @@ const SumForm = {
         this._uid = null;
         UI.modal(t('sum.add'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('sum.month')} (YYYY/MM)</label><input id="sf_ym" value="${State.YYYY_MM}"></div>
+                <div class="form-group"><label>${t('sum.month')} (YYYY-MM)</label><input id="sf_ym" value="${State.YYYY_MM}"></div>
                 <div class="form-group"><label>${t('sum.sale')}</label><input type="number" id="sf_sale" value="0"></div>
                 <div class="form-group"><label>${t('sum.cost')}</label><input type="number" id="sf_cost" value="0"></div>
             </div>
@@ -111,7 +111,7 @@ const SumForm = {
     },
     async addon() {
         try {
-            await API.post('/api/summary/addon', { bu_no: State.bu_no, YYYY: State.YYYY_MM.split('/')[0] });
+            await API.post('/api/summary/addon', { bu_no: State.bu_no, YYYY: State.YYYY_MM.split('-')[0] });
             UI.toast(t('sum.addon_done'),'success');
             loadSummary();
         } catch(e) { UI.toast(e.message,'error'); }
