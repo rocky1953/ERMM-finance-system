@@ -763,13 +763,21 @@ router.get('/monthly-summary', async (req, res) => {
         if (actor.error) return fail(res, '使用者不存在或未登入', 403);
         const q = req.query;
         const bu = trimOrNull(q.bu_no) || 'HM';
-        const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || (() => {
-            const d = new Date();
-            return { ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
-        })();
+        const mo = parseYM(q.YYYY_MM) || normalizeMonth(Number(q.year), q.month) || null;
+        const yearOnly = q.year && !q.YYYY_MM && !q.month;   // 仅有年份时走全年汇总
 
-        let where = ['d.bu_no=?', 'd.YYYY_MM=?', "d.status1='USE'"];
-        let params = [bu, mo.ym];
+        let where = ['d.bu_no=?', "d.status1='USE'"];
+        let params = [bu];
+        if (mo && mo.ym) {
+            where.push('d.YYYY_MM=?'); params.push(mo.ym);
+        } else if (yearOnly) {
+            where.push('d.YYYY_MM LIKE ?'); params.push(`${q.year}-%`);
+        } else {
+            // 兜底：没有任何时间条件则默认当月
+            const d = new Date();
+            const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            where.push('d.YYYY_MM=?'); params.push(ym);
+        }
         const target = resolveTarget(actor, trimOrNull(q.user_id));
         if (target) { where.push('d.user_id=?'); params.push(target); }
         const dept = trimOrNull(q.depart_id);
@@ -793,6 +801,8 @@ router.get('/monthly-summary', async (req, res) => {
              ORDER BY d.user_id
         `, params);
 
+        const resolvedYM = (mo && mo.ym) ? mo.ym : (yearOnly ? `${q.year}-全部` : (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; })());
+
         const list = rows.map(r => {
             const total = Number(r.total_hours) || 0;
             const work = Number(r.work_hours) || 0;
@@ -801,7 +811,7 @@ router.get('/monthly-summary', async (req, res) => {
                 user_id: r.user_id,
                 user_name: r.user_name || r.user_id,
                 depart_id: r.depart_id || '',
-                YYYY_MM: mo.ym,
+                YYYY_MM: resolvedYM,
                 report_days: Number(r.report_days) || 0,
                 detail_cnt: Number(r.detail_cnt) || 0,
                 total_hours: total,
@@ -825,7 +835,7 @@ router.get('/monthly-summary', async (req, res) => {
                 `SELECT user_id, target_hours, max_delays, max_unresolved, min_work_ratio, remark
                    FROM daily_report_target
                   WHERE bu_no=? AND YYYY_MM=? AND user_id IN (${placeholders})`,
-                [bu, mo.ym, ...userIds]
+                [bu, resolvedYM, ...userIds]
             );
             const tMap = Object.fromEntries(targets.map(t => [t.user_id, t]));
             for (const item of list) {
@@ -844,7 +854,7 @@ router.get('/monthly-summary', async (req, res) => {
             }
 
             // M2：附加當月 OKR 完成率
-            const okrMap = await loadMonthOkrs(bu, mo.ym, userIds);
+            const okrMap = await loadMonthOkrs(bu, resolvedYM, userIds);
             for (const item of list) {
                 const o = okrMap.get(item.user_id);
                 if (o) {

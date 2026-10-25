@@ -18,5 +18,8 @@ SOURCE 004_system_tables.sql;
 -- ▶ 005 ERP 明細 3 表 (3 表)
 SOURCE 005_erp_detail_tables.sql;
 
+-- ▶ 011 ERP 製造 4 表 (4 表)
+SOURCE 011_erp_manufacturing_tables.sql;
+
 SET FOREIGN_KEY_CHECKS = 1;
 SELECT * FROM schema_migrations ORDER BY version;

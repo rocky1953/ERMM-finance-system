@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ERMM 财务模组管理系统</title>
-<link rel="stylesheet" href="/css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/css/style.css?v=20261025c">
+<script src="/vendor/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';"></script>
 </head>
 <body class="locked">
 
@@ -33,7 +33,9 @@
 
 <!-- 侧边栏 -->
 <aside id="sidebar">
-    <div class="logo">
+    <div class="logo" onclick="SystemMap.open()" title="点击查看系统架构图"
+         role="button" tabindex="0"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();SystemMap.open();}">
         <h2>🏢 ERMM</h2>
         <p data-i18n="app.subtitle">财务模组管理系统</p>
     </div>
@@ -107,6 +109,12 @@
         </div>
         <div class="nav-item" data-page="arap" onclick="navigate('arap')">
             <span class="nav-icon">📐</span><span data-i18n="nav.arap">应收应付</span>
+        </div>
+    </div>
+    <div class="nav-group">
+        <div class="nav-group-title">税务申报</div>
+        <div class="nav-item" data-page="tax" onclick="navigate('tax')">
+            <span class="nav-icon">🧮</span><span>电子化报税</span>
         </div>
     </div>
     <div class="nav-group">
@@ -228,7 +236,8 @@
 <div id="toast"></div>
 
 <script src="/js/i18n.js"></script>
-<script src="/js/app.js"></script>
+<script src="/js/app.js?v=20261025c"></script>
+<script src="/js/pages/systemMap.js?v=20261025c"></script>
 <script src="/js/pages/dashboard.js"></script>
 <script src="/js/pages/po.js"></script>
 <script src="/js/pages/so.js"></script>
@@ -268,7 +277,8 @@
 <script src="/js/pages/scenario.js"></script>
 <script src="/js/pages/dailyReport.js"></script>
 <script src="/js/pages/dailyReportUnfinished.js"></script>
-<script src="/js/pages/integration.js"></script>
+<script src="/js/pages/integration.js?v=20261025b"></script>
+<script src="/js/pages/tax.js"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;

@@ -68,12 +68,28 @@ async function getTableColumns(tableName) {
     const [rows] = await pool.execute(
         `SELECT COLUMN_NAME AS name, DATA_TYPE AS dataType, COLUMN_TYPE AS columnType,
                 IS_NULLABLE AS nullable, COLUMN_KEY AS columnKey, COLUMN_DEFAULT AS dflt,
-                EXTRA AS extra
+                EXTRA AS extra, COLUMN_COMMENT AS comment
          FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA=? AND TABLE_NAME=? ORDER BY ORDINAL_POSITION`,
         [dbName, tableName]
     );
     return rows;
+}
+
+// 本地表唯一鍵（含複合唯一索引），供 UPSERT 預設匹配鍵使用
+async function getTableUniqueKeys(tableName) {
+    if (!IDENT_RE.test(tableName)) throw new Error('資料表名稱不合法');
+    const dbName = process.env.DB_NAME || 'ERMM_db';
+    const [rows] = await pool.execute(
+        `SELECT INDEX_NAME AS indexName,
+                GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS cols
+         FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA=? AND TABLE_NAME=? AND NON_UNIQUE=0
+         GROUP BY INDEX_NAME
+         ORDER BY (INDEX_NAME='PRIMARY') ASC, INDEX_NAME`,
+        [dbName, tableName]
+    );
+    return rows.map(r => ({ name: r.indexName, columns: String(r.cols).split(',') }));
 }
 
 async function listLocalTables() {
@@ -120,6 +136,32 @@ function coerceValue(raw, dataType) {
     }
     if (dt === 'json' && (typeof raw === 'object')) return JSON.stringify(raw);
     return String(raw).trim();
+}
+
+// 表頭正規化：支援「中文 * en」「中文(en)」「en」等格式，取出英文欄位名
+function normalizeHeader(h) {
+    const s = String(h === null || h === undefined ? '' : h).trim();
+    if (!s) return '';
+    let m = s.match(/[（(]\s*([A-Za-z_][A-Za-z0-9_]*)\s*[)）]\s*$/);
+    if (m) return m[1];
+    m = s.match(/([A-Za-z_][A-Za-z0-9_]*)\s*$/);
+    return m ? m[1] : s;
+}
+
+// 映射方向統一為 {來源欄: 目標欄}；兼容舊作業 {目標欄: 來源欄}
+function normalizeMapping(mapping, targetCols) {
+    if (!mapping) return {};
+    const entries = Object.entries(mapping);
+    if (!entries.length) return {};
+    const targets = new Set(targetCols.map(c => c.name.toLowerCase()));
+    const keysAreTargets = entries.every(([k]) => targets.has(String(k).toLowerCase()));
+    const valsAreTargets = entries.every(([, v]) => targets.has(String(v).toLowerCase()));
+    if (keysAreTargets && !valsAreTargets) {
+        const out = {};
+        for (const [k, v] of entries) out[String(v)] = k;
+        return out;
+    }
+    return mapping;
 }
 
 // 把一列來源資料依映射轉為「目標欄位 -> 值」
@@ -330,6 +372,7 @@ async function runJob(jobId, opts = {}) {
         let mapping = job.column_mapping;
         if (typeof mapping === 'string') mapping = mapping ? JSON.parse(mapping) : null;
         if (!mapping) mapping = autoMapping(srcRows[0], targetCols);
+        else mapping = normalizeMapping(mapping, targetCols);
         const mapped = srcRows.map(r => mapRow(r, mapping, targetCols));
         const stats = await writeRows(mapped, {
             targetTable: job.target_table,
@@ -349,13 +392,18 @@ async function runJob(jobId, opts = {}) {
     }
 }
 
-// 同名欄自動映射
+// 同名欄自動映射（支援中英雙語表頭，回傳 {來源欄: 目標欄}）
 function autoMapping(firstRow, targetCols) {
     const mapping = {};
     if (!firstRow) return mapping;
-    const tgtNames = new Set(targetCols.map(c => c.name));
+    const byName = new Map();
+    for (const c of targetCols) {
+        byName.set(c.name.toLowerCase(), c.name);
+        byName.set(normalizeHeader(c.name).toLowerCase(), c.name);
+    }
     for (const k of Object.keys(firstRow)) {
-        if (tgtNames.has(k)) mapping[k] = k;
+        const tgt = byName.get(String(k).toLowerCase()) || byName.get(normalizeHeader(k).toLowerCase());
+        if (tgt) mapping[k] = tgt;
     }
     return mapping;
 }
@@ -368,7 +416,8 @@ function autoMapping(firstRow, targetCols) {
 async function importRows(parsedRows, opts) {
     const startedAt = new Date();
     const targetCols = await getTableColumns(opts.targetTable);
-    const mapped = parsedRows.map(r => mapRow(r, opts.mapping, targetCols));
+    const mapping = normalizeMapping(opts.mapping, targetCols);
+    const mapped = parsedRows.map(r => mapRow(r, mapping, targetCols));
     const logId = await createLog({
         job_id: opts.jobId || null,
         job_name: opts.jobName || `Excel匯入:${opts.targetTable}`,
@@ -396,7 +445,8 @@ async function importRows(parsedRows, opts) {
 
 module.exports = {
     testSource, querySource, closeSourcePool,
-    listLocalTables, getTableColumns,
+    listLocalTables, getTableColumns, getTableUniqueKeys,
     runJob, getJob, getSource,
     importRows, autoMapping, mapRow, coerceValue, writeRows,
+    normalizeHeader, normalizeMapping,
 };

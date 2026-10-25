@@ -9,6 +9,8 @@
 const express = require('express');
 const router = express.Router();
 const ExcelJS = require('exceljs');
+const path = require('path');
+const fs = require('fs');
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const integ = require('../services/dataIntegrator');
@@ -30,6 +32,49 @@ router.get('/tables/:name/columns', async (req, res) => {
         const cols = await integ.getTableColumns(req.params.name);
         if (!cols.length) return fail(res, '資料表不存在或無欄位', 404);
         ok(res, cols);
+    } catch (e) { fail500(res, e); }
+});
+
+// 唯一鍵（供 UPSERT 預設匹配鍵）
+router.get('/tables/:name/keys', async (req, res) => {
+    try {
+        ok(res, await integ.getTableUniqueKeys(req.params.name));
+    } catch (e) { fail500(res, e); }
+});
+
+// ============ 匯入模板下載 ============
+const TEMPLATE_DIR = path.join(__dirname, '..', 'exports');
+function findTemplateFile() {
+    if (!fs.existsSync(TEMPLATE_DIR)) return null;
+    const files = fs.readdirSync(TEMPLATE_DIR)
+        .filter(f => /^ERMM_ERP_Import_Template.*\.xlsx$/i.test(f))
+        .sort().reverse();
+    return files.length ? path.join(TEMPLATE_DIR, files[0]) : null;
+}
+
+// 全部資料表模板
+router.get('/templates', (req, res) => {
+    const file = findTemplateFile();
+    if (!file) return fail(res, '模板不存在，请先执行 node database/gen_erp_import_template.js', 404);
+    res.download(file, 'ERMM_ERP_Import_Template.xlsx');
+});
+
+// 單一資料表模板（從總模板抽出對應 Sheet）
+router.get('/templates/:table', async (req, res) => {
+    try {
+        const file = findTemplateFile();
+        if (!file) return fail(res, '模板不存在，请先执行 node database/gen_erp_import_template.js', 404);
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.readFile(file);
+        const target = wb.getWorksheet(req.params.table);
+        if (!target) return fail(res, `模板中无此资料表：${req.params.table}`, 404);
+        for (const ws of [...wb.worksheets]) {
+            if (ws.id !== target.id) wb.removeWorksheet(ws.id);
+        }
+        const buf = await wb.xlsx.writeBuffer();
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${req.params.table}_template.xlsx"`);
+        res.send(Buffer.from(buf));
     } catch (e) { fail500(res, e); }
 });
 

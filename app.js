@@ -69,6 +69,7 @@ const llmRoutes = require('./routes/llm');
 const dailyReportRoutes = require('./routes/dailyReport');
 const financeRoutes = require('./routes/finance');
 const integrationRoutes = require('./routes/integration');
+const taxRoutes = require('./routes/tax');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -117,6 +118,7 @@ app.use('/api/llm', llmRoutes);
 app.use('/api/daily-report', dailyReportRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/integration', integrationRoutes);
+app.use('/api/tax', taxRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {
@@ -137,7 +139,8 @@ app.get('/api/health', (req, res) => {
             batch: '/api/batch/*',
             report: '/api/report/*',
             risk: '/api/risk/*',
-            forecast: '/api/forecast/*'
+            forecast: '/api/forecast/*',
+            tax: '/api/tax/* (VAT/CIT/IIT 三大報稅模組)'
         }
     });
 });

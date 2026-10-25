@@ -10,6 +10,7 @@ const Integration = {
     tab: 'excel',
     tables: [],
     colCache: {},
+    keyCache: {},
     sources: [],
     jobs: [],
     logs: [],
@@ -64,6 +65,28 @@ const Integration = {
         return this.colCache[table];
     },
 
+    async getKeys(table) {
+        if (!this.keyCache[table]) {
+            this.keyCache[table] = (await API.get(`/api/integration/tables/${encodeURIComponent(table)}/keys`)).data;
+        }
+        return this.keyCache[table];
+    },
+
+    // 選表後載入欄位與唯一鍵；UPSERT 預設採用業務唯一鍵（排除自增 uid）
+    async pickTable(kind, name) {
+        const st = this[kind === 'xl' ? 'xl' : 'sq'];
+        st.targetTable = name;
+        st.cols = name ? await this.getCols(name) : [];
+        st.keys = name ? defaultKeys(st.cols, await this.getKeys(name)) : [];
+        if (kind === 'xl') {
+            if (name) this.autoMap('xl');
+            this.renderTab();
+        } else {
+            if (name && st.result) this.autoMap('sq');
+            this.refreshSqLower();
+        }
+    },
+
     tableOptions(sel) {
         return ['<option value="">— 请选择目标表 —</option>']
             .concat(this.tables.map(t => `<option value="${esc(t.name)}" ${t.name === sel ? 'selected' : ''}>${esc(t.name)}${t.comment ? '（' + esc(t.comment) + '）' : ''}</option>`)).join('');
@@ -89,22 +112,32 @@ const Integration = {
                 <div><label style="font-size:12px;color:#64748b;">① 目标资料表</label>
                     <select id="xlTable" onchange="Integration.xlPickTable(this.value)" style="display:block;margin-top:4px;min-width:280px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(x.targetTable)}</select>
                 </div>
-                <div><label style="font-size:12px;color:#64748b;">② 第三方 Excel 档（.xlsx，表头在第 1 列）</label>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-outline" onclick="Integration.downloadTemplate()">⬇️ 全部模板</button>
+                    <button class="btn btn-outline" onclick="Integration.downloadTemplate(Integration.xl.targetTable)" ${x.targetTable ? '' : 'disabled'}>⬇️ 本表模板</button>
+                </div>
+                <div><label style="font-size:12px;color:#64748b;">② 第三方 Excel 档（.xlsx，表头在第 1 行）</label>
                     <input type="file" id="xlFile" accept=".xlsx" onchange="Integration.xlPickFile(this)" style="display:block;margin-top:4px;font-size:13px;">
                 </div>
                 <div id="xlSheetWrap" style="${x.parsed ? '' : 'display:none;'}"><label style="font-size:12px;color:#64748b;">③ 工作表</label>
                     <select id="xlSheet" onchange="Integration.xlPickSheet(this.value)" style="display:block;margin-top:4px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;min-width:200px;">${sheetOpts}</select>
                 </div>
             </div>
-            <div id="xlMapping"></div>
+            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">提示：可直接下载模板填写；模板第 2~3 行为灰色示例，正式导入前请删除；采购订单请写入 ermm_temp_po，勿直写 ermm_erp_po。</div>
+            <div id="xlMapping">${this.mappingPanel('xl')}</div>
         </div>`;
     },
 
     async xlPickTable(name) {
-        this.xl.targetTable = name;
-        this.xl.cols = name ? await this.getCols(name) : [];
-        if (name) this.autoMap('xl');
-        this.renderTab();
+        await this.pickTable('xl', name);
+    },
+
+    async downloadTemplate(table) {
+        try {
+            await API.download(table
+                ? `/api/integration/templates/${encodeURIComponent(table)}`
+                : '/api/integration/templates');
+        } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     xlPickFile(input) {
@@ -141,21 +174,16 @@ const Integration = {
         return x.parsed ? x.parsed.sheets.find(s => s.name === x.sheetName) : null;
     },
 
-    // 同名欄自動映射
+    // 同名欄自動映射（支援「中文 * en」等雙語表頭），映射方向 {來源欄: 目標欄}
     autoMap(kind) {
         const st = this[kind === 'xl' ? 'xl' : 'sq'];
-        let srcHeaders = [];
-        if (kind === 'xl') srcHeaders = (this.currentSheet()?.headers) || [];
-        else srcHeaders = st.result?.columns || [];
+        const srcHeaders = kind === 'xl' ? (this.currentSheet()?.headers || []) : (st.result?.columns || []);
         const mapping = {};
-        const keys = [];
         for (const c of st.cols) {
-            const hit = srcHeaders.find(h => h.toLowerCase() === c.name.toLowerCase());
-            if (hit) mapping[c.name] = hit;
-            if (c.columnKey === 'PRI') keys.push(c.name);
+            const hit = srcHeaders.find(h => headerToColumn(h).toLowerCase() === c.name.toLowerCase());
+            if (hit) mapping[hit] = c.name;
         }
         st.mapping = mapping;
-        st.keys = keys;
     },
 
     // 欄位映射面板（Excel / SQL 共用）
@@ -168,10 +196,12 @@ const Integration = {
         if (kind === 'sq' && !st.result) return '';
 
         const rowsHtml = st.cols.map(c => {
-            const sel = st.mapping[c.name] || '';
+            const sel = Object.keys(st.mapping).find(k => st.mapping[k] === c.name) || '';
             const isKey = st.keys.includes(c.name);
+            const req = isRequired(c);
             return `<tr>
                 <td><b>${esc(c.name)}</b>${c.columnKey === 'PRI' ? ' <span class="tag" style="background:#fee2e2;color:#991b1b;">PK</span>' : c.columnKey === 'UNI' ? ' <span class="tag" style="background:#fef3c7;color:#92400e;">UK</span>' : ''}</td>
+                <td style="color:#64748b;font-size:12px;">${esc(c.comment || '')}${req ? ' <b style="color:#dc2626;">*</b>' : ''}</td>
                 <td style="color:#64748b;font-size:12px;">${esc(c.columnType)}${c.nullable === 'NO' ? ' NOT NULL' : ''}</td>
                 <td>
                     <select onchange="Integration.setMap('${kind}','${esc(c.name)}',this.value)" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;min-width:180px;">
@@ -184,6 +214,13 @@ const Integration = {
                 </td>
             </tr>`;
         }).join('');
+
+        const miss = missingRequired(st);
+        const missHtml = miss.length
+            ? `<div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:8px 12px;font-size:12px;">
+                   ⚠️ 必填栏位尚未映射：${miss.map(m => esc(m.name)).join('、')}（写入时会失败）
+               </div>`
+            : '';
 
         const previewHtml = previewRows.length ? `
             <div style="margin-top:14px;">
@@ -205,13 +242,14 @@ const Integration = {
                         <option value="UPSERT" ${st.writeMode === 'UPSERT' ? 'selected' : ''}>新增或更新（UPSERT）</option>
                     </select>
                 </label>
-                <div style="font-size:12px;color:#94a3b8;">勾选「匹配键」用于判断新增/更新（建议用 PK/UK；无唯一约束时系统自动比对）</div>
+                <div style="font-size:12px;color:#94a3b8;">勾选「匹配键」用于判断新增/更新；已按资料表唯一键自动预选（复合唯一键会整组勾选）</div>
             </div>
             <div style="max-height:300px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;">
             <table class="data-table" style="width:100%;font-size:13px;">
-                <thead style="position:sticky;top:0;"><tr><th>目标栏位</th><th>类型</th><th>← 来源栏位（Excel/SQL）</th><th style="text-align:center;">匹配键</th></tr></thead>
+                <thead style="position:sticky;top:0;"><tr><th>目标栏位</th><th>中文名称</th><th>类型</th><th>← 来源栏位（Excel/SQL）</th><th style="text-align:center;">匹配键</th></tr></thead>
                 <tbody>${rowsHtml}</tbody>
             </table></div>
+            ${missHtml}
             ${previewHtml}
             <div style="margin-top:16px;text-align:right;">
                 <button class="btn btn-primary" onclick="Integration.doImport()" ${kind === 'xl' ? '' : 'style="display:none;"'}>🚀 开始导入（${this.currentSheet()?.total_rows || 0} 列）</button>
@@ -221,7 +259,10 @@ const Integration = {
 
     setMap(kind, tgt, src) {
         const st = this[kind === 'xl' ? 'xl' : 'sq'];
-        if (src) st.mapping[tgt] = src; else delete st.mapping[tgt];
+        for (const k of Object.keys(st.mapping)) {
+            if (st.mapping[k] === tgt) delete st.mapping[k];
+        }
+        if (src) st.mapping[src] = tgt;
     },
     toggleKey(kind, col, checked) {
         const st = this[kind === 'xl' ? 'xl' : 'sq'];
@@ -235,6 +276,8 @@ const Integration = {
         if (!x.targetTable) return UI.toast('请先选择目标表', 'error');
         if (!x.sheetName) return UI.toast('请先选择工作表', 'error');
         if (!Object.keys(x.mapping).length) return UI.toast('请至少映射一个栏位', 'error');
+        const miss = missingRequired(x);
+        if (miss.length) return UI.toast(`必填栏位未映射：${miss.map(m => m.name).join('、')}`, 'error');
         if (x.writeMode === 'UPSERT' && !x.keys.length) return UI.toast('UPSERT 模式需勾选匹配键', 'error');
         if (!confirm(`确认将「${x.fileName} / ${x.sheetName}」写入 ${x.targetTable}？`)) return;
         try {
@@ -281,11 +324,15 @@ const Integration = {
             </div>
             <div style="margin-top:12px;"><label style="font-size:12px;color:#64748b;">② 第三方查询 SQL（仅允许 SELECT）</label>
                 <textarea id="sqSql" style="width:100%;margin-top:4px;height:110px;font-family:Consolas,monospace;font-size:13px;padding:10px;border:1px solid #cbd5e1;border-radius:6px;"
-                    placeholder="SELECT customer_id AS uid, name, amt FROM erp.customer WHERE ...">${esc(s.sql)}</textarea>
+                    placeholder="SELECT so_nbr, client_id, client_name, xitems, so_date, so_qty, unit_price FROM erp.sales_order WHERE ...">${esc(s.sql)}</textarea>
             </div>
-            <div style="margin-top:12px;"><label style="font-size:12px;color:#64748b;">③ 写入本地目标表</label>
-                <select id="sqTable" onchange="Integration.sqPickTable(this.value)" style="display:block;margin-top:4px;min-width:320px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(s.targetTable)}</select>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+                <div><label style="font-size:12px;color:#64748b;">③ 写入本地目标表</label>
+                    <select id="sqTable" onchange="Integration.sqPickTable(this.value)" style="display:block;margin-top:4px;min-width:320px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(s.targetTable)}</select>
+                </div>
+                <button class="btn btn-outline" onclick="Integration.copyColumns()">📋 复制栏位清单</button>
             </div>
+            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">提示：SELECT 的别名请直接使用目标栏位英文名（如 so_nbr、so_qty），系统会自动映射；日期用 YYYY-MM-DD，金额不带千分位。采购订单请写 ermm_temp_po，勿直写 ermm_erp_po。</div>
             <div id="sqMapping"></div>
             <div id="sqActions" style="margin-top:16px;text-align:right;display:none;gap:8px;justify-content:flex-end;">
                 <button class="btn btn-outline" onclick="Integration.openSaveBatch()">💾 存为批次作业</button>
@@ -295,10 +342,18 @@ const Integration = {
     },
 
     async sqPickTable(name) {
-        this.sq.targetTable = name;
-        this.sq.cols = name ? await this.getCols(name) : [];
-        if (name && this.sq.result) this.autoMap('sq');
-        this.refreshSqLower();
+        await this.pickTable('sq', name);
+    },
+
+    copyColumns() {
+        const s = this.sq;
+        if (!s.targetTable || !s.cols.length) return UI.toast('请先选择目标表', 'error');
+        const text = s.cols
+            .map(c => `${c.name}\t${c.comment || ''}\t${c.columnType}${isRequired(c) ? '\t必填' : ''}`)
+            .join('\n');
+        navigator.clipboard.writeText(text)
+            .then(() => UI.toast(`已复制 ${s.cols.length} 个栏位`, 'success'))
+            .catch(() => UI.toast('复制失败，请手动选取', 'error'));
     },
 
     refreshSqLower() {
@@ -327,6 +382,8 @@ const Integration = {
     async sqRun() {
         const s = this.sq;
         if (!s.targetTable || !Object.keys(s.mapping).length) return UI.toast('请完成目标表与栏位映射', 'error');
+        const miss = missingRequired(s);
+        if (miss.length) return UI.toast(`必填栏位未映射：${miss.map(m => m.name).join('、')}`, 'error');
         if (s.writeMode === 'UPSERT' && !s.keys.length) return UI.toast('UPSERT 模式需勾选匹配键', 'error');
         // 先存草稿作業（Online 也留作業設定，id 用於復用），再立即執行
         if (!confirm('确认立即执行资料整合写入？')) return;
@@ -422,7 +479,7 @@ const Integration = {
         this.sq = {
             sourceId: String(j.source_id || ''), sql: j.source_sql || '', result: null,
             targetTable: j.target_table, cols: [],
-            mapping: j.column_mapping || {}, keys: (j.key_columns || '').split(',').filter(Boolean),
+            mapping: {}, keys: (j.key_columns || '').split(',').filter(Boolean),
             writeMode: j.write_mode || 'INSERT', editJobId: j.id, editJobName: j.name,
             editMode: j.mode, editSchedule: j.schedule, editEnabled: j.enabled,
         };
@@ -430,8 +487,11 @@ const Integration = {
         document.getElementById('sqSql').value = this.sq.sql;
         document.getElementById('sqTable').value = this.sq.targetTable;
         this.sq.cols = await this.getCols(j.target_table);
+        const rawMapping = typeof j.column_mapping === 'string'
+            ? (j.column_mapping ? JSON.parse(j.column_mapping) : {}) : (j.column_mapping || {});
+        this.sq.mapping = normalizeMappingFE(rawMapping, this.sq.cols);
         // 無預覽結果時，用映射中已有的來源欄產生一個欄位集合，供面板顯示下拉
-        const srcCols = [...new Set(Object.values(this.sq.mapping))];
+        const srcCols = [...new Set(Object.keys(this.sq.mapping))];
         this.sq.result = { columns: srcCols, rows: [], row_count: 0 };
         this.refreshSqLower();
         UI.toast(`已载入作业 #${id}，可「测试读取」后再保存/执行`, 'info');
@@ -640,6 +700,54 @@ const Integration = {
         </div>`;
     },
 };
+
+// 「中文 * en」「中文(en)」「en」→ en
+function headerToColumn(h) {
+    const s = String(h === null || h === undefined ? '' : h).trim();
+    if (!s) return '';
+    let m = s.match(/[（(]\s*([A-Za-z_][A-Za-z0-9_]*)\s*[)）]\s*$/);
+    if (m) return m[1];
+    m = s.match(/([A-Za-z_][A-Za-z0-9_]*)\s*$/);
+    return m ? m[1] : s;
+}
+
+// 必填：NOT NULL、非自增、無預設值
+function isRequired(c) {
+    return c.nullable === 'NO'
+        && !String(c.extra || '').includes('auto_increment')
+        && (c.dflt === null || c.dflt === undefined);
+}
+
+function missingRequired(st) {
+    if (!st.cols.length) return [];
+    const mapped = new Set(Object.values(st.mapping || {}));
+    return st.cols.filter(c => isRequired(c) && !mapped.has(c.name));
+}
+
+// UPSERT 預設匹配鍵：優先非自增的唯一索引（複合鍵整組），否則用非自增主鍵
+function defaultKeys(cols, uniqueKeys) {
+    const auto = new Set(cols.filter(c => String(c.extra || '').includes('auto_increment')).map(c => c.name));
+    const usable = (uniqueKeys || [])
+        .map(k => k.columns || [])
+        .filter(k => k.length && !k.includes('uid') && !k.every(n => auto.has(n)));
+    if (usable.length) return usable[0];
+    return cols.filter(c => c.columnKey === 'PRI' && !auto.has(c.name)).map(c => c.name);
+}
+
+// 前端映射方向統一 {來源欄: 目標欄}，兼容舊作業 {目標欄: 來源欄}
+function normalizeMappingFE(mapping, cols) {
+    const entries = Object.entries(mapping || {});
+    if (!entries.length) return {};
+    const targets = new Set((cols || []).map(c => c.name.toLowerCase()));
+    const keysAreTargets = entries.every(([k]) => targets.has(String(k).toLowerCase()));
+    const valsAreTargets = entries.every(([, v]) => targets.has(String(v).toLowerCase()));
+    if (keysAreTargets && !valsAreTargets) {
+        const out = {};
+        for (const [k, v] of entries) out[String(v)] = k;
+        return out;
+    }
+    return { ...mapping };
+}
 
 function esc(s) {
     if (s === null || s === undefined) return '';

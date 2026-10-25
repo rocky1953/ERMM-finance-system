@@ -306,7 +306,7 @@ registerPage('dashboard', async (c) => {
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: false } },
+                    plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 12 } } } },
                     scales: { y: { beginAtZero: true } },
                     // 仅销货收入(0)、销货成本(1) 可点击钻取
                     onHover: (evt, elements) => {

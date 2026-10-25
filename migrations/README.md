@@ -11,6 +11,7 @@
 | 003 | [003_erp_master_tables.sql](./003_erp_master_tables.sql) | 8 | ERP 主數據 8 表 |
 | 004 | [004_system_tables.sql](./004_system_tables.sql) | 6 | 系統配置 6 表 |
 | 005 | [005_erp_detail_tables.sql](./005_erp_detail_tables.sql) | 3 | ERP 明細 3 表 |
+| 011 | [011_erp_manufacturing_tables.sql](./011_erp_manufacturing_tables.sql) | 4 | ERP 製造 4 表（工單/用料/工藝/報工） |
 
 ## 快速執行
 
@@ -60,6 +61,10 @@ mysql -hlocalhost -uroot -p ERMM_db -e "SELECT * FROM schema_migrations ORDER BY
 - `005_bh_mgm_tx_detail` → `bh_mgm_tx_detail`
 - `005_mgm_production_details` → `mgm_production_details`
 - `005_transit_price` → `transit_price`
+- `011_ermm_erp_mo` → `ermm_erp_mo`
+- `011_ermm_erp_mo_component` → `ermm_erp_mo_component`
+- `011_ermm_erp_routing` → `ermm_erp_routing`
+- `011_ermm_erp_work_report` → `ermm_erp_work_report`
 
 ## 重複執行安全
 

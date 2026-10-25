@@ -89,7 +89,7 @@ taskkill /F /PID <查到的PID>
 
 ---
 
-## 2. 全量資料清單（29 張表，按來源分類）
+## 2. 全量資料清單（33 張表，按來源分類）
 
 > 「推薦通道」：**API**＝線上介面／HTTP；**管線**＝批次 Step1~7 產出；**Excel**＝離線模板；**SQL**＝備份還原／直接匯入。
 > 標 ✅「需重算」者，匯入後要跑批次管線，報表數字才會更新。
@@ -106,6 +106,10 @@ taskkill /F /PID <查到的PID>
 | `e2_xitems_daily_status` | 庫存日狀態 | xitems | 第三方倉存 | 頁面/API/管線 Excel | ✅ Step5 |
 | `e2_xitems_daily_status_chart` | 庫存圖表彙總 | xitems | Step5 產出 | 管線 Step5 | — |
 | `mgm_production_details` | 生產明細 | （生產） | 第三方生產報表 | SQL | — |
+| `ermm_erp_mo` | 製造工單主檔 | （製造） | 第三方工單 | Excel/SQL | — |
+| `ermm_erp_mo_component` | 工單用料明細 | （製造） | 第三方用料清單 | Excel/SQL | — |
+| `ermm_erp_routing` | 工藝路線／工序 | （製造） | 第三方工藝資料 | Excel/SQL | — |
+| `ermm_erp_work_report` | 報工／產出記錄 | （製造） | 第三方報工資料 | Excel/SQL | — |
 | `transit_price` | 轉撥計價 | （關係人） | 第三方/管理 | API/SQL | — |
 
 ### 2.2 財務核心 8 表（來源：財務／銀行／稅務，離線模板已完整支援）
@@ -310,6 +314,24 @@ node database/gen_excel_template.js
 1. 複製一份並修改頂部 `EXCEL` 檔名與「清除舊資料」清單裡的單號前綴（如 `PO2501%`、`SO2501%`）；
 2. 或把其中 5、7（發票/現金/摘要）改用 4.1 通用匯入器，僅保留 1~4 的 ERP 表；
 3. 執行後**必跑** `/api/batch/runAll`（或在服務啟動後於頁面觸發）。
+
+製造 4 表可另附獨立 Sheet（依 `mo_no`／`xitems` 關聯）：
+
+| Sheet | 寫入表 | 內容 |
+|-------|--------|------|
+| `08_製造工單_mo` | `ermm_erp_mo` | 工單主檔（`mo_no` 唯一） |
+| `09_工單用料_mo_component` | `ermm_erp_mo_component` | 工單用料（`mo_no + line_no`） |
+| `10_工藝路線_routing` | `ermm_erp_routing` | 工藝路線（`xitems + routing_no + op_seq`） |
+| `11_報工_work_report` | `ermm_erp_work_report` | 報工產出（`mo_no + op_seq + wk_date + shift + operator`） |
+
+完整的第三方匯入模板（含使用說明、欄位總覽、13 張資料表 Sheet 與範例列）：
+
+```powershell
+node database/gen_erp_import_template.js
+# 產出 exports/ERMM_ERP_Import_Template_YYYYMMDD.xlsx
+```
+
+也可在系統「第三方資料整合 → Excel 導入」頁直接下載「全部模板」或「本表模板」。
 
 > 經驗提醒：交接檔的 Sheet 名需與腳本 `SHEET_TABLE` 完全一致；Row 1/Row 2 慣例同 4.1。建議第三方每次用同一模板輸出，避免欄位漂移。
 

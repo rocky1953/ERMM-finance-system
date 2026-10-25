@@ -38,6 +38,10 @@ const THIRD_PARTY_TABLES = [
     'ermm_erp_documents',
     'e2_xitems_daily_status',
     'mgm_production_details',
+    'ermm_erp_mo',
+    'ermm_erp_mo_component',
+    'ermm_erp_routing',
+    'ermm_erp_work_report',
     'transit_price',
     // 財務核心 8 表
     'mgm_finance_summary',

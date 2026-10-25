@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
  * 預測明細路由 forecast_detail
  */
 const express = require('express');
@@ -146,6 +146,48 @@ router.get('/compare', async (req, res) => {
         }
 
         ok(res, { bu_no, forecast_type: fcType, year, actual_field: actualField, labels, forecast: forecastData, actual: actualData });
+    } catch (err) { fail500(res, err); }
+});
+
+// 年度各月成長率與累計倍數（依 forecast_detail.actual_amt，1 月為基準 1.00×）
+router.get('/annual-growth', async (req, res) => {
+    try {
+        const { bu_no, year } = req.query;
+        if (!bu_no || !year) return fail(res, '缺少必要參數 bu_no, year');
+
+        // forecast_type 雙向兼容（與 /compare 相同別名策略）
+        const types = ['Sales', '銷售'];
+        let rows = [];
+        for (const t of types) {
+            const [r] = await pool.execute(
+                'SELECT YYYY_MM, actual_amt FROM forecast_detail WHERE bu_no=? AND forecast_type=? AND YYYY_MM LIKE ? ORDER BY YYYY_MM',
+                [bu_no, t, `${year}-%`]);
+            if (r.length > 0) { rows = r; break; }
+        }
+
+        const actual = [], growth = [], factor = [];
+        let hasData = false;
+        let prev = null;
+        for (let m = 1; m <= 12; m++) {
+            const ym = `${year}-${String(m).padStart(2, '0')}`;
+            const row = rows.find(r => r.YYYY_MM === ym);
+            const amt = row ? Number(row.actual_amt || 0) : null;
+            if (amt !== null && amt > 0) hasData = true;
+            actual.push(amt);
+            if (amt === null || amt <= 0 || prev === null || prev <= 0) {
+                growth.push(null);
+                factor.push(amt && amt > 0 ? Number((amt / (rows.find(r => r.YYYY_MM === `${year}-01`) ? Number(rows.find(r => r.YYYY_MM === `${year}-01`).actual_amt || 1) : 1)).toFixed(2)) : null);
+            } else {
+                growth.push(Number(((amt / prev - 1) * 100).toFixed(1)));
+                const base = rows.find(r => r.YYYY_MM === `${year}-01`);
+                const baseAmt = base ? Number(base.actual_amt || 0) : 0;
+                factor.push(baseAmt > 0 ? Number((amt / baseAmt).toFixed(2)) : null);
+            }
+            if (amt !== null) prev = amt;
+        }
+
+        const labels = Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
+        ok(res, { bu_no, year, has_data: hasData, labels, actual, growth, factor });
     } catch (err) { fail500(res, err); }
 });
 

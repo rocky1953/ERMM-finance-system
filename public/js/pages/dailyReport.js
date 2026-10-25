@@ -655,9 +655,104 @@
                         <button class="btn btn-primary" onclick="DRApp.loadSummary()">🔍 ${t('dr.btn.query')}</button>
                         <button class="btn" style="margin-left:auto;" onclick="DRApp.back()">↩️ ${t('dr.btn.back')}</button>
                     </div>
+                    <div id="sumGrowth" style="margin-top:12px;"></div>
                     <div id="sumBody" style="margin-top:12px;">${t('loading')}</div>
                 </div>`;
             this.loadSummary();
+        },
+
+        // 年度各月成長率與累計倍數圖（實際業績依 forecast_detail.actual_amt）
+        async loadGrowthChart(year) {
+            const el = document.getElementById('sumGrowth');
+            if (!el) return;
+            try {
+                const res = await API.get(`/api/forecast/annual-growth?bu_no=${encodeURIComponent(State.bu_no)}&year=${encodeURIComponent(year)}`);
+                const d = res.data || {};
+                if (!d.has_data) { el.innerHTML = ''; return; }
+                const barColor = '#02743B', lineColor = '#80C1FF';
+                el.innerHTML = `
+                    <div class="card" style="padding:16px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                            <b>📈 ${year} ${t('dr.sum.growth.title')}</b>
+                            <span style="font-size:0.85em;color:#7f8c8d;">
+                                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${barColor};margin:0 4px 0 8px;"></span>${t('dr.sum.growth.rate')}
+                                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${lineColor};margin:0 4px 0 12px;"></span>${t('dr.sum.growth.factor')}
+                            </span>
+                        </div>
+                        <div style="font-size:0.8em;color:#95a5a6;line-height:1.5;margin-bottom:6px;">
+                            ${t('dr.sum.growth.note')}
+                        </div>
+                        <div style="position:relative;height:300px;"><canvas id="sumGrowthChart"></canvas></div>
+                    </div>`;
+                const canvas = document.getElementById('sumGrowthChart');
+                if (!canvas) return;
+                const chart = new Chart(canvas, {
+                    data: {
+                        labels: d.labels,
+                        datasets: [
+                            {
+                                type: 'bar', label: t('dr.sum.growth.rate'),
+                                data: d.growth, backgroundColor: barColor, borderRadius: 4,
+                                barPercentage: 0.55, categoryPercentage: 0.7, yAxisID: 'y'
+                            },
+                            {
+                                type: 'line', label: t('dr.sum.growth.factor'),
+                                data: d.factor, borderColor: lineColor, backgroundColor: lineColor,
+                                borderWidth: 2, pointRadius: 3, pointHoverRadius: 5,
+                                pointBackgroundColor: lineColor, tension: 0.3, yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        animation: { duration: 200 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true,
+                                    pointStyleWidth: 14,
+                                    padding: 16,
+                                    font: { size: 13, weight: '500' },
+                                    color: '#2c3e50'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (c) => {
+                                        const v = c.parsed.y;
+                                        if (v == null) return '';
+                                        return c.datasetIndex === 0
+                                            ? `${t('dr.sum.growth.rate')}: ${v > 0 ? '+' : ''}${v}%`
+                                            : `${t('dr.sum.growth.factor')}: ${Number(v).toFixed(2)}×`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#7f8c8d' } },
+                            y: {
+                                position: 'left', suggestedMin: -20, suggestedMax: 50,
+                                grid: { color: 'rgba(0,0,0,0.06)' },
+                                ticks: { color: '#7f8c8d', callback: (v) => v + '%' },
+                                title: { display: true, text: t('dr.sum.growth.rate'), color: '#7f8c8d' }
+                            },
+                            y1: {
+                                position: 'right', min: 0, suggestedMax: 4.5,
+                                grid: { drawOnChartArea: false },
+                                ticks: { color: '#7f8c8d', callback: (v) => v + '×' },
+                                title: { display: true, text: t('dr.sum.growth.factor'), color: '#7f8c8d' }
+                            }
+                        }
+                    }
+                });
+                this.charts.push(chart);
+            } catch (e) {
+                el.innerHTML = `<p style="color:#e74c3c;">${esc(e.message)}</p>`;
+            }
         },
 
         async loadSummary() {
@@ -666,12 +761,29 @@
             const y = document.getElementById('sumYear').value;
             const mm = document.getElementById('sumMonth').value;
             this._sumYM = { year: y, mm };
-            const ym = y + '/' + mm;
+            const qs = new URLSearchParams({ bu_no: State.bu_no });
+            if (mm) qs.set('YYYY_MM', `${y}-${mm}`);
+            else qs.set('year', y);   // 月份选"全部"时走全年汇总
             el.innerHTML = `<p style="color:#7f8c8d;">${t('loading')}</p>`;
+            this.destroyCharts();   // 防止换年份查询时 canvas 被旧图表占用
+            this.loadGrowthChart(y);
             try {
-                const res = await API.get('/api/daily-report/monthly-summary?bu_no=' + encodeURIComponent(State.bu_no) + '&YYYY_MM=' + encodeURIComponent(ym));
+                const res = await API.get('/api/daily-report/monthly-summary?' + qs.toString());
                 const rows = res.data || [];
-                if (rows.length === 0) { el.innerHTML = UI.empty('📭', t('dr.sum.empty')); return; }
+                const hasChart = document.getElementById('sumGrowth') && document.getElementById('sumGrowthChart');
+                if (rows.length === 0) {
+                    if (hasChart) {
+                        // 图表有数据但日报表无数据：区分提示
+                        el.innerHTML = `<div style="text-align:center;padding:24px;color:#7f8c8d;">
+                            <div style="font-size:2em;margin-bottom:8px;">📭</div>
+                            <div>${t('dr.sum.empty_daily')}</div>
+                            <div style="font-size:0.85em;color:#95a5a6;margin-top:6px;">${t('dr.sum.empty_hint')}</div>
+                        </div>`;
+                    } else {
+                        el.innerHTML = UI.empty('📭', t('dr.sum.empty'));
+                    }
+                    return;
+                }
                 const tgtBadge = (val, over) => {
                     if (val == null) return '-';
                     if (over != null && over > 0) return `<span style="color:#e74c3c;font-weight:700;">${val} (↑${over})</span>`;
@@ -1923,7 +2035,7 @@
                         datasets: [{ label: t('dr.ar.headcount'), data: dist.histogram.map(h => h.count),
                             backgroundColor: 'rgba(27,79,114,0.65)' }]
                     },
-                    options: { responsive: true, plugins: { legend: { display: false } },
+                    options: { responsive: true, plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
                         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
                 }));
                 // 图3：部门 × 等第堆叠
@@ -2396,7 +2508,7 @@
                     this.charts.push(new Chart(document.getElementById('drChartBar'), {
                         type: 'bar',
                         data: { labels, datasets: [{ label: t('dr.axis.hours'), data, backgroundColor: COLORS }] },
-                        options: { responsive: true, plugins: { legend: { display: false } },
+                        options: { responsive: true, plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
                             scales: { y: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } } } }
                     }));
                     this.charts.push(new Chart(document.getElementById('drChartDonut'), {
@@ -2449,9 +2561,11 @@
                     }));
                     this.charts.push(new Chart(document.getElementById('drChartWL'), {
                         type: 'bar',
-                        data: { labels: [t('dr.an.work_hours'), t('dr.an.life_hours')],
-                            datasets: [{ data: [Number(d.work_hours), Number(d.life_hours)], backgroundColor: ['#3498db', '#27ae60'] }] },
-                        options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                        data: {
+                            labels: [t('dr.an.work_hours'), t('dr.an.life_hours')],
+                            datasets: [{ label: t('dr.axis.hours'), data: [Number(d.work_hours), Number(d.life_hours)], backgroundColor: ['#3498db', '#27ae60'] }]
+                        },
+                        options: { indexAxis: 'y', plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
                             scales: { x: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } } } }
                     }));
                     const total = Number(d.work_hours) + Number(d.life_hours);

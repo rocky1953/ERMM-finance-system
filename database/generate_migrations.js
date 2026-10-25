@@ -87,6 +87,18 @@ const GROUPS = [
       'transit_price',          // 在途價格表
     ],
   },
+  {
+    version: '011',
+    name: 'erp_manufacturing_tables',
+    title: 'ERP 製造 4 表',
+    desc: '製造工單 / 工單用料 / 工藝路線 / 報工產出',
+    tables: [
+      'ermm_erp_mo',             // 製造工單主檔
+      'ermm_erp_mo_component',   // 工單用料明細
+      'ermm_erp_routing',        // 工藝路線/工序
+      'ermm_erp_work_report',    // 報工/產出記錄
+    ],
+  },
 ];
 
 async function main() {

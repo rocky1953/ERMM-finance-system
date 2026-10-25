@@ -141,7 +141,7 @@
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
                         scales: {
                             y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: t('dr.an.unfinished_cnt') } },
                             x: { title: { display: true, text: t('dr.axis.person') } }
@@ -394,7 +394,7 @@
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
+                        plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
                         scales: {
                             y: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } },
                             x: { title: { display: true, text: t('dr.axis.month') } }
