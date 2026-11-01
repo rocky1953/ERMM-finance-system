@@ -44,6 +44,29 @@ command -v pm2  >/dev/null || die "未安装 pm2（npm install -g pm2）"
 
 cd "$APP_DIR"
 
+# ── 解析 PM2 进程名（配置名与实际进程名可能不一致，自动对齐）───────────────────
+RESOLVED_PM2_NAME="$PM2_NAME"
+resolve_pm2_name() {
+  if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
+    RESOLVED_PM2_NAME="$PM2_NAME"
+    return 0
+  fi
+
+  local detected=""
+  detected="$(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{JSON.parse(s).filter(a=>/app\.js/i.test((a.pm2_env||{}).pm_exec_path||"")).forEach(a=>console.log(a.name))}catch(e){}})' | head -n1)" || detected=""
+
+  if [ -n "$detected" ]; then
+    warn "pm2 中未找到「$PM2_NAME」，检测到运行 app.js 的进程「$detected」→ 自动重命名为「$PM2_NAME」"
+    pm2 rename "$detected" "$PM2_NAME" >/dev/null 2>&1 || warn "重命名失败（可通过 PM2_NAME=xxx ./deploy.sh 覆盖）"
+    RESOLVED_PM2_NAME="$PM2_NAME"
+    return 0
+  fi
+
+  warn "pm2 中没有任何运行 app.js 的进程，将按 ecosystem.config.js 启动"
+  pm2 start ecosystem.config.js --env production >/dev/null
+  RESOLVED_PM2_NAME="$PM2_NAME"
+}
+
 # ── 失败自动回滚 ──────────────────────────────────────────────────────────────
 PREV_COMMIT=""
 ROLLBACK_ARMED=0
@@ -53,8 +76,8 @@ on_error() {
     printf '\n\033[1;31m❌ 部署失败（exit %s），自动回滚到 %s\033[0m\n' "$code" "$PREV_COMMIT"
     git reset --hard "$PREV_COMMIT" >/dev/null 2>&1 || true
     npm install --production >/dev/null 2>&1 || true
-    pm2 restart "$PM2_NAME" >/dev/null 2>&1 || true
-    printf '\033[1;33m已回滚并重启，请检查：pm2 logs %s --lines 40\033[0m\n' "$PM2_NAME"
+    pm2 restart "${RESOLVED_PM2_NAME:-$PM2_NAME}" >/dev/null 2>&1 || true
+    printf '\033[1;33m已回滚并重启，请检查：pm2 logs %s --lines 40\033[0m\n' "${RESOLVED_PM2_NAME:-$PM2_NAME}"
   fi
   exit "$code"
 }
@@ -139,9 +162,10 @@ fi
 
 # ── 4. 重启服务 ───────────────────────────────────────────────────────────────
 log "4/6 重启 PM2 服务：$PM2_NAME"
-pm2 restart "$PM2_NAME" --update-env
+resolve_pm2_name
+pm2 restart "$RESOLVED_PM2_NAME" --update-env
 pm2 save >/dev/null
-ok "服务已重启"
+ok "服务已重启（$RESOLVED_PM2_NAME）"
 
 # ── 5. 健康检查 ───────────────────────────────────────────────────────────────
 log "5/6 健康检查 $HEALTH_URL"
@@ -162,7 +186,7 @@ echo
 # ── 6. 完成 ───────────────────────────────────────────────────────────────────
 log "6/6 部署完成"
 ROLLBACK_ARMED=0
-pm2 status "$PM2_NAME"
+pm2 status "$RESOLVED_PM2_NAME"
 echo
 echo "更新前：$(git rev-parse --short "$PREV_COMMIT")"
 echo "更新后：$(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
