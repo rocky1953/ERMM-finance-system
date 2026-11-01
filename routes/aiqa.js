@@ -90,7 +90,7 @@ router.get('/suggestions', (req, res) => {
 // 一般使用者僅能查自己的記錄；管理員可查全部或指定 xuser_id
 router.get('/records', async (req, res) => {
     try {
-        const isAdmin = req.user && req.user.admin === '管理員';
+        const isAdmin = req.user && req.user.admin === 'Yes';
         const page = Math.max(1, parseInt(req.query.page, 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
         const offset = (page - 1) * pageSize;

@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ERMM 財務模組開發實施計畫書</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <!-- Mermaid：优先本地 vendor（最稳），失败时依次回退 jsDelivr / unpkg / bootcdn -->
+    <script src="public/vendor/mermaid.min.js"
+            onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://unpkg.com/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://cdn.bootcdn.net/ajax/libs/mermaid/10.9.3/mermaid.min.js';};};"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "Microsoft YaHei", "Segoe UI", sans-serif; background: #f5f7fa; color: #333; line-height: 1.8; padding: 20px; }
@@ -955,6 +957,22 @@ flowchart TB
 </section>
 
 </div>
-<script>mermaid.initialize({startOnLoad:true, theme:'default', flowchart:{useMaxWidth:true}});</script>
+<script>
+  // 等 DOM 和 Mermaid 都就绪后再初始化
+  function initMermaid() {
+    if (typeof mermaid === 'undefined') {
+      document.querySelectorAll('.mermaid').forEach(el => {
+        if (el.firstChild && el.firstChild.nodeType !== 1) {
+          el.style.cssText = 'background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px;border-radius:6px;font-size:13px;white-space:pre-wrap;text-align:left;';
+          el.textContent = '⚠️ Mermaid.js 加载失败（本地 + 多个 CDN 均不可用），下图为原始源码：\n\n' + el.textContent;
+        }
+      });
+      return;
+    }
+    mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { useMaxWidth: true } });
+  }
+  if (document.readyState === 'complete') initMermaid();
+  else window.addEventListener('load', initMermaid);
+</script>
 </body>
 </html>

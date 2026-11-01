@@ -5,7 +5,7 @@ require('dotenv').config();
 const { signToken } = require('../middleware/auth');
 const { pool } = require('../config/db');
 
-const TOKEN = signToken({ user_id: 'VERIFY', admin: '管理員', user_name: '驗證' });
+const TOKEN = signToken({ user_id: 'VERIFY', admin: 'Yes', user_name: '驗證' });
 const BASE = 'http://localhost:3008';
 
 const get = async (p) => {

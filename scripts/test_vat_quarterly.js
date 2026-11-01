@@ -20,7 +20,7 @@ const { signToken } = require('../middleware/auth');
 const { pool } = require('../config/db');
 
 const BASE = `http://localhost:${process.env.PORT || 3008}/api/tax`;
-const token = signToken({ user_id: 'QTEST', admin: '管理員' });
+const token = signToken({ user_id: 'QTEST', admin: 'Yes' });
 const BU = 'SZ';
 const BU_EMPTY = 'QTEST-NONE';
 let pass = 0, fail = 0;

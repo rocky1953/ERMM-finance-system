@@ -16,7 +16,7 @@ const { signToken } = require('../middleware/auth');
 const { pool } = require('../config/db');
 
 const BASE = `http://localhost:${process.env.PORT || 3008}/api/tax`;
-const token = signToken({ user_id: 'INPUT-TEST', admin: '管理員' });
+const token = signToken({ user_id: 'INPUT-TEST', admin: 'Yes' });
 const BU = 'SZ';
 const PERIOD = '202512';
 const YEAR = '2025';

@@ -14,22 +14,25 @@ const Auth = {
         try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }
         catch (e) { return null; }
     },
-    // 简繁体归一化（避免 DB 中简繁体混杂导致权限漏判）
+    // 使用者類別归一化：繁/简/历史错别字统一为简体，供权限判断使用
     _normRole(s) {
         return String(s || '')
-            .replace(/部门/g, '部门').replace(/经理/g, '经理').replace(/高阶/g, '高阶')
-            .replace(/管理员/g, '管理员');
+            .replace(/部門|部门/g, '部门')
+            .replace(/經理|经理/g, '经理')
+            .replace(/高階|高阶|高价/g, '高阶')
+            .replace(/員工|员工/g, '员工')
+            .trim();
     },
-    // 是否为管理员（cams_xuser.admin === '管理员'，兼容简体）
+    // 是否为管理员（cams_xuser.admin === 'Yes'，migration 012 起統一 Yes/No）
     isAdmin() {
         const u = this.getUser();
-        return !!(u && this._normRole(u.admin) === '管理员');
+        return !!(u && String(u.admin || '').trim() === 'Yes');
     },
-    // 是否为部门主管或高阶主管（可操作 CRUD 功能模组，兼容简繁体）
+    // 是否为部门主管／部门经理／高阶主管（可操作 CRUD 功能模组）
     isManager() {
         const u = this.getUser();
         const t = this._normRole(u && u.user_type);
-        return !!(u && (t === '部门主管' || t === '高阶主管'));
+        return !!(u && (t === '部门主管' || t === '部门经理' || t === '高阶主管'));
     },
 
     showLogin() {

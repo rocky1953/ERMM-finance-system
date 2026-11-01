@@ -381,14 +381,14 @@
 
 <h4>設定管理員帳號（如需調整）</h4>
 <pre><code><span class="c"># 將指定帳號設為管理員</span>
-<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET admin='管理員' WHERE xuser_id='U0001'"</span>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET admin='Yes' WHERE xuser_id='U0001'"</span>
 
 <span class="c"># 設定使用者類別</span>
-<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET xuser_type='部門經理' WHERE xuser_id='U0002'"</span></code></pre>
+<span class="k">mysql</span> -u ermm_user -p ermm_db -e <span class="s">"UPDATE cams_xuser SET xuser_type='部门主管' WHERE xuser_id='U0002'"</span></code></pre>
 
 <table>
   <tr><th>欄位</th><th>類型</th><th>合法值</th><th>預設值</th></tr>
-  <tr><td><code>admin</code></td><td>VARCHAR(10)</td><td>管理員 / 普通者</td><td>普通者</td></tr>
+  <tr><td><code>admin</code></td><td>VARCHAR(10)</td><td>Yes（管理員）/ No（普通者）</td><td>No</td></tr>
   <tr><td><code>email</code></td><td>VARCHAR(100)</td><td>—</td><td>NULL</td></tr>
   <tr><td><code>tel_no</code></td><td>VARCHAR(30)</td><td>—</td><td>NULL</td></tr>
   <tr><td><code>xuser_type</code></td><td>VARCHAR(20)</td><td>一般員工 / 部門經理 / 高階主管</td><td>一般員工</td></tr>
@@ -568,7 +568,7 @@ WantedBy=multi-user.target</code></pre>
     "user": {
       "user_id": "U0001",
       "user_name": "黃惠君",
-      "admin": "管理員"
+      "admin": "Yes"
     }
   }
 }</code></pre>
@@ -608,8 +608,8 @@ WantedBy=multi-user.target</code></pre>
 <div class="call ok">
   <b>驗證重點</b>：
   <ul>
-    <li>管理員（admin='管理員'）可存取 <code>/api/user</code> → 200</li>
-    <li>普通者（admin='普通者'）存取 <code>/api/user</code> → 403</li>
+    <li>管理員（admin='Yes'）可存取 <code>/api/user</code> → 200</li>
+    <li>普通者（admin='No'）存取 <code>/api/user</code> → 403</li>
     <li>普通者存取其他業務 API（如 /api/bep/query）→ 200（不受限制）</li>
   </ul>
 </div>

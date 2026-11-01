@@ -12,13 +12,13 @@ const { requireAdmin } = require('../middleware/auth');
 // 整個「使用者管理」模組僅限管理員（前頁也有入口攔截，此處為服務端強制校驗）
 router.use(requireAdmin);
 
-// admin 欄位合法值白名單
-const ADMIN_VALUES = ['管理員', '普通者'];
-const normAdmin = v => ADMIN_VALUES.includes(v) ? v : '普通者';
+// admin 欄位合法值白名單（migration 012 起統一 Yes=管理員 / No=普通者）
+const ADMIN_VALUES = ['Yes', 'No'];
+const normAdmin = v => ADMIN_VALUES.includes(v) ? v : 'No';
 
-// xuser_type 欄位合法值白名單
-const TYPE_VALUES = ['一般員工', '部門經理', '高階主管'];
-const normType = v => TYPE_VALUES.includes(v) ? v : '一般員工';
+// xuser_type 欄位合法值白名單（兼容簡繁體與歷史錯別字，避免儲存時被靜默降級）
+const TYPE_VALUES = ['一般員工', '一般员工', '部門經理', '部门经理', '部門主管', '部门主管', '高階主管', '高阶主管', '高价主管'];
+const normType = v => TYPE_VALUES.includes(v) ? v : '一般员工';
 
 function hashPwd(pwd) { return crypto.createHash('sha256').update(String(pwd)).digest('hex'); }
 

@@ -38,6 +38,21 @@
 
         destroyCharts() { this.charts.forEach(ch => { try { ch.destroy(); } catch (e) { } }); this.charts = []; },
 
+        // 读取列表画面当前筛选（DOM 优先，否则回退 this.filters），供各子画面继承上下文
+        // 返回 {year, mm, depart_id, user_id}；年/月无值时回退当前年月
+        currentListFilters() {
+            const f = this.filters || {};
+            const y = document.getElementById('drfYear'), m = document.getElementById('drfMonth');
+            const d = document.getElementById('drfDept'), u = document.getElementById('drfUser');
+            const now = new Date();
+            return {
+                year: (y ? y.value : f.year) || String(now.getFullYear()),
+                mm: (m ? m.value : f.month) || String(now.getMonth() + 1).padStart(2, '0'),
+                depart_id: (d ? d.value : f.depart_id) || '',
+                user_id: (u ? u.value : f.user_id) || ''
+            };
+        },
+
         yearOptions(sel) {
             const y = new Date().getFullYear();
             let html = `<option value="">${t('dr.all')}</option>`;
@@ -581,9 +596,9 @@
         openTimeliness() {
             this.view = 'timeliness';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._tlYM) {
-                this._tlYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+                this._tlYM = { year: lf.year, mm: lf.mm };
             }
             this.c.innerHTML = `
                 <div class="card">
@@ -641,9 +656,9 @@
         openSummary() {
             this.view = 'summary';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._sumYM) {
-                this._sumYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+                this._sumYM = { year: lf.year, mm: lf.mm };
             }
             this.c.innerHTML = `
                 <div class="card">
@@ -827,9 +842,9 @@
         openTargets() {
             this.view = 'targets';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._tgtYM) {
-                this._tgtYM = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0') };
+                this._tgtYM = { year: lf.year, mm: lf.mm };
             }
             if (!this._tgtMode) this._tgtMode = 'threshold';
             this.c.innerHTML = `
@@ -1186,9 +1201,9 @@
         openDashboard() {
             this.view = 'dashboard';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._dashYM) {
-                this._dashYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+                this._dashYM = { year: lf.year, mm: lf.mm };
             }
             this.c.innerHTML = `
                 <div class="card">
@@ -1651,9 +1666,9 @@
         openMgmtReport() {
             this.view = 'mgmtReport';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._mbrYM) {
-                this._mbrYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+                this._mbrYM = { year: lf.year, mm: lf.mm };
             }
             this.c.innerHTML = `
                 <div class="card">
@@ -1881,8 +1896,8 @@
         openAnnualReview() {
             this.view = 'annualReview';
             this.destroyCharts();
-            const now = new Date();
-            if (!this._arY) this._arY = String(now.getFullYear());
+            const lf = this.currentListFilters();
+            if (!this._arY) this._arY = String(lf.year);
             this.c.innerHTML = `
                 <div class="card">
                     <div class="toolbar" style="flex-wrap:wrap;gap:10px;">
@@ -2206,9 +2221,9 @@
         openSignoff() {
             this.view = 'signoff';
             this.destroyCharts();
-            const now = new Date();
+            const lf = this.currentListFilters();
             if (!this._signYM) {
-                this._signYM = { year: this.filters.year || now.getFullYear(), mm: this.filters.month || String(now.getMonth() + 1).padStart(2, '0') };
+                this._signYM = { year: lf.year, mm: lf.mm };
             }
             this.c.innerHTML = `
                 <div class="card">
@@ -2336,8 +2351,8 @@
 
         // ============ 审计日志查询弹窗 ============
         openAudit() {
-            const now = new Date();
-            this._auditFilter = { year: now.getFullYear(), mm: String(now.getMonth() + 1).padStart(2, '0'), action: '', page: 1 };
+            const lf = this.currentListFilters();
+            this._auditFilter = { year: lf.year, mm: lf.mm, action: '', page: 1 };
             UI.modal(`📜 ${t('dr.audit.title')}`, `
                 <div style="min-width:780px;max-width:90vw;">
                     <div class="toolbar" style="flex-wrap:wrap;gap:8px;">
@@ -2452,13 +2467,15 @@
             this.view = 'analysis';
             this.destroyCharts();
             const mgr = !!(this.me && this.me.isManager);
-            const year = new Date().getFullYear();
-            const mm = String(new Date().getMonth() + 1).padStart(2, '0');
+            // 继承列表画面的筛选上下文（年/月/部门/撰写人），避免跳回登入者+当前月
+            const lf = this.currentListFilters();
+            const year = lf.year;
+            const mm = lf.mm;
             const deptFilter = kind === 'time' && mgr
-                ? `<label>${t('dr.depart')}：<select id="draDept">${this.deptOptions('')}</select></label>` : '';
+                ? `<label>${t('dr.depart')}：<select id="draDept">${this.deptOptions(lf.depart_id)}</select></label>` : '';
+            const defUser = lf.user_id || (this.me ? this.me.user_id : '');
             const writerFilter = `
-                <label>${t('dr.writer')}：<select id="draUser">${mgr ? this.writerOptions(this.me.user_id) : ''}</select></label>`;
-            const writerVal = mgr ? this.me.user_id : (this.me ? this.me.user_id : '');
+                <label>${t('dr.writer')}：<select id="draUser">${mgr ? this.writerOptions(defUser) : ''}</select></label>`;
 
             this.c.innerHTML = `
                 <div class="card">

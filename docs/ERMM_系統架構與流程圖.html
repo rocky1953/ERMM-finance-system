@@ -4,18 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ERMM 系统架构图与相关联流程图</title>
-<script src="mermaid.min.js"></script>
-<script>
-  // 本地库加载失败时依次回退：BootCDN（国内）→ jsdelivr
-  if (typeof mermaid === 'undefined') {
-    document.write('<script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.9.3/mermaid.min.js"><\/script>');
-  }
-</script>
-<script>
-  if (typeof mermaid === 'undefined') {
-    document.write('<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.3/dist/mermaid.min.js"><\/script>');
-  }
-</script>
+<!-- Mermaid：优先同目录本地库（最稳），失败时依次回退 vendor 相对路径 / jsDelivr / unpkg / bootcdn -->
+<script src="mermaid.min.js"
+        onerror="this.onerror=null;this.src='../public/vendor/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://unpkg.com/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://cdn.bootcdn.net/ajax/libs/mermaid/10.9.3/mermaid.min.js';};};};"></script>
 <style>
   :root {
     --primary: #1e3a5f;

@@ -93,7 +93,7 @@ async function auditVat() {
 
 async function negativeCases(submittedId) {
     console.log('\n=== C. 異常用例 ===');
-    const token = signToken({ user_id: 'AUDIT', admin: '管理員' });
+    const token = signToken({ user_id: 'AUDIT', admin: 'Yes' });
     const post = async (path, body) => {
         const r = await fetch(BASE + path, {
             method: 'POST',

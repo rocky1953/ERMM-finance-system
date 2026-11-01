@@ -26,7 +26,7 @@ const taxpayerType = Number(args[1] || 1);
 const buNo = args[2] || 'SZ';
 
 // 測試用 JWT（正式環境請改為登入取得）
-const token = signToken({ user_id: 'VAT-API-TEST', admin: '管理員' });
+const token = signToken({ user_id: 'VAT-API-TEST', admin: 'Yes' });
 
 async function post(path, body) {
     const res = await fetch(BASE + path, {

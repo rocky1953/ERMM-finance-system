@@ -9,7 +9,7 @@
  *   - xuser_name     使用者姓名
  *   - xuser_password SHA-256 hex 密碼（與 routes/user.js hashPwd 一致）
  *   - inuse_flag     USE=啟用 / NOUSE=停用
- *   - admin          管理員 / 普通者
+ *   - admin          Yes=管理員 / No=普通者
  */
 const express = require('express');
 const router = express.Router();
@@ -50,14 +50,14 @@ router.post('/login', async (req, res) => {
             return fail(res, invalidMsg, 401);
         }
 
-        const token = signToken({ user_id: user.xuser_id, admin: user.admin || '普通者' });
+        const token = signToken({ user_id: user.xuser_id, admin: user.admin || 'No' });
 
         ok(res, {
             token,
             user: {
                 user_id: user.xuser_id,
                 user_name: user.xuser_name || user.xuser_id,
-                admin: user.admin || '普通者',
+                admin: user.admin || 'No',
                 user_type: user.xuser_type || '一般員工'
             }
         }, '登入成功');
@@ -82,7 +82,7 @@ router.get('/me', authRequired, async (req, res) => {
         ok(res, {
             user_id: u.xuser_id,
             user_name: u.xuser_name || u.xuser_id,
-            admin: u.admin || '普通者',
+            admin: u.admin || 'No',
             user_type: u.xuser_type || '一般員工'
         });
     } catch (err) {

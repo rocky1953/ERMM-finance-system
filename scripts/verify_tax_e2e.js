@@ -149,7 +149,7 @@ async function checkDbWrites() {
 async function runHttp(src) {
     const base = `http://localhost:${process.env.PORT || 3008}/api/tax`;
     const { signToken } = require('../middleware/auth');
-    const token = signToken({ user_id: 'HTTP-TEST', admin: '管理員' });
+    const token = signToken({ user_id: 'HTTP-TEST', admin: 'Yes' });
     const post = async (path, body) => {
         const r = await fetch(base + path, {
             method: 'POST',

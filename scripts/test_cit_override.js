@@ -17,7 +17,7 @@ const { signToken } = require('../middleware/auth');
 
 const BU = '10010';
 const YEAR = '2025';
-const TOKEN = signToken({ user_id: 'CIT_OVR_TEST', admin: '管理員' });
+const TOKEN = signToken({ user_id: 'CIT_OVR_TEST', admin: 'Yes' });
 const PASS = []; const FAIL = [];
 function ok(n) { PASS.push(n); console.log(`  ✓ ${n}`); }
 function fail(n, err) { FAIL.push(n); console.log(`  ✗ ${n}: ${err}`); }

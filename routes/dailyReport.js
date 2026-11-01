@@ -8,7 +8,7 @@
  *   POST   /api/daily-report/relink             更新连接资料(重算派生栏位)
  *   GET    /api/daily-report/analysis/*         时间分类/客户/平衡轮/未完成/延误明细/每月工时
  *
- * 权限：admin∈{管理員,管理员} 或 xuser_type∈{部門經理,高階主管,部门经理,高价主管} 为经理级，可查全部；
+ * 权限：admin='Yes' 或 xuser_type∈{部門經理,高階主管,部门经理,高价主管} 为经理级，可查全部；
  *       一般员工仅能操作本人数据(服务端强制，忽略前端传入的 user_id)。
  * 测试环境(NODE_ENV=test)允许 x-test-user 头指定身份。
  */
@@ -124,21 +124,19 @@ async function loadYearOkrs(bu, yyyy) {
 const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
 // 生命平衡轮八大模块（生活类）
 const LIFE_TYPES = WK_TYPES.slice(1);
-// 经理级身份：兼容繁简体（部門主管/部门主管、高階主管/高阶主管、部門經理/部门经理）及历史错别字
+// 经理级身份：admin='Yes' 或兼容繁简体的主管类别（部門主管/部门主管、高階主管/高阶主管、部門經理/部门经理）及历史错别字
 const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
-const ADMIN_MANAGER_VALUES = ['管理員', '管理员'];
-// 经理身份归一化：先做简→繁关键映射，再判断，避免 DB 中简繁体混杂导致漏判
+// 经理身份归一化：xuser_type 先做简→繁关键映射再判断；admin 自 migration 012 起統一 Yes/No
 function isManagerRole(admin, xuserType) {
     const norm = (s) => String(s || '')
         .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
-        .replace(/管理员/g, '管理員').replace(/高价/g, '高階');
-    return ADMIN_MANAGER_VALUES.includes(norm(admin)) || MANAGER_TYPES.includes(norm(xuserType));
+        .replace(/高价/g, '高階');
+    return admin === 'Yes' || MANAGER_TYPES.includes(norm(xuserType));
 }
-// 高階权限：仅 管理员(管理員) 或 高階主管 —— 解锁等制衡性操作仅限此身份
+// 高階权限：仅 管理员(admin='Yes') 或 高階主管 —— 解锁等制衡性操作仅限此身份
 function isSeniorRole(admin, xuserType) {
-    const na = String(admin || '').replace(/管理员/g, '管理員');
-    const nt = String(xuserType || '').replace(/高阶/g, '高階');
-    return na === '管理員' || nt === '高階主管';
+    const nt = String(xuserType || '').replace(/高阶/g, '高階').replace(/高价/g, '高階');
+    return admin === 'Yes' || nt === '高階主管';
 }
 
 // 审计动作常量
@@ -249,7 +247,7 @@ async function resolveActor(req) {
     if (rows.length === 0) {
         // 测试环境允许不存在于 cams_xuser 的身份(预设为经理级，便于隔离测试)
         if (process.env.NODE_ENV === 'test') {
-            return { user_id: uid, user_name: uid, xuser_dept: null, xuser_type: '部門主管', admin: '管理員', isManager: true, isSenior: true };
+            return { user_id: uid, user_name: uid, xuser_dept: null, xuser_type: '部門主管', admin: 'Yes', isManager: true, isSenior: true };
         }
         return { error: 'NOT_FOUND' };
     }
@@ -259,7 +257,7 @@ async function resolveActor(req) {
         user_name: u.xuser_name || u.xuser_id,
         xuser_dept: u.xuser_dept || null,
         xuser_type: u.xuser_type || '一般員工',
-        admin: u.admin || '普通者',
+        admin: u.admin || 'No',
         isManager: isManagerRole(u.admin, u.xuser_type),
         isSenior: isSeniorRole(u.admin, u.xuser_type)
     };

@@ -16,9 +16,9 @@
 const { request, app, pool } = require('./setup');
 
 const BU = 'TEST';
-const MGR = 'TEST_DR_MGR';   // admin=管理员 → isManager + isSenior
+const MGR = 'TEST_DR_MGR';   // admin=Yes → isManager + isSenior
 const EMP = 'TEST_DR_EMP';   // 一般员工
-const SUP = 'TEST_DR_SUP';   // 部門主管 + 普通者 → isManager 但非 isSenior（制衡测试）
+const SUP = 'TEST_DR_SUP';   // 部門主管 + admin=No → isManager 但非 isSenior（制衡测试）
 const DEPT = '测试部';
 
 function fmtDate(offsetDays) {
@@ -248,17 +248,17 @@ beforeAll(async () => {
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [MGR, 'x', '王经理', DEPT, null, 'USE', '管理员', null, null, '部门经理']);
+    `, [MGR, 'x', '王经理', DEPT, null, 'USE', 'Yes', null, null, '部门经理']);
     await pool.execute(`
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [EMP, 'x', '李员工', DEPT, null, 'USE', '普通者', null, null, '一般员工']);
+    `, [EMP, 'x', '李员工', DEPT, null, 'USE', 'No', null, null, '一般员工']);
     await pool.execute(`
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [SUP, 'x', '张主管', DEPT, null, 'USE', '普通者', null, null, '部門主管']);
+    `, [SUP, 'x', '张主管', DEPT, null, 'USE', 'No', null, null, '部門主管']);
 
     // 固定分析数据 2099/01
     await seedReport({

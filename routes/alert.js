@@ -11,12 +11,11 @@ const { scanBu } = require('../services/drAlertScanner');
 
 // ============ M3 身份解析（與 routes/dailyReport.js 同口徑） ============
 const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
-const ADMIN_MANAGER_VALUES = ['管理員', '管理员'];
 function isManagerRole(admin, xuserType) {
     const norm = (s) => String(s || '')
         .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
-        .replace(/管理员/g, '管理員').replace(/高价/g, '高階');
-    return ADMIN_MANAGER_VALUES.includes(norm(admin)) || MANAGER_TYPES.includes(norm(xuserType));
+        .replace(/高价/g, '高階');
+    return admin === 'Yes' || MANAGER_TYPES.includes(norm(xuserType));
 }
 async function resolveActor(req) {
     let uid = req.user && req.user.user_id;
@@ -27,7 +26,7 @@ async function resolveActor(req) {
            FROM cams_xuser WHERE xuser_id=? LIMIT 1`, [uid]);
     if (rows.length === 0) {
         if (process.env.NODE_ENV === 'test') {
-            return { user_id: uid, user_name: uid, xuser_type: '部門主管', admin: '管理員', isManager: true, isSenior: true };
+            return { user_id: uid, user_name: uid, xuser_type: '部門主管', admin: 'Yes', isManager: true, isSenior: true };
         }
         return { error: 'NOT_FOUND' };
     }
@@ -35,12 +34,11 @@ async function resolveActor(req) {
     return {
         user_id: u.xuser_id, user_name: u.xuser_name || u.xuser_id,
         xuser_dept: u.xuser_dept || null, xuser_type: u.xuser_type || '一般員工',
-        admin: u.admin || '普通者',
+        admin: u.admin || 'No',
         isManager: isManagerRole(u.admin, u.xuser_type),
         isSenior: (() => {
-            const na = String(u.admin || '').replace(/管理员/g, '管理員');
-            const nt = String(u.xuser_type || '').replace(/高阶/g, '高階');
-            return na === '管理員' || nt === '高階主管';
+            const nt = String(u.xuser_type || '').replace(/高阶/g, '高階').replace(/高价/g, '高階');
+            return u.admin === 'Yes' || nt === '高階主管';
         })()
     };
 }

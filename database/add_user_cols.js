@@ -29,9 +29,12 @@ const NEW_COLS = [
         }
     }
 
-    // 異常值歸為預設
+    // 異常值歸為預設（保留既有繁/簡/歷史有效值，不覆蓋）
     await pool.execute(
-        `UPDATE cams_xuser SET xuser_type='一般員工' WHERE xuser_type IS NULL OR xuser_type NOT IN ('一般員工','部門經理','高階主管')`
+        `UPDATE cams_xuser SET xuser_type='一般员工'
+          WHERE xuser_type IS NULL OR TRIM(xuser_type)=''
+             OR xuser_type NOT IN
+                ('一般員工','一般员工','部門經理','部门经理','部門主管','部门主管','高階主管','高阶主管','高价主管')`
     );
 
     const [stat] = await pool.execute(

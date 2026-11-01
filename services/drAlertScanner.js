@@ -17,9 +17,8 @@ const { sendAlertMail } = require('../utils/mailer');
 
 const ACTIVE_LOOKBACK_DAYS = 56;   // 活躍人員：近 56 天有 USE 日報（同時覆蓋 R2 逐日視窗）
 
-// 經理級身份（與 routes/dailyReport.js 同口徑，繁簡歸一）
+// 經理級身份（與 routes/dailyReport.js 同口徑；admin 自 migration 012 起統一 Yes/No）
 const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
-const ADMIN_MANAGER_VALUES = ['管理員', '管理员'];
 
 // ============ 日期工具（本地時區，與日報 report_date 口徑一致） ============
 function pad2(n) { return String(n).padStart(2, '0'); }
@@ -159,8 +158,8 @@ async function loadManagerEmails() {
     const [rows] = await pool.execute(
         `SELECT DISTINCT email FROM cams_xuser
           WHERE email IS NOT NULL AND email<>''
-            AND (admin IN (?,?) OR xuser_type IN (${MANAGER_TYPES.map(() => '?').join(',')}))`,
-        [...ADMIN_MANAGER_VALUES, ...MANAGER_TYPES]);
+            AND (admin = 'Yes' OR xuser_type IN (${MANAGER_TYPES.map(() => '?').join(',')}))`,
+        MANAGER_TYPES);
     return rows.map(r => r.email).filter(Boolean);
 }
 

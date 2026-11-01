@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ERMM 财务模组 · 系统架构图与模块-资料表关系图</title>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<!-- Mermaid：优先同目录本地库（最稳），失败时依次回退 vendor 相对路径 / jsDelivr / unpkg / bootcdn -->
+<script src="mermaid.min.js"
+        onerror="this.onerror=null;this.src='../public/vendor/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://unpkg.com/mermaid@10/dist/mermaid.min.js';this.onerror=function(){this.onerror=null;this.src='https://cdn.bootcdn.net/ajax/libs/mermaid/10.9.3/mermaid.min.js';};};};"></script>
 <style>
   :root {
     --primary: #1e3a5f;
@@ -179,90 +181,176 @@
   </ul>
 </div>
 
-<!-- ============ 一、系统整体架构图 ============ -->
-<h2 id="s1">一、系统整体架构图（分层架构）</h2>
-<div class="mermaid">
-flowchart TB
-    subgraph CLIENT["① 客户端层"]
-        Browser["浏览器 (Chrome/Edge)<br/>HTTP + JWT"]
-    end
+<!-- ============ 一、系统整体架构图（分层架构 · 6 层纵向展开） ============ -->
+<h2 id="s1">一、系统整体架构图（分层架构 · 纵向展开 · 每层独立占满宽度）</h2>
 
-    subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口<br/>+ 侧边栏菜单 (43 页)"]
-        App["app.js<br/>路由/导航/弹窗/通用 UI"]
-        I18n["i18n.js<br/>简/繁/英 三语"]
-        Pages["pages/*.js (41 个功能页)<br/>dashboard / dailyReport / finance / tax / integration / ..."]
-        Chart["Chart.js 图表引擎"]
-    end
-
-    subgraph GATEWAY["③ API 网关层 (app.js)"]
-        Auth["/api/auth<br/>登录/登出/JWT"]
-        AuthReq["authRequired 中间件<br/>JWT 校验 + 权限"]
-        Static["静态资源服务<br/>public/"]
-    end
-
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 42 个路由)"]
-        direction LR
-        S1["📊 绩效闭环<br/>dailyReport"]
-        S2["🔔 预警引擎<br/>alert"]
-        S3["📈 趋势预测<br/>forecast"]
-        S4["📒 财务核心<br/>finance"]
-        S5["💰 现金预测<br/>cashForecast"]
-        S6["🧾 财务核算<br/>cash/invoice/pay/check/bank/account"]
-        S7["📋 预算/管会/合并<br/>budget/mgmtAccounting/consolidation"]
-        S8["🤖 AI 能力<br/>aiqa/llm/diagnosis"]
-        S9["📦 业务单据<br/>po/so/dn/tempPo"]
-        S10["⚙️ 系统支撑<br/>system/user/batch/kpi/action"]
-        S11["🔌 第三方资料整合<br/>integration"]
-        S12["🧮 电子化报税<br/>tax"]
-    end
-
-    subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
-        direction TB
-        CoreT["核心交易表<br/>daily_report / fin_voucher / fin_tax_return / ..."]
-        AuditT["审计与配置表<br/>daily_report_audit_log / alert_rule / llm_config / ..."]
-        BaseT["基础资料表<br/>cams_xuser / mgm_account_details / mgmt_dept / ..."]
-        Ledger["fin_ruid_ledger<br/>RUID 全链路主台账"]
-        IntgT["第三方整合表<br/>intg_source / intg_job / intg_log"]
-        TaxT["税务申报表<br/>vat_declarations / cit_annual_settlements / iit_withholding_*"]
-        TaxIn["税务录入表<br/>tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
-    end
-
-    subgraph EXTERNAL["⑥ 外部/支撑"]
-        LLM["LLM 服务<br/>(AI 问答/诊断)"]
-        Mailer["邮件服务<br/>nodemailer 告警通知"]
-        Scheduler["node-cron 排程器<br/>工作日 09:30/16:30 告警扫描"]
-        ThirdPartyDB["第三方数据库<br/>(MySQL 连线池缓存)"]
-        ExcelFile["Excel 文件<br/>(ExcelJS 解析/导入)"]
-        IntgSched["整合排程器<br/>(setInterval 分钟级)"]
-    end
-
-    Browser --> Index
-    Index --> App --> Pages --> Chart
-    App --> Auth --> AuthReq
-    AuthReq --> S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12
-    S1 --> CoreT & AuditT
-    S2 --> AuditT & Scheduler --> Mailer
-    S3 --> CoreT
-    S4 --> Ledger & CoreT
-    S5 --> CoreT
-    S6 --> CoreT
-    S7 --> CoreT
-    S8 --> LLM & CoreT
-    S9 --> CoreT
-    S10 --> BaseT & AuditT
-    S11 --> IntgT & CoreT
-    S11 --> ThirdPartyDB & ExcelFile & IntgSched
-    S12 --> TaxT & TaxIn & CoreT
-    Ledger --> CoreT
-
-    style CLIENT fill:#e3f2fd,stroke:#1976d2
-    style FRONTEND fill:#e8f5e9,stroke:#388e3c
-    style GATEWAY fill:#fff3e0,stroke:#f57c00
-    style SERVICE fill:#fce4ec,stroke:#c2185b
-    style DATA fill:#f3e5f5,stroke:#7b1fa2
-    style EXTERNAL fill:#efebe9,stroke:#5d4037
+<div class="arch-wrap">
+<!-- 图例 -->
+<div class="arch-legend">
+  <span>配色：</span>
+  <span class="arch-ldot" style="background:#1976d2">客户端</span>
+  <span class="arch-ldot" style="background:#e65100">前端 SPA</span>
+  <span class="arch-ldot" style="background:#388e3c">API 网关</span>
+  <span class="arch-ldot" style="background:#c62828">业务服务 42 路由</span>
+  <span class="arch-ldot" style="background:#5e35b1">数据层 74 张表</span>
+  <span class="arch-ldot" style="background:#f9a825">外部 / 支撑</span>
 </div>
+
+<!-- ① 客户端层 -->
+<div class="arch-row a1">
+  <div class="arch-label">① 客户端层</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  Browser["🖥️ 浏览器<br/>HTTP + JWT 登录态"]
+  JWT["🔑 Bearer Token<br/>localStorage · 12h 有效期"]
+  IndexClick["→ index.html · 进入前端 SPA"]
+  Browser --> JWT --> IndexClick
+  style Browser fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#0d47a1
+  style JWT    fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+  style IndexClick fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+</div>
+</div>
+
+<!-- ② 前端 SPA 层 -->
+<div class="arch-row a2">
+  <div class="arch-label">② 前端 SPA 层（public/）</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  Index["index.html 入口<br/>侧边栏菜单 · 43 页 SPA"]
+  App["app.js · 核心框架<br/>路由 / 导航 / Auth / 通用 UI / i18n 三语"]
+  Pages["pages/*.js · 41 个功能页<br/>dashboard · dailyReport · finance · tax · integration · po · so · cash · invoice · pay · budget · mgmtAccounting · consolidation · ..."]
+  Chart["Chart.js 图表引擎<br/>柱状 / 折线 / 饼图 / 雷达"]
+  Index --> App --> Pages --> Chart
+  style Index fill:#fff3e0,stroke:#e65100,stroke-width:1.5px,color:#bf360c
+  style App   fill:#fff3e0,stroke:#e65100,stroke-width:1.5px,color:#bf360c
+  style Pages fill:#fff3e0,stroke:#e65100,stroke-width:1.5px,color:#bf360c
+  style Chart fill:#fff3e0,stroke:#e65100,stroke-width:1.5px,color:#bf360c
+</div>
+</div>
+
+<!-- ③ API 网关层 -->
+<div class="arch-row a3">
+  <div class="arch-label">③ API 网关层（app.js · Express）</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  Static["静态资源服务<br/>public/ · index.html · vendor/"]
+  Auth["/api/auth 路由<br/>登录 · 登出 · JWT 签发 / 校验 / 续期"]
+  AuthReq["authRequired 中间件<br/>Bearer Token 解析 · 401 自动回退登录页"]
+  Static --> Auth --> AuthReq
+  style Static  fill:#e8f5e9,stroke:#388e3c,stroke-width:1.5px,color:#1b5e20
+  style Auth    fill:#e8f5e9,stroke:#388e3c,stroke-width:1.5px,color:#1b5e20
+  style AuthReq fill:#e8f5e9,stroke:#388e3c,stroke-width:1.5px,color:#1b5e20
+</div>
+</div>
+
+<!-- ④ 业务服务层：3 行 × 4 个模块 = 12 个，竖向展开 -->
+<div class="arch-row a4">
+  <div class="arch-label">④ 业务服务层（routes/*.js · 42 个路由 · 12 个模块）</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  subgraph R1["经营决策类（8 个模块）"]
+    direction LR
+    S1["📊 绩效闭环<br/>dailyReport<br/>dailyReportUnfinished"]
+    S2["🔔 预警引擎<br/>alert<br/>告警规则 / 扫描"]
+    S3["📈 趋势预测<br/>forecast<br/>月均 / 年度趋势"]
+    S7["📋 预算管会合并<br/>budget<br/>mgmtAccounting<br/>consolidation"]
+  end
+  subgraph R2["财务核算类（4 个模块）"]
+    direction LR
+    S4["📒 财务核心<br/>finance<br/>总账 · 凭证 · 月结"]
+    S5["💰 现金预测<br/>cashForecast<br/>收支 · 预测"]
+    S6["🧾 财务核算<br/>cash · invoice<br/>pay · check · bank<br/>account"]
+    S12["🧮 电子化报税<br/>tax<br/>VAT · CIT · IIT"]
+  end
+  subgraph R3["单据 / 系统 / 整合类（4 个模块）"]
+    direction LR
+    S9["📦 业务单据<br/>po · so<br/>dn · tempPo"]
+    S10["⚙️ 系统支撑<br/>system · user<br/>batch · kpi · action"]
+    S11["🔌 第三方资料整合<br/>integration<br/>Excel 导入 / SQL 线上"]
+    S8["🤖 AI 能力<br/>aiqa · llm<br/>diagnosis"]
+  end
+  R1 --> R2 --> R3
+  classDef svc fill:#fce4ec,stroke:#c62828,stroke-width:1.5px,color:#880e4f;
+  class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10,S11,S12 svc;
+</div>
+</div>
+
+<!-- ⑤ 数据层 -->
+<div class="arch-row a5">
+  <div class="arch-label">⑤ 数据层（MySQL 8 · ermm_db · 74 张表）</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  Ledger["fin_ruid_ledger<br/>★ RUID 全链路主台账<br/>从单据到报表的唯一追踪 ID"]
+  CoreT["核心交易表<br/>daily_report · fin_voucher · fin_tax_return<br/>cash_ledger · po · so · ..."]
+  TaxT["税务申报表（3 张）<br/>vat_declarations<br/>cit_annual_settlements<br/>iit_withholding_*"]
+  TaxIn["税务录入表（4 张）<br/>tax_vat_adjustments · tax_cit_inputs<br/>payroll_details · bonus_details"]
+  IntgT["第三方整合表（3 张）<br/>intg_source · intg_job · intg_log"]
+  AuditT["审计与配置表（约 14 张）<br/>daily_report_audit_log · alert_rule<br/>llm_config · daily_report_lock · ..."]
+  BaseT["基础资料表（约 20 张）<br/>cams_xuser · mgm_account_details<br/>mgmt_dept · cams_item · ..."]
+  Ledger --> CoreT
+  CoreT --> TaxT
+  CoreT --> TaxIn
+  CoreT --> IntgT
+  CoreT --> AuditT
+  CoreT --> BaseT
+  classDef dt fill:#ede7f6,stroke:#5e35b1,stroke-width:1.5px,color:#311b92;
+  class Ledger,CoreT,TaxT,TaxIn,IntgT,AuditT,BaseT dt;
+</div>
+</div>
+
+<!-- ⑥ 外部 / 支撑 + 跨层数据流说明 -->
+<div class="arch-row a6">
+  <div class="arch-label">⑥ 外部 / 支撑 &nbsp;&nbsp;·&nbsp;&nbsp; 跨层数据流摘要</div>
+  <div class="arch-g mermaid">
+flowchart TB
+  subgraph EXT["⑥ 外部 / 支撑"]
+    direction TB
+    LLM["🤖 LLM 服务<br/>aiqa 问答 / diagnosis 诊断"]
+    Mailer["📧 邮件服务<br/>nodemailer<br/>告警 · 日报 · 月度报告"]
+    Sched["⏰ node-cron 排程器<br/>工作日 09:30 / 16:30<br/>dailyAlertScanner 告警扫描"]
+    DBExt["🗄️ 第三方数据库<br/>MySQL 连线池缓存<br/>integration SQL 线上整合"]
+    Excel["📗 Excel 文件<br/>ExcelJS 解析 / 导入<br/>batch 管线 Step1-7"]
+  end
+  direction TB
+  AUTH["🔐 跨层数据流"]
+  AUTH --> N1["authRequired → 42 个路由入口统一鉴权"]
+  AUTH --> N2["业务路由 → 数据层 74 张表"]
+  AUTH --> N3["alert / tax / forecast 等 → Scheduler / Mailer"]
+  AUTH --> N4["integration / batch → DBExt / Excel"]
+  AUTH --> N5["aiqa / diagnosis → LLM（可配置多个服务商）"]
+  classDef ext fill:#fffde7,stroke:#f9a825,stroke-width:1.5px,color:#f57f17;
+  class LLM,Mailer,Sched,DBExt,Excel ext;
+</div>
+</div>
+</div>
+
+<style>
+.arch-wrap { margin: 16px 0 8px; }
+.arch-legend {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  background: #f8fafc; padding: 10px 14px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 12px; color: #475569; margin-bottom: 14px;
+}
+.arch-ldot { display: inline-block; padding: 2px 10px; border-radius: 12px; color: #fff; font-weight: 600; font-size: 12px; }
+.arch-row { margin-bottom: 6px; }
+.arch-label {
+  font-weight: 700; font-size: 13px; color: #1e3a5f;
+  padding: 6px 12px; border-radius: 6px 6px 0 0; border: 1px solid var(--border);
+  border-bottom: none;
+}
+.arch-row.a1 .arch-label { background:#e3f2fd; color:#0d47a1; border-color:#90caf9; }
+.arch-row.a2 .arch-label { background:#fff3e0; color:#bf360c; border-color:#ffcc80; }
+.arch-row.a3 .arch-label { background:#e8f5e9; color:#1b5e20; border-color:#a5d6a7; }
+.arch-row.a4 .arch-label { background:#fce4ec; color:#880e4f; border-color:#f48fb1; }
+.arch-row.a5 .arch-label { background:#ede7f6; color:#311b92; border-color:#b39ddb; }
+.arch-row.a6 .arch-label { background:#fffde7; color:#f57f17; border-color:#ffe082; }
+.arch-g {
+  background: #fff; padding: 12px; border-radius: 0 0 6px 6px;
+  border: 1px solid var(--border); border-top: none;
+  overflow-x: auto;
+}
+.arch-g svg { width: 100%; height: auto !important; max-width: none; }
+</style>
 
 <hr>
 
@@ -1291,7 +1379,40 @@ Mermaid 图由 mermaid.js 实时渲染。<br>
 </div>
 
 <script>
-  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' }, er: { useMaxWidth: true } });
+  // Mermaid 初始化：先清掉所有 data-processed 残留，再用 async run() 统一渲染
+  (async function initMermaid() {
+    if (typeof mermaid === 'undefined') {
+      document.querySelectorAll('.mermaid').forEach(el => {
+        if (el.firstChild && el.firstChild.nodeType !== 1) {
+          el.style.cssText = 'background:#fef2f2;border:1px solid #fca5a5;color:#991b1b;padding:12px;border-radius:6px;font-size:13px;white-space:pre-wrap;text-align:left;';
+          const src = el.textContent;
+          el.textContent = '⚠️ Mermaid.js 加载失败（本地 + 多个 CDN 均不可用），下图为原始源码：\n\n' + src;
+        }
+      });
+      return;
+    }
+    // 硬清所有 data-processed（新 tab 不会有，旧 tab/刷新时可能残留）
+    document.querySelectorAll('.mermaid[data-processed]').forEach(el => el.removeAttribute('data-processed'));
+    // 全局初始化
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      flowchart: { curve: 'basis', useMaxWidth: true, nodeSpacing: 22, rankSpacing: 26 },
+      er: { useMaxWidth: true },
+      sequence: { useMaxWidth: true }
+    });
+    // 先跑 6 个 arch-wrap 的（它们最容易被漏处理），再跑剩下全部
+    try {
+      await mermaid.run({ querySelector: '.arch-wrap .mermaid' });
+    } catch (e) {
+      console.warn('arch-wrap mermaid run 警告:', e && e.message);
+    }
+    try {
+      await mermaid.run({ querySelector: '.mermaid:not([data-processed])' });
+    } catch (e) {
+      console.warn('剩余 mermaid run 警告:', e && e.message);
+    }
+  })();
 </script>
 </body>
 </html>

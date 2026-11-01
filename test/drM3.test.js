@@ -15,7 +15,7 @@ const { buildReportHtml } = require('../utils/mailer');
 
 const BU = 'TEST';
 const DEPT = '測試部';
-const MGR = 'TEST_DR_MGR';   // 管理員 → isManager + isSenior
+const MGR = 'TEST_DR_MGR';   // admin=Yes → isManager + isSenior
 const SUP = 'TEST_DR_SUP';   // 部門主管 → isManager、非 isSenior
 const EMP = 'TEST_DR_EMP';   // 一般員工
 const RULES = '/api/alert/daily-rules';
@@ -273,17 +273,17 @@ beforeAll(async () => {
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [MGR, 'x', '王經理', DEPT, null, 'USE', '管理員', null, null, '部門經理']);
+    `, [MGR, 'x', '王經理', DEPT, null, 'USE', 'Yes', null, null, '部門經理']);
     await pool.execute(`
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [EMP, 'x', '李員工', DEPT, null, 'USE', '普通者', null, null, '一般員工']);
+    `, [EMP, 'x', '李員工', DEPT, null, 'USE', 'No', null, null, '一般員工']);
     await pool.execute(`
         INSERT INTO cams_xuser
             (xuser_id, xuser_password, xuser_name, xuser_dept, client_id, inuse_flag, admin, email, tel_no, xuser_type)
         VALUES (?,?,?,?,?,?,?,?,?,?)
-    `, [SUP, 'x', '張主管', DEPT, null, 'USE', '普通者', null, null, '部門主管']);
+    `, [SUP, 'x', '張主管', DEPT, null, 'USE', 'No', null, null, '部門主管']);
 
     // 快照 5 條日報規則，測試期間暫關 email 通道（避免對真實經理發信）
     const [rules] = await pool.execute(

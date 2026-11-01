@@ -45,11 +45,11 @@ function authRequired(req, res, next) {
 }
 
 // 管理員權限中介層：必須在 authRequired 之後使用（依賴 req.user）
-// cams_xuser.admin 值為「管理員」或「普通者」
+// cams_xuser.admin 值統一為 Yes（管理員）/ No（普通者），見 migrations/012_admin_yes_no.sql
 // 測試環境（NODE_ENV=test）自動放行，既有整合測試不需帶 token
 function requireAdmin(req, res, next) {
     if (process.env.NODE_ENV === 'test') return next();
-    if (req.user && req.user.admin === '管理員') return next();
+    if (req.user && req.user.admin === 'Yes') return next();
     return res.status(403).json({
         success: false, code: 'FORBIDDEN',
         message: '你的權限不足，無法進入該功能'

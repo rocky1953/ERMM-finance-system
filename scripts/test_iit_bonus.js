@@ -9,7 +9,7 @@ const { signToken } = require('../middleware/auth');
 
 const BU = '10010';
 const YEAR = '2025';
-const TOKEN = signToken({ user_id: 'BONUS_TEST', admin: '管理員' });
+const TOKEN = signToken({ user_id: 'BONUS_TEST', admin: 'Yes' });
 const PASS = []; const FAIL = [];
 function ok(name) { PASS.push(name); console.log(`  ✓ ${name}`); }
 function fail(name, err) { FAIL.push(name); console.log(`  ✗ ${name}: ${err}`); }

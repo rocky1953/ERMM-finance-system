@@ -8,7 +8,7 @@ const { signToken } = require('../middleware/auth');
 const { pool } = require('../config/db');
 
 const BASE = 'http://localhost:3008';
-const TOKEN = signToken({ user_id: 'VERIFY', admin: '管理員', user_name: '驗證腳本' });
+const TOKEN = signToken({ user_id: 'VERIFY', admin: 'Yes', user_name: '驗證腳本' });
 
 (async () => {
     const YEARS = process.argv.filter(a => a.startsWith('--year=')).map(a => a.split('=')[1]);
