@@ -57,9 +57,8 @@ resolve_pm2_name() {
   detected="$(pm2 jlist 2>/dev/null | ERMM_APP_DIR="$APP_DIR" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const root=((process.env.ERMM_APP_DIR||"").replace(/\\/g,"/")).replace(/\/+/g,"/");JSON.parse(s).filter(a=>{const p=((a.pm2_env||{}).pm_exec_path||"").replace(/\\/g,"/");return root&&p.indexOf(root+"/")===0&&/app\.js/i.test(p)}).forEach(a=>console.log(a.name))}catch(e){}})' | head -n1)" || detected=""
 
   if [ -n "$detected" ]; then
-    warn "pm2 中未找到「$PM2_NAME」，检测到运行 app.js 的进程「$detected」→ 自动重命名为「$PM2_NAME」"
-    pm2 rename "$detected" "$PM2_NAME" >/dev/null 2>&1 || warn "重命名失败（可通过 PM2_NAME=xxx ./deploy.sh 覆盖）"
-    RESOLVED_PM2_NAME="$PM2_NAME"
+    warn "pm2 中未找到「$PM2_NAME」，改用本项目的现有进程「$detected」（如要统一名称：pm2 delete + pm2 start）"
+    RESOLVED_PM2_NAME="$detected"
     return 0
   fi
 
