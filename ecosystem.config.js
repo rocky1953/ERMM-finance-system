@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'ermm-finance-system',
+    name: 'ermm-finance',
     script: './app.js',
     env_production: { 
       NODE_ENV: 'production', 
