@@ -15,7 +15,7 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-/root/Project/ERMM-finance-system}"
 BRANCH="${BRANCH:-main}"
-PM2_NAME="${PM2_NAME:-ermm-finance}"
+PM2_NAME="${PM2_NAME:-ermm-finance-system}"
 PORT="${PORT:-3008}"
 HEALTH_URL="http://127.0.0.1:${PORT}/api/health"
 
@@ -53,7 +53,8 @@ resolve_pm2_name() {
   fi
 
   local detected=""
-  detected="$(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{JSON.parse(s).filter(a=>/app\.js/i.test((a.pm2_env||{}).pm_exec_path||"")).forEach(a=>console.log(a.name))}catch(e){}})' | head -n1)" || detected=""
+  # 只在 APP_DIR 目录内查找执行 app.js 的进程，避免误改名同机的其他 Node 服务
+  detected="$(pm2 jlist 2>/dev/null | ERMM_APP_DIR="$APP_DIR" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const root=((process.env.ERMM_APP_DIR||"").replace(/\\/g,"/")).replace(/\/+/g,"/");JSON.parse(s).filter(a=>{const p=((a.pm2_env||{}).pm_exec_path||"").replace(/\\/g,"/");return root&&p.indexOf(root+"/")===0&&/app\.js/i.test(p)}).forEach(a=>console.log(a.name))}catch(e){}})' | head -n1)" || detected=""
 
   if [ -n "$detected" ]; then
     warn "pm2 中未找到「$PM2_NAME」，检测到运行 app.js 的进程「$detected」→ 自动重命名为「$PM2_NAME」"
