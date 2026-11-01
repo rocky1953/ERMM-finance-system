@@ -13,15 +13,35 @@
 
 SET NAMES utf8mb4;
 
-ALTER TABLE `vat_declarations`
-  ADD COLUMN `filing_cycle` varchar(10) NOT NULL DEFAULT 'MONTHLY'
-      COMMENT '申報週期：MONTHLY=按月，QUARTERLY=按季' AFTER `tax_period`,
-  ADD COLUMN `period_start` varchar(6) DEFAULT NULL
-      COMMENT '稅款所屬期起始月 YYYYMM' AFTER `filing_cycle`,
-  ADD COLUMN `period_end` varchar(6) DEFAULT NULL
-      COMMENT '稅款所屬期結束月 YYYYMM' AFTER `period_start`,
-  ADD COLUMN `tax_exempt` tinyint(1) NOT NULL DEFAULT 0
-      COMMENT '1=季度銷售額未達免征標準，應納稅額為 0' AFTER `tax_payable`;
+-- ------------------------------------------------------------
+-- 幂等加列助手：MySQL 8 不支援 ADD COLUMN IF NOT EXISTS，
+-- 改用 information_schema 檢查後再 ALTER，確保 migration 可重複執行
+-- ------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_add_column;
+DELIMITER $$
+CREATE PROCEDURE sp_add_column(
+    IN p_table VARCHAR(64), IN p_column VARCHAR(64), IN p_definition TEXT)
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME   = p_table
+                      AND COLUMN_NAME  = p_column) THEN
+        SET @ddl = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN ', p_definition);
+        PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL sp_add_column('vat_declarations', 'filing_cycle',
+  '`filing_cycle` varchar(10) NOT NULL DEFAULT ''MONTHLY'' COMMENT ''申報週期：MONTHLY=按月，QUARTERLY=按季'' AFTER `tax_period`');
+CALL sp_add_column('vat_declarations', 'period_start',
+  '`period_start` varchar(6) DEFAULT NULL COMMENT ''稅款所屬期起始月 YYYYMM'' AFTER `filing_cycle`');
+CALL sp_add_column('vat_declarations', 'period_end',
+  '`period_end` varchar(6) DEFAULT NULL COMMENT ''稅款所屬期結束月 YYYYMM'' AFTER `period_start`');
+CALL sp_add_column('vat_declarations', 'tax_exempt',
+  '`tax_exempt` tinyint(1) NOT NULL DEFAULT 0 COMMENT ''1=季度銷售額未達免征標準，應納稅額為 0'' AFTER `tax_payable`');
+
+DROP PROCEDURE IF EXISTS sp_add_column;
 
 -- 歷史資料回填：預設為按月，起訖月同 tax_period
 UPDATE `vat_declarations`

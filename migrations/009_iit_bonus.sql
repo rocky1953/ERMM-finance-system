@@ -36,21 +36,39 @@ CREATE TABLE IF NOT EXISTS `bonus_details` (
 -- ================================================================
 -- 2. 扣繳批次：記錄本次是否包含年終獎
 -- ================================================================
-ALTER TABLE `iit_withholding_batches`
-  ADD COLUMN `bonus_mode` varchar(10) DEFAULT NULL
-      COMMENT 'SEPARATE/COMBINED 表示本批次是否包含年終獎及計稅方式'
-      AFTER `income_type`;
+-- ------------------------------------------------------------
+-- 幂等加列助手：MySQL 8 不支援 ADD COLUMN IF NOT EXISTS，
+-- 改用 information_schema 檢查後再 ALTER，確保 migration 可重複執行
+-- ------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_add_column;
+DELIMITER $$
+CREATE PROCEDURE sp_add_column(
+    IN p_table VARCHAR(64), IN p_column VARCHAR(64), IN p_definition TEXT)
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME   = p_table
+                      AND COLUMN_NAME  = p_column) THEN
+        SET @ddl = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN ', p_definition);
+        PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
+CALL sp_add_column('iit_withholding_batches', 'bonus_mode',
+  '`bonus_mode` varchar(10) DEFAULT NULL COMMENT ''SEPARATE/COMBINED 表示本批次是否包含年終獎及計稅方式'' AFTER `income_type`');
 
 -- ================================================================
 -- 3. 扣繳明細：年終獎相關欄位（非年終獎時為 0）
 -- ================================================================
-ALTER TABLE `iit_withholding_details`
-  ADD COLUMN `bonus_amount`  decimal(18,2) DEFAULT '0.00'
-      COMMENT '年終獎金額' AFTER `current_period_income`,
-  ADD COLUMN `bonus_tax`     decimal(18,2) DEFAULT '0.00'
-      COMMENT '年終獎應扣稅額' AFTER `bonus_amount`,
-  ADD COLUMN `bonus_method`  varchar(10) DEFAULT NULL
-      COMMENT 'SEPARATE/COMBINED' AFTER `bonus_tax`;
+CALL sp_add_column('iit_withholding_details', 'bonus_amount',
+  '`bonus_amount` decimal(18,2) DEFAULT ''0.00'' COMMENT ''年終獎金額'' AFTER `current_period_income`');
+CALL sp_add_column('iit_withholding_details', 'bonus_tax',
+  '`bonus_tax` decimal(18,2) DEFAULT ''0.00'' COMMENT ''年終獎應扣稅額'' AFTER `bonus_amount`');
+CALL sp_add_column('iit_withholding_details', 'bonus_method',
+  '`bonus_method` varchar(10) DEFAULT NULL COMMENT ''SEPARATE/COMBINED'' AFTER `bonus_tax`');
+
+DROP PROCEDURE IF EXISTS sp_add_column;
 
 INSERT IGNORE INTO schema_migrations (version, description) VALUES
 ('009_bonus_details', '年終獎單獨計稅 — bonus_details / batch_bonus_*');

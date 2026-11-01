@@ -85,12 +85,32 @@ CREATE TABLE IF NOT EXISTS `payroll_details` (
   KEY `idx_emp` (`employee_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='工資及個稅扣除明細';
 
+-- ------------------------------------------------------------
+-- 幂等加列助手：MySQL 8 不支援 ADD COLUMN IF NOT EXISTS，
+-- 改用 information_schema 檢查後再 ALTER，確保 migration 可重複執行
+-- ------------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_add_column;
+DELIMITER $$
+CREATE PROCEDURE sp_add_column(
+    IN p_table VARCHAR(64), IN p_column VARCHAR(64), IN p_definition TEXT)
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME   = p_table
+                      AND COLUMN_NAME  = p_column) THEN
+        SET @ddl = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN ', p_definition);
+        PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
 -- ================================================================
 -- 5. 增值稅申報主表：補記進項轉出，保留審計軌跡
 -- ================================================================
-ALTER TABLE `vat_declarations`
-  ADD COLUMN `input_tax_transfer_out` decimal(18,2) DEFAULT '0.00'
-  COMMENT '進項稅額轉出' AFTER `total_input_tax`;
+CALL sp_add_column('vat_declarations', 'input_tax_transfer_out',
+  '`input_tax_transfer_out` decimal(18,2) DEFAULT ''0.00'' COMMENT ''進項稅額轉出'' AFTER `total_input_tax`');
+
+DROP PROCEDURE IF EXISTS sp_add_column;
 
 -- 版本追蹤
 INSERT IGNORE INTO schema_migrations (version, description) VALUES
