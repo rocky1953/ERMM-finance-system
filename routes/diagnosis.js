@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
+const { chatCompletion } = require('../utils/llmClient');
 
 // 指標口徑設定（對應 mgm_finance_summary 欄位）
 const KPI_DEF = {
@@ -52,52 +53,122 @@ router.get('/kpi', async (req, res) => {
     try {
         const { bu_no, YYYY_MM, kpi_id } = req.query;
         if (!bu_no || !YYYY_MM || !kpi_id) return fail(res, '需要 bu_no, YYYY_MM, kpi_id');
+        const result = await runDiagnosis(bu_no, YYYY_MM, kpi_id);
+        ok(res, result);
+    } catch (err) { fail500(res, err); }
+});
 
-        const def = KPI_DEF[kpi_id];
-        if (!def) return fail(res, `不支援的指標: ${kpi_id}`);
+// 內部：執行指標診斷（規則引擎），供 /kpi 與 /ai-attribution 共用
+async function runDiagnosis(bu_no, YYYY_MM, kpi_id) {
+    const def = KPI_DEF[kpi_id];
+    if (!def) throw new Error(`不支援的指標: ${kpi_id}`);
 
-        // 當月資料
-        const [curRows] = await pool.execute(
-            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
-        );
-        if (curRows.length === 0) return fail(res, '該月摘要不存在');
-        const cur = curRows[0];
-        const curVal = def.formula(cur);
+    const [curRows] = await pool.execute(
+        'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]
+    );
+    if (curRows.length === 0) throw new Error('該月摘要不存在');
+    const cur = curRows[0];
+    const curVal = def.formula(cur);
 
-        // 上月資料（計算變動）
-        const dt = new Date(YYYY_MM + '-01');
-        dt.setMonth(dt.getMonth() - 1);
-        const prevYM = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
-        const [prevRows] = await pool.execute(
-            'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, prevYM]
-        );
-        const prev = prevRows[0] || null;
-        const prevVal = prev ? def.formula(prev) : null;
-        const change = prevVal !== null ? Math.round((curVal - prevVal) * 100) / 100 : null;
+    const dt = new Date(YYYY_MM + '-01');
+    dt.setMonth(dt.getMonth() - 1);
+    const prevYM = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    const [prevRows] = await pool.execute(
+        'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, prevYM]
+    );
+    const prev = prevRows[0] || null;
+    const prevVal = prev ? def.formula(prev) : null;
+    const change = prevVal !== null ? Math.round((curVal - prevVal) * 100) / 100 : null;
 
-        // 判定是否異常
-        let isAnomaly = false;
-        if (kpi_id === 'gross_profit' || kpi_id === 'net_profit_margin' || kpi_id === 'current_ratio' || kpi_id === 'ar_turn' || kpi_id === 'roe') {
-            isAnomaly = curVal < def.threshold;
-        } else if (kpi_id === 'debt_ratio') {
-            isAnomaly = curVal > def.threshold;
+    let isAnomaly = false;
+    if (kpi_id === 'gross_profit' || kpi_id === 'net_profit_margin' || kpi_id === 'current_ratio' || kpi_id === 'ar_turn' || kpi_id === 'roe') {
+        isAnomaly = curVal < def.threshold;
+    } else if (kpi_id === 'debt_ratio') {
+        isAnomaly = curVal > def.threshold;
+    }
+
+    const reasons = generateReasons(kpi_id, cur, prev, change);
+    return {
+        kpi_id, kpi_name: def.name,
+        current_value: Math.round(curVal * 100) / 100,
+        threshold: def.threshold,
+        unit: def.unit,
+        prev_value: prevVal !== null ? Math.round(prevVal * 100) / 100 : null,
+        change,
+        is_anomaly: isAnomaly,
+        level: !isAnomaly ? 'normal' : (Math.abs(change || 0) > 5 ? 'danger' : 'warning'),
+        top_reasons: reasons,
+        _cur: cur, _prev: prev
+    };
+}
+
+// AI 智能歸因：把規則引擎的 Top3 原因與財務上下文交給 LLM，輸出自然語言根因解釋與建議
+router.post('/ai-attribution', async (req, res) => {
+    try {
+        const { bu_no, YYYY_MM, kpi_id, lang } = req.body;
+        if (!bu_no || !YYYY_MM || !kpi_id) return fail(res, '需要 bu_no, YYYY_MM, kpi_id');
+
+        // 1. 規則引擎診斷
+        const d = await runDiagnosis(bu_no, YYYY_MM, kpi_id);
+        const cur = d._cur;
+
+        // 2. 選擇已設定 API Key 的 LLM 服務商（優先 Kimi，其次 DeepSeek）
+        let cfg = null;
+        for (const p of ['kimi', 'deepseek']) {
+            const [rows] = await pool.execute('SELECT * FROM llm_config WHERE provider=?', [p]);
+            if (rows.length && rows[0].api_key) { cfg = rows[0]; break; }
         }
+        if (!cfg) return fail(res, '尚未設定任何 LLM 服務商的 API Key，請至「系統設定 → API Key 管理」設定');
 
-        // 產生原因分析（依指標類型）
-        const reasons = generateReasons(kpi_id, cur, prev, change);
+        // 3. 組裝上下文
+        const num = (v) => Number(v || 0);
+        const ctx = {
+            公司別: bu_no, 期間: YYYY_MM,
+            指標: d.kpi_name,
+            當期值: `${d.current_value}${d.unit}`,
+            門檻: `${d.threshold}${d.unit}`,
+            上期值: d.prev_value !== null ? `${d.prev_value}${d.unit}` : '無',
+            變動: d.change !== null ? `${d.change > 0 ? '+' : ''}${d.change}${d.unit}` : '無',
+            是否異常: d.is_anomaly ? '是' : '否',
+            銷售收入: num(cur.sale_amt).toFixed(0),
+            銷售成本: num(cur.sale_cost_amt).toFixed(0),
+            毛利: (num(cur.sale_amt) - num(cur.sale_cost_amt)).toFixed(0),
+            淨利: num(cur.net_profit_amt).toFixed(0),
+            應收帳款: num(cur.AR_amt).toFixed(0),
+            銀行借款: num(cur.loan_amt).toFixed(0),
+            總資產: num(cur.ttl_asset_amt).toFixed(0),
+            總負債: num(cur.ttl_debet_amt).toFixed(0),
+            股東權益: num(cur.stockholder_amt).toFixed(0),
+            Top3拖累原因: d.top_reasons.map(r => `${r.rank}. [${r.dim}] ${r.desc}（影響：${r.impact}；建議：${r.suggestion}）`)
+        };
+
+        // 4. 呼叫 LLM
+        const messages = [
+            { role: 'system', content: '你是一位資深財務分析顧問。請依據提供的財務資料與規則引擎分析出的 Top3 拖累原因，用自然語言說明該指標異常的「根因」，並給出 3 條可執行的改進建議。請以繁體中文回答，結構清晰，避免空泛。' },
+            { role: 'user', content: `財務資料與診斷結果：\n${JSON.stringify(ctx, null, 2)}\n\n請輸出：\n1. 根因解釋（200~400 字）\n2. 改進建議（以「建議1：」「建議2：」「建議3：」開頭，每條 1~2 句）` }
+        ];
+        const content = await chatCompletion(
+            { base_url: cfg.base_url, api_key: cfg.api_key, model: cfg.model },
+            messages,
+            { temperature: 0.3, max_tokens: 2048, timeout: 60000 }
+        );
+
+        // 5. 解析建議（若模型有按格式輸出）
+        const suggestionMatches = content.match(/建議[1-3][：:]\s*.+/g);
+        const suggestions = suggestionMatches
+            ? suggestionMatches.map(s => s.replace(/^建議[1-3][：:]\s*/, '').trim())
+            : [];
 
         ok(res, {
-            kpi_id, kpi_name: def.name,
-            current_value: Math.round(curVal * 100) / 100,
-            threshold: def.threshold,
-            unit: def.unit,
-            prev_value: prevVal !== null ? Math.round(prevVal * 100) / 100 : null,
-            change,
-            is_anomaly: isAnomaly,
-            level: !isAnomaly ? 'normal' : (Math.abs(change || 0) > 5 ? 'danger' : 'warning'),
-            top_reasons: reasons
+            explanation: content,
+            suggestions,
+            provider: cfg.provider_name,
+            model: cfg.model
         });
-    } catch (err) { fail500(res, err); }
+    } catch (err) {
+        if (err.message && err.message.includes('API Key')) return fail(res, err.message);
+        fail500(res, err);
+    }
 });
 
 // 依指標產生原因

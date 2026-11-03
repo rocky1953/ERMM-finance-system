@@ -229,9 +229,35 @@ const Diagnosis = {
                 <div style="font-weight:700;margin-bottom:10px;">Top 3 拖累原因</div>
                 ${reasonsHtml}
             `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
+                <button class="btn" onclick="Diagnosis.aiAttribution('${kpi_id}')" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7;">🤖 AI 智能归因</button>
                 <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">建立行动任务 →</button>`);
         } catch (e) {
             UI.modal('诊断失败', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>');
+        }
+    },
+
+    async aiAttribution(kpi_id) {
+        UI.modal(`🤖 ${kpi_id} AI 智能归因`, '<div style="text-align:center;padding:40px;">AI 分析中，請稍候...</div>', '');
+        try {
+            const res = await API.post('/api/diagnosis/ai-attribution', {
+                bu_no: State.bu_no, YYYY_MM: State.YYYY_MM, kpi_id
+            });
+            const d = res.data;
+            const sugHtml = (d.suggestions && d.suggestions.length)
+                ? d.suggestions.map((s, i) => `<div style="background:#eaf2f8;padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px;"><b>建议 ${i + 1}：</b>${s}</div>`).join('')
+                : '<div style="color:#999;font-size:13px;">（未解析到结构化建议，详见上方说明）</div>';
+            UI.modal(`🤖 AI 智能归因`, `
+                <div style="max-height:60vh;overflow-y:auto;">
+                    <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:14px;border-left:4px solid #6c5ce7;">
+                        <div style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:#2c3e50;">${d.explanation}</div>
+                    </div>
+                    <div style="font-weight:700;margin-bottom:8px;">改进建议</div>
+                    ${sugHtml}
+                </div>
+            `, `<div style="font-size:11px;color:#95a5a6;margin-right:auto;text-align:left;">由 ${d.provider}（${d.model}）生成，仅供参考</div>
+                <button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>`);
+        } catch (e) {
+            UI.modal('AI 归因失败', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>');
         }
     }
 };
