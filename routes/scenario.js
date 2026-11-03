@@ -157,4 +157,98 @@ router.get('/base', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// 儲存模擬方案（參數 + 計算結果）
+router.post('/save', async (req, res) => {
+    try {
+        const { bu_no, YYYY_MM, scenario_name, scenarios } = req.body;
+        if (!bu_no || !YYYY_MM || !scenario_name) return fail(res, '需要 bu_no、YYYY_MM、scenario_name');
+        if (!scenarios) return fail(res, '需要 scenarios 參數');
+
+        const base = await getBaseData(bu_no, YYYY_MM);
+        if (!base) return fail(res, `找不到 ${bu_no} ${YYYY_MM} 的財務資料`);
+
+        const sc = scenarios;
+        const result = {
+            actual: {
+                revenue: Number(base.sale_amt),
+                cost: Number(base.sale_cost_amt),
+                gross_profit: Number(base.sale_amt) - Number(base.sale_cost_amt),
+                gross_margin: Number(base.sale_amt) > 0 ? ((Number(base.sale_amt) - Number(base.sale_cost_amt)) / Number(base.sale_amt) * 100) : 0,
+                operating_expense: Number(base.sale_exp_amt) + Number(base.MGM_EXP_amt) + Number(base.finance_EXP_amt),
+                operating_profit: Number(base.BIZ_margin_amt || 0),
+                net_profit: Number(base.net_profit_amt),
+                net_margin: Number(base.sale_amt) > 0 ? (Number(base.net_profit_amt) / Number(base.sale_amt) * 100) : 0,
+                accounts_receivable: Number(base.AR_amt),
+                cash: Number(base.cash_amt) + Number(base.deposite_amt),
+                total_asset: Number(base.ttl_asset_amt),
+                total_debt: Number(base.ttl_debet_amt),
+                debt_ratio: Number(base.ttl_asset_amt) > 0 ? (Number(base.ttl_debet_amt) / Number(base.ttl_asset_amt) * 100) : 0,
+                roe: Number(base.stockholder_amt) > 0 ? (Number(base.net_profit_amt) / Number(base.stockholder_amt) * 100) : 0
+            },
+            scenarios: {
+                optimistic: calcScenario(base, sc.optimistic || {}),
+                base: calcScenario(base, sc.base || {}),
+                pessimistic: calcScenario(base, sc.pessimistic || {})
+            }
+        };
+
+        const createdBy = req.user && req.user.user_id ? req.user.user_id : '';
+        const createdByName = req.user && req.user.user_name ? req.user.user_name : (createdBy || '');
+
+        const [r] = await pool.execute(
+            `INSERT INTO ermm_scenario_saved (bu_no, YYYY_MM, scenario_name, params_json, result_json, created_by, created_by_name)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [bu_no, YYYY_MM, scenario_name, JSON.stringify(scenarios), JSON.stringify(result), createdBy, createdByName]
+        );
+        ok(res, { uid: r.insertId, message: '方案已儲存' });
+    } catch (err) { fail500(res, err); }
+});
+
+// 查詢已保存方案列表（依公司別+月份）
+router.get('/saved', async (req, res) => {
+    try {
+        const { bu_no, YYYY_MM } = req.query;
+        if (!bu_no || !YYYY_MM) return fail(res, '需要 bu_no 與 YYYY_MM');
+        const [rows] = await pool.execute(
+            `SELECT uid, scenario_name, created_by_name, created_time
+             FROM ermm_scenario_saved WHERE bu_no=? AND YYYY_MM=? ORDER BY created_time DESC`,
+            [bu_no, YYYY_MM]
+        );
+        ok(res, { list: rows });
+    } catch (err) { fail500(res, err); }
+});
+
+// 載入單一已保存方案
+router.get('/saved/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await pool.execute(
+            `SELECT uid, bu_no, YYYY_MM, scenario_name, params_json, result_json, created_by_name, created_time
+             FROM ermm_scenario_saved WHERE uid=?`, [id]
+        );
+        if (rows.length === 0) return fail(res, '方案不存在');
+        const r = rows[0];
+        ok(res, {
+            uid: r.uid, bu_no: r.bu_no, YYYY_MM: r.YYYY_MM, scenario_name: r.scenario_name,
+            scenarios: typeof r.params_json === 'string' ? JSON.parse(r.params_json) : r.params_json,
+            result: typeof r.result_json === 'string' ? JSON.parse(r.result_json) : r.result_json,
+            created_by_name: r.created_by_name, created_time: r.created_time
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+// 刪除已保存方案（僅建立者或管理員）
+router.delete('/saved/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await pool.execute('SELECT created_by FROM ermm_scenario_saved WHERE uid=?', [id]);
+        if (rows.length === 0) return fail(res, '方案不存在');
+        const isAdmin = req.user && req.user.admin === 'Yes';
+        const isOwner = req.user && req.user.user_id && rows[0].created_by === req.user.user_id;
+        if (!isAdmin && !isOwner) return fail(res, '無權限刪除此方案');
+        await pool.execute('DELETE FROM ermm_scenario_saved WHERE uid=?', [id]);
+        ok(res, { message: '已刪除' });
+    } catch (err) { fail500(res, err); }
+});
+
 module.exports = router;

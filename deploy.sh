@@ -149,7 +149,7 @@ else
   for s in add_daily_report.js add_daily_report_target.js add_annual_review.js \
              add_okr.js add_ai_records.js add_cash_safe_level.js add_integration.js \
              add_llm_config.js add_daily_report_lock_audit.js add_dr_forecast_alert.js \
-             add_p1p2_tables.js add_new_features_tables.js add_admin_column.js add_user_cols.js ; do
+             add_p1p2_tables.js add_new_features_tables.js add_admin_column.js add_user_cols.js add_scenario_saved.js ; do
     if [ -f "database/$s" ]; then
       echo "  → node database/$s"
       node "database/$s" >/dev/null

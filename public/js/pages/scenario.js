@@ -12,7 +12,13 @@ registerPage('scenario', async (c) => {
                 </select>
                 <input type="month" id="scMonth" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                 <button class="btn btn-primary" onclick="Scenario.run()" style="margin-left:6px;">▶ 执行模拟</button>
+                <button class="btn" onclick="Scenario.save()" style="margin-left:6px;">💾 保存方案</button>
             </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-title">已保存方案 <small id="scSavedCount" style="color:#7f8c8d;font-weight:normal;"></small></div>
+            <div id="scSavedList"><div style="color:#999;font-size:13px;">加载中...</div></div>
         </div>
 
         <div class="card" style="margin-bottom:16px;">
@@ -65,6 +71,7 @@ registerPage('scenario', async (c) => {
     `;
     document.getElementById('scBu').value = State.bu_no;
     document.getElementById('scMonth').value = '2025-12';
+    Scenario.refreshSaved();
 
     // 注入数字输入框样式
     const style = document.createElement('style');
@@ -92,6 +99,87 @@ const Scenario = {
             Scenario.render(res.data);
         } catch (e) {
             document.getElementById('scResult').innerHTML = `<p style="color:#e74c3c">${e.message}</p>`;
+        }
+    },
+
+    async save() {
+        const bu = document.getElementById('scBu').value;
+        const mm = document.getElementById('scMonth').value;
+        if (!mm) { UI.toast('请选择月份', 'error'); return; }
+        const name = prompt('请输入方案名称：', `方案 ${new Date().toLocaleString()}`);
+        if (!name) return;
+
+        const num = (id) => { const v = document.getElementById(id).value; return v === '' ? null : Number(v); };
+        const scenarios = {
+            optimistic: { revenueGrowth: num('opt_rev'), costGrowth: num('opt_cost'), expenseRate: num('opt_exp'), arDaysChange: num('opt_ar'), loanChange: num('opt_loan') },
+            base: { revenueGrowth: num('base_rev'), costGrowth: num('base_cost'), expenseRate: num('base_exp'), arDaysChange: num('base_ar'), loanChange: num('base_loan') },
+            pessimistic: { revenueGrowth: num('pes_rev'), costGrowth: num('pes_cost'), expenseRate: num('pes_exp'), arDaysChange: num('pes_ar'), loanChange: num('pes_loan') }
+        };
+        try {
+            const res = await API.post('/api/scenario/save', { bu_no: bu, YYYY_MM: mm, scenario_name: name.trim(), scenarios });
+            UI.toast(`方案「${name}」已保存`, 'success');
+            Scenario.refreshSaved();
+        } catch (e) {
+            UI.toast('保存失败：' + e.message, 'error');
+        }
+    },
+
+    async refreshSaved() {
+        const bu = document.getElementById('scBu').value;
+        const mm = document.getElementById('scMonth').value;
+        const el = document.getElementById('scSavedList');
+        const cnt = document.getElementById('scSavedCount');
+        if (!mm) { el.innerHTML = '<div style="color:#999;font-size:13px;">请选择月份</div>'; cnt.textContent = ''; return; }
+        try {
+            const res = await API.get(`/api/scenario/saved?bu_no=${bu}&YYYY_MM=${mm}`);
+            const list = (res.data && res.data.list) || [];
+            cnt.textContent = list.length ? `（${list.length}）` : '';
+            if (list.length === 0) { el.innerHTML = '<div style="color:#999;font-size:13px;">暂无已保存方案</div>'; return; }
+            el.innerHTML = list.map(r => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;">
+                    <div>
+                        <div style="font-weight:600;">${r.scenario_name}</div>
+                        <div style="font-size:12px;color:#7f8c8d;">${r.created_by_name || ''} · ${new Date(r.created_time).toLocaleString()}</div>
+                    </div>
+                    <div>
+                        <button class="btn" style="padding:4px 10px;font-size:12px;" onclick="Scenario.loadSaved(${r.uid})">加载</button>
+                        <button class="btn" style="padding:4px 10px;font-size:12px;color:#e74c3c;" onclick="Scenario.deleteSaved(${r.uid})">删除</button>
+                    </div>
+                </div>`).join('');
+        } catch (e) {
+            el.innerHTML = `<div style="color:#e74c3c;font-size:13px;">加载失败：${e.message}</div>`;
+        }
+    },
+
+    async loadSaved(uid) {
+        try {
+            const res = await API.get(`/api/scenario/saved/${uid}`);
+            const d = res.data;
+            const sc = d.scenarios || {};
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v === null || v === undefined) ? '' : v; };
+            ['opt','base','pes'].forEach((p, i) => {
+                const s = [sc.optimistic, sc.base, sc.pessimistic][i] || {};
+                set(`${p}_rev`, s.revenueGrowth);
+                set(`${p}_cost`, s.costGrowth);
+                set(`${p}_exp`, s.expenseRate);
+                set(`${p}_ar`, s.arDaysChange);
+                set(`${p}_loan`, s.loanChange);
+            });
+            UI.toast(`已加载方案「${d.scenario_name}」，正在重算...`, 'success');
+            Scenario.run();
+        } catch (e) {
+            UI.toast('加载失败：' + e.message, 'error');
+        }
+    },
+
+    async deleteSaved(uid) {
+        if (!confirm('确认删除此方案？')) return;
+        try {
+            await API.del(`/api/scenario/saved/${uid}`);
+            UI.toast('已删除', 'success');
+            Scenario.refreshSaved();
+        } catch (e) {
+            UI.toast('删除失败：' + e.message, 'error');
         }
     },
 
