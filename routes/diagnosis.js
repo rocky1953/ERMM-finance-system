@@ -120,7 +120,15 @@ router.post('/ai-attribution', async (req, res) => {
         }
         if (!cfg) return fail(res, '尚未設定任何 LLM 服務商的 API Key，請至「系統設定 → API Key 管理」設定');
 
-        // 3. 組裝上下文
+        // 3. 依使用者介面語言決定 LLM 回覆語言
+        const langMap = {
+            'zh-TW': { name: '繁體中文', rootLabel: '根因解釋（200~400 字）', sugLabel: '改進建議（以「建議1：」「建議2：」「建議3：」開頭，每條 1~2 句）' },
+            'zh-CN': { name: '简体中文', rootLabel: '根因解释（200~400 字）', sugLabel: '改进建议（以「建议1：」「建议2：」「建议3：」开头，每条 1~2 句）' },
+            'en':    { name: 'English', rootLabel: 'Root cause explanation (200~400 words)', sugLabel: 'Improvement suggestions (start each with "Suggestion 1:", "Suggestion 2:", "Suggestion 3:")' }
+        };
+        const lm = langMap[lang] || langMap['zh-TW'];
+
+        // 4. 組裝上下文
         const num = (v) => Number(v || 0);
         const ctx = {
             公司別: bu_no, 期間: YYYY_MM,
@@ -142,10 +150,10 @@ router.post('/ai-attribution', async (req, res) => {
             Top3拖累原因: d.top_reasons.map(r => `${r.rank}. [${r.dim}] ${r.desc}（影響：${r.impact}；建議：${r.suggestion}）`)
         };
 
-        // 4. 呼叫 LLM
+        // 5. 呼叫 LLM
         const messages = [
-            { role: 'system', content: '你是一位資深財務分析顧問。請依據提供的財務資料與規則引擎分析出的 Top3 拖累原因，用自然語言說明該指標異常的「根因」，並給出 3 條可執行的改進建議。請以繁體中文回答，結構清晰，避免空泛。' },
-            { role: 'user', content: `財務資料與診斷結果：\n${JSON.stringify(ctx, null, 2)}\n\n請輸出：\n1. 根因解釋（200~400 字）\n2. 改進建議（以「建議1：」「建議2：」「建議3：」開頭，每條 1~2 句）` }
+            { role: 'system', content: `你是一位資深財務分析顧問。請依據提供的財務資料與規則引擎分析出的 Top3 拖累原因，用自然語言說明該指標異常的「根因」，並給出 3 條可執行的改進建議。請以${lm.name}回答，結構清晰，避免空泛。` },
+            { role: 'user', content: `財務資料與診斷結果：\n${JSON.stringify(ctx, null, 2)}\n\n請輸出：\n1. ${lm.rootLabel}\n2. ${lm.sugLabel}` }
         ];
         const content = await chatCompletion(
             { base_url: cfg.base_url, api_key: cfg.api_key, model: cfg.model },
@@ -154,9 +162,9 @@ router.post('/ai-attribution', async (req, res) => {
         );
 
         // 5. 解析建議（若模型有按格式輸出）
-        const suggestionMatches = content.match(/建議[1-3][：:]\s*.+/g);
+        const suggestionMatches = content.match(/(?:建議|建议|Suggestion)\s*[1-3][：:]\s*.+/g);
         const suggestions = suggestionMatches
-            ? suggestionMatches.map(s => s.replace(/^建議[1-3][：:]\s*/, '').trim())
+            ? suggestionMatches.map(s => s.replace(/^(?:建議|建议|Suggestion)\s*[1-3][：:]\s*/, '').trim())
             : [];
 
         ok(res, {

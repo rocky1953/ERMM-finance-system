@@ -203,7 +203,7 @@ const UI = {
 // ===== 异常诊断（点击 KPI 红灯展开 Top3 原因）=====
 const Diagnosis = {
     async open(kpi_id) {
-        UI.modal('🔍 异常自动诊断', '<div style="text-align:center;padding:30px;">分析中...</div>', '');
+        UI.modal(t('diag.loading_title'), `<div style="text-align:center;padding:30px;">${t('diag.analyzing')}</div>`, '');
         try {
             const res = await API.get(`/api/diagnosis/kpi?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}&kpi_id=${kpi_id}`);
             const d = res.data;
@@ -213,51 +213,52 @@ const Diagnosis = {
                     <div style="width:30px;height:30px;border-radius:50%;background:${r.rank===1?'#e74c3c':r.rank===2?'#f39c12':'#3498db'};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">${r.rank}</div>
                     <div style="flex:1;">
                         <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${r.dim}：${r.desc}</div>
-                        <div style="font-size:12px;color:#555;margin-bottom:4px;">📊 影响：${r.impact}</div>
+                        <div style="font-size:12px;color:#555;margin-bottom:4px;">📊 ${t('diag.impact')}：${r.impact}</div>
                         <div style="font-size:12px;color:#2980b9;background:#eaf2f8;padding:5px 8px;border-radius:5px;">💡 ${r.suggestion}</div>
                     </div>
                 </div>
             `).join('');
-            UI.modal(`🔍 ${d.kpi_name} 异常诊断`, `
+            UI.modal(`🔍 ${d.kpi_name} ${t('diag.anomaly_diag')}`, `
                 <div style="margin-bottom:16px;">
-                    <div style="font-size:12px;color:#7f8c8d;">当期值</div>
+                    <div style="font-size:12px;color:#7f8c8d;">${t('diag.current_value')}</div>
                     <div style="font-size:28px;font-weight:800;color:${lvlColor};">${d.current_value}${d.unit} 
-                        <span style="font-size:14px;color:#95a5a6;">／ 门槛 ${d.threshold}${d.unit}</span>
+                        <span style="font-size:14px;color:#95a5a6;">／ ${t('diag.threshold')} ${d.threshold}${d.unit}</span>
                     </div>
-                    ${d.change !== null ? `<div style="font-size:13px;color:${d.change>=0?'#27ae60':'#e74c3c'};">较上期 ${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}${d.unit}</div>` : ''}
+                    ${d.change !== null ? `<div style="font-size:13px;color:${d.change>=0?'#27ae60':'#e74c3c'};">${t('diag.vs_prev')} ${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}${d.unit}</div>` : ''}
                 </div>
-                <div style="font-weight:700;margin-bottom:10px;">Top 3 拖累原因</div>
+                <div style="font-weight:700;margin-bottom:10px;">${t('diag.top3_reasons')}</div>
                 ${reasonsHtml}
-            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
-                <button class="btn" onclick="Diagnosis.aiAttribution('${kpi_id}')" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7;">🤖 AI 智能归因</button>
-                <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">建立行动任务 →</button>`);
+            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>
+                <button class="btn" onclick="Diagnosis.aiAttribution('${kpi_id}')" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7;">🤖 ${t('diag.ai_attribution')}</button>
+                <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">${t('diag.create_action')}</button>`);
         } catch (e) {
-            UI.modal('诊断失败', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>');
+            UI.modal(t('diag.diag_failed'), `<p style="color:#e74c3c">${e.message}</p>`, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
         }
     },
 
     async aiAttribution(kpi_id) {
-        UI.modal(`🤖 ${kpi_id} AI 智能归因`, '<div style="text-align:center;padding:40px;">AI 分析中，請稍候...</div>', '');
+        UI.modal(`🤖 ${kpi_id} ${t('diag.ai_attribution')}`, `<div style="text-align:center;padding:40px;">${t('diag.ai_analyzing')}</div>`, '');
         try {
             const res = await API.post('/api/diagnosis/ai-attribution', {
-                bu_no: State.bu_no, YYYY_MM: State.YYYY_MM, kpi_id
+                bu_no: State.bu_no, YYYY_MM: State.YYYY_MM, kpi_id, lang: I18N.lang
             });
             const d = res.data;
+            const sugLabel = t('diag.suggestions');
             const sugHtml = (d.suggestions && d.suggestions.length)
-                ? d.suggestions.map((s, i) => `<div style="background:#eaf2f8;padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px;"><b>建议 ${i + 1}：</b>${s}</div>`).join('')
-                : '<div style="color:#999;font-size:13px;">（未解析到结构化建议，详见上方说明）</div>';
-            UI.modal(`🤖 AI 智能归因`, `
+                ? d.suggestions.map((s, i) => `<div style="background:#eaf2f8;padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px;"><b>${sugLabel} ${i + 1}：</b>${s}</div>`).join('')
+                : `<div style="color:#999;font-size:13px;">${t('diag.no_suggestions')}</div>`;
+            UI.modal(`🤖 ${t('diag.ai_attribution')}`, `
                 <div style="max-height:60vh;overflow-y:auto;">
                     <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:14px;border-left:4px solid #6c5ce7;">
                         <div style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:#2c3e50;">${d.explanation}</div>
                     </div>
-                    <div style="font-weight:700;margin-bottom:8px;">改进建议</div>
+                    <div style="font-weight:700;margin-bottom:8px;">${t('diag.suggestions')}</div>
                     ${sugHtml}
                 </div>
-            `, `<div style="font-size:11px;color:#95a5a6;margin-right:auto;text-align:left;">由 ${d.provider}（${d.model}）生成，仅供参考</div>
-                <button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>`);
+            `, `<div style="font-size:11px;color:#95a5a6;margin-right:auto;text-align:left;">${t('diag.generated_by', { provider: d.provider, model: d.model })}</div>
+                <button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
         } catch (e) {
-            UI.modal('AI 归因失败', `<p style="color:#e74c3c">${e.message}</p>`, '<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>');
+            UI.modal(t('diag.ai_failed'), `<p style="color:#e74c3c">${e.message}</p>`, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
         }
     }
 };
