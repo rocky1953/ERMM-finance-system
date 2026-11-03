@@ -114,4 +114,25 @@ function maskKey(key) {
     return `${k.slice(0, 3)}****${k.slice(-4)}`;
 }
 
-module.exports = { PROVIDERS, chatCompletion, maskKey, sanitizeKey };
+/**
+ * 從 llm_config 取得「預設 LLM」設定
+ *   優先 is_default=1 且有 api_key；其次 status='USE' 且有 key 的任意一家
+ *   找不到回 null，呼叫方自行處理（顯示錯誤或走規則引擎兜底）
+ * @param {object} pool  mysql2 pool
+ * @returns {Promise<object|null>}  { provider, provider_name, api_key, base_url, model }
+ */
+async function getDefaultProvider(pool) {
+    if (!pool) return null;
+    // 1) 先找 is_default=1 且有 api_key
+    const [r1] = await pool.execute(
+        "SELECT provider, provider_name, api_key, base_url, model FROM llm_config WHERE is_default=1 AND status='USE' AND api_key<>'' LIMIT 1"
+    );
+    if (r1.length) return r1[0];
+    // 2) 沒有預設 → 隨便撿一個 USE 狀態且有 key 的
+    const [r2] = await pool.execute(
+        "SELECT provider, provider_name, api_key, base_url, model FROM llm_config WHERE status='USE' AND api_key<>'' ORDER BY uid LIMIT 1"
+    );
+    return r2.length ? r2[0] : null;
+}
+
+module.exports = { PROVIDERS, chatCompletion, maskKey, sanitizeKey, getDefaultProvider };

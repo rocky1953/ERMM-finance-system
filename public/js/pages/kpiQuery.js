@@ -289,10 +289,12 @@ function buildYGRender(pageId) {
         const bu = State.bu_no || '';
         const ym = State.YYYY_MM || '';
         document.getElementById('ygBU').value = bu;
-        if (ym && ym.includes('/')) {
-            const [y, m] = ym.split('/');
+        if (ym) {
+            // 兼容 "2025-06"（标准）与 "2025/6"（旧格式）
+            const sep = ym.includes('/') ? '/' : '-';
+            const [y, m] = ym.split(sep);
             document.getElementById('ygY').value = y;
-            document.getElementById('ygM').value = m;
+            document.getElementById('ygM').value = parseInt(m, 10);
         } else {
             const now = new Date();
             document.getElementById('ygY').value = now.getFullYear();
@@ -336,6 +338,47 @@ window.ygLoad = async function(pageId) {
         body.innerHTML = `<p style="color:#e74c3c;padding:20px;">${t('kpiQuery.load_fail')}: ${e.message}</p>`;
     }
 };
+
+// ====== 渲染同业标杆区间条 + vs 同业徽标 ======
+function renderBenchmark(item) {
+    const b = item.benchmark;
+    const rank = item.vs_industry;
+    if (!b || rank === null || rank === undefined) return '';
+    const v = item.current_value;
+    if (v === null || v === undefined || isNaN(v)) return '';
+
+    // 区间两端：p10 ~ p90；超出两端的部分用边界截
+    const p10 = b.p10, p90 = b.p90;
+    const span = p90 - p10;
+    if (!span || span === 0) return '';
+
+    // 当前值在区间条上的位置百分比（0-100 对应 p10~p90），允许越界（clip 到 -10~110）
+    let posPct = ((v - p10) / span) * 100;
+    posPct = Math.max(-10, Math.min(110, posPct));
+
+    // median 位置
+    const medPct = ((b.median - p10) / span) * 100;
+
+    // 区间条配色：灰渐变两端 + median 黑线 + 当前值红三角
+    const barHtml = `
+        <div style="position:relative;width:120px;height:14px;margin:2px 0;">
+            <div style="position:absolute;left:0;top:3px;bottom:3px;background:linear-gradient(90deg,#ecf0f1 0%,#d5f5e3 25%,#d5f5e3 75%,#ecf0f1 100%);width:100%;border-radius:2px;"></div>
+            <div style="position:absolute;left:${medPct}%;top:1px;bottom:1px;width:1px;background:#2c3e50;"></div>
+            <div style="position:absolute;left:${posPct}%;top:-2px;transform:translateX(-50%);
+                        border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid #c0392b;"></div>
+        </div>
+    `;
+
+    // vs_industry 徽标（rank 直接就是百分位，越大越优于同业）
+    const rankPct = rank;
+    const good = rank >= 60;
+    const neutral = rank >= 40 && rank < 60;
+    const vsColor = good ? '#27ae60' : (neutral ? '#f39c12' : '#e74c3c');
+    const vsLabel = good ? t('kpiQuery.vs_better') : (neutral ? t('kpiQuery.vs_peer') : t('kpiQuery.vs_worse'));
+    const badgeHtml = `<span style="color:${vsColor};font-weight:600;font-size:11px;">${vsLabel} ${rankPct}%</span>`;
+
+    return `<div style="min-width:150px;">${barHtml}${badgeHtml}</div>`;
+}
 
 function renderSection(kpis, sec) {
     // 先按类别分组（让点击“预警类别”可一次看到同组所有项目）
@@ -381,6 +424,7 @@ function renderSection(kpis, sec) {
                 ${targetCell}
                 <td class="num"><b style="color:${color==='RED'?'#e74c3c':color==='YELLOW'?'#e67e22':color==='GREEN'?'#27ae60':'#333'};">${fmt(v)}</b>${item.unit?`<span style="color:#7f8c8d;font-size:11px;"> ${item.unit}</span>`:''}</td>
                 <td>${dot(color)}</td>
+                <td>${renderBenchmark(item)}</td>
             </tr>`;
     }).join('');
 
@@ -396,6 +440,7 @@ function renderSection(kpis, sec) {
                     <th style="width:140px;">${t('kpiQuery.th.target')}</th>
                     <th style="width:130px;">${t('kpiQuery.th.current')}</th>
                     <th style="width:80px;">${t('kpiQuery.th.status')}</th>
+                    <th style="width:190px;">${t('kpiQuery.th.benchmark')}</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>

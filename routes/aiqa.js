@@ -6,7 +6,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
-const { PROVIDERS, chatCompletion } = require('../utils/llmClient');
+const { chatCompletion, getDefaultProvider } = require('../utils/llmClient');
 
 // 問答接口
 router.post('/ask', async (req, res) => {
@@ -18,10 +18,16 @@ router.post('/ask', async (req, res) => {
 
         // 勾選 LLM：所有問答交由大語言模型（帶入 ermm_db 財務資料作為上下文）
         if (useLLM) {
+            // 優先用戶指定 provider；未指定 → 系統預設（is_default=1）
             const pvd = String(provider || '').toLowerCase();
-            if (!PROVIDERS[pvd]) return fail(res, '請選擇 LLM 服務商（Kimi 或 DeepSeek）');
+            let providerToUse = pvd;
+            if (!providerToUse) {
+                const defaultCfg = await getDefaultProvider(pool);
+                if (!defaultCfg) return fail(res, '尚未設定任何 LLM 服務商，請至「系統設定 → API Key 管理」');
+                providerToUse = defaultCfg.provider;
+            }
             try {
-                const result = await askLLM(question, bu, mm, pvd, lang);
+                const result = await askLLM(question, bu, mm, providerToUse, lang);
                 // 回覆前先落庫（主鏈路確保記錄不遺失）
                 try {
                     await saveAIRecord({

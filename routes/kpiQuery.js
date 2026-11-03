@@ -273,6 +273,89 @@ router.get('/query', async (req, res) => {
         const kpiMap = {};
         kpis.forEach(k => kpiMap[k.KPI_id] = k);
 
+        // ===== 同業標竿（industry_benchmark）=====
+        // bu_no → 行業
+        const INDUSTRY_MAP = { HM: '制造业', SZ: '制造业', HN: '批发零售业' };
+        const industry = INDUSTRY_MAP[bu_no] || '制造业';
+
+        // KPI alias：巴萨模型衍生 id → 对标到同一 parent 比率
+        const BENCH_ALIAS = {
+            bz_quick: 'quick_ratio',
+            bz_receivable_turn: 'ar_turn',
+            bz_debt_ratio: 'debt_ratio',
+            altman_ggr: 'altman_z1',
+        };
+
+        // 查詢年份
+        const queryYear = YYYY_MM ? parseInt(YYYY_MM.substring(0, 4), 10) : new Date().getFullYear();
+
+        // 找最接近的標竿年份（優先同年，其次 ±1 年，再其次最新可用）
+        const [years] = await pool.execute(
+            'SELECT DISTINCT year FROM industry_benchmark WHERE industry=? ORDER BY year DESC',
+            [industry]
+        );
+        let benchYear = null;
+        if (years.length) {
+            const availYears = years.map(r => r.year);
+            // 先看同年，再 ±1 年，再 ±2 年，最後取最新
+            for (const offset of [0, -1, 1, -2, 2]) {
+                if (availYears.includes(queryYear + offset)) {
+                    benchYear = queryYear + offset; break;
+                }
+            }
+            if (benchYear === null) benchYear = availYears[0];
+        }
+
+        let benchMap = {};
+        if (benchYear) {
+            const [rows] = await pool.execute(
+                `SELECT kpi_id, p10, p25, median, p75, p90
+                 FROM industry_benchmark
+                 WHERE industry=? AND year=?`,
+                [industry, benchYear]
+            );
+            for (const r of rows) benchMap[r.kpi_id] = r;
+        }
+
+        // 給定 KPI id 找標竿（支援 alias fallback）
+        function getBenchmarkFor(kpiId) {
+            if (benchMap[kpiId]) return benchMap[kpiId];
+            const alias = BENCH_ALIAS[kpiId];
+            if (alias && benchMap[alias]) return benchMap[alias];
+            return null;
+        }
+
+        // ===== 計算「優於同業 X%」百分位 =====
+        // 給定五個分位（p10 < p25 < median < p75 < p90）與當前值 v，估算 v 在 0-100 的百分位。
+        // 假設分位之間是線性分佈，超出兩端時以邊界斜率外推（最多 clip 到 0 或 100）。
+        function estimateRank(v, bench, pct_type) {
+            if (v === null || v === undefined || !bench) return null;
+            const { p10, p25, median, p75, p90 } = bench;
+            const pts = [[p10,10],[p25,25],[median,50],[p75,75],[p90,90]].filter(p => p[0] !== null && p[0] !== undefined);
+            if (pts.length < 2) return null;
+
+            let rank;
+            if (v <= pts[0][0]) {
+                // 最低段 外推
+                const [a, ra] = pts[0]; const [b, rb] = pts[1];
+                rank = ra - ((a - v) / (b - a)) * (rb - ra);
+            } else if (v >= pts[pts.length-1][0]) {
+                const [a, ra] = pts[pts.length-2]; const [b, rb] = pts[pts.length-1];
+                rank = rb + ((v - b) / (b - a)) * (rb - ra);
+            } else {
+                for (let i = 0; i < pts.length - 1; i++) {
+                    const [a, ra] = pts[i], [b, rb] = pts[i+1];
+                    if (v >= a && v <= b) { rank = ra + ((v - a) / (b - a)) * (rb - ra); break; }
+                }
+            }
+            if (rank === undefined) rank = 50;
+            rank = Math.max(0, Math.min(100, rank));
+
+            // 值低=好（desc）→ 百分位越高代表越差，需反轉
+            const isDesc = pct_type === 'desc';
+            return Math.round(isDesc ? (100 - rank) : rank);
+        }
+
         // mysql2 回 DECIMAL 是 String，全部轉 Number（數字欄位）
         const toNum = o => { const out = {}; for (const [k, v] of Object.entries(o)) out[k] = typeof v === 'string' && /^\d/.test(v) ? Number(v) : v; return out; };
         const s = toNum(cur[0]);
@@ -321,6 +404,18 @@ router.get('/query', async (req, res) => {
                     pct_type: kpi.pct_type
                 };
             }
+            // ===== 同業標竿合併 =====
+            const raw = getBenchmarkFor(id);
+            const bench = raw ? {
+                p10:    raw.p10    != null ? Number(raw.p10)    : null,
+                p25:    raw.p25    != null ? Number(raw.p25)    : null,
+                median: raw.median != null ? Number(raw.median) : null,
+                p75:    raw.p75    != null ? Number(raw.p75)    : null,
+                p90:    raw.p90    != null ? Number(raw.p90)    : null,
+                industry, year: benchYear
+            } : null;
+            results[id].benchmark = bench;
+            results[id].vs_industry = estimateRank(results[id].current_value, bench, results[id].pct_type);
         }
 
         ok(res, results);

@@ -54,6 +54,7 @@ const userRoutes = require('./routes/user');
 const tempPoRoutes = require('./routes/tempPo');
 const xitemsRoutes = require('./routes/xitems');
 const kpiQueryRoutes = require('./routes/kpiQuery');
+const benchmarkRoutes = require('./routes/benchmark');
 const bepRoutes = require('./routes/bep');
 const actionRoutes = require('./routes/action');
 const alertRoutes = require('./routes/alert');
@@ -70,6 +71,7 @@ const dailyReportRoutes = require('./routes/dailyReport');
 const financeRoutes = require('./routes/finance');
 const integrationRoutes = require('./routes/integration');
 const taxRoutes = require('./routes/tax');
+const warRoomRoutes = require('./routes/warRoom');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -103,6 +105,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/temp-po', tempPoRoutes);
 app.use('/api/xitems', xitemsRoutes);
 app.use('/api/kpi-query', kpiQueryRoutes);
+app.use('/api/benchmark', benchmarkRoutes);
 app.use('/api/bep', bepRoutes);
 app.use('/api/action', actionRoutes);
 app.use('/api/alert', alertRoutes);
@@ -119,6 +122,7 @@ app.use('/api/daily-report', dailyReportRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/tax', taxRoutes);
+app.use('/api/war-room', warRoomRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {

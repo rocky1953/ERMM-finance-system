@@ -74,6 +74,12 @@
         <div class="nav-item" data-page="scenario" onclick="navigate('scenario')">
             <span class="nav-icon">🎯</span><span data-i18n="nav.scenario">情景模拟</span>
         </div>
+        <div class="nav-item" data-page="warRoom" onclick="navigate('warRoom')">
+            <span class="nav-icon">⚔️</span><span data-i18n="nav.warRoom">战情看板</span>
+        </div>
+        <div class="nav-item" data-page="benchmark" onclick="navigate('benchmark')">
+            <span class="nav-icon">📊</span><span data-i18n="nav.benchmark">同业标杆</span>
+        </div>
     </div>
     <div class="nav-group">
         <div class="nav-group-title" data-i18n="nav.erp_raw">ERP 原始单据</div>
@@ -256,6 +262,7 @@
 <script src="/js/pages/tempPo.js"></script>
 <script src="/js/pages/xitems.js"></script>
 <script src="/js/pages/kpiQuery.js"></script>
+<script src="/js/pages/benchmark.js"></script>
 <script src="/js/pages/bep.js"></script>
 <script src="/js/pages/actions.js"></script>
 <script src="/js/pages/alerts.js"></script>
@@ -270,6 +277,7 @@
 <script src="/js/pages/dailyReportUnfinished.js"></script>
 <script src="/js/pages/integration.js?v=20261025b"></script>
 <script src="/js/pages/tax.js"></script>
+<script src="/js/pages/warRoom.js"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;
