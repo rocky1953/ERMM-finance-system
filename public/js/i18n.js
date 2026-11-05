@@ -42,6 +42,9 @@ const I18N = {
             'nav.analysisTax': '財務分析 · 稅務申報',
             'nav.systemMaster': '系統 · 主檔管理',
             'nav.system': '系統',
+            'nav.docs': '系統文件',
+            'nav.docArchitecture': '系統架構與流程圖',
+            'nav.docDataModel': '模組資料表關係圖',
 
             // 頁面標題
             'page.dashboard': '財務儀表板',
@@ -1707,6 +1710,9 @@ const I18N = {
             'nav.dailyReports': '日常作业 · 工作日报',
             'nav.analysisTax': '财务分析 · 税务申报',
             'nav.systemMaster': '系统 · 主档管理',
+            'nav.docs': '系统文件',
+            'nav.docArchitecture': '系统架构与流程图',
+            'nav.docDataModel': '模块数据表关系图',
             'nav.system': '系统',
 
             // 页面标题
@@ -3368,6 +3374,9 @@ const I18N = {
             'nav.dailyReports': 'Daily Operations · Daily Report',
             'nav.analysisTax': 'Financial Analysis · Tax Filing',
             'nav.systemMaster': 'System · Master Data',
+            'nav.docs': 'Documentation',
+            'nav.docArchitecture': 'Architecture & Flow',
+            'nav.docDataModel': 'Data Model & ER Diagram',
             'nav.system': 'System',
 
             // Page titles
