@@ -286,7 +286,7 @@ async function navigate(pageId, params = {}) {
 function openDocPage(url) {
     if (!Auth.isLoggedIn()) return false;
     if (!Auth.isAdmin()) {
-        Auth.toast(t('docs.noPermission'), 'error');
+        UI.toast(t('docs.noPermission'), 'error');
         return false;
     }
     window.open(url, '_blank', 'noopener');
