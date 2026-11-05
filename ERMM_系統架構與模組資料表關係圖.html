@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 系統架構與模組資料表關係圖</title>
+<style>
+  :root {
+    --primary: #7c3aed;
+    --primary-dark: #6d28d9;
+    --accent: #f472b6;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+    --core: #ef4444;
+    --ai: #8b5cf6;
+    --erp: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 260px;
+    background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%);
+    color: #c7d2fe;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    padding: 30px 0;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar .logo {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 16px;
+  }
+  .sidebar .logo h2 {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .sidebar .logo small {
+    color: #818cf8;
+    font-size: 11px;
+  }
+  .sidebar nav a {
+    display: block;
+    padding: 10px 24px;
+    color: #a5b4fc;
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .sidebar nav a:hover, .sidebar nav a.active {
+    background: rgba(124, 58, 237, 0.2);
+    color: #fff;
+    border-left-color: var(--primary);
+  }
+  .sidebar nav a .num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    font-size: 10px;
+    margin-right: 8px;
+    color: #a5b4fc;
+  }
+
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 40px 60px;
+    max-width: 1200px;
+  }
+
+  .header-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0f172a, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .meta {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 48px 0 20px;
+    padding-left: 16px;
+    border-left: 5px solid var(--primary);
+    color: var(--text);
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 28px 0 14px;
+    color: var(--primary-dark);
+  }
+
+  .table-wrapper {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    text-align: left;
+    padding: 12px 18px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #faf5ff; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 20px;
+    border-radius: 12px;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  code {
+    background: #f5f3ff;
+    color: var(--primary-dark);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  .er-box {
+    background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+    border: 2px solid #ec4899;
+    border-radius: 12px;
+    padding: 8px;
+    margin: 16px 0;
+  }
+  .er-box pre {
+    background: transparent;
+    color: var(--text);
+    box-shadow: none;
+    padding: 12px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .group-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid var(--primary);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .badge-core { background: #fee2e2; color: #b91c1c; }
+  .badge-erp { background: #dbeafe; color: #1d4ed8; }
+  .badge-op { background: #fef3c7; color: #b45309; }
+  .badge-sys { background: #f3f4f6; color: #4b5563; }
+  .badge-tax { background: #dcfce7; color: #15803d; }
+  .badge-ai { background: #ede9fe; color: #6d28d9; }
+
+  .core-table {
+    background: linear-gradient(135deg, #fff7ed, #fee2e2);
+    border-left: 4px solid var(--core);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+
+  .tree-box {
+    background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+    border-left: 4px solid var(--ai);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre;
+  }
+
+  hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 40px 0;
+  }
+
+  .status-ok { color: #10b981; font-weight: 600; }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 100%; position: relative; padding: 20px; }
+    .main { margin-left: 0; padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="logo">
+    <h2>🗄️ ERMM</h2>
+    <small>v1.1 · 2026-11-05</small>
+  </div>
+  <nav>
+    <a href="#s1" class="active"><span class="num">1</span>資料表總覽</a>
+    <a href="#s2"><span class="num">2</span>核心 ER 圖</a>
+    <a href="#s3"><span class="num">3</span>模組 × 表 對照</a>
+    <a href="#s4"><span class="num">4</span>數據流依賴</a>
+    <a href="#s5"><span class="num">5</span>外鍵關聯</a>
+    <a href="#s6"><span class="num">6</span>索引策略</a>
+    <a href="#s7"><span class="num">7</span>遷移順序</a>
+  </nav>
+</aside>
+
+<main class="main">
+  <span class="header-badge">📋 文件 · 資料架構</span>
+  <h1>ERMM 財務模組管理系統 — 模組資料表關係圖</h1>
+  <div class="meta">版本 v1.1 · 更新 2026-11-05 · Migration 001–019 · ~55 張資料表</div>
+
+  <!-- ===== Section 1 ===== -->
+  <h2 id="s1">一、資料表總覽</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th style="width:15%">Migration</th><th style="width:8%">表數</th><th>說明</th><th style="width:10%">狀態</th></tr></thead>
+      <tbody>
+        <tr><td><code>001</code></td><td>3</td><td>ERP 原始單據（PO/SO）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>002</code></td><td>8</td><td><strong>財務核心（mgm_finance_summary 為中心）</strong></td><td class="status-ok">✅</td></tr>
+        <tr><td><code>003</code></td><td>8</td><td>ERP 主檔 + 日結</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>004</code></td><td>6</td><td>系統設定 + 使用者 + KPI 定義</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>005</code></td><td>3</td><td>ERP 交易明細 + 生產 + 轉運價</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>006</code></td><td>5</td><td>稅務申報（VAT/CIT/IIT）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>007</code></td><td>4</td><td>稅務調整 + 薪資</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>008</code></td><td>1</td><td>VAT 季報（增量）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>009</code></td><td>2</td><td>IIT 獎金（增量）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>010</code></td><td>1</td><td>CIT 營收成本 Override</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>011</code></td><td>4</td><td>ERP 製造四表（MO/Routing/工時）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>012</code></td><td>1</td><td>使用者 admin 字串改 Yes/No</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>013</code></td><td>1</td><td><strong>同業標竿 industry_benchmark</strong></td><td class="status-ok">✅</td></tr>
+        <tr><td><code>014</code></td><td>1</td><td><strong>LLM provider is_default</strong></td><td class="status-ok">✅</td></tr>
+        <tr><td><code>015</code></td><td>1</td><td><strong>AI 知識庫 ermm_knowledge</strong></td><td class="status-ok">✅</td></tr>
+        <tr><td><code>016</code></td><td>+</td><td>AI 知識庫擴充</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>017</code></td><td>1</td><td><strong>每日 AI 摘要 daily_ai_summary</strong></td><td class="status-ok">✅</td></tr>
+        <tr><td><code>018</code></td><td>+</td><td>AI 知識庫再次擴充（41 條）</td><td class="status-ok">✅</td></tr>
+        <tr><td><code>019</code></td><td>1</td><td><strong>RAG 未命中日誌 ermm_kb_miss_log</strong></td><td class="status-ok">✅</td></tr>
+        <tr style="background:#f1f5f9;font-weight:700"><td><strong>合計</strong></td><td><strong>~55 張</strong></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== Section 2 ===== -->
+  <h2 id="s2">二、核心實體關係圖（ER Diagram）</h2>
+  <div class="er-box">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                              ERMM_db 核心關係圖                                       │
+│                                                                                     │
+│                            ┌──────────────┐                                         │
+│                            │   branch_     │                                        │
+│                            │  detail       │                                        │
+│                            │  公司別(HM/SZ/HN)│                                     │
+│                            └──────┬───────┘                                         │
+│                                   │ 1:N (bu_no)                                      │
+│                                   ▼                                                  │
+│ ┌────────────┐    ┌─────────────────────────────────────────────────────────┐       │
+│ │ cams_xuser  │───▶│               mgm_finance_summary                      │       │
+│ │ 使用者管理   │    │  ──────────────────────────────────────                │       │
+│ └────────────┘    │  ⭐ 中心表 · 月度財務彙總                              │       │
+│                    │  bu_no · YYYY_MM · sale_amt · cost_amt                  │       │
+│ ┌────────────┐    │  AR_amt · AP_amt · ttl_asset_amt · debet_amt            │       │
+│ │ mgm_kpi_    │    │  captial_stock · retained_amt · Z_score · ROE          │       │
+│ │ desc KPI定義 │    │  風險評估 → routes/risk.js 直接讀                         │       │
+│ └────────────┘    └────────────────┬────────────────────────────────────────┘       │
+│                                    │                                                 │
+│                    ┌───────────────┼───────────────────┐                            │
+│                    ▼               ▼                   ▼                            │
+│          ┌─────────────────┐ ┌──────────────────┐ ┌──────────────────┐               │
+│          │mgm_invoice_     │ │mgm_casher_        │ │mgm_bank_loan_    │               │
+│          │details 發票明細  │ │details 現金日記    │ │details 銀行貸款   │               │
+│          │TX_type=AR → AR  │ │ 現金/銀行/票據流   │ │ 本金/利息/到期日  │               │
+│          │TX_type=AP → AP  │ │                   │ │                  │               │
+│          └────────┬────────┘ └──────────────────┘ └──────────────────┘               │
+│                   │                                                                   │
+│          ┌────────┴──────────────────┐                                               │
+│          ▼                           ▼                                                │
+│   ┌───────────────┐          ┌──────────────┐                                         │
+│   │ermm_arap_     │          │forecast_     │                                         │
+│   │detail AR/AP   │          │detail 預測    │                                         │
+│   │月彙總表       │          │sales/cost    │                                         │
+│   └───────────────┘          │/profit 逐月  │                                         │
+│                               └──────────────┘                                         │
+│                                                                                       │
+│ ════════════════════════ 智能化新增表 ════════════════════════                          │
+│                                                                                       │
+│   ┌────────────────────┐  ┌────────────────────┐  ┌─────────────────────────┐       │
+│   │  ermm_knowledge     │  │ daily_ai_summary    │  │ ermm_kb_miss_log         │       │
+│   │  AI 問答知識庫      │  │ 每日 AI 執行摘要    │  │ RAG 未命中查詢日誌        │       │
+│   │  41 條 / 6 分類     │  │ 自動/手動觸發 LLM   │  │ 用於知識庫擴充            │       │
+│   │  FULLTEXT 索引     │  │ Prompt → DeepSeek   │  │                         │       │
+│   └────────────────────┘  └────────────────────┘  └─────────────────────────┘       │
+│                                                                                       │
+│   ┌────────────────────┐                                                             │
+│   │  industry_benchmark │                                                             │
+│   │  同業標竿           │                                                             │
+│   │  KPI × 年度 × 產業  │                                                             │
+│   └────────────────────┘                                                             │
+│                                                                                       │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+</pre>
+  </div>
+
+  <!-- ===== Section 3 ===== -->
+  <h2 id="s3">三、模組 × 資料表 對照表</h2>
+
+  <div class="group-card">
+    <h3><span class="badge badge-core">⭐ 模組 1</span>財務核心（Read by 幾乎所有頁面）</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>API 路由</th><th>讀取的資料表</th><th>寫入的資料表</th><th>說明</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/summary/*</code></td><td><code>mgm_finance_summary</code></td><td>—</td><td>Dashboard 核心</td></tr>
+          <tr><td><code>/api/report/*</code></td><td><code>mgm_finance_summary</code>, <code>forecast_detail</code></td><td>—</td><td>三大報表計算</td></tr>
+          <tr><td><code>/api/risk/*</code></td><td><code>mgm_finance_summary</code></td><td>—</td><td>Altman Z-score / 多維風險</td></tr>
+          <tr><td><code>/api/forecast/*</code></td><td><code>forecast_detail</code>, <code>mgm_finance_summary</code></td><td><code>forecast_detail</code></td><td>趨勢預測</td></tr>
+          <tr><td><code>/api/cash-forecast/*</code></td><td><code>mgm_casher_details</code>, <code>mgm_finance_summary</code></td><td>—</td><td>現金水位 + 蒙特卡洛</td></tr>
+          <tr><td><code>/api/consolidation/*</code></td><td><code>mgm_finance_summary</code></td><td>—</td><td>集團合併報表</td></tr>
+          <tr><td><code>/api/bep/*</code></td><td><code>mgm_finance_summary</code></td><td>—</td><td>損益平衡點計算</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="core-table">
+      <strong>⭐ 核心表 <code>mgm_finance_summary</code> 欄位速覽</strong>
+      <div style="margin-top:8px;font-size:13px;">
+<pre>
+主鍵: uid
+關鍵欄位: bu_no, YYYY_MM, flag
+資產類: cash_amt, deposite_amt, AR_amt, AR_bill_amt, stock_P_amt, stock_M_amt,
+        ttl_asset_amt, current_asset_amt, non_current_asset_amt
+負債類: AP_amt, loan_amt, LT_loan_amt, debet_amt, LQ_debet_amt
+權益類: captial_stock, captial_reserve, accumulated_amt, retained_amt
+損益類: sale_amt, sale_cost_amt, sale_exp_amt, sale_profit_amt, net_profit_amt
+風險類: Z_score (Altman 5 公式), working_capital, AR_turn, debt_ratio
+其他:   全部折舊/攤銷/估價備抵項目...
+</pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-erp">📦 模組 2</span>ERP 原始單據</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>資料表</th><th>說明</th><th>Migration</th></tr></thead>
+        <tbody>
+          <tr><td><code>ermm_temp_po</code></td><td>PO 暫存（草稿）</td><td>001</td></tr>
+          <tr><td><code>ermm_erp_po</code></td><td>PO 正式採購單</td><td>001</td></tr>
+          <tr><td><code>ermm_erp_so</code></td><td>SO 銷售訂單</td><td>001</td></tr>
+          <tr><td><code>ermm_erp_so_dn</code></td><td>SO 交貨單</td><td>003</td></tr>
+          <tr><td><code>ermm_erp_documents</code></td><td>ERP 文件索引</td><td>003</td></tr>
+          <tr><td><code>bh_mgm_tx_detail</code></td><td>ERP 交易明細（發票/收付款）</td><td>005</td></tr>
+          <tr><td><code>mgm_production_details</code></td><td>ERP 生產明細</td><td>005</td></tr>
+          <tr><td><code>ermm_erp_mo</code></td><td>製造工單</td><td>011</td></tr>
+          <tr><td><code>ermm_erp_mo_component</code></td><td>工單 BOM 組件</td><td>011</td></tr>
+          <tr><td><code>ermm_erp_routing</code></td><td>製程途程</td><td>011</td></tr>
+          <tr><td><code>ermm_erp_work_report</code></td><td>工時回報</td><td>011</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-op">📋 模組 3</span>日常作業</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>資料表</th><th>說明</th><th>Migration</th><th>API</th></tr></thead>
+        <tbody>
+          <tr><td><code>mgm_invoice_details</code></td><td><strong>發票明細</strong>（AR/AP 分 TX_type）</td><td>002</td><td><code>/api/invoice/*</code></td></tr>
+          <tr><td><code>mgm_casher_details</code></td><td><strong>現金日記</strong>（現金/銀行/票據）</td><td>002</td><td><code>/api/cash/*</code></td></tr>
+          <tr><td><code>ermm_arap_detail</code></td><td>AR/AP 月彙總表</td><td>002</td><td><code>/api/arap/*</code></td></tr>
+          <tr><td><code>pay_detail</code></td><td>付款明細</td><td>002</td><td><code>/api/pay/*</code></td></tr>
+          <tr><td><code>check_detail</code></td><td>票據管理（支票/匯票）</td><td>002</td><td><code>/api/check/*</code></td></tr>
+          <tr><td><code>mgm_bank_loan_details</code></td><td>銀行貸款</td><td>002</td><td><code>/api/bank/*</code></td></tr>
+          <tr><td><code>forecast_detail</code></td><td><strong>預測明細</strong>（逐月銷售/成本）</td><td>002</td><td><code>/api/forecast/*</code></td></tr>
+          <tr><td><code>mgm_account_details</code></td><td>帳戶明細</td><td>003</td><td><code>/api/account/*</code></td></tr>
+          <tr><td><code>transit_price</code></td><td>轉運價/移轉計價</td><td>005</td><td>內部使用</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-sys">⚙️ 模組 4</span>系統與設定</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>資料表</th><th>說明</th><th>Migration</th></tr></thead>
+        <tbody>
+          <tr><td><code>cams_system_codes</code></td><td><strong>系統字典</strong>（公司別/幣別/KPI 代碼）</td><td>003</td></tr>
+          <tr><td><code>branch_detail</code></td><td>公司別/分公司</td><td>004</td></tr>
+          <tr><td><code>cams_batch_control</code></td><td><strong>批次控制</strong>（步驟狀態追蹤）</td><td>004</td></tr>
+          <tr><td><code>cams_xuser</code></td><td>使用者帳號（JWT 驗證用）</td><td>004</td></tr>
+          <tr><td><code>leader_user</code></td><td>主管層級</td><td>004</td></tr>
+          <tr><td><code>login_user_record</code></td><td>登入記錄</td><td>004</td></tr>
+          <tr><td><code>mgm_kpi_desc</code></td><td><strong>KPI 定義</strong>（用於 diagnosis 模組）</td><td>004</td></tr>
+          <tr><td><code>e2_xitems_daily_status</code></td><td>存貨日結狀態</td><td>003</td></tr>
+          <tr><td><code>e2_xitems_daily_status_chart</code></td><td>存貨狀態圖表</td><td>003</td></tr>
+          <tr><td><code>monthly_items</code></td><td>月度項目管理</td><td>003</td></tr>
+          <tr><td><code>relation_detail</code></td><td>往來對象（客戶/供應商）</td><td>003</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-tax">💡 模組 5</span>稅務</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>資料表</th><th>說明</th><th>Migration</th></tr></thead>
+        <tbody>
+          <tr><td><code>vat_declarations</code></td><td><strong>VAT 增值稅申報</strong></td><td>006</td></tr>
+          <tr><td><code>cit_annual_settlements</code></td><td><strong>CIT 企業所得稅年結</strong></td><td>006</td></tr>
+          <tr><td><code>iit_withholding_batches</code></td><td><strong>IIT 工資稅批次</strong></td><td>006</td></tr>
+          <tr><td><code>iit_withholding_details</code></td><td>IIT 工資稅明細</td><td>006</td></tr>
+          <tr><td><code>tax_submit_receipts</code></td><td>稅務遞交通知收據</td><td>006</td></tr>
+          <tr><td><code>tax_vat_adjustments</code></td><td>VAT 調整</td><td>007</td></tr>
+          <tr><td><code>tax_cit_inputs</code></td><td>CIT 輸入資料</td><td>007</td></tr>
+          <tr><td><code>tax_cit_adjustments</code></td><td>CIT 調整</td><td>007</td></tr>
+          <tr><td><code>payroll_details</code></td><td>薪資明細</td><td>007</td></tr>
+          <tr><td><code>bonus_details</code></td><td>年終獎金稅</td><td>009</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-ai">🧠 模組 6</span>智能化新增（Top 5）</h3>
+
+    <div style="margin-top:16px;font-weight:600;color:var(--ai);">📚 AI 知識庫（RAG 數據源）</div>
+    <div class="tree-box">
+ermm_knowledge
+├── 41 條知識 / 6 分類
+├── category: annual(10) / policy(18) / tax(6) / benchmark(3) / data_dict(4)
+├── bu_no: HM / SZ / HN / ALL
+├── FULLTEXT INDEX (title + content + tags)
+└── importance 權重 1-5
+
+ermm_kb_miss_log
+└── 每次 RAG 未命中 → 自動寫入 → 用於知識庫擴充
+    </div>
+
+    <div style="margin-top:16px;font-weight:600;color:var(--ai);">🤖 每日 AI 摘要</div>
+    <div class="tree-box">
+daily_ai_summary
+├── summary_date: 覆蓋的財務期間
+├── data_json: 聚合的財務快照相關結構化資料
+├── title: LLM 生成的標題
+├── content: LLM 自然語言摘要正文
+├── alerts_json: LLM 標記的異常條目
+├── actions_json: LLM 建議的行動項
+├── provider / model / duration_ms: LLM 元數據
+└── is_active: 軟刪除
+    </div>
+
+    <div style="margin-top:16px;font-weight:600;color:var(--ai);">🎯 同業標竿</div>
+    <div class="tree-box">
+industry_benchmark
+├── bu_no × kpi_id × year
+├── benchmark_value: 同業中位數
+├── bu_value: 本公司實際值
+├── gap_pct: 差距百分比
+└── source: 資料來源
+    </div>
+  </div>
+
+  <!-- ===== Section 4 ===== -->
+  <h2 id="s4">四、數據流依賴圖</h2>
+<pre>
+                        ┌──────────────────────┐
+                        │  批次管線 runAll()    │
+                        │  Step1 → Step7       │
+                        └──────────┬───────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+        ┌────────────────┐ ┌─────────────┐ ┌───────────────────┐
+        │ mgm_finance_    │ │ mgm_invoice_ │ │ mgm_casher_        │
+        │ summary  ⭐ 中心 │ │ details  AR/AP│ │ details  現金流     │
+        └───────┬────────┘ └──────┬──────┘ └────────┬────────────┘
+                │                  │                 │
+    ┌───────────┼──────────┐       │                 │
+    ▼           ▼          ▼       ▼                 ▼
+  report      risk      forecast  ar-smart/         data-quality
+  三大報表   風險預警   趨勢預測  arap             質量掃描
+                              AR催收             全表健康度
+    │           │          │       │                 │
+    └───────────┴──────────┴───────┴─────────────────┘
+                                    │
+                                    ▼
+                           ┌──────────────────────┐
+                           │   AI 智能層（LLM）    │
+                           │                      │
+                           │  diagnosis/kpi       │ ← 讀 mgm_finance_summary
+                           │  aiqa/ask (RAG)      │ ← 讀 ermm_knowledge
+                           │  daily-summary       │ ← 讀 summary + forecast
+                           │  ar-smart (評分)     │ ← 讀 mgm_invoice_details
+                           └──────────────────────┘
+</pre>
+
+  <!-- ===== Section 5 ===== -->
+  <h2 id="s5">五、外鍵 / 關聯規則</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>父表</th><th>子表</th><th>關聯欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><code>branch_detail</code></td><td><code>mgm_finance_summary</code></td><td><code>bu_no</code></td><td>公司別 (HM/SZ/HN)</td></tr>
+        <tr><td><code>cams_xuser</code></td><td><code>login_user_record</code></td><td><code>user_id</code></td><td>使用者登入記錄</td></tr>
+        <tr><td><code>mgm_kpi_desc</code></td><td><code>routes/diagnosis.js</code></td><td><code>kpi_id</code></td><td>異常診斷 KPI 定義</td></tr>
+        <tr><td><code>mgm_finance_summary</code></td><td><code>forecast_detail</code></td><td><code>bu_no, YYYY_MM</code></td><td>預測 vs 實際</td></tr>
+        <tr><td><code>mgm_finance_summary</code></td><td><code>mgm_invoice_details</code></td><td><code>bu_no</code></td><td>應收賬款 vs 發票 AR</td></tr>
+        <tr><td><code>mgm_finance_summary</code></td><td><code>mgm_casher_details</code></td><td><code>bu_no</code></td><td>現金 vs 銀行存款</td></tr>
+        <tr><td><code>mgm_kpi_desc</code></td><td><code>industry_benchmark</code></td><td><code>kpi_id</code></td><td>同業標竿 KPI 對應</td></tr>
+        <tr><td><code>ermm_knowledge</code></td><td><code>ermm_kb_miss_log</code></td><td><code>category, bu_no</code></td><td>RAG 未命中 → 知識庫擴充</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== Section 6 ===== -->
+  <h2 id="s6">六、索引策略</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>表</th><th>索引</th><th>目的</th></tr></thead>
+      <tbody>
+        <tr><td><code>mgm_finance_summary</code></td><td><code>(bu_no, YYYY_MM)</code></td><td>Dashboard / 報表 查詢主力</td></tr>
+        <tr><td><code>mgm_invoice_details</code></td><td><code>(bu_no, TX_type, ageing_days)</code></td><td>AR 催收排序 / 風險評分</td></tr>
+        <tr><td><code>mgm_casher_details</code></td><td><code>(bu_no, YYYY_MM)</code></td><td>現金水位查詢</td></tr>
+        <tr><td><code>forecast_detail</code></td><td><code>(bu_no, metric, forecast_month)</code></td><td>預測 vs 實際</td></tr>
+        <tr><td><code>ermm_knowledge</code></td><td><code>FULLTEXT(title, content, tags)</code></td><td>RAG 全文檢索</td></tr>
+        <tr><td><code>ermm_knowledge</code></td><td><code>(category), (bu_no), (year)</code></td><td>分類過濾</td></tr>
+        <tr><td><code>daily_ai_summary</code></td><td><code>(summary_date), (generated_time)</code></td><td>Dashboard 取最新</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== Section 7 ===== -->
+  <h2 id="s7">七、遷移執行順序</h2>
+<pre>
+-- run_all.sql 統一建置
+SOURCE 001_po_so_tables.sql;              -- 3 表
+SOURCE 002_finance_core_tables.sql;       -- 8 表 ⭐
+SOURCE 003_erp_master_tables.sql;         -- 8 表
+SOURCE 004_system_tables.sql;             -- 6 表
+SOURCE 005_erp_detail_tables.sql;         -- 3 表
+SOURCE 006_tax_tables.sql;                -- 5 表
+SOURCE 007_tax_inputs.sql;                -- 4 表
+SOURCE 008_vat_quarterly.sql;             -- 增量
+SOURCE 009_iit_bonus.sql;                 -- 增量
+SOURCE 010_cit_revenue_cost_override.sql;  -- 增量
+SOURCE 011_erp_manufacturing_tables.sql;  -- 4 表
+SOURCE 012_admin_yes_no.sql;              -- 結構調整
+SOURCE 013_industry_benchmark.sql;        -- 1 表
+SOURCE 014_llm_is_default.sql;            -- 結構調整
+SOURCE 015_ermm_knowledge.sql;             -- 1 表
+SOURCE 016_ermm_knowledge_expand.sql;      -- 數據擴充
+SOURCE 017_daily_ai_summary.sql;          -- 1 表
+SOURCE 018_ermm_knowledge_expand_2.sql;    -- 數據擴充
+SOURCE 019_kb_miss_log.sql;               -- 1 表
+</pre>
+  <div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:16px 20px;border-radius:0 8px 8px 0;margin:16px 0;font-size:14px;">
+    <strong>✅ 單次執行時間</strong>: 約 30 秒（全部幂等，CREATE TABLE IF NOT EXISTS）
+  </div>
+
+  <hr>
+  <div class="meta" style="text-align:center;">
+    文件產生時間：2026-11-05 · 基於 19 個 Migration + 55+ 張資料表 + 85 個 Commit
+  </div>
+
+</main>
+
+<script>
+  const links = document.querySelectorAll('.sidebar nav a');
+  const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href')));
+  
+  window.addEventListener('scroll', () => {
+    const pos = window.scrollY + 120;
+    let current = sections[0];
+    for (const s of sections) { if (s && s.offsetTop <= pos) current = s; }
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + current.id));
+  });
+
+  links.forEach(l => {
+    l.addEventListener('click', e => {
+      e.preventDefault();
+      const id = l.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+</body>
+</html>
