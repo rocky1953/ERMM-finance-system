@@ -308,6 +308,10 @@ const RAG_STOPWORDS = new Set([
     'how', 'what', 'is', 'the', 'a', 'an', 'to', 'of'
 ]);
 
+// P4: category 专属权重 — 制度类（tax）最常被精确查询，权重加高
+const CATEGORY_WEIGHTS = { tax: 1.5, policy: 1.2, data_dict: 1.3, benchmark: 1.0, annual: 0.8 };
+const RAG_MIN_SCORE_KW = 1.0;
+
 // P0: 中文 2-gram 滑窗切分 — 解決中文 query 沒空格導致 split 不出詞的問題
 // "的毛利率是多少" → ["毛利", "利率", "率是", "是多", "多少"]
 function chineseNgrams(text, minLen = 2, maxLen = 4) {
@@ -324,8 +328,7 @@ function chineseNgrams(text, minLen = 2, maxLen = 4) {
     return [...grams];
 }
 
-// P0: 最低分閾值 — importance×0.5 + 命中詞數 的最低線
-const RAG_MIN_SCORE_KW = 1.0;
+// P0: 最低分閾值 — importance×0.5 + 命中詞數 的最低線（已在顶部定义 RAG_MIN_SCORE_KW = 1.0）
 // 權重：title 命中=3, tags 命中=2, content 命中=1
 // importance=1, 命中 1 個 title → score = 3 + 0.5 = 3.5 ✅ 通過
 // importance=1, 命中 1 個 content → score = 1 + 0.5 = 1.5 ✅ 通過
@@ -395,7 +398,8 @@ async function searchKnowledge(query, bu_no, limit = 5) {
              `%${kw}%`, `%${kw}%`, `%${kw}%`, RAG_MIN_SCORE_KW]
         );
 
-        // 融合兩個結果集，去重後按分數排序（FULLTEXT 結果只取有 ft_score>0 的）
+        // 融合兩個結果集，去重後按分數排序
+        // FULLTEXT 結果（只取有 ft_score>0 的）+ LIKE 關鍵詞結果
         const merged = new Map();
         for (const r of ftRows) {
             const ftScore = Number(r.ft_score || 0);
@@ -411,9 +415,30 @@ async function searchKnowledge(query, bu_no, limit = 5) {
                 merged.set(r.uid, { ...r, score });
             }
         }
+
+        // P4: category 专属权重 — 制度类 tax ×1.5、data_dict ×1.3、policy ×1.2 加權
         const sorted = Array.from(merged.values())
+            .map(r => {
+                const catW = CATEGORY_WEIGHTS[r.category] || 1.0;
+                return { ...r, score: Number(r.score || 0) * catW };
+            })
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
+
+        // P2: 召回=0 → 寫 miss log（驅動 KB 主動擴充）
+        const hitCount = sorted.length;
+        if (hitCount === 0) {
+            pool.execute(
+                `INSERT INTO ermm_kb_miss_log (query, bu_no, hit_count, search_words) VALUES (?, ?, 0, ?)`,
+                [kw, bu_no, effectiveWords.join(',')]
+            ).catch(() => {}); // 不阻塞主流程
+        } else {
+            // 命中數也寫（方便觀察 query 命中變化）
+            pool.execute(
+                `INSERT INTO ermm_kb_miss_log (query, bu_no, hit_count, search_words) VALUES (?, ?, ?, ?)`,
+                [kw, bu_no, hitCount, effectiveWords.join(',')]
+            ).catch(() => {});
+        }
 
         // P1: 耗時 + 召回日志
         const ms = Date.now() - t0;

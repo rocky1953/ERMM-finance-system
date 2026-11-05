@@ -7,13 +7,23 @@
  *   - 数据源标签标注（📊 DB / 📚 KB / 🧠 AI）
  */
 
-// 生成唯一 conversation_id（页面首次加载时生成一次，保存在 sessionStorage）
+// ===== P3: conversation_id 持久化（localStorage，刷新后恢复最近对话）=====
+// 存最近一个 convId，用户可手动点「🧹 新对话」重置
 function getConvId() {
-    let cid = sessionStorage.getItem('ai_conv_id');
+    let cid = localStorage.getItem('ai_conv_id');
     if (!cid) {
         cid = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-        sessionStorage.setItem('ai_conv_id', cid);
+        localStorage.setItem('ai_conv_id', cid);
     }
+    return cid;
+}
+// 手动重置：生成新 convId 并清除历史
+function resetConvId() {
+    const old = localStorage.getItem('ai_conv_id');
+    const cid = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('ai_conv_id', cid);
+    // 可选：记录上一个 convId（方便回退）
+    if (old) localStorage.setItem('ai_conv_id_prev', old);
     return cid;
 }
 
@@ -222,6 +232,11 @@ const AIQA = {
                 kbCard = `<div style="margin-top:10px;background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:8px 12px;font-size:12px;">
                     <div style="font-weight:600;color:#854d0e;margin-bottom:4px;">📚 ${t('aiqa.ref_sources') || '知识库参考来源'}：</div>
                     ${allKb.map(k => `<div style="color:#713f12;">• ${esc(k.title)} <span style="color:#a16207;">(${esc(k.category)})</span></div>`).join('')}
+                </div>`;
+            } else if (useKB && query.trim().length > 3) {
+                // P2: 未命中提示 — 告知用户可建议我们补充
+                kbCard = `<div style="margin-top:10px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 12px;font-size:11px;color:#64748b;">
+                    💭 ${t('aiqa.no_kb_hit_hint') || '此查询知识库暂无匹配，如您经常遇到可建议我们补充此知识'}
                 </div>`;
             }
 
