@@ -291,16 +291,64 @@ router.get('/records', async (req, res) => {
  * 知識庫檢索（輕量 RAG）
  * 先做關鍵詞匹配（title + tags 權重較高），再補 FULLTEXT 全文搜索，加權排序
  * 回傳 [{title, content, score, category, source}]
+ *
+ * 優化（P0 級）：
+ *   - MIN_SCORE_KW: 1.0 最低分閾值，低於此分數的條目不注入 context
+ *     （importance=1×0.5 + 至少命中 1 詞 = 1.0；importance=5×0.5 + 命中 1 詞 = 3.5）
+ *   - 單字停用詞過濾：避免「的/了/是/和/跟/比」等無效詞進 LIKE 查詢
+ *   - 耗時 & 召回日志：console.time 便於觀測 RAG 检索開銷
  */
+
+// P0: 停用詞表（中文單字/語氣詞/介詞，出現在 query 中但不應進入 LIKE 查詢）
+const RAG_STOPWORDS = new Set([
+    '的', '了', '是', '在', '和', '跟', '比', '與', '或', '及',
+    '嗎', '呢', '啊', '吧', '呀', '哦', '嘛',
+    '一', '個', '这', '那', '哪', '些',
+    '會', '能', '可以', '要', '想', '看', '有',
+    'how', 'what', 'is', 'the', 'a', 'an', 'to', 'of'
+]);
+
+// P0: 中文 2-gram 滑窗切分 — 解決中文 query 沒空格導致 split 不出詞的問題
+// "的毛利率是多少" → ["毛利", "利率", "率是", "是多", "多少"]
+function chineseNgrams(text, minLen = 2, maxLen = 4) {
+    const grams = new Set();
+    for (let len = minLen; len <= maxLen; len++) {
+        for (let i = 0; i <= text.length - len; i++) {
+            const g = text.slice(i, i + len);
+            // 過濾含停用詞的 gram
+            if (![...g].some(c => RAG_STOPWORDS.has(c))) {
+                grams.add(g);
+            }
+        }
+    }
+    return [...grams];
+}
+
+// P0: 最低分閾值 — importance×0.5 + 命中詞數 的最低線
+const RAG_MIN_SCORE_KW = 1.0;
+// 權重：title 命中=3, tags 命中=2, content 命中=1
+// importance=1, 命中 1 個 title → score = 3 + 0.5 = 3.5 ✅ 通過
+// importance=1, 命中 1 個 content → score = 1 + 0.5 = 1.5 ✅ 通過
+// importance=1, 命中 0 個詞但靠 ALL 公司範圍 → score = 0 + 0.5 = 0.5 ❌ 被過濾
+
 async function searchKnowledge(query, bu_no, limit = 5) {
     const kw = String(query || '').trim();
     if (!kw || kw.length < 1) return [];
-    const words = kw.split(/[\s,，。？?！!、;；]+/).filter(w => w.length > 0);
+
+    // P0: 提取有效关键词 = split 空格/标点 + 2-gram 滑窗（解决中文无空格问题）
+    const allWords = kw.split(/[\s,，。？?！!、;；]+/).filter(w => w.length > 0);
+    const splitWords = allWords.filter(w => !RAG_STOPWORDS.has(w.toLowerCase()) || w.length >= 2);
+    const ngrams = chineseNgrams(kw); // 2-4 字滑窗，过滤含停用词的 gram
+    // 合并去重，优先保留长词
+    const mergedWords = [...new Set([...splitWords, ...ngrams])]
+        .sort((a, b) => b.length - a.length); // 长词优先（如「毛利率」>「毛利」）
+    const effectiveWords = mergedWords.length > 0 ? mergedWords : allWords;
+
+    const t0 = Date.now();
 
     try {
         // 策略 1：MySQL FULLTEXT 全文搜索（title + content + tags）
-        // 注意：FULLTEXT 對中文效果有限，但英文/數字/混合詞有效
-        const ftKeyword = words.filter(w => /[a-zA-Z0-9]/.test(w)).join(' ');
+        const ftKeyword = effectiveWords.filter(w => /[a-zA-Z0-9]/.test(w)).join(' ');
         let ftRows = [];
         if (ftKeyword) {
             try {
@@ -317,16 +365,15 @@ async function searchKnowledge(query, bu_no, limit = 5) {
                 );
                 ftRows = res;
             } catch (ftErr) {
-                // FULLTEXT 失敗（可能是沒有有效的英文/數字詞）→ 跳過
                 console.log('[aiqa] FULLTEXT 跳過:', ftErr.message);
             }
         }
 
-        // 策略 2：關鍵詞 LIKE 匹配（對中文友好，任意詞命中即可 → OR 聚合，靠 score 排序）
-        const likeConditions = words.map(w => {
+        // 策略 2：關鍵詞 LIKE 匹配（OR 聚合，靠 score 排序 + 最低分閾值過濾）
+        const likeConditions = effectiveWords.map(w => {
             const safeW = w.replace(/'/g, "''");
             return `(title LIKE '%${safeW}%' OR content LIKE '%${safeW}%' OR tags LIKE '%${safeW}%')`;
-        }).join(' OR ')
+        }).join(' OR ');
 
         const [kwRows] = await pool.execute(
             `SELECT uid, title, content, category, bu_no, source, tags, importance,
@@ -338,15 +385,22 @@ async function searchKnowledge(query, bu_no, limit = 5) {
              WHERE is_active = 1
                AND (bu_no = ? OR bu_no = 'ALL')
                AND (${likeConditions})
+               AND (CASE WHEN title LIKE ? THEN 3 ELSE 0 END +
+                    CASE WHEN tags LIKE ? THEN 2 ELSE 0 END +
+                    CASE WHEN content LIKE ? THEN 1 ELSE 0 END +
+                    importance * 0.5) >= ?
              ORDER BY kw_score DESC
              LIMIT ${limit}`,
-            [`%${kw}%`, `%${kw}%`, `%${kw}%`, bu_no]
+            [`%${kw}%`, `%${kw}%`, `%${kw}%`, bu_no,
+             `%${kw}%`, `%${kw}%`, `%${kw}%`, RAG_MIN_SCORE_KW]
         );
 
-        // 融合兩個結果集，去重後按分數排序
+        // 融合兩個結果集，去重後按分數排序（FULLTEXT 結果只取有 ft_score>0 的）
         const merged = new Map();
         for (const r of ftRows) {
-            merged.set(r.uid, { ...r, score: Number(r.ft_score || 0) + Number(r.importance || 1) });
+            const ftScore = Number(r.ft_score || 0);
+            if (ftScore <= 0) continue;
+            merged.set(r.uid, { ...r, score: ftScore + Number(r.importance || 1) });
         }
         for (const r of kwRows) {
             const existing = merged.get(r.uid);
@@ -360,6 +414,14 @@ async function searchKnowledge(query, bu_no, limit = 5) {
         const sorted = Array.from(merged.values())
             .sort((a, b) => b.score - a.score)
             .slice(0, limit);
+
+        // P1: 耗時 + 召回日志
+        const ms = Date.now() - t0;
+        if (sorted.length === 0) {
+            console.log(`[aiqa] RAG 召回=0 | query="${kw}" | bu=${bu_no} | words=[${effectiveWords.join(',')}] | ${ms}ms`);
+        } else {
+            console.log(`[aiqa] RAG 召回=${sorted.length} | query="${kw}" | bu=${bu_no} | ${ms}ms | TOP: ${sorted[0].title.slice(0,30)}`);
+        }
 
         return sorted.map(r => ({
             title: r.title,
