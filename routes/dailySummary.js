@@ -18,7 +18,13 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { chatCompletion, getDefaultProvider } = require('../utils/llmClient');
-const { normalizeLang } = require('./aiqa'); // 复用
+// 不依赖 aiqa.js 的内部 normalizeLang（aiqa 只导出 router）
+function normalizeLang(input) {
+    const l = String(input || 'zh-TW').toLowerCase();
+    if (l.startsWith('zh')) return 'zh-TW'; // 统一繁中（AI 摘要习惯繁中输出）
+    if (l.startsWith('en')) return 'en';
+    return 'zh-TW';
+}
 
 const BU_INDUSTRY = { HM: '制造业', SZ: '制造业', HN: '批发零售业' };
 const ALL_BU = ['HM', 'SZ', 'HN'];
@@ -253,33 +259,39 @@ async function buildGroupConsolidated(yearMonth) {
 
 // ===== 2. LLM 生成摘要 =====
 const DAILY_SYSTEM_PROMPTS = {
-    'zh-TW': `你是 ERMM 企業的資深財務長（CFO）。請根據提供的財務數據，撰寫每日/每月財務執行摘要。
+    'zh-TW': `你是 ERMM 集團的資深財務長（CFO），精通企業財務分析、風險評估、現金流量管理。
+請根據我提供的財務數據，撰寫一份精煉的每日/每月財務執行摘要。
 
-要求：
-1. 語言：繁體中文
-2. 結構：**標題**（一句話概括當期狀態）+ 3~5 段條理清晰的分析 + **風險預警**（如有）+ **建議行動**
-3. 先給總結論（1 句話），再給數據支撐
-4. 所有金額千分位；百分比明確標示 %
-5. 標明「數據來源：ermm_db · YYYY-MM」
-6. 精煉、專業，避免空話`,
-    'zh-CN': `你是 ERMM 企业的资深财务长（CFO）。请根据提供的财务数据，撰写每日/每月财务执行摘要。
+寫作要求：
+- 語言：繁體中文
+- 先給【一句話總結】（開頭加粗），再給數據支撐
+- 結構：① 集團合併概況 ② 三公司個別表現 ③ YoY 同比分析 ④ 風險預警 ⑤ 建議行動
+- 所有金額用千分位格式；百分比標示 %
+- 風險標記用符號：🟢安全 / 🟡灰色 / 🔴危險
+- 具體、精煉、有洞察，避免空話
+- 結尾標註：數據來源 ermm_db`,
+    'zh-CN': `你是 ERMM 集团的资深财务长（CFO），精通企业财务分析、风险评估、现金流量管理。
+请根据我提供的财务数据，撰写一份精炼的每日/每月财务执行摘要。
 
-要求：
-1. 语言：简体中文
-2. 结构：**标题**（一句话概括当期状态）+ 3~5 段条理清晰的分析 + **风险预警**（如有）+ **建议行动**
-3. 先给总结论（1 句话），再给数据支撑
-4. 所有金额千分位；百分比明确标示 %
-5. 标明「数据来源：ermm_db · YYYY-MM」
-6. 精炼、专业，避免空话`,
-    'en': `You are the CFO of ERMM Group. Write a daily/monthly financial executive summary based on the data provided.
+写作要求：
+- 语言：简体中文
+- 先给【一句话总结】（开头加粗），再给数据支撑
+- 结构：① 集团合并概况 ② 三公司个别表现 ③ YoY 同比分析 ④ 风险预警 ⑤ 建议行动
+- 所有金额用千分位格式；百分比标示 %
+- 风险标记用符号：🟢安全 / 🟡灰色 / 🔴危险
+- 具体、精炼、有洞察，避免空话
+- 结尾标注：数据来源 ermm_db`,
+    'en': `You are the CFO of ERMM Group, expert in financial analysis, risk assessment, cash flow management.
+Write a concise daily/monthly executive summary based on the data I provide.
 
 Requirements:
-1. Language: English
-2. Structure: **Title** (one-sentence state) + 3~5 paragraphs of structured analysis + **Risk Alerts** (if any) + **Recommended Actions**
-3. Conclusion first, then supporting figures
-4. All amounts with thousand separators; percentages marked with %
-5. Cite "Data source: ermm_db · YYYY-MM"
-6. Concise, professional, no fluff`
+- Language: English
+- Start with a **one-sentence conclusion** (bold), then supporting figures
+- Structure: ① Consolidated overview ② By-company performance ③ YoY analysis ④ Risk alerts ⑤ Recommended actions
+- All amounts with thousand separators; percentages marked with %
+- Risk symbols: 🟢Safe / 🟡Watch / 🔴Danger
+- Specific, insightful, no fluff
+- Cite: Data source ermm_db`
 };
 
 async function generateSummary(aggregate, lang) {
@@ -290,45 +302,71 @@ async function generateSummary(aggregate, lang) {
     if (!cfg) throw new Error('未設定 LLM 服務商');
     if (!cfg.api_key) throw new Error(`「${cfg.provider_name}」尚未設定 API Key`);
 
-    // 拼 prompt
+    // 精簡版 context — 只傳 LLM 真正需要的數字，砍掉所有冗余字段
     const period = aggregate.companies.HM?.period || aggregate.generated_at;
-    const modules = aggregate.modules_included.join(' + ');
+
+    // 精簡 companies
+    const slimCompanies = {};
+    for (const bu of ALL_BU) {
+        const c = aggregate.companies[bu];
+        if (!c) continue;
+        slimCompanies[bu] = {
+            sale: +c.sale, gross_margin: +c.gross_margin, net_margin: +c.net_margin,
+            net_profit: +c.net_profit, Z_score: +c.Z_score, debt_ratio: +c.debt_ratio,
+            current_ratio: +c.current_ratio, AR: +c.AR, cash: +c.cash, loan: +c.loan,
+            yoy: c.yoy ? { sale_chg: +c.yoy.sale_chg, gross_margin_chg: +c.yoy.gross_margin_chg,
+                          Z_score_chg: +c.yoy.Z_score_chg, debt_ratio_chg: +c.yoy.debt_ratio_chg } : null,
+            cash_position: c.cash_position ? { ratio: c.cash_position.ratio, flag: c.cash_position.flag } : null,
+            peer: c.peer_position ? Object.fromEntries(
+                Object.entries(c.peer_position).filter(([k]) => k !== 'industry' && k !== 'year')
+                    .map(([k, v]) => [k, { my: +v.my_val, pos: v.pos }])
+            ) : null
+        };
+    }
+
     const context = {
-        _meta: {
-            period, modules_covered: modules,
-            generated_at: aggregate.generated_at,
-            companies: ALL_BU.join(', ')
+        period, generated_at: aggregate.generated_at,
+        group: {
+            consolidated_sale: +aggregate.group_consolidated.consolidated_sale,
+            consolidated_net_profit: +aggregate.group_consolidated.consolidated_net_profit,
+            profit_margin: aggregate.group_consolidated.profit_margin,
+            bu_contribution: aggregate.group_consolidated.bu_contribution
         },
-        data: aggregate,
-        instructions: {
-            title: '用一句話概括當期財務狀態',
-            sections: [
-                '1. 集團合併概況：三公司合計營收/淨利 + 各公司佔比',
-                '2. 個別公司表現：每家公司的 KPI 亮點/不足',
-                '3. YoY 變動分析：同比增減 + 可能原因推論',
-                '4. 風險預警：Z-score / 現金水位 / 負債比率 的紅黃燈',
-                '5. 建議行動：2~5 條可執行的動作（具體到部門/金額/時限）'
-            ],
-            data_source: `ermm_db · ${period}`
-        }
+        companies: slimCompanies,
+        risk_ranking: aggregate.risk_ranking,
+        alerts: aggregate.alerts
     };
+
+    // 用緊湊格式 JSON — 減少 token（不用 null, 2 縮排）
+    const promptContent = `財務數據期間：${period}\n\n${JSON.stringify(context)}`;
 
     const messages = [
         { role: 'system', content: DAILY_SYSTEM_PROMPTS[uiLang] },
-        { role: 'user', content: JSON.stringify(context, null, 2) }
+        { role: 'user', content: promptContent }
     ];
 
     const t0 = Date.now();
+    console.log('[daily-summary] 调 chatCompletion provider=' + cfg.provider_name + ' model=' + cfg.model + ' prompt_size=' + promptContent.length);
     const content = await chatCompletion(
         { base_url: cfg.base_url, api_key: cfg.api_key, model: cfg.model },
         messages,
         { temperature: 0.2, max_tokens: 4096, timeout: 120000 }
     );
     const duration = Date.now() - t0;
+    console.log('[daily-summary] chatCompletion 返回 type=' + typeof content + ' len=' + (content?.length || 'null') + ' duration=' + duration);
 
-    // 解析输出中的标题（取第一行 **xxx** 或第一句话）
-    const lines = content.trim().split('\n').filter(l => l.trim());
-    let title = lines[0]?.replace(/[#*\s]/g, '').slice(0, 80) || 'AI 执行摘要';
+    // 解析输出中的标题 — 取前 30 字符的第一句
+    const cleanContent = content.trim();
+    const lines = cleanContent.split('\n').filter(l => l.trim());
+    let title = '';
+    for (const l of lines.slice(0, 5)) {
+        const t = l.replace(/^[#*\s]+/, '').trim().slice(0, 80);
+        // 跳过 instructions 复述的标题
+        if (t && !t.includes('用戶') && !t.includes('请根据') && !t.includes('根據提供的')) {
+            title = t; break;
+        }
+    }
+    if (!title) title = lines[0]?.replace(/^[#*\s]+/, '').trim().slice(0, 80) || 'AI 执行摘要';
 
     return {
         title, content, duration_ms: duration,
@@ -363,15 +401,16 @@ router.post('/generate', async (req, res) => {
         const aggregate = await buildAggregateData();
 
         // Step 2: 调 LLM 生成（可能失败，失败时存聚合数据 + fallback 文字）
-        let title = '', content = '', provider = '', model = '', duration_ms = 0, alerts_json = null, actions_json = null;
-        try {
-            const r = await generateSummary(aggregate, lang || 'zh-TW');
-            title = r.title; content = r.content;
-            provider = r.provider; model = r.model; duration_ms = r.duration_ms;
-        } catch (llmErr) {
-            console.error('[daily-summary] LLM 生成失敗，使用 fallback:', llmErr.message);
+    let title = '', content = '', provider = '', model = '', duration_ms = 0, alerts_json = null, actions_json = null;
+    try {
+        const r = await generateSummary(aggregate, lang || 'zh-TW');
+        console.log('[daily-summary] LLM 摘要生成成功！provider=' + r.provider + ' duration=' + r.duration_ms + 'ms content_len=' + (r.content?.length || 0));
+        title = r.title; content = r.content;
+        provider = r.provider; model = r.model; duration_ms = r.duration_ms;
+    } catch (llmErr) {
+            console.error('[daily-summary] LLM 生成失敗，使用 fallback:', llmErr?.message || String(llmErr), llmErr?.stack || '');
             title = `每日財務快報（${aggregate.generated_at}）— LLM 暫不可用`;
-            content = buildFallbackText(aggregate, lang || 'zh-TW', llmErr.message);
+            content = buildFallbackText(aggregate, lang || 'zh-TW', llmErr?.message || String(llmErr) || 'unknown');
             provider = 'fallback';
         }
 
