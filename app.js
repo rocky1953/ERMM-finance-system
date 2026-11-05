@@ -176,6 +176,7 @@ const DOC_ROUTES = {
 };
 Object.entries(DOC_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => {
+        res.set('Cache-Control', 'no-store');
         res.sendFile(path.join(__dirname, 'public', file));
     });
 });
