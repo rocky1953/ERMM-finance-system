@@ -260,10 +260,11 @@ async function searchKnowledge(query, bu_no, limit = 5) {
             }
         }
 
-        // 策略 2：關鍵詞 REGEXP 匹配（對中文友好）
-        const likeConditions = words.map(w =>
-            `(title LIKE '%${w.replace(/'/g, "''")}%' OR content LIKE '%${w.replace(/'/g, "''")}%' OR tags LIKE '%${w.replace(/'/g, "''")}%')`
-        ).join(' AND ');
+        // 策略 2：關鍵詞 LIKE 匹配（對中文友好，任意詞命中即可 → OR 聚合，靠 score 排序）
+        const likeConditions = words.map(w => {
+            const safeW = w.replace(/'/g, "''");
+            return `(title LIKE '%${safeW}%' OR content LIKE '%${safeW}%' OR tags LIKE '%${safeW}%')`;
+        }).join(' OR ')
 
         const [kwRows] = await pool.execute(
             `SELECT uid, title, content, category, bu_no, source, tags, importance,
@@ -330,34 +331,84 @@ async function getYoYContext(bu_no, YYYY_MM) {
     const [y, m] = targetMM.split('-').map(Number);
     const lastYearMM = `${y - 1}-${String(m).padStart(2, '0')}`;
 
-    // 當月 + 去年同月
+    // 當月 + 去年同月（含容錯：去年同月缺失時自動回退去年最接近月份）
     const [bothRows] = await pool.execute(
         'SELECT YYYY_MM, sale_amt, sale_cost_amt, net_profit_amt, ttl_asset_amt, ttl_debet_amt, Z_score, gross_margin, net_margin, debt_ratio, current_ratio FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM IN (?, ?)',
         [bu_no, targetMM, lastYearMM]
     );
-    const curr = bothRows.find(r => r.YYYY_MM === targetMM);
-    const prev = bothRows.find(r => r.YYYY_MM === lastYearMM);
+    let curr = bothRows.find(r => r.YYYY_MM === targetMM);
+    let prev = bothRows.find(r => r.YYYY_MM === lastYearMM);
+
+    // 容錯：去年同月沒資料時，取去年最接近的月份
+    if (!prev) {
+        const [fallback] = await pool.execute(
+            `SELECT YYYY_MM FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM < ?
+             ORDER BY YYYY_MM DESC LIMIT 1`,
+            [bu_no, targetMM]
+        );
+        if (fallback[0]) {
+            const [fbRows] = await pool.execute(
+                'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?',
+                [bu_no, fallback[0].YYYY_MM]
+            );
+            prev = fbRows[0];
+            if (prev) {
+                prev._period = prev.YYYY_MM; // 標記實際對比月份非去年同月
+            }
+        }
+    }
+
+    // 輔助函數：計算變動率 + 標記方向（好/壞）
+    const calcDelta = (cVal, pVal, reverseSign = false) => {
+        // reverseSign=true 時，上升 = 壞（如負債率）；false 時上升 = 好（如毛利率）
+        if (cVal == null || pVal == null) return { delta: null, deltaPct: null, trend: null };
+        const delta = Number(cVal) - Number(pVal);
+        const deltaPct = Number(pVal) !== 0 ? ((delta / Math.abs(Number(pVal))) * 100).toFixed(2) : null;
+        const isGood = reverseSign ? delta < 0 : delta > 0;
+        const trend = Math.abs(delta) < 0.01 ? '→' : (isGood ? '↑' : '↓');
+        return { delta: delta.toFixed(2), deltaPct, trend };
+    };
 
     const yoy = {
-        period: targetMM,
-        lastYearPeriod: lastYearMM,
-        sale: curr ? Number(curr.sale_amt || 0) : null,
-        sale_lastYear: prev ? Number(prev.sale_amt || 0) : null,
-        sale_delta: curr && prev ? Number(curr.sale_amt || 0) - Number(prev.sale_amt || 0) : null,
-        sale_deltaPct: curr && prev && Number(prev.sale_amt || 0) !== 0
-            ? ((Number(curr.sale_amt || 0) - Number(prev.sale_amt || 0)) / Number(prev.sale_amt || 0) * 100).toFixed(2)
-            : null,
-        netProfit: curr ? Number(curr.net_profit_amt || 0) : null,
-        netProfit_lastYear: prev ? Number(prev.net_profit_amt || 0) : null,
-        netProfit_deltaPct: curr && prev && Number(prev.net_profit_amt || 0) !== 0
-            ? ((Number(curr.net_profit_amt || 0) - Number(prev.net_profit_amt || 0)) / Math.abs(Number(prev.net_profit_amt || 0)) * 100).toFixed(2)
-            : null,
-        Z_score: curr ? Number(curr.Z_score || 0).toFixed(2) : null,
-        Z_score_lastYear: prev ? Number(prev.Z_score || 0).toFixed(2) : null,
+        period: curr?.YYYY_MM || targetMM,
+        lastYearPeriod: prev?.YYYY_MM || lastYearMM,
+        isExactYoY: prev ? prev.YYYY_MM === lastYearMM : false,
+
+        sale: curr ? Number(curr.sale_amt || 0).toFixed(2) : null,
+        sale_lastYear: prev ? Number(prev.sale_amt || 0).toFixed(2) : null,
+        sale_delta: curr && prev ? (Number(curr.sale_amt || 0) - Number(prev.sale_amt || 0)).toFixed(2) : null,
+        sale_deltaPct: calcDelta(curr?.sale_amt, prev?.sale_amt, false).deltaPct,
+        sale_trend: calcDelta(curr?.sale_amt, prev?.sale_amt, false).trend,
+
+        netProfit: curr ? Number(curr.net_profit_amt || 0).toFixed(2) : null,
+        netProfit_lastYear: prev ? Number(prev.net_profit_amt || 0).toFixed(2) : null,
+        netProfit_deltaPct: calcDelta(curr?.net_profit_amt, prev?.net_profit_amt, false).deltaPct,
+        netProfit_trend: calcDelta(curr?.net_profit_amt, prev?.net_profit_amt, false).trend,
+
         grossMargin: curr ? Number(curr.gross_margin || 0).toFixed(2) : null,
         grossMargin_lastYear: prev ? Number(prev.gross_margin || 0).toFixed(2) : null,
+        grossMargin_delta: calcDelta(curr?.gross_margin, prev?.gross_margin, false).delta,
+        grossMargin_trend: calcDelta(curr?.gross_margin, prev?.gross_margin, false).trend,
+
         netMargin: curr ? Number(curr.net_margin || 0).toFixed(2) : null,
-        netMargin_lastYear: prev ? Number(prev.net_margin || 0).toFixed(2) : null
+        netMargin_lastYear: prev ? Number(prev.net_margin || 0).toFixed(2) : null,
+        netMargin_delta: calcDelta(curr?.net_margin, prev?.net_margin, false).delta,
+        netMargin_trend: calcDelta(curr?.net_margin, prev?.net_margin, false).trend,
+
+        Z_score: curr ? Number(curr.Z_score || 0).toFixed(2) : null,
+        Z_score_lastYear: prev ? Number(prev.Z_score || 0).toFixed(2) : null,
+        Z_score_delta: calcDelta(curr?.Z_score, prev?.Z_score, false).delta,
+        Z_score_trend: calcDelta(curr?.Z_score, prev?.Z_score, false).trend,
+
+        debtRatio: curr ? Number(curr.debt_ratio || 0).toFixed(2) : null,
+        debtRatio_lastYear: prev ? Number(prev.debt_ratio || 0).toFixed(2) : null,
+        debtRatio_delta: calcDelta(curr?.debt_ratio, prev?.debt_ratio, true).delta,
+        debtRatio_trend: calcDelta(curr?.debt_ratio, prev?.debt_ratio, true).trend,
+
+        currentRatio: curr ? Number(curr.current_ratio || 0).toFixed(2) : null,
+        currentRatio_lastYear: prev ? Number(prev.current_ratio || 0).toFixed(2) : null,
+        currentRatio_delta: calcDelta(curr?.current_ratio, prev?.current_ratio, false).delta,
+        currentRatio_trend: calcDelta(curr?.current_ratio, prev?.current_ratio, false).trend
     };
 
     // 12 個月趨勢
