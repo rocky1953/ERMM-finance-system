@@ -21,6 +21,20 @@ registerPage('dashboard', async (c) => {
             <div class="card-title">${t('dash.risk_panel')}</div>
             <div id="riskPanel">${t('loading')}</div>
         </div>
+        <div class="card" style="margin-top:16px;border-left:4px solid #7c3aed;background:linear-gradient(135deg,#f5f3ff,#fff);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <div class="card-title" style="margin:0;">🤖 ${t('daily_summary.title') || 'AI 每日执行摘要'}
+                    <span id="aiSumMeta" style="font-size:11px;color:#95a5a6;font-weight:normal;"></span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn btn-sm btn-primary" id="aiSumGenBtn" onclick="genDailySummary()" style="background:#7c3aed;border:none;color:#fff;">⚡ ${t('daily_summary.generate') || '立即生成'}</button>
+                    <button class="btn btn-sm" id="aiSumHistoryBtn" onclick="showDailySummaryHistory()">📋 ${t('daily_summary.history') || '历史'}</button>
+                </div>
+            </div>
+            <div id="aiSummaryCard" style="min-height:120px;">
+                <div style="text-align:center;color:#95a5a6;padding:30px;">⏳ ${t('loading')}</div>
+            </div>
+        </div>
     `;
 
     // ===== 弹窗共用基础设施（明细钻取 / Z-Score 说明）=====
@@ -409,4 +423,116 @@ registerPage('dashboard', async (c) => {
     } catch (err) {
         c.innerHTML = `<div class="card"><p style="color:#e74c3c">❌ ${t('load_failed')}: ${err.message}</p><p style="margin-top:10px"><button class="btn btn-primary" onclick="navigate('dashboard')">${t('refresh')}</button></p></div>`;
     }
+
+    // === C-1 每日 AI 摘要 ===
+    try { loadDailySummary(); } catch (e) { console.warn('[daily-summary] 加载失败:', e.message); }
 });
+
+// ======== C-1 每日 AI 摘要 全局函数 ========
+async function loadDailySummary() {
+    const card = document.getElementById('aiSummaryCard');
+    const meta = document.getElementById('aiSumMeta');
+    const btn = document.getElementById('aiSumGenBtn');
+    if (!card) return;
+    try {
+        const res = await API.get('/api/daily-summary/latest');
+        if (!res.data?.has_summary) {
+            // 没历史 — 显示聚合快照 + 引导
+            const agg = res.data?.aggregate;
+            const html = agg ? renderAggregateTeaser(agg) : '';
+            card.innerHTML = `<div style="padding:12px;">
+                <div style="font-size:13px;color:#64748b;margin-bottom:10px;">${t('daily_summary.no_summary_hint') || '尚未生成摘要，点击按钮立即生成一份！'}</div>
+                ${html}
+            </div>`;
+            meta.textContent = '';
+            return;
+        }
+        const s = res.data;
+        meta.textContent = `· ${s.summary_date} · ${s.provider || 'auto'} · ${s.duration_ms ? s.duration_ms + 'ms' : ''}`;
+        // 渲染 alert badge + content（截断前 600 字，详情展开用历史）
+        const alerts = s.alerts_json || [];
+        let alertBadges = '';
+        if (alerts.length > 0) {
+            const colors = { danger: '#dc2626', warning: '#f59e0b' };
+            alertBadges = alerts.slice(0, 3).map(a =>
+                `<span style="background:${colors[a.level] || '#64748b'};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:4px;">${a.level === 'danger' ? '🔴' : '🟡'} ${a.bu || ''} ${a.msg}</span>`
+            ).join('');
+        }
+        const contentHtml = (s.content || '').replace(/\n/g, '<br>').slice(0, 800);
+        card.innerHTML = `<div style="padding:8px 12px;">
+            ${alertBadges ? `<div style="margin-bottom:10px;">${alertBadges}</div>` : ''}
+            <div style="font-weight:700;color:#1e1b4b;margin-bottom:8px;">${s.title}</div>
+            <div style="font-size:13px;color:#475569;line-height:1.7;white-space:pre-wrap;">${contentHtml}${(s.content || '').length > 800 ? '…' : ''}</div>
+            ${(s.content || '').length > 800 ? `<button class="btn btn-sm" style="margin-top:8px;" onclick="showDailySummaryHistory()">📖 ${t('daily_summary.read_full') || '查看完整摘要'}</button>` : ''}
+        </div>`;
+    } catch (e) {
+        card.innerHTML = `<div style="padding:20px;text-align:center;color:#95a5a6;">⚠️ ${e.message}</div>`;
+    }
+}
+
+function renderAggregateTeaser(agg) {
+    const g = agg.group_consolidated || {};
+    const r = agg.risk_ranking || [];
+    const a = (agg.alerts || []).slice(0, 3);
+    let html = `<div style="background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;">`;
+    html += `<b>📊 ${g.period || ''} 快覽：</b> 合併營收 <b>${(+g.consolidated_sale).toLocaleString()}</b> · 淨利 <b>${(+g.consolidated_net_profit).toLocaleString()}</b> · 利潤率 ${g.profit_margin}`;
+    if (a.length > 0) {
+        html += `<br><b>⚠️ 風險：</b>`;
+        a.forEach(x => html += `<span style="color:${x.level === 'danger' ? '#dc2626' : '#f59e0b'};margin-right:8px;">${x.bu}: ${x.msg}</span>`);
+    }
+    html += `</div>`;
+    return html;
+}
+
+async function genDailySummary() {
+    const btn = document.getElementById('aiSumGenBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ 生成中...'; }
+    try {
+        const res = await API.post('/api/daily-summary/generate', { force: true, lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW' });
+        UI.toast(res.data.is_llm ? '✨ AI 摘要生成完成！' : '📊 规则引擎摘要生成完成', 'success');
+        await loadDailySummary();
+    } catch (e) {
+        UI.toast('❌ ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ ' + (t('daily_summary.generate') || '立即生成'); }
+    }
+}
+
+async function showDailySummaryHistory() {
+    let list = [];
+    try {
+        const res = await API.get('/api/daily-summary/history?pageSize=5');
+        list = res.data?.list || [];
+    } catch (e) { UI.toast(e.message, 'error'); return; }
+
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    let rows = list.map(r => `
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin-bottom:10px;cursor:pointer;" onclick="viewDailySummary(${r.uid})">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#7f8c8d;margin-bottom:6px;">
+                <span>🕒 ${esc(r.generated_time)} · ${esc(r.provider || 'auto')}${r.duration_ms ? ' · ' + r.duration_ms + 'ms' : ''}</span>
+                <span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:10px;font-size:11px;">${esc(r.trigger_type)}</span>
+            </div>
+            <div style="font-weight:600;color:#1e1b4b;font-size:14px;">${esc(r.title)}</div>
+        </div>`).join('');
+    if (!rows) rows = `<div style="text-align:center;color:#95a5a6;padding:30px;">${t('daily_summary.no_history') || '暂无历史'}</div>`;
+
+    UI.modal(t('daily_summary.title') + ' — ' + (t('daily_summary.history') || '历史'), `
+        <div style="max-height:65vh;overflow-y:auto;">${rows}</div>
+    `, `<button class="btn" onclick="UI.closeModal()">${t('close')}</button>`);
+}
+
+async function viewDailySummary(uid) {
+    try {
+        const all = await API.get('/api/daily-summary/history?pageSize=50');
+        const item = (all.data?.list || []).find(x => x.uid === uid);
+        if (!item) return;
+        UI.closeModal();
+        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        UI.modal(esc(item.title), `
+            <div style="font-size:12px;color:#7f8c8d;margin-bottom:10px;">
+                🕒 ${esc(item.generated_time)} · ${esc(item.provider)} · ${esc(item.trigger_type)}
+            </div>
+            <div style="white-space:pre-wrap;line-height:1.7;color:#334155;font-size:14px;max-height:60vh;overflow-y:auto;">${esc(item.title)}\n\n${esc(item.content)}</div>
+        `, `<button class="btn" onclick="UI.closeModal()">${t('close')}</button>`);
+    } catch (e) { UI.toast(e.message, 'error'); }
+}
