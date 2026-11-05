@@ -15,7 +15,7 @@ registerPage('dataQuality', async (c) => {
     };
 
     async function apiScan() {
-        const token = localStorage.getItem('token') || '';
+        const token = Auth.getToken();
         const res = await fetch('/api/data-quality/scan', { headers: { Authorization: 'Bearer ' + token } });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
         const j = await res.json();

@@ -36,7 +36,7 @@ registerPage('arSmart', async (c) => {
     }
 
     async function apiGet(path) {
-        const token = localStorage.getItem('token') || '';
+        const token = Auth.getToken();
         const res = await fetch(path, { headers: { Authorization: 'Bearer ' + token } });
         if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
         const j = await res.json();
