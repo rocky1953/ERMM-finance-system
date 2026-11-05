@@ -1,10 +1,24 @@
 /**
- * AI 问答页面
- * 两种模式：
- *   1. 未勾选 LLM：规则引擎自然语言查询 ermm_db
- *   2. 勾选 LLM：Kimi / DeepSeek 依财务资料上下文回答
+ * AI 问答页面（T-1 RAG 增强版）
+ * 新增：
+ *   - 🧠 使用知识库开关（默认开启）
+ *   - 💬 对话记忆开关（同一页签内多轮带上下文）
+ *   - 📚 回答区显示知识库参考来源卡片
+ *   - 数据源标签标注（📊 DB / 📚 KB / 🧠 AI）
  */
+
+// 生成唯一 conversation_id（页面首次加载时生成一次，保存在 sessionStorage）
+function getConvId() {
+    let cid = sessionStorage.getItem('ai_conv_id');
+    if (!cid) {
+        cid = 'conv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        sessionStorage.setItem('ai_conv_id', cid);
+    }
+    return cid;
+}
+
 registerPage('aiqa', async (c) => {
+    const convId = getConvId(); // 本次页面会话的 conversation_id
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">🤖 ${t('page.aiqa')} <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">${t('aiqa.subtitle')}</small></h2>
@@ -24,11 +38,18 @@ registerPage('aiqa', async (c) => {
                 <label style="background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;user-select:none;">
                     <input type="checkbox" id="aiUseLLM" onchange="AIQA.toggleLLM()"> 🧠 ${t('llm.toggle')}
                 </label>
+                <label id="aiKBLabel" style="display:none;background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:none;align-items:center;gap:6px;user-select:none;">
+                    <input type="checkbox" id="aiUseKB" checked onchange="AIQA.toggleKB()"> 📚 ${t('aiqa.use_knowledge') || '使用知识库'}
+                </label>
+                <label id="aiMemLabel" style="display:none;background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:none;align-items:center;gap:6px;user-select:none;">
+                    <input type="checkbox" id="aiUseMem" onchange="AIQA.toggleMem()"> 💬 ${t('aiqa.use_memory') || '对话记忆'}
+                </label>
                 <select id="aiProvider" style="display:none;padding:6px 10px;border-radius:6px;border:none;font-size:13px;">
                     <option value="kimi">Kimi</option>
                     <option value="deepseek">DeepSeek</option>
                 </select>
                 <button type="button" id="aiKeyBtn" class="btn btn-sm" style="display:none;background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.5);" onclick="LLMKeyMgr.open()">⚙️ ${t('llm.key_mgr')}</button>
+                <button type="button" id="aiNewConvBtn" class="btn btn-sm" style="display:none;background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.5);" onclick="AIQA.newConversation()">🔄 ${t('aiqa.new_conv') || '新对话'}</button>
                 <span id="aiLLMStatus" style="font-size:12px;color:rgba(255,255,255,0.9);"></span>
             </div>
             <div id="aiSuggest" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;"></div>
@@ -47,7 +68,7 @@ registerPage('aiqa', async (c) => {
         </div>
     `;
     document.getElementById('aiBu').value = State.bu_no;
-    const defMonth = State.YYYY_MM || '2025-07';
+    const defMonth = State.YYYY_MM || '2025-12';
     document.getElementById('aiMonth').value = defMonth;
     loadSuggestions();
     LLMKeyMgr.refreshStatus();
@@ -65,22 +86,36 @@ async function loadSuggestions() {
     } catch (e) { /* ignore */ }
 }
 
+// 用于多轮对话的内存 history（前端维护，不用查 DB）
+const convHistory = [];
+
 const AIQA = {
-    // 点击建议问题：填入输入框并立即提问
     fillSuggestion(el) {
         document.getElementById('aiInput').value = el.dataset.sg || '';
         this.ask();
     },
 
-    // 勾选 LLM 后显示模型选择 + Key 管理按钮
     toggleLLM() {
         const useLLM = document.getElementById('aiUseLLM').checked;
         document.getElementById('aiProvider').style.display = useLLM ? '' : 'none';
         document.getElementById('aiKeyBtn').style.display = useLLM ? '' : 'none';
+        // RAG 新按钮
+        document.getElementById('aiKBLabel').style.display = useLLM ? '' : 'none';
+        document.getElementById('aiMemLabel').style.display = useLLM ? '' : 'none';
+        document.getElementById('aiNewConvBtn').style.display = useLLM ? '' : 'none';
         this.renderStatus();
     },
 
-    // 显示当前选择模型的 Key 设定状态
+    toggleKB() { /* 状态自动取 checkbox，ask() 里读取 */ },
+    toggleMem() { /* 同上 */ },
+
+    newConversation() {
+        sessionStorage.removeItem('ai_conv_id');
+        convHistory.length = 0;
+        getConvId(); // 生成新 conv_id
+        UI.toast('🆕 已开启新对话', 'info');
+    },
+
     renderStatus() {
         const el = document.getElementById('aiLLMStatus');
         if (!el) return;
@@ -97,20 +132,25 @@ const AIQA = {
         const q = input.value.trim();
         if (!q) return;
         const bu = document.getElementById('aiBu').value;
-        // 读取月份并标准化为 YYYY-MM 格式
         const mRaw = document.getElementById('aiMonth').value;
         let mm = null;
         if (mRaw) {
-            // 支援 YYYY-MM, YYYY/MM, YYYYMM 三种格式
             const m = mRaw.match(/^(\d{4})[-/]?(\d{1,2})/);
             if (m) mm = `${m[1]}-${m[2].padStart(2, '0')}`;
         }
         const useLLM = document.getElementById('aiUseLLM').checked;
         const provider = document.getElementById('aiProvider').value;
+        const useKB = useLLM ? document.getElementById('aiUseKB').checked : false;
+        const useMem = useLLM ? document.getElementById('aiUseMem').checked : false;
         State.bu_no = bu;
 
         const chat = document.getElementById('aiChat');
         const askBtn = document.getElementById('aiAskBtn');
+
+        // 清除欢迎占位符
+        const welcomeEl = chat.querySelector(':scope > div[style*="text-align:center"]');
+        if (welcomeEl) welcomeEl.remove();
+
         // 使用者讯息
         chat.innerHTML += `<div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
             <div style="background:#2563eb;color:#fff;padding:10px 14px;border-radius:12px 12px 2px 12px;max-width:70%;">${q}</div>
@@ -122,32 +162,76 @@ const AIQA = {
         let thinkingEl = null;
         if (useLLM) {
             askBtn.disabled = true;
+            const ragFlags = [];
+            if (useKB) ragFlags.push('📚');
+            if (useMem) ragFlags.push('💬');
             chat.innerHTML += `<div id="aiThinking" style="display:flex;margin-bottom:12px;">
-                <div style="background:#f5f3ff;color:#7c3aed;padding:12px 16px;border-radius:12px 12px 12px 2px;font-size:13px;">🧠 ${t('llm.thinking')}</div>
+                <div style="background:#f5f3ff;color:#7c3aed;padding:12px 16px;border-radius:12px 12px 12px 2px;font-size:13px;">🧠 ${t('llm.thinking')}${ragFlags.length ? ' · RAG 模式 ' + ragFlags.join(' ') : ''}</div>
             </div>`;
             thinkingEl = document.getElementById('aiThinking');
             chat.scrollTop = chat.scrollHeight;
         }
 
-        // AI 回复
+        // 准备请求参数
+        const postBody = {
+            question: q, bu_no: bu, YYYY_MM: mm,
+            useLLM: useLLM, provider: provider,
+            lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW',
+            xuser_name: (Auth.getUser() && Auth.getUser().user_name) || ''
+        };
+        if (useLLM) {
+            postBody.useKnowledge = useKB;
+            if (useMem) {
+                postBody.conversation_id = getConvId();
+                postBody.history = convHistory.slice(-5);
+            }
+        }
+
         try {
-            const res = await API.post('/api/aiqa/ask', {
-                question: q, bu_no: bu, YYYY_MM: mm,
-                useLLM: useLLM, provider: provider,
-                lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW',
-                xuser_name: (Auth.getUser() && Auth.getUser().user_name) || ''
-            });
+            const res = await API.post('/api/aiqa/ask', postBody);
             if (thinkingEl) thinkingEl.remove();
             const a = res.data;
-            const color = a.metric === 'llm' ? '#7c3aed'
+
+            // 记录到多轮历史
+            if (useLLM) convHistory.push({ question: q, answer: a.answer });
+
+            const isLLM = a.metric === 'llm';
+            const color = isLLM ? '#7c3aed'
                 : (a.metric && (a.metric.includes('margin') || a.metric.includes('ratio') || a.metric.includes('roe'))) ? '#2563eb' : '#667eea';
-            // LLM 回答可能含换行，使用 pre-wrap 保留格式
-            const answerStyle = a.metric === 'llm' ? 'white-space:pre-wrap;line-height:1.7;' : '';
+            const answerStyle = isLLM ? 'white-space:pre-wrap;line-height:1.7;' : '';
+
+            // 数据源标签
+            const srcTags = [];
+            if (a.ragSources) {
+                const tagMap = {
+                    db: '📊 DB', yoy: '📈 YoY', trend: '📉 Trend',
+                    benchmark: '🎯 Peer', knowledge: '📚 KB', memory: '💬 Mem'
+                };
+                for (const s of a.ragSources) {
+                    if (tagMap[s]) srcTags.push(tagMap[s]);
+                }
+            }
+
+            // 知识库参考来源卡片
+            const kbHits = a.knowledgeHits || [];
+            let kbCard = '';
+            if (kbHits.length > 0) {
+                const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+                kbCard = `<div style="margin-top:10px;background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:8px 12px;font-size:12px;">
+                    <div style="font-weight:600;color:#854d0e;margin-bottom:4px;">📚 ${t('aiqa.ref_sources') || '知识库参考来源'}：</div>
+                    ${kbHits.map(k => `<div style="color:#713f12;">• ${esc(k.title)} <span style="color:#a16207;">(${esc(k.category)})</span></div>`).join('')}
+                </div>`;
+            }
+
+            const srcBadges = srcTags.length > 0 ? `<div style="margin-top:8px;font-size:11px;">${srcTags.map(t => `<span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:10px;margin-right:4px;">${t}</span>`).join('')}</div>` : '';
+
             chat.innerHTML += `<div style="display:flex;margin-bottom:12px;">
-                <div style="background:#f1f5f9;padding:12px 16px;border-radius:12px 12px 12px 2px;max-width:80%;">
-                    <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:${color};${answerStyle}">${a.metric === 'llm' ? '🧠 ' : '📊 '}${a.answer}</div>
-                    ${a.detail ? `<div style="font-size:13px;color:#555;margin-bottom:8px;line-height:1.6;">${a.detail}</div>` : ''}
-                    ${a.suggestion ? `<div style="font-size:12px;color:#2980b9;background:#eaf2f8;padding:6px 10px;border-radius:6px;">💡 ${a.suggestion}</div>` : ''}
+                <div style="background:#f1f5f9;padding:12px 16px;border-radius:12px 12px 12px 2px;max-width:85%;">
+                    <div style="font-size:15px;font-weight:700;margin-bottom:8px;color:${color};${answerStyle}">${isLLM ? '🧠 ' : '📊 '}${a.answer}</div>
+                    ${a.detail ? `<div style="font-size:12px;color:#64748b;margin-bottom:6px;">${a.detail}</div>` : ''}
+                    ${srcBadges}
+                    ${kbCard}
+                    ${a.suggestion ? `<div style="font-size:12px;color:#2980b9;background:#eaf2f8;padding:6px 10px;border-radius:6px;margin-top:6px;">💡 ${a.suggestion}</div>` : ''}
                 </div>
             </div>`;
         } catch (e) {
@@ -166,7 +250,6 @@ const AIQA = {
 const LLMKeyMgr = {
     configs: [],
 
-    // 页面载入时拉取服务商设定状态
     async refreshStatus() {
         try {
             const res = await API.get('/api/llm/providers');
@@ -227,7 +310,6 @@ const LLMKeyMgr = {
 
     async test(provider) {
         try {
-            // 弹窗中若有临时输入新 Key 一并带入测试
             const keyEl = document.getElementById(`llm_key_${provider}`);
             const api_key = keyEl ? keyEl.value.trim() : '';
             UI.toast(t('llm.testing'), 'info');
@@ -257,7 +339,6 @@ const AIRecords = {
             </div>
             <div id="airPager" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:13px;"></div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('llm.close')}</button>`);
-        // 加宽弹窗
         const m = document.querySelector('#modalOverlay .modal');
         if (m) { m.style.width = '820px'; m.style.maxWidth = '94vw'; }
         document.getElementById('airBu').value = State.bu_no || '';
@@ -300,7 +381,6 @@ const AIRecords = {
                     ${page} / ${totalPages}
                     <button class="btn btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="AIRecords.go(${page + 1})">${t('airecords.next')} ›</button>
                 </span>`;
-            // 快取当前页资料供复制使用
             this._cache = {};
             (list || []).forEach(r => { this._cache[r.uid] = r; });
         } catch (e) {

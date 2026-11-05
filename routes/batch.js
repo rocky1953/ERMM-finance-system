@@ -400,6 +400,8 @@ router.post('/step7', async (req, res) => {
                     VAT_amt     = GREATEST(?,0) - GREATEST(?,0),
                     ttl_asset_amt = cash_amt + COALESCE(deposite_amt,0) + AR_amt + AR_bill_amt
                                   + stock_P_amt + stock_M_amt + stock_S_amt - reserve_loss_amt,
+                    sale_amt = ?,
+                    sale_cost_amt = ?,
                     batch_id     = 'step7'
                 WHERE bu_no=? AND YYYY_MM=?
             `, sanitizeParams([
@@ -410,6 +412,8 @@ router.post('/step7', async (req, res) => {
                 Math.round(stock * 0.2),
                 reserve,
                 AR_inv, AP_inv,
+                invMap['AR'] || 0,
+                invMap['AP'] || 0,
                 bu_no, a.YYYY_MM
             ]));
             updated++;

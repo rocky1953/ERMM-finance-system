@@ -1,4 +1,4 @@
-﻿﻿/**
+﻿/**
  * 5 套風險預警模型路由
  * Z-Score / Z2-Score / Z3-Score / BZ 破產概率 / JZ 營運能力
  * Wolf 模型 + KPI 燈號
@@ -176,19 +176,81 @@ router.post('/calc', async (req, res) => {
     }
 });
 
-// ===== 查詢風險結果 =====
+// ===== 查詢風險結果（若 Z_score=0 則即時重算）=====
 router.get('/', async (req, res) => {
     try {
-        const { bu_no, YYYY_MM } = req.query;
+        const { bu_no, YYYY_MM, auto_recalc } = req.query;
         let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, BZ_X1, BZ_X2, BZ_X3, BZ_X4, BZ_X5, JZ_ZA, JZ_ZB, JZ_ZC, JZ_ZD, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM mgm_finance_summary WHERE 1=1';
         const params = [];
         if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
         if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
         sql += ' ORDER BY YYYY_MM DESC LIMIT 60';
         const [rows] = await pool.execute(sql, params);
+
+        // 即時重算：Z_score 為 0/NULL 但有原始資產/銷貨資料 → lazy calc
+        if (auto_recalc !== '0') {
+            const need = rows.filter(r =>
+                (!r.Z_score || Number(r.Z_score) === 0) &&
+                Number(r.ttl_asset_amt || r.ttl_asset || 0) > 0 &&
+                Number(r.sale_amt || 0) > 0
+            );
+            for (const r of need) {
+                try { await recalcOne(r.uid); } catch (e) { /* ignore one failure */ }
+            }
+            if (need.length > 0) {
+                const [fresh] = await pool.execute(sql, params);
+                return ok(res, fresh);
+            }
+        }
         ok(res, rows);
     } catch (err) { fail500(res, err); }
 });
+
+// 單筆重算（與 POST /calc 公式一致）
+async function recalcOne(uid) {
+    const [rows] = await pool.execute('SELECT * FROM mgm_finance_summary WHERE uid=?', [uid]);
+    if (rows.length === 0) return;
+    const r = rows[0];
+    const ttl_asset = Number(r.ttl_asset_amt || 1) || 1;
+    const ttl_debet = Number(r.ttl_debet_amt || r.debet_amt || 1) || 1;
+    const equity = Number(r.stockholder_amt || 1) || 1;
+    const sale = Number(r.sale_amt || 0);
+    const current_asset = Number(r.current_asset_amt || Number(r.cash_amt||0)+Number(r.deposite_amt||0)+Number(r.AR_amt||0)+Number(r.stock_P_amt||0)+Number(r.stock_M_amt||0));
+    const current_debet = Number(r.current_debet_amt || Number(r.loan_amt||0)+Number(r.AP_amt||0)+Number(r.AP_tax_amt||0)+Number(r.AP_salary_amt||0));
+    const WC = current_asset - current_debet;
+    const retained = Number(r.retained_income_amt || Number(r.accumulated_amt||0)+Number(r.current_PL_amt||0));
+    const EBIT = Number(r.operation_profit_amt || 0);
+    const X1 = WC / ttl_asset;
+    const X2 = retained / ttl_asset;
+    const X3 = EBIT / ttl_asset;
+    const X4 = equity / ttl_debet;
+    const X5 = sale / ttl_asset;
+    const Z_score = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 0.999*X5;
+    const wall_mode = Z_score >= 2.9 ? '安全' : (Z_score >= 1.23 ? '灰色' : '破產區');
+    let risk_color = 'GREEN';
+    if (Z_score < 1.23) risk_color = 'RED';
+    else if (Z_score < 2.9) risk_color = 'YELLOW';
+    const current_ratio = current_debet > 0 ? current_asset / current_debet : 0;
+    const quick_ratio = current_debet > 0 ? (current_asset - Number(r.stock_P_amt||0)) / current_debet : 0;
+    const debt_ratio = ttl_asset > 0 ? ttl_debet / ttl_asset * 100 : 0;
+    const ROA = ttl_asset > 0 ? Number(r.net_profit_amt||0) / ttl_asset * 100 : 0;
+    const ROE = equity > 0 ? Number(r.net_profit_amt||0) / equity * 100 : 0;
+    const gross_margin = sale > 0 ? Number(r.BIZ_major_margin_amt||0) / sale * 100 : 0;
+    const net_margin = sale > 0 ? Number(r.net_profit_amt||0) / sale * 100 : 0;
+    await pool.execute(`UPDATE mgm_finance_summary SET
+        Z_X1=?, Z_X2=?, Z_X3=?, Z_X4=?, Z_X5=?,
+        Z_score=?, Z2_score=?, Z3_score=?,
+        wall_mode=?, risk_color=?,
+        current_ratio=?, quick_ratio=?, debt_ratio=?, ROE=?, ROA=?, gross_margin=?, net_margin=?,
+        update_time=NOW()
+    WHERE uid=?`, [X1,X2,X3,X4,X5,
+        Z_score,
+        0.717*X1+0.847*X2+3.107*X3+0.420*X4+0.998*X5,
+        6.56*X1+3.26*X2+6.72*X3+1.05*X4,
+        wall_mode, risk_color,
+        current_ratio, quick_ratio, debt_ratio, ROE, ROA, gross_margin, net_margin,
+        uid]);
+}
 
 // ===== KPI 燈號判定 =====
 router.post('/kpi-light', async (req, res) => {

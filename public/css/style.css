@@ -15,6 +15,7 @@
     --sidebar-w: 230px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100vh; overflow: hidden; }
 body { font-family: "Microsoft JhengHei", "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); }
 
 /* ===== 登入鎖定：未登入時隱藏整個功能選單 ===== */
@@ -99,17 +100,36 @@ body.locked #loginScreen { display: flex; }
 #sidebar .nav-icon { width: 20px; text-align: center; font-size: 1.1em; }
 
 /* ===== 主内容 ===== */
-#main { margin-left: var(--sidebar-w); padding: 20px; min-height: 100vh; }
-#main .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-#main .topbar h1 { font-size: 1.5em; color: var(--primary); }
+#main { margin-left: var(--sidebar-w); padding: 12px 20px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+#main .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
+#main .topbar h1 { font-size: 1.35em; color: var(--primary); }
 #main .topbar .actions { display: flex; gap: 10px; align-items: center; }
+#pageContent { flex: 1; overflow: auto; min-height: 0; }
 
 /* ===== 卡片 ===== */
 .card {
-    background: var(--card-bg); border-radius: 10px; padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px;
+    background: var(--card-bg); border-radius: 10px; padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px;
 }
-.card-title { font-size: 1.1em; font-weight: 600; margin-bottom: 15px; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+.card-title { font-size: 1.05em; font-weight: 600; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+
+/* ===== 仪表板页面（无滚动条，一屏完整显示） ===== */
+.dash-page {
+    display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0;
+}
+.dash-page .kpi-grid { flex-shrink: 0; margin-bottom: 0; gap: 10px; }
+.dash-page .kpi-card { padding: 12px 14px; }
+.dash-page .kpi-card .kpi-value { font-size: 1.5em; }
+.dash-page .dash-charts-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0;
+}
+.dash-page .dash-chart-card {
+    height: 100%; margin-bottom: 0; padding: 10px 14px;
+    display: flex; flex-direction: column; min-height: 0;
+}
+.dash-page .dash-chart-card canvas { flex: 1; width: 100% !important; min-height: 0; }
+.dash-page .dash-risk-card { flex-shrink: 0; padding: 10px 14px; margin-bottom: 0; }
+.dash-page .card-title { font-size: 0.92em; margin-bottom: 6px; padding-bottom: 4px; border-bottom-width: 1px; }
 
 /* ===== KPI 卡片 ===== */
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }

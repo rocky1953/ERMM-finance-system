@@ -4,19 +4,20 @@
 registerPage('dashboard', async (c) => {
     const { bu_no, YYYY_MM } = State;
 
+    c.className = 'dash-page';
     c.innerHTML = `
         <div class="kpi-grid" id="kpiGrid"><div class="empty-state"><div class="icon">⏳</div>${t('loading')}</div></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-            <div class="card">
+        <div class="dash-charts-row">
+            <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.pl_chart')}<span class="dash-drill-hint">💡 ${t('dash.detail.hint')}</span></div>
-                <canvas id="plChart" height="200"></canvas>
+                <canvas id="plChart"></canvas>
             </div>
-            <div class="card">
+            <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.bs_chart')}</div>
-                <canvas id="bsChart" height="200"></canvas>
+                <canvas id="bsChart"></canvas>
             </div>
         </div>
-        <div class="card" style="margin-top:20px">
+        <div class="card dash-risk-card">
             <div class="card-title">${t('dash.risk_panel')}</div>
             <div id="riskPanel">${t('loading')}</div>
         </div>
