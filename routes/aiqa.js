@@ -38,11 +38,24 @@ router.post('/ask', async (req, res) => {
                 if (!defaultCfg) return fail(res, '尚未設定任何 LLM 服務商，請至「系統設定 → API Key 管理」');
                 providerToUse = defaultCfg.provider;
             }
+
+            // === E2 多輪記憶 DB 持久化 ===
+            // 前端可選傳 history；若沒傳且有 convId，後端自動從 DB 拉最近 5 輪
+            let finalHistory = Array.isArray(history) ? history : [];
+            if (finalHistory.length === 0 && convId) {
+                try {
+                    finalHistory = await loadConversationFromDB(convId);
+                    console.log(`[aiqa] 從 DB 補充對話記憶 conv=${convId}, 補 ${finalHistory.length} 輪`);
+                } catch (e) {
+                    console.warn('[aiqa] loadConversationFromDB 失敗（不影響主流程）:', e.message);
+                }
+            }
+
             try {
                 const result = await askLLMRAG(question, bu, mm, providerToUse, lang, {
                     conversation_id: convId,
-                    useKnowledge: useKnowledge !== false, // 預設開啟
-                    history: Array.isArray(history) ? history : []
+                    useKnowledge: useKnowledge !== false,
+                    history: finalHistory
                 });
                 try {
                     await saveAIRecord({
@@ -62,8 +75,57 @@ router.post('/ask', async (req, res) => {
             }
         }
 
-        // 未勾選 → 原有規則引擎
+        // 未勾選 → 原有規則引擎（加上 KB 參考來源增強）
         const result = await analyzeQuestion(question.toLowerCase(), bu, mm);
+
+        // === E3 規則引擎融合 RAG ===
+        // 規則引擎也查知識庫 + 同業標竿，附加到 response 的 kb_refs / benchmark 字段
+        try {
+            const kbHits = await searchKnowledge(question, bu, 3);
+            if (kbHits.length > 0) {
+                result.kb_refs = kbHits.map(k => ({
+                    title: k.title, category: k.category, score: Number(k.score || 0).toFixed(2)
+                }));
+                // 在 suggestion 末追加 KB 參考提示
+                const kbHint = kbHits.slice(0, 2).map(k => `📚 ${k.title}`).join('；');
+                result.suggestion = (result.suggestion || '') + `｜參考：${kbHint}`;
+            }
+
+            // 同業標竿快速對比（給規則引擎 KPI 查詢加上「vs 同業」標籤）
+            const stdMM = normalizeYYYYMM(mm);
+            const yyyy = stdMM ? Number(stdMM.split('-')[0]) : new Date().getFullYear();
+            const bench = await getIndustryBenchmark(bu, yyyy);
+            if (bench && result.value != null && typeof result.value === 'number') {
+                // 嘗試匹配 KPI 到 benchmark
+                const kpiMap = {
+                    gross_margin: 'gross_profit', net_margin: 'net_profit_margin',
+                    debt_ratio: 'debt_ratio', current_ratio: 'current_ratio',
+                    roe: 'net_profit_margin', ar_turn: 'ar_turn'
+                };
+                const bkpi = kpiMap[result.metric];
+                const benchRow = bench.benchmarks.find(b => b.kpi === bkpi);
+                if (benchRow) {
+                    const myVal = Number(result.value);
+                    const median = Number(benchRow.median);
+                    const p75 = Number(benchRow.p75);
+                    const p25 = Number(benchRow.p25);
+                    let pos = '≈ 同業中位';
+                    if (myVal > p75) pos = '↑ 優於同業 P75';
+                    else if (myVal > median) pos = '↑ 優於同業中位';
+                    else if (myVal < p25) pos = '↓ 低於同業 P25';
+                    else if (myVal < median) pos = '↓ 低於同業中位';
+                    result.benchmark_pos = {
+                        industry: bench.industry,
+                        year: bench.year,
+                        median, p25, p75, myVal, pos
+                    };
+                    result.detail = (result.detail || '') + `｜同業 ${bench.industry} ${bench.year} 中位 ${median}，本公司 ${myVal.toFixed(2)} ${pos}`;
+                }
+            }
+        } catch (ragErr) {
+            console.warn('[aiqa] 規則引擎 KB 增強失敗（不影響主流程）:', ragErr.message);
+        }
+
         ok(res, result);
     } catch (err) { fail500(res, err); }
 });
@@ -764,6 +826,22 @@ function normalizeYYYYMM(input) {
         return `${s.slice(0, 4)}-${s.slice(4, 6)}`;
     }
     return null;
+}
+
+// === E2 新增：從 DB 載入 conversation_id 的歷史對話 ===
+async function loadConversationFromDB(convId, limit = 5) {
+    if (!convId) return [];
+    const [rows] = await pool.execute(
+        `SELECT ai_records FROM ermm_ai_records WHERE remark LIKE ?
+         ORDER BY uid DESC LIMIT ${limit}`,
+        [`%conv:${convId}%`]
+    );
+    // 倒序 → 時間正序（最早在前）
+    return rows.reverse().map(r => {
+        let rec = r.ai_records;
+        if (typeof rec === 'string') { try { rec = JSON.parse(rec); } catch (e) { rec = {}; } }
+        return { question: rec.question || '', answer: rec.answer || '' };
+    }).filter(h => h.question && h.answer);
 }
 
 async function saveAIRecord({ bu_no, question, answer, remark, user, xuser_name, conversation_id }) {

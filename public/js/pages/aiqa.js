@@ -212,16 +212,27 @@ const AIQA = {
                 }
             }
 
-            // 知识库参考来源卡片
-            const kbHits = a.knowledgeHits || [];
+            // 知识库参考来源卡片（兼容 LLM knowledgeHits + 规则引擎 kb_refs）
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const llmKb = (a.knowledgeHits || []).map(k => ({ title: k.title, category: k.category }));
+            const ruleKb = (a.kb_refs || []).map(k => ({ title: k.title, category: k.category }));
+            const allKb = [...llmKb, ...ruleKb];
             let kbCard = '';
-            if (kbHits.length > 0) {
-                const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            if (allKb.length > 0) {
                 kbCard = `<div style="margin-top:10px;background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:8px 12px;font-size:12px;">
                     <div style="font-weight:600;color:#854d0e;margin-bottom:4px;">📚 ${t('aiqa.ref_sources') || '知识库参考来源'}：</div>
-                    ${kbHits.map(k => `<div style="color:#713f12;">• ${esc(k.title)} <span style="color:#a16207;">(${esc(k.category)})</span></div>`).join('')}
+                    ${allKb.map(k => `<div style="color:#713f12;">• ${esc(k.title)} <span style="color:#a16207;">(${esc(k.category)})</span></div>`).join('')}
                 </div>`;
             }
+
+            // 同业对比徽章（规则引擎 benchmark_pos + LLM ragSources 里有 benchmark）
+            const benchTags = [];
+            if (a.benchmark_pos) {
+                const bp = a.benchmark_pos;
+                const posColor = bp.pos.includes('優於') || bp.pos.includes('median') ? '#16a34a' : '#dc2626';
+                benchTags.push(`🎯 ${esc(bp.industry)} ${bp.year} | 本公司 ${Number(bp.myVal).toFixed(2)} vs 中位 ${bp.median} <span style="color:${posColor};font-weight:600;">${esc(bp.pos)}</span>`);
+            }
+            if (srcTags.length === 0 && benchTags.length > 0) srcTags.push('🎯 Peer');
 
             const srcBadges = srcTags.length > 0 ? `<div style="margin-top:8px;font-size:11px;">${srcTags.map(t => `<span style="background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:10px;margin-right:4px;">${t}</span>`).join('')}</div>` : '';
 
