@@ -297,10 +297,9 @@ Requirements:
 async function generateSummary(aggregate, lang) {
     const uiLang = normalizeLang(lang);
 
-    // 取 LLM provider
-    const [[cfg]] = await pool.execute('SELECT * FROM llm_config WHERE is_default=1 OR status="USE" LIMIT 1');
+    // 取 LLM provider — 复用 getDefaultProvider（先 is_default=1，再 status='USE'）
+    const cfg = await getDefaultProvider(pool);
     if (!cfg) throw new Error('未設定 LLM 服務商');
-    if (!cfg.api_key) throw new Error(`「${cfg.provider_name}」尚未設定 API Key`);
 
     // 精簡版 context — 只傳 LLM 真正需要的數字，砍掉所有冗余字段
     const period = aggregate.companies.HM?.period || aggregate.generated_at;
