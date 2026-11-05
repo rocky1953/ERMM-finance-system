@@ -2,789 +2,689 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<title>ERMM 財務模組 · 系統架構與流程圖</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 系統架構與流程圖</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: "Microsoft JhengHei","PingFang TC","Segoe UI",sans-serif; background:#f4f6f9; color:#2c3e50; line-height:1.6; }
-  .wrap { max-width:1280px; margin:0 auto; padding:30px 24px; }
-  h1 { font-size:28px; color:#1a3a5c; margin-bottom:6px; border-bottom:3px solid #3498db; padding-bottom:10px; }
-  .subtitle { color:#7f8c8d; margin-bottom:30px; font-size:14px; }
-  h2 { font-size:22px; color:#1a3a5c; margin:40px 0 16px; padding-left:12px; border-left:5px solid #3498db; }
-  h3 { font-size:16px; color:#2c3e50; margin:20px 0 10px; }
-  .card { background:#fff; border-radius:10px; padding:20px 24px; box-shadow:0 2px 12px rgba(0,0,0,0.06); margin-bottom:20px; overflow-x:auto; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --accent: #06b6d4;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --code-bg: #1e293b;
+    --code-text: #e2e8f0;
+    --success: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
 
-  /* ===== 1. 系統總架構 ===== */
-  .arch { display:flex; flex-direction:column; gap:14px; }
-  .arch-row { display:flex; align-items:center; justify-content:center; gap:14px; }
-  .arch-box { padding:12px 20px; border-radius:8px; text-align:center; font-weight:700; font-size:14px; border:2px solid transparent; min-width:140px; }
-  .arch-box.browser { background:#eaf2f8; border-color:#2980b9; color:#1b4f72; }
-  .arch-box.frontend { background:#d5f5e3; border-color:#27ae60; color:#1e8449; }
-  .arch-box.backend { background:#fef9e7; border-color:#f1c40f; color:#7d6608; }
-  .arch-box.db { background:#fadbd8; border-color:#c0392b; color:#922b21; }
-  .arch-box.io { background:#e8daef; border-color:#8e44ad; color:#6c3483; }
-  .arch-arrow { font-size:24px; color:#95a5a6; }
-  .arch-stack { display:flex; flex-direction:column; gap:8px; }
-  .arch-stack .arch-box { min-width:260px; }
-  .tech-tag { font-size:11px; font-weight:400; opacity:.85; display:block; margin-top:3px; }
+  /* Sidebar */
+  .sidebar {
+    width: 260px;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    color: #cbd5e1;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    padding: 30px 0;
+    overflow-y: auto;
+    z-index: 100;
+  }
+  .sidebar .logo {
+    padding: 0 24px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    margin-bottom: 16px;
+  }
+  .sidebar .logo h2 {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .sidebar .logo small {
+    color: #64748b;
+    font-size: 11px;
+  }
+  .sidebar nav a {
+    display: block;
+    padding: 10px 24px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .sidebar nav a:hover, .sidebar nav a.active {
+    background: rgba(37, 99, 235, 0.15);
+    color: #fff;
+    border-left-color: var(--primary);
+  }
+  .sidebar nav a .num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    font-size: 10px;
+    margin-right: 8px;
+    color: #64748b;
+  }
 
-  /* ===== 2. 前端頁面導航 ===== */
-  .nav-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; }
-  .nav-item { background:#f8f9fa; border:1px solid #ecf0f1; border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:13px; transition:.15s; }
-  .nav-item:hover { background:#eaf2f8; border-color:#3498db; }
-  .nav-id { font-family:monospace; color:#2980b9; font-size:11px; background:#eaf2f8; padding:2px 6px; border-radius:4px; }
+  /* Main */
+  .main {
+    margin-left: 260px;
+    flex: 1;
+    padding: 40px 60px;
+    max-width: 1200px;
+  }
 
-  /* ===== 3. DB 表關係圖 ===== */
-  .er-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
-  .er-table { background:#fff; border:2px solid #3498db; border-radius:8px; overflow:hidden; }
-  .er-table h4 { background:#3498db; color:#fff; padding:8px 12px; font-size:13px; }
-  .er-table h4.empty { background:#95a5a6; }
-  .er-fields { padding:8px 12px; font-size:12px; }
-  .er-fields div { padding:3px 0; border-bottom:1px dashed #ecf0f1; display:flex; justify-content:space-between; }
-  .er-fields div:last-child { border-bottom:none; }
-  .er-pk { color:#c0392b; font-weight:700; }
-  .er-fk { color:#2980b9; }
-  .er-type { color:#95a5a6; font-family:monospace; font-size:10px; }
-  .er-count { font-size:11px; color:#7f8c8d; margin-left:auto; padding-left:6px; }
-  .er-empty { opacity:.5; font-style:italic; }
+  /* Header */
+  .header-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 36px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0f172a, var(--primary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .meta {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 2px solid var(--border);
+  }
 
-  /* ===== 4. API 路由表 ===== */
-  .api-table { width:100%; border-collapse:collapse; font-size:13px; }
-  .api-table th, .api-table td { padding:8px 10px; text-align:left; border-bottom:1px solid #ecf0f1; }
-  .api-table th { background:#2c3e50; color:#fff; font-weight:600; }
-  .api-table tr:hover { background:#f8f9fa; }
-  .api-method { font-family:monospace; font-weight:700; font-size:11px; padding:2px 8px; border-radius:4px; display:inline-block; min-width:48px; text-align:center; }
-  .m-GET { background:#d4efdf; color:#1e8449; }
-  .m-POST { background:#d6eaf8; color:#1b4f72; }
-  .m-PUT { background:#fef9e7; color:#7d6608; }
-  .m-DELETE { background:#fadbd8; color:#922b21; }
+  h2 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 48px 0 20px;
+    padding-left: 16px;
+    border-left: 5px solid var(--primary);
+    color: var(--text);
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 28px 0 14px;
+    color: var(--primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-  /* ===== 5. BEP 數據流 ===== */
-  .flow { display:flex; flex-direction:column; align-items:center; gap:10px; }
-  .flow-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
-  .flow-node { padding:10px 16px; border-radius:8px; font-size:13px; font-weight:600; text-align:center; max-width:240px; }
-  .n-input { background:#d5f5e3; border:2px solid #27ae60; color:#1e8449; }
-  .n-process { background:#fef9e7; border:2px solid #f1c40f; color:#7d6608; }
-  .n-db { background:#fadbd8; border:2px solid #c0392b; color:#922b21; }
-  .n-api { background:#e8daef; border:2px solid #8e44ad; color:#6c3483; }
-  .n-ui { background:#d6eaf8; border:2px solid #2980b9; color:#1b4f72; }
-  .n-formula { background:#d1ecf1; border:2px solid #17a2b8; color:#0c5460; }
-  .flow-arrow { font-size:20px; color:#95a5a6; }
-  .flow-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  /* Table */
+  .table-wrapper {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th {
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    text-align: left;
+    padding: 12px 18px;
+    font-weight: 600;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
 
-  /* ===== 6. 導入導出流程 ===== */
-  .io-flow { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .io-col h4 { padding:10px; border-radius:6px; color:#fff; margin-bottom:12px; }
-  .io-col.imp h4 { background:#27ae60; }
-  .io-col.exp h4 { background:#2980b9; }
-  .io-step { background:#f8f9fa; padding:8px 12px; margin:6px 0; border-left:4px solid #bdc3c7; border-radius:0 6px 6px 0; font-size:12px; }
-  .io-step.ok { border-left-color:#27ae60; }
-  .io-step.db { border-left-color:#c0392b; }
-  .io-step.api { border-left-color:#8e44ad; }
+  /* Code block */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 20px;
+    border-radius: 12px;
+    overflow-x: auto;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 16px 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  code {
+    background: #f1f5f9;
+    color: var(--primary-dark);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
 
-  /* ===== 7. 模組功能矩陣 ===== */
-  .matrix { width:100%; border-collapse:collapse; font-size:12px; }
-  .matrix th, .matrix td { border:1px solid #ecf0f1; padding:6px 8px; text-align:center; }
-  .matrix th { background:#34495e; color:#fff; font-weight:600; }
-  .matrix td:first-child { text-align:left; font-weight:600; background:#f8f9fa; white-space:nowrap; }
-  .matrix .y { color:#27ae60; font-weight:700; }
-  .matrix .n { color:#bdc3c7; }
+  /* Architecture diagram */
+  .arch-box {
+    background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    padding: 8px;
+    margin: 16px 0;
+  }
+  .arch-box pre {
+    background: transparent;
+    color: var(--text);
+    box-shadow: none;
+    padding: 12px;
+    font-size: 11px;
+    line-height: 1.35;
+  }
 
-  .legend { display:flex; gap:20px; flex-wrap:wrap; font-size:12px; margin:10px 0; }
-  .legend-item { display:flex; align-items:center; gap:6px; }
-  .legend-color { width:14px; height:14px; border-radius:3px; }
+  /* Card groups */
+  .group-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 4px solid var(--primary);
+  }
+  .group-card h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+  }
 
-  .footer { text-align:center; color:#bdc3c7; margin-top:50px; font-size:12px; }
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 6px;
+  }
+  .badge-ai { background: #ede9fe; color: #6d28d9; }
+  .badge-fin { background: #dbeafe; color: #1d4ed8; }
+  .badge-tax { background: #dcfce7; color: #15803d; }
+  .badge-op { background: #fef3c7; color: #b45309; }
+  .badge-sys { background: #f3f4f6; color: #4b5563; }
+  .badge-alert { background: #fee2e2; color: #b91c1c; }
 
-  /* 程式碼方塊 */
-  code { background:#f4f6f9; padding:2px 6px; border-radius:3px; font-family:Consolas,monospace; font-size:12px; }
-  pre { background:#2c3e50; color:#ecf0f1; padding:12px 16px; border-radius:6px; overflow-x:auto; font-size:12px; line-height:1.5; margin:8px 0; }
-  details { margin:8px 0; }
-  summary { cursor:pointer; padding:8px 12px; background:#f0f4f8; border-radius:6px; font-weight:600; font-size:13px; }
-  summary:hover { background:#e5ecf3; }
+  /* Info block */
+  .info-box {
+    background: #eff6ff;
+    border-left: 4px solid var(--primary);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .info-box strong { color: var(--primary-dark); }
+
+  /* Section divider */
+  hr {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 40px 0;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar { width: 100%; position: relative; padding: 20px; }
+    .main { margin-left: 0; padding: 20px; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-<h1>🏢 ERMM 財務模組 · 系統架構與流程圖</h1>
-<p class="subtitle">技術棧：Node.js 18+ · Express 4 · MySQL 8 · 原生 HTML/JS (無框架) · ExcelJS · Jest · Port 3008 · DB: ERMM_db</p>
+<aside class="sidebar">
+  <div class="logo">
+    <h2>🏢 ERMM</h2>
+    <small>v1.1 · 2026-11-05</small>
+  </div>
+  <nav>
+    <a href="#s1" class="active"><span class="num">1</span>技術棧總覽</a>
+    <a href="#s2"><span class="num">2</span>系統架構圖</a>
+    <a href="#s3"><span class="num">3</span>API 模組地圖</a>
+    <a href="#s4"><span class="num">4</span>資料流程圖</a>
+    <a href="#s5"><span class="num">5</span>前端頁面機制</a>
+    <a href="#s6"><span class="num">6</span>認證流程</a>
+    <a href="#s7"><span class="num">7</span>部署與維運</a>
+    <a href="#s8"><span class="num">8</span>API 回應格式</a>
+  </nav>
+</aside>
 
-<!-- ========== 1. 系統總架構 ========== -->
-<h2>1️⃣ 系統總架構（三層架構 + 外部整合）</h2>
-<div class="card">
-<div class="arch">
+<main class="main">
+  <span class="header-badge">📋 文件 · 架構設計</span>
+  <h1>ERMM 財務模組管理系統 — 架構與流程圖</h1>
+  <div class="meta">版本 v1.1 · 更新 2026-11-05 · 部署 Commit 46c383e · 48 個 API 路由 · 40+ 張資料表</div>
 
-  <!-- 使用者層 -->
-  <div class="arch-row">
-    <div class="arch-box browser">🌐 瀏覽器<br><span class="tech-tag">Chrome / Edge / Safari</span></div>
-    <div class="arch-arrow">→</div>
+  <!-- ===== Section 1 ===== -->
+  <h2 id="s1">一、技術棧總覽</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th style="width:12%">層</th><th>技術</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>前端</strong></td><td>原生 HTML5 + CSS3 + ES6+</td><td>無框架（React/Vue），輕量 SPA</td></tr>
+        <tr><td><strong>後端</strong></td><td>Node.js 18 + Express 4.x</td><td>RESTful API，48 個路由模組</td></tr>
+        <tr><td><strong>資料庫</strong></td><td>MySQL 8.x (InnoDB, utf8mb4)</td><td>40+ 張資料表，批次管線 7 步驟</td></tr>
+        <tr><td><strong>驗證</strong></td><td>JWT (HS256)</td><td><code>localStorage.ermm_token</code> + Bearer Token</td></tr>
+        <tr><td><strong>LLM</strong></td><td>DeepSeek API（可切換 Kimi）</td><td><code>utils/llmClient.js</code> 統一 Provider 管理</td></tr>
+        <tr><td><strong>RAG</strong></td><td>MySQL FULLTEXT + n-gram 滑窗</td><td>無向量資料庫，輕量檢索</td></tr>
+        <tr><td><strong>圖表</strong></td><td>Chart.js 4.4.1</td><td>本地 vendor 目錄 + CDN fallback</td></tr>
+        <tr><td><strong>部署</strong></td><td>PM2 (ecosystem.config.js)</td><td>Linux 一鍵腳本 <code>deploy_ubuntu.sh</code></td></tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- 前端層 -->
-  <div class="arch-row">
-    <div class="arch-box frontend">🖥 前端 SPA<br><span class="tech-tag">原生 HTML5 + CSS3 + ES6</span></div>
+  <!-- ===== Section 2 ===== -->
+  <h2 id="s2">二、系統架構圖</h2>
+  <div class="arch-box">
+<pre>
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        ERMM 系統架構 (v1.1)                             │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  使用者瀏覽器 (Chrome/Edge)                                     │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │    │
+│  │  │  HTML/CSS/JS  │  │ Chart.js 圖表 │  │ 46 個 SPA 頁面模組    │ │    │
+│  │  │  index.html   │  │ vendor/ 目錄  │  │ pages/*.js           │ │    │
+│  │  └──────────────┘  └──────────────┘  └───────────────────────┘ │    │
+│  │         ↕ HTTPS / RESTful / JWT Bearer Token                     │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              ↓                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  Express.js 後端 (:3008)                                        │    │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌───────────────────────┐ │    │
+│  │  │ Auth 中間件    │  │ 回應統一格式   │  │ 全域 401 → 強制登出  │ │    │
+│  │  │ verifyToken() │  │ ok()/fail()  │  │ handle401()          │ │    │
+│  │  └──────────────┘  └──────────────┘  └───────────────────────┘ │    │
+│  │                                                                 │    │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌─────────────────┐ │    │
+│  │  │ 批次管線   │ │ 風險計算   │ │ LLM 客戶端 │ │ 診斷/預測引擎   │ │    │
+│  │  │ Step1-7   │ │ Z-score   │ │ 多 Provider│ │ KPI 归因/蒙特卡 │ │    │
+│  │  └───────────┘ └───────────┘ └───────────┘ └─────────────────┘ │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              ↓                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  MySQL 8.x 資料庫 (ERMM_db)                                    │    │
+│  │  40+ 張資料表 · 19 個 Migration · 批次管線自動建置                │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                              ↕                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  DeepSeek / Kimi LLM API（智能問答 / AI 摘要 / 智能归因）         │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+</pre>
   </div>
-  <div class="arch-row" style="gap:12px;">
-    <div class="arch-box frontend" style="background:#eafaf1;border-color:#27ae60;">📄 index.html<br><span class="tech-tag">26 個頁面 nav item</span></div>
-    <div class="arch-box frontend" style="background:#eafaf1;border-color:#27ae60;">⚙️ js/app.js<br><span class="tech-tag">registerPage 路由引擎</span></div>
-    <div class="arch-box frontend" style="background:#eafaf1;border-color:#27ae60;">🌍 js/i18n.js<br><span class="tech-tag">中/英/繁多語切換</span></div>
-    <div class="arch-box frontend" style="background:#eafaf1;border-color:#27ae60;">📂 js/pages/* <br><span class="tech-tag">27 個頁面模組</span></div>
+
+  <!-- ===== Section 3 ===== -->
+  <h2 id="s3">三、API 模組地圖（48 個路由）</h2>
+
+  <div class="group-card">
+    <h3><span class="badge badge-ai">🧠 智能化</span>Top 5 — 2026-11 新增</h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/aiqa/*</code></td><td><code>routes/aiqa.js</code></td><td><code>pages/aiqa.js</code></td><td><strong>T-1 AI 智能問答 + RAG</strong>（提問/建議/知識庫/對話歷史）</td></tr>
+          <tr><td><code>/api/daily-summary/*</code></td><td><code>routes/dailySummary.js</code></td><td>Dashboard 內嵌</td><td><strong>C-1 每日 AI 執行摘要</strong>（生成/最新/歷史/聚合）</td></tr>
+          <tr><td><code>/api/data-quality/*</code></td><td><code>routes/dataQuality.js</code></td><td><code>pages/dataQuality.js</code></td><td><strong>T-3 數據質量自動掃描</strong>（7 大類 20+ 項檢查）</td></tr>
+          <tr><td><code>/api/ar-smart/*</code></td><td><code>routes/arSmart.js</code></td><td><code>pages/arSmart.js</code></td><td><strong>O-3 AR 智能催收排序</strong>（催收評分/總覽）</td></tr>
+          <tr><td><code>/api/cash-forecast/monte-carlo</code></td><td><code>routes/cashMonteCarlo.js</code></td><td>Dashboard</td><td><strong>F-3 現金流概率預測</strong>（蒙特卡洛 5000 次）</td></tr>
+          <tr><td><code>/api/diagnosis/*</code></td><td><code>routes/diagnosis.js</code></td><td>Dashboard 彈窗</td><td>KPI 異常診斷 + LLM 智能归因</td></tr>
+          <tr><td><code>/api/llm/*</code></td><td><code>routes/llm.js</code></td><td><code>pages/system.js</code></td><td>LLM 服務商管理（DeepSeek/Kimi 可切換）</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <div class="arch-row"><div class="arch-arrow">⬇ HTTPS / Fetch API ⬇</div></div>
-
-  <!-- 後端層 -->
-  <div class="arch-row">
-    <div class="arch-box backend">⚙️ Express Server <br><span class="tech-tag">Node.js · Port 3008</span></div>
-  </div>
-  <div class="arch-row" style="gap:12px;flex-wrap:wrap;">
-    <div class="arch-box backend" style="background:#fefde7;border-color:#f39c12;">🛰 app.js<br><span class="tech-tag">路由註冊 / Middleware</span></div>
-    <div class="arch-box backend" style="background:#fefde7;border-color:#f39c12;">📂 routes/*<br><span class="tech-tag">27 個 REST API 模組</span></div>
-    <div class="arch-box backend" style="background:#fefde7;border-color:#f39c12;">🔌 config/db.js<br><span class="tech-tag">mysql2 連線池</span></div>
-    <div class="arch-box backend" style="background:#fefde7;border-color:#f39c12;">📦 utils/*<br><span class="tech-tag">response.js 統一回傳</span></div>
-  </div>
-
-  <div class="arch-row"><div class="arch-arrow">⬇ mysql2/promise ⬇</div></div>
-
-  <!-- DB 層 -->
-  <div class="arch-row">
-    <div class="arch-box db">🗄 MySQL ERMM_db<br><span class="tech-tag">30 張表 · InnoDB · utf8mb4</span></div>
-  </div>
-
-  <!-- 外部整合 -->
-  <div class="arch-row" style="margin-top:20px;">
-    <div class="arch-box io">📊 Excel 匯入匯出<br><span class="tech-tag">ExcelJS · .xlsx</span></div>
-    <div class="arch-box io">🧪 Jest 測試<br><span class="tech-tag">Supertest · 8 test suites</span></div>
-    <div class="arch-box io">🐙 GitHub 版本控制<br><span class="tech-tag">rocky1953/ERMM-finance-system</span></div>
+  <div class="group-card">
+    <h3><span class="badge badge-fin">📊 核心財務</span></h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/summary/*</code></td><td><code>routes/summary.js</code></td><td><code>pages/summary.js</code></td><td>財務摘要（Dashboard 核心資料源）</td></tr>
+          <tr><td><code>/api/report/*</code></td><td><code>routes/report.js</code></td><td><code>pages/report.js</code></td><td>三大報表：資產負債表/損益表/現金流量表</td></tr>
+          <tr><td><code>/api/forecast/*</code></td><td><code>routes/forecast.js</code></td><td><code>pages/forecast.js</code></td><td>趨勢預測（銷售/成本/利潤走勢）</td></tr>
+          <tr><td><code>/api/risk/*</code></td><td><code>routes/risk.js</code></td><td><code>pages/risk.js</code></td><td>風險預警掃描（Altman Z-score 多維計算）</td></tr>
+          <tr><td><code>/api/bep/*</code></td><td><code>routes/bep.js</code></td><td><code>pages/bep.js</code></td><td>損益平衡分析（單品/線上/月度）</td></tr>
+          <tr><td><code>/api/budget/*</code></td><td><code>routes/budget.js</code></td><td><code>pages/budget.js</code></td><td>預算編制（預算/明細/彙總/達成進度）</td></tr>
+          <tr><td><code>/api/scenario/*</code></td><td><code>routes/scenario.js</code></td><td><code>pages/scenario.js</code></td><td>情景模擬（What-if 儲存/載入/模擬）</td></tr>
+          <tr><td><code>/api/mgmt-accounting/*</code></td><td><code>routes/mgmtAccounting.js</code></td><td><code>pages/mgmtAccounting.js</code></td><td>管理會計（部門損益/科目明細）</td></tr>
+          <tr><td><code>/api/consolidation/*</code></td><td><code>routes/consolidation.js</code></td><td><code>pages/consolidation.js</code></td><td>合併報表（集團損益/資產負債表）</td></tr>
+          <tr><td><code>/api/cash-forecast/*</code></td><td><code>routes/cashForecast.js</code></td><td><code>pages/cashForecast.js</code></td><td>現金預測（週別現金水位 + 蒙特卡洛模擬）</td></tr>
+          <tr><td><code>/api/analysis/*</code></td><td><code>routes/analysis.js</code></td><td>Dashboard 下鑽</td><td>分析下鑽（產品/客戶/部門三維度）</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-</div>
-</div>
+  <div class="group-card">
+    <h3><span class="badge badge-tax">💡 稅務</span></h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/finance/*</code></td><td><code>routes/finance.js</code></td><td><code>pages/finance.js</code></td><td>會計科目/憑證/勾稽核對/稅務申報全流程</td></tr>
+          <tr><td><code>/api/tax/*</code></td><td><code>routes/tax.js</code></td><td><code>pages/tax.js</code></td><td>VAT/CIT/IIT 三大報稅模組（20+ API）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-op">📋 日常作業</span></h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/arap/*</code></td><td><code>routes/arap.js</code></td><td><code>pages/arap.js</code></td><td>應收應付（AR 催收/AP 對帳）</td></tr>
+          <tr><td><code>/api/invoice/*</code></td><td><code>routes/invoice.js</code></td><td><code>pages/invoice.js</code></td><td>發票管理</td></tr>
+          <tr><td><code>/api/cash/*</code></td><td><code>routes/cash.js</code></td><td><code>pages/cash.js</code></td><td>現金日記帳</td></tr>
+          <tr><td><code>/api/pay/*</code></td><td><code>routes/pay.js</code></td><td><code>pages/pay.js</code></td><td>付款明細</td></tr>
+          <tr><td><code>/api/check/*</code></td><td><code>routes/check.js</code></td><td><code>pages/check.js</code></td><td>票據管理</td></tr>
+          <tr><td><code>/api/bank/*</code></td><td><code>routes/bank.js</code></td><td><code>pages/bank.js</code></td><td>銀行貸款（CRUD + 重算）</td></tr>
+          <tr><td><code>/api/po/*</code></td><td><code>routes/po.js</code></td><td><code>pages/po.js</code></td><td>採購單</td></tr>
+          <tr><td><code>/api/so/*</code></td><td><code>routes/so.js</code></td><td><code>pages/so.js</code></td><td>銷售訂單</td></tr>
+          <tr><td><code>/api/dn/*</code></td><td><code>routes/dn.js</code></td><td><code>pages/dn.js</code></td><td>SO 交貨單</td></tr>
+          <tr><td><code>/api/temp-po/*</code></td><td><code>routes/tempPo.js</code></td><td><code>pages/tempPo.js</code></td><td>PO 暫存</td></tr>
+          <tr><td><code>/api/xitems/*</code></td><td><code>routes/xitems.js</code></td><td><code>pages/xitems.js</code></td><td>存貨管理</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-sys">⚙️ 系統與基礎設施</span></h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/auth/*</code></td><td><code>routes/auth.js</code></td><td>登入頁面</td><td>認證（JWT 登入/登出/驗證）</td></tr>
+          <tr><td><code>/api/system/*</code></td><td><code>routes/system.js</code></td><td><code>pages/system.js</code></td><td>系統設定值/字典/KPI/批次控制</td></tr>
+          <tr><td><code>/api/user/*</code></td><td><code>routes/user.js</code></td><td><code>pages/user.js</code></td><td>使用者管理</td></tr>
+          <tr><td><code>/api/branch/*</code></td><td><code>routes/branch.js</code></td><td><code>pages/branch.js</code></td><td>分公司/公司別管理</td></tr>
+          <tr><td><code>/api/relation/*</code></td><td><code>routes/relation.js</code></td><td><code>pages/relation.js</code></td><td>往來對象（客戶/供應商）</td></tr>
+          <tr><td><code>/api/batch-ctrl/*</code></td><td><code>routes/batchCtrl.js</code></td><td><code>pages/batch.js</code></td><td>批次管線狀態查詢</td></tr>
+          <tr><td><code>/api/batch/*</code></td><td><code>routes/batch.js</code></td><td><code>pages/batch.js</code></td><td>批次執行（Step1-7 + runAll）</td></tr>
+          <tr><td><code>/api/integration/*</code></td><td><code>routes/integration.js</code></td><td><code>pages/integration.js</code></td><td>ERP 第三方資料整合日誌</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="group-card">
+    <h3><span class="badge badge-alert">🔍 預警與 KPI</span></h3>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th style="width:22%">API 路由</th><th style="width:22%">後端檔案</th><th style="width:22%">前端頁面</th><th>功能</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/alert/*</code></td><td><code>routes/alert.js</code></td><td><code>pages/alerts.js</code></td><td>預警規則/日誌/每日掃描</td></tr>
+          <tr><td><code>/api/kpi/*</code></td><td><code>routes/kpi.js</code></td><td><code>pages/kpi.js</code></td><td>KPI 門檻設定</td></tr>
+          <tr><td><code>/api/kpi-query/*</code></td><td><code>routes/kpiQuery.js</code></td><td><code>pages/kpiQuery.js</code></td><td>KPI 異常診斷/預測模型</td></tr>
+          <tr><td><code>/api/benchmark/*</code></td><td><code>routes/benchmark.js</code></td><td><code>pages/benchmark.js</code></td><td>同業標竿維護</td></tr>
+          <tr><td><code>/api/monthly/*</code></td><td><code>routes/monthly.js</code></td><td><code>pages/monthly.js</code></td><td>月度項目管理</td></tr>
+          <tr><td><code>/api/action/*</code></td><td><code>routes/action.js</code></td><td><code>pages/actions.js</code></td><td>行動追蹤</td></tr>
+          <tr><td><code>/api/daily-report/*</code></td><td><code>routes/dailyReport.js</code></td><td><code>pages/dailyReport.js</code></td><td>月報/人效/年度績效/部門橫向對比</td></tr>
+          <tr><td><code>/api/war-room/*</code></td><td><code>routes/warRoom.js</code></td><td><code>pages/warRoom.js</code></td><td>戰情看板</td></tr>
+          <tr><td><code>/api/account/*</code></td><td><code>routes/account.js</code></td><td><code>pages/account.js</code></td><td>帳戶明細</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== Section 4 ===== -->
+  <h2 id="s4">四、資料流程圖</h2>
+
+  <h3>4.1 批次管線（7 步驟自動化）</h3>
+<pre>
+ERP 原始資料
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  批次管線 /api/batch/runAll                                      │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Step1  讀取 ERP PO/SO 明細                    (ermm_erp_po)    │
+│    ↓                                                             │
+│  Step2  讀取 ERP 交貨單                          (ermm_erp_so_dn)│
+│    ↓                                                             │
+│  Step3  讀取 ERP 生產工單                        (ermm_erp_mo)   │
+│    ↓                                                             │
+│  Step4  計算發票/AR/AP 明細                      (mgm_invoice_details)│
+│    ↓                                                             │
+│  Step5  彙總現金/銀行/票據變動                    (mgm_casher_details)│
+│    ↓                                                             │
+│  Step6  計算銀行貸款利息                          (mgm_bank_loan_details)│
+│    ↓                                                             │
+│  Step7  寫入財務摘要 + 計算 Z-score 風險值        (mgm_finance_summary)│
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+   完成！前端 Dashboard/三大報表/風險預警 全部讀 mgm_finance_summary
+</pre>
+
+  <h3>4.2 AI 智能問答流程（T-1 RAG）</h3>
+<pre>
+使用者提問："HM 今年毛利率怎麼樣？"
+    │
+    ▼
+/api/aiqa/ask
+    │
+    ├── 1. 詞彙切分 → 抽出 ["HM", "毛利率", "今年", "2025"]
+    │
+    ├── 2. RAG 檢索（輕量）
+    │      ├── n-gram 2-4 滑窗 + OR 聚合 LIKE
+    │      ├── ermm_knowledge (FULLTEXT INDEX)
+    │      └── ermm_kb_miss_log (未命中寫入)
+    │
+    ├── 3. 財務資料補強
+    │      └── mgm_finance_summary（毛利率 = (sale - cost) / sale）
+    │
+    └── 4. LLM 生成回答
+           └── POST DeepSeek API（getDefaultProvider 統一）
+                │
+                ▼
+           自然語言回答 + 引用知識條目
+</pre>
+
+  <h3>4.3 AR 智能催收排序（O-3）</h3>
+<pre>
+/api/ar-smart/collections?bu_no=HM
+    │
+    ├── 1. 查詢 mgm_invoice_details WHERE TX_type='AR'
+    │      （每筆發票 = 一筆應收賬款）
+    │
+    ├── 2. 五維度加權評分
+    │      ├── 賬齡天數 × 40%  （越舊越高分）
+    │      ├── 逾期天數 × 30%  （逾期越多越高分）
+    │      ├── 金額規模 × 15%  （金額越大越高分）
+    │      ├── 風險綜合   × 10%  （客戶 Z-score 反向映射）
+    │      └── 單筆佔比   ×  5%  （佔 AR 總額比例）
+    │
+    └── 3. 輸出分級
+           ├── ≥70 分 🔴 緊急催收
+           ├── 50~70 🟠 高優先
+           ├── 30~50 🟡 常規追蹤
+           └── <30  🟢 正常
+</pre>
+
+  <h3>4.4 數據質量掃描（T-3）</h3>
+<pre>
+/api/data-quality/scan  （毫秒級返回，無需異步）
+    │
+    ├── 1. Z_score 未計算       → 掃描 mgm_finance_summary WHERE Z_score IS NULL
+    ├── 2. 重複記錄              → 逐表 COUNT GROUP BY HAVING > 1
+    ├── 3. 金額異常              → sale_amt / stock_value_amt / ...
+    ├── 4. 逾期 forecast         → forecast_detail WHERE forecast_month < 當月
+    ├── 5. AR 對賬差異           → SUM(AR_amt) vs SUM(invoice AR)
+    ├── 6. 稅務表 vs 摘要不一致  → VAT declarations vs finance_summary
+    └── 7. 表級健康度            → 8 張核心表 COUNT / HAS 缺失欄位 / 索引
+</pre>
+
+  <h3>4.5 每日 AI 執行摘要（C-1）</h3>
+<pre>
+觸發方式：自動 (batch runAll 後) / 手動 (Dashboard "⚡立即生成") / API
+    │
+    ▼
+POST /api/daily-summary/generate
+    │
+    ├── 1. 彙總財務快照相關資料
+    │      ├── mgm_finance_summary（當月 + 去年同期 YoY）
+    │      ├── forecast_detail（當月 vs 預測）
+    │      └── mgm_invoice_details（AR 催收水位）
+    │
+    ├── 2. LLM 分析（DeepSeek，6-10 秒）
+    │      ├── Prompt：財務快照 + YoY 對比 + 風險評分 + 同業位置
+    │      └── 輸出：標題 + 自然語言摘要 + 異常條目 + 行動建議
+    │
+    └── 3. 存入 daily_ai_summary
+           └── Dashboard 讀 latest TOP 1 展示
+</pre>
+
+  <!-- ===== Section 5 ===== -->
+  <h2 id="s5">五、前端頁面註冊機制</h2>
+<pre>
+// app.js 全域註冊函式
+function registerPage(pageId, asyncFn) {
+    pages[pageId] = asyncFn;
+}
+
+// 各頁面模組（pages/*.js）
+registerPage('arSmart', async (container) => {
+    // container = <div id="pageContent">
+    container.innerHTML = `...`;
+    await fetchData();
+});
+
+// 側邊欄點擊（index.html）
+div class="nav-item" data-page="arSmart" onclick="navigate('arSmart')"
+    🎯 AR 智能催收
+/div
+
+// navigate() 內部流程
+function navigate(pageId) {
+    if (!Auth.isLoggedIn()) return;  // 🔒 未登入攔截
+    pages[pageId](document.getElementById('pageContent'));
+}
+</pre>
+
+  <!-- ===== Section 6 ===== -->
+  <h2 id="s6">六、認證流程</h2>
+<pre>
+POST /api/auth/login  { user_id, password }
+    │
+    ▼
+routes/auth.js → 驗證使用者 → 簽發 JWT
+    │
+    ▼
+localStorage.setItem('ermm_token', token)   ← 統一 Key！
+localStorage.setItem('ermm_user', JSON.stringify(user))
+    │
+    ▼
+所有 API request fetch:
+    headers: { Authorization: 'Bearer ' + Auth.getToken() }
+    │
+    ▼
+Auth.getToken() = localStorage.getItem('ermm_token')  ← 統一讀取！
+
+失敗（401）→ fetch wrapper → Auth.handle401()
+    → localStorage.removeItem('ermm_token')
+    → 顯示登入畫面（body.classList.add('locked')）
+</pre>
+
+  <!-- ===== Section 7 ===== -->
+  <h2 id="s7">七、部署與維運</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th style="width:22%">專案</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>啟動</strong></td><td><code>node app.js</code> 或 <code>pm2 start ecosystem.config.js</code></td></tr>
+        <tr><td><strong>埠號</strong></td><td>3008</td></tr>
+        <tr><td><strong>資料庫</strong></td><td><code>ERMM_db</code>（<code>migrations/run_all.sql</code> 一鍵建置）</td></tr>
+        <tr><td><strong>使用者</strong></td><td>預設 <code>rocky / 68315711</code>（admin: Yes）</td></tr>
+        <tr><td><strong>PM2 腳本</strong></td><td><code>deploy_ubuntu.sh</code>（Linux 一鍵部署）</td></tr>
+        <tr><td><strong>日誌</strong></td><td><code>pm2 logs ermm-finance</code></td></tr>
+        <tr><td><strong>健康檢查</strong></td><td><code>GET /api/health</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== Section 8 ===== -->
+  <h2 id="s8">八、API 回應格式（統一）</h2>
+<pre>
+// 成功
+{ "success": true, "code": 200, "data": { ... } }
+
+// 失敗
+{ "success": false, "message": "錯誤說明" }
+
+// 401 未授權 → 全域 fetch wrapper 自動觸發 handle401()
+</pre>
+
+  <hr>
+  <div class="meta" style="text-align:center;">
+    文件產生時間：2026-11-05 · 基於 85 個 Commit + 40 個 Migration + 48 個 API 路由
+  </div>
+
+</main>
+
+<script>
+  // Sidebar scrollspy
+  const links = document.querySelectorAll('.sidebar nav a');
+  const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href')));
+  
+  window.addEventListener('scroll', () => {
+    const pos = window.scrollY + 120;
+    let current = sections[0];
+    for (const s of sections) { if (s && s.offsetTop <= pos) current = s; }
+    links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + current.id));
+  });
+
+  // Smooth scroll
+  links.forEach(l => {
+    l.addEventListener('click', e => {
+      e.preventDefault();
+      const id = l.getAttribute('href').slice(1);
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
 
-<!-- ========== 2. 前端頁面 ========== -->
-<h2>2️⃣ 前端頁面導航（27 個模組）</h2>
-<div class="card">
-<div class="nav-grid">
-  <div class="nav-item"><span>📊 Dashboard 儀表板</span><span class="nav-id">dashboard</span></div>
-  <div class="nav-item"><span>💰 現金日記帳</span><span class="nav-id">cash</span></div>
-  <div class="nav-item"><span>🏦 銀行明細</span><span class="nav-id">bank</span></div>
-  <div class="nav-item"><span>📝 付款明細</span><span class="nav-id">pay</span></div>
-  <div class="nav-item"><span>✅ 支票明細</span><span class="nav-id">check</span></div>
-  <div class="nav-item"><span>📋 應收帳款</span><span class="nav-id">arap</span></div>
-  <div class="nav-item"><span>🧾 發票明細</span><span class="nav-id">invoice</span></div>
-  <div class="nav-item"><span>📦 採購單 PO</span><span class="nav-id">po</span></div>
-  <div class="nav-item"><span>🛒 銷售單 SO</span><span class="nav-id">so</span></div>
-  <div class="nav-item"><span>🚚 送貨單 DN</span><span class="nav-id">dn</span></div>
-  <div class="nav-item"><span>📈 財務摘要</span><span class="nav-id">summary</span></div>
-  <div class="nav-item"><span>⚖️ 損益平衡分析</span><span class="nav-id">bep</span></div>
-  <div class="nav-item"><span>🎯 KPI 查詢</span><span class="nav-id">kpiQuery</span></div>
-  <div class="nav-item"><span>📉 KPI 設定</span><span class="nav-id">kpi</span></div>
-  <div class="nav-item"><span>⚠️ 風險管理</span><span class="nav-id">risk</span></div>
-  <div class="nav-item"><span>🔮 預測分析</span><span class="nav-id">forecast</span></div>
-  <div class="nav-item"><span>📊 報表匯出</span><span class="nav-id">report</span></div>
-  <div class="nav-item"><span>🗂 批次管理</span><span class="nav-id">batch</span></div>
-  <div class="nav-item"><span>🏢 公司別</span><span class="nav-id">branch</span></div>
-  <div class="nav-item"><span>👥 關聯方</span><span class="nav-id">relation</span></div>
-  <div class="nav-item"><span>🏷 系統代碼</span><span class="nav-id">system</span></div>
-  <div class="nav-item"><span>📅 月度項目</span><span class="nav-id">monthly</span></div>
-  <div class="nav-item"><span>🏦 貸款</span><span class="nav-id">account</span></div>
-  <div class="nav-item"><span>📑 臨時 PO</span><span class="nav-id">tempPo</span></div>
-  <div class="nav-item"><span>📊 趨勢圖</span><span class="nav-id">trend</span></div>
-  <div class="nav-item"><span>📋 xitems 日報</span><span class="nav-id">xitems</span></div>
-  <div class="nav-item"><span>👤 使用者管理</span><span class="nav-id">user</span></div>
-</div>
-</div>
-
-<!-- ========== 3. DB 表關係 ========== -->
-<h2>3️⃣ 資料庫表結構（30 張表 · ERMM_db）</h2>
-
-<h3 style="margin-top:0;">🔗 表關聯線圖（核心 10 張表）</h3>
-<div class="card" style="overflow-x:auto;">
-<svg width="1180" height="520" style="background:#fff;border-radius:8px;" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7f8c8d"/>
-    </marker>
-  </defs>
-
-  <!-- 表框樣式 -->
-  <style>
-    .svg-table { fill:#eaf2f8; stroke:#2980b9; stroke-width:2; rx:6; }
-    .svg-table-core { fill:#d5f5e3; stroke:#27ae60; }
-    .svg-table-erp  { fill:#fef9e7; stroke:#f1c40f; }
-    .svg-table-bep  { fill:#fadbd8; stroke:#c0392b; }
-    .svg-table-arap { fill:#e8daef; stroke:#8e44ad; }
-    .svg-title { font-family:Consolas,monospace; font-size:13px; font-weight:700; fill:#1a3a5c; }
-    .svg-pk { font-size:11px; fill:#c0392b; font-weight:700; font-family:Consolas,monospace; }
-    .svg-fk { font-size:11px; fill:#2980b9; font-family:Consolas,monospace; }
-    .svg-line { stroke:#7f8c8d; stroke-width:2; fill:none; marker-end:url(#arrow); stroke-dasharray:none; }
-    .svg-line-rel { stroke:#27ae60; stroke-width:2.2; fill:none; marker-end:url(#arrow); }
-    .svg-line-mm  { stroke:#8e44ad; stroke-width:2; fill:none; marker-end:url(#arrow); stroke-dasharray:6,4; }
-    .svg-label { font-size:10px; fill:#555; font-family:Consolas,monospace; }
-  </style>
-
-  <!-- === 第一列 === -->
-  <!-- MGM_finance_summary (左上) -->
-  <rect x="20" y="20" width="190" height="90" class="svg-table svg-table-core"/>
-  <text x="30" y="42" class="svg-title">📈 MGM_finance_summary</text>
-  <text x="30" y="62" class="svg-pk">* uid (INT)</text>
-  <text x="30" y="78" class="svg-fk">  bu_no / YYYY_MM</text>
-  <text x="30" y="93" class="svg-fk">  sale_amt, current_asset_amt...</text>
-
-  <!-- MGM_casher_details -->
-  <rect x="270" y="20" width="190" height="90" class="svg-table svg-table-core"/>
-  <text x="280" y="42" class="svg-title">💵 MGM_casher_details</text>
-  <text x="280" y="62" class="svg-pk">* uid (INT)</text>
-  <text x="280" y="78" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
-  <text x="280" y="93" class="svg-fk">  amt_type, DB_CR, sub_amt</text>
-
-  <!-- BEP_threshold -->
-  <rect x="520" y="20" width="190" height="105" class="svg-table svg-table-bep"/>
-  <text x="530" y="42" class="svg-title">⚖️ MGM_BEP_threshold</text>
-  <text x="530" y="62" class="svg-pk">* uid (INT)</text>
-  <text x="530" y="78" class="svg-fk">  bu_no / YYYY_MM (UNIQUE)</text>
-  <text x="530" y="93" class="svg-fk">  8 項門檻 (consumable...)</text>
-  <text x="530" y="108" class="svg-fk">  variable_expense, fixed_cost</text>
-
-  <!-- forecast_detail -->
-  <rect x="770" y="20" width="190" height="90" class="svg-table"/>
-  <text x="780" y="42" class="svg-title">🔮 forecast_detail</text>
-  <text x="780" y="62" class="svg-pk">* uid (INT)</text>
-  <text x="780" y="78" class="svg-fk">  bu_no / YYYY_MM / forecast_type</text>
-  <text x="780" y="93" class="svg-fk">  forecast_amt</text>
-
-  <!-- kpi_desc -->
-  <rect x="1020" y="20" width="140" height="90" class="svg-table"/>
-  <text x="1030" y="42" class="svg-title">📊 mgm_kpi_desc</text>
-  <text x="1030" y="62" class="svg-pk">* uid (INT)</text>
-  <text x="1030" y="78" class="svg-fk">  kpi_code / kpi_name</text>
-  <text x="1030" y="93" class="svg-fk">  target / risk_color</text>
-
-  <!-- === 第二列 === -->
-  <!-- ermm_erp_po -->
-  <rect x="20" y="220" width="190" height="90" class="svg-table svg-table-erp"/>
-  <text x="30" y="242" class="svg-title">📦 ermm_erp_po</text>
-  <text x="30" y="262" class="svg-pk">* uid (INT)</text>
-  <text x="30" y="278" class="svg-fk">  po_no / bu_no / client_id</text>
-  <text x="30" y="293" class="svg-fk">  item_code, qty, unit_price</text>
-
-  <!-- ermm_erp_so -->
-  <rect x="270" y="220" width="190" height="90" class="svg-table svg-table-erp"/>
-  <text x="280" y="242" class="svg-title">🛒 ermm_erp_so</text>
-  <text x="280" y="262" class="svg-pk">* uid (INT)</text>
-  <text x="280" y="278" class="svg-fk">  so_no / bu_no / client_id</text>
-  <text x="280" y="293" class="svg-fk">  item_code, qty, amount</text>
-
-  <!-- ermm_arap_detail -->
-  <rect x="520" y="220" width="190" height="90" class="svg-table svg-table-arap"/>
-  <text x="530" y="242" class="svg-title">📋 ermm_arap_detail</text>
-  <text x="530" y="262" class="svg-pk">* uid (INT)</text>
-  <text x="530" y="278" class="svg-fk">  bu_no / YYYY_MM (UNIQUE)</text>
-  <text x="530" y="293" class="svg-fk">  AR_amt, AP_amt, ageing</text>
-
-  <!-- invoice_details -->
-  <rect x="770" y="220" width="190" height="90" class="svg-table svg-table-core"/>
-  <text x="780" y="242" class="svg-title">🧾 mgm_invoice_details</text>
-  <text x="780" y="262" class="svg-pk">* uid (INT)</text>
-  <text x="780" y="278" class="svg-fk">  invoice_no / client_id</text>
-  <text x="780" y="293" class="svg-fk">  invoice_amt, VAT_rate</text>
-
-  <!-- === 第三列 === -->
-  <!-- pay_detail -->
-  <rect x="20" y="400" width="190" height="80" class="svg-table"/>
-  <text x="30" y="422" class="svg-title">💳 pay_detail</text>
-  <text x="30" y="442" class="svg-pk">* uid (INT)</text>
-  <text x="30" y="458" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
-  <text x="30" y="473" class="svg-fk">  client_id, sub_amt</text>
-
-  <!-- check_detail -->
-  <rect x="270" y="400" width="190" height="80" class="svg-table"/>
-  <text x="280" y="422" class="svg-title">✅ check_detail</text>
-  <text x="280" y="442" class="svg-pk">* uid (INT)</text>
-  <text x="280" y="458" class="svg-fk">  bu_no / YYYY_MM / wk_date</text>
-  <text x="280" y="473" class="svg-fk">  client_id, sub_amt</text>
-
-  <!-- bank_loan_details -->
-  <rect x="520" y="400" width="190" height="80" class="svg-table"/>
-  <text x="530" y="422" class="svg-title">🏦 bank_loan_details</text>
-  <text x="530" y="442" class="svg-pk">* uid (INT)</text>
-  <text x="530" y="458" class="svg-fk">  bu_no / loan_id / bank_name</text>
-  <text x="530" y="473" class="svg-fk">  loan_amt, interest_rate</text>
-
-  <!-- === 關聯線 === -->
-  <!-- finance_summary ↔ BEP_threshold (共享 bu_no + YYYY_MM) -->
-  <line x1="210" y1="65" x2="520" y2="65" class="svg-line-rel"/>
-  <text x="330" y="58" class="svg-label" text-anchor="middle">共享 bu_no + YYYY_MM</text>
-  <text x="330" y="77" class="svg-label" text-anchor="middle">sale_amt 提供給 BEP 使用</text>
-
-  <!-- BEP_threshold → casher_details (item_key 映射 amt_type) -->
-  <line x1="615" y1="125" x2="365" y2="200" class="svg-line-mm"/>
-  <text x="450" y="170" class="svg-label">BEP_ITEM_MAP: item_key → amt_type</text>
-
-  <!-- casher_details → pay_detail (共享 bu_no + YYYY_MM) -->
-  <line x1="365" y1="110" x2="115" y2="400" class="svg-line-rel"/>
-  <text x="195" y="260" class="svg-label">共享 bu_no + YYYY_MM</text>
-
-  <!-- finance_summary → arap_detail (共享 bu_no + YYYY_MM) -->
-  <path d="M 210 110 L 210 305 L 520 305" class="svg-line-rel"/>
-  <text x="330" y="300" class="svg-label">共享 bu_no + YYYY_MM → AR/AP 聚合</text>
-
-  <!-- erp_po ↔ erp_so (訂單關聯) -->
-  <line x1="210" y1="265" x2="270" y2="265" class="svg-line"/>
-  <text x="235" y="257" class="svg-label">採購 ↔ 銷售</text>
-
-  <!-- forecast → summary -->
-  <path d="M 865 110 Q 865 180 615 180 Q 615 130 520 130" class="svg-line-mm"/>
-  <text x="700" y="175" class="svg-label">預測 vs 實際比較</text>
-
-  <!-- kpi → summary -->
-  <path d="M 1090 110 Q 1090 170 615 170 Q 615 120 210 120" class="svg-line-mm"/>
-  <text x="850" y="165" class="svg-label">KPI 對比 sale_amt 等</text>
-
-  <!-- invoice → arap -->
-  <path d="M 865 310 Q 865 350 615 350 Q 615 310 710 310" class="svg-line-rel"/>
-  <text x="740" y="345" class="svg-label">發票 AR → 應收帳款聚合</text>
-
-  <!-- 圖例 -->
-  <rect x="850" y="420" width="320" height="90" fill="#f8f9fa" stroke="#bdc3c7" rx="6"/>
-  <text x="860" y="440" class="svg-title" style="font-size:11px;">圖例 Legend</text>
-  <line x1="860" y1="455" x2="900" y2="455" class="svg-line-rel"/>
-  <text x="906" y="458" class="svg-label">共享 Key / 直接關聯</text>
-  <line x1="860" y1="472" x2="900" y2="472" class="svg-line-mm"/>
-  <text x="906" y="475" class="svg-label">業務邏輯關聯（非 FK）</text>
-  <line x1="860" y1="489" x2="900" y2="489" class="svg-line"/>
-  <text x="906" y="492" class="svg-label">模組間資料流</text>
-</svg>
-<p style="font-size:12px;color:#7f8c8d;margin-top:8px;">💡 ER 圖顯示核心 10 張表的關聯：實線=共享 Key 直接關聯；虛線=業務邏輯關聯（非 DB FK）</p>
-</div>
-
-<div class="legend">
-  <div class="legend-item"><div class="legend-color" style="background:#c0392b;"></div>PK 主鍵</div>
-  <div class="legend-item"><div class="legend-color" style="background:#2980b9;"></div>FK 外鍵</div>
-  <div class="legend-item"><div class="legend-color" style="background:#27ae60;"></div>核心財務表</div>
-  <div class="legend-item"><div class="legend-color" style="background:#f1c40f;"></div>ERP 營運表</div>
-  <div class="legend-item"><div class="legend-color" style="background:#8e44ad;"></div>系統設定表</div>
-  <div class="legend-item"><div class="legend-color" style="background:#34495e;"></div>空表（待啟用）</div>
-</div>
-
-<div class="card">
-<h3>💚 核心財務資料表（有種子數據）</h3>
-<div class="er-grid">
-
-<div class="er-table"><h4>📈 MGM_finance_summary</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">59</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>sale_amt</span> <span class="er-type">DECIMAL(18,2)</span></div>
-  <div><span>current_asset_amt</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>non_current_asset_amt</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>current_debet_amt</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>long_term_debet_amt</span> <span class="er-type">DECIMAL</span></div>
-</div></div>
-
-<div class="er-table"><h4>💵 MGM_casher_details</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">516</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>wk_date</span> <span class="er-type">DATE</span></div>
-  <div><span>num_vman</span> <span class="er-type">VARCHAR(50)</span></div>
-  <div><span>amt_type</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>DB_CR</span> <span class="er-type">VARCHAR(3)</span> DR=收入 CR=支出</div>
-  <div><span>sub_amt</span> <span class="er-type">DECIMAL(18,2)</span></div>
-</div></div>
-
-<div class="er-table"><h4>⚖️ MGM_BEP_threshold</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">52</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>consumable</span> <span class="er-type">DECIMAL</span> 消耗品</div>
-  <div><span>packaging</span> <span class="er-type">DECIMAL</span> 包裝費</div>
-  <div><span>processing</span> <span class="er-type">DECIMAL</span> 加工費</div>
-  <div><span>misc_purchase</span> <span class="er-type">DECIMAL</span> 雜項購置</div>
-  <div><span>freight</span> <span class="er-type">DECIMAL</span> 運費</div>
-  <div><span>customs</span> <span class="er-type">DECIMAL</span> 進出口</div>
-  <div><span>service_part_comp</span> <span class="er-type">DECIMAL</span> 服務零件</div>
-  <div><span>variable_expense</span> <span class="er-type">DECIMAL</span> 變動費用</div>
-  <div><span>fixed_cost</span> <span class="er-type">DECIMAL</span> 固定成本</div>
-</div></div>
-
-<div class="er-table"><h4>🧾 MGM_invoice_details</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">792</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>invoice_no</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>client_id</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>invoice_amt</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>invoice_date</span> <span class="er-type">DATE</span></div>
-  <div><span>VAT_rate</span> <span class="er-type">DECIMAL</span></div>
-</div></div>
-
-<div class="er-table"><h4>📋 ermm_arap_detail</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">54</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>AR_amt</span> <span class="er-type">DECIMAL</span> 應收</div>
-  <div><span>AP_amt</span> <span class="er-type">DECIMAL</span> 應付</div>
-  <div><span>AR_ageing</span> <span class="er-type">DECIMAL</span> 應收帳齡</div>
-  <div><span>AP_ageing</span> <span class="er-type">DECIMAL</span> 應付帳齡</div>
-</div></div>
-
-<div class="er-table"><h4>📦 ermm_erp_po / so</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">PO:70 SO:18</span></div>
-  <div><span>po_no / so_no</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>client_id</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>item_code</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>qty / unit_price</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>amount</span> <span class="er-type">DECIMAL</span></div>
-</div></div>
-
-<div class="er-table"><h4>🔮 forecast_detail</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">56</span></div>
-  <div><span>bu_no</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>YYYY_MM</span> <span class="er-type">VARCHAR(10)</span></div>
-  <div><span>forecast_type</span> <span class="er-type">VARCHAR(20)</span></div>
-  <div><span>forecast_amt</span> <span class="er-type">DECIMAL</span></div>
-</div></div>
-
-<div class="er-table"><h4>🏦 mgm_bank_loan_details</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">18</span></div>
-  <div><span>bu_no / loan_id</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>bank_name</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>loan_amt</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>interest_rate</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>start_date / end_date</span> <span class="er-type">DATE</span></div>
-</div></div>
-
-<div class="er-table"><h4>💳 pay_detail / check_detail</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">Pay:303 Check:40</span></div>
-  <div><span>bu_no / YYYY_MM</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>wk_date</span> <span class="er-type">DATE</span></div>
-  <div><span>client_id</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>sub_amt</span> <span class="er-type">DECIMAL</span></div>
-</div></div>
-
-<div class="er-table"><h4>📊 mgm_kpi_desc</h4>
-<div class="er-fields">
-  <div><span class="er-pk">uid</span> <span class="er-type">INT</span> <span class="er-count">45</span></div>
-  <div><span>kpi_code</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>kpi_name</span> <span class="er-type">VARCHAR</span></div>
-  <div><span>target_val / actual_val</span> <span class="er-type">DECIMAL</span></div>
-  <div><span>risk_color</span> <span class="er-type">VARCHAR</span></div>
-</div></div>
-
-</div>
-
-<h3 style="margin-top:30px;">⚙️ 系統設定 / 空表（待啟用）</h3>
-<div class="er-grid">
-<div class="er-table"><h4>🏢 branch_detail</h4><div class="er-fields er-empty">公司別主檔（空）</div></div>
-<div class="er-table"><h4>👥 relation_detail</h4><div class="er-fields er-empty">關聯方（空）</div></div>
-<div class="er-table"><h4>📋 cams_system_codes</h4><div class="er-fields">系統代碼 8 筆</div></div>
-<div class="er-table"><h4>📋 cams_xuser</h4><div class="er-fields er-empty">使用者（空）</div></div>
-<div class="er-table"><h4>📦 ermm_erp_documents</h4><div class="er-fields er-empty">ERP 文件（空）</div></div>
-<div class="er-table"><h4>📦 ermm_erp_so_dn</h4><div class="er-fields er-empty">送貨單明細（空）</div></div>
-<div class="er-table"><h4>📦 mgm_account_details</h4><div class="er-fields er-empty">銀行帳戶（空）</div></div>
-<div class="er-table"><h4>📦 mgm_production_details</h4><div class="er-fields er-empty">生產明細（空）</div></div>
-<div class="er-table"><h4>📦 transit_price</h4><div class="er-fields er-empty">運費價格（空）</div></div>
-<div class="er-table"><h4>📦 bh_mgm_tx_detail</h4><div class="er-fields er-empty">交易明細（空）</div></div>
-</div>
-</div>
-
-<!-- ========== 4. API 路由 ========== -->
-<h2>4️⃣ REST API 路由（27 個模組）</h2>
-<div class="card">
-<table class="api-table">
-<tr><th>模組</th><th>路由前綴</th><th>主要端點</th><th>方法</th></tr>
-<tr><td>📊 Summary 摘要</td><td><code>/api/summary</code></td><td>balance-sheet / pl-table / cash-flow</td><td><span class="api-method m-GET">GET</span></td></tr>
-<tr><td>⚖️ BEP 損益平衡</td><td><code>/api/bep</code></td><td>query / history / detail / save</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>💰 Cash 現金</td><td><code>/api/cash</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span> <span class="api-method m-PUT">PUT</span> <span class="api-method m-DELETE">DEL</span></td></tr>
-<tr><td>🏦 Bank 銀行</td><td><code>/api/bank</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📝 Pay 付款</td><td><code>/api/pay</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>✅ Check 支票</td><td><code>/api/check</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📋 AR/AP</td><td><code>/api/arap</code></td><td>list / upsert / ageing</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🧾 Invoice 發票</td><td><code>/api/invoice</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📦 PO 採購</td><td><code>/api/po</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🛒 SO 銷售</td><td><code>/api/so</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🚚 DN 送貨</td><td><code>/api/dn</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🔮 Forecast 預測</td><td><code>/api/forecast</code></td><td>list / upsert / save-batch</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📉 KPI 門檻</td><td><code>/api/kpi</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span> <span class="api-method m-PUT">PUT</span> <span class="api-method m-DELETE">DEL</span></td></tr>
-<tr><td>🎯 KPI Query</td><td><code>/api/kpi-query</code></td><td>query / trend / export</td><td><span class="api-method m-GET">GET</span></td></tr>
-<tr><td>⚠️ Risk 風險</td><td><code>/api/risk</code></td><td>query / assess / auto-assess</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📊 Report 報表</td><td><code>/api/report</code></td><td>export/balance-sheet.xlsx / pl-table.xlsx / cash-flow.xlsx</td><td><span class="api-method m-GET">GET</span></td></tr>
-<tr><td>🗂 Batch 批次</td><td><code>/api/batch</code></td><td>import / status / verify</td><td><span class="api-method m-POST">POST</span> <span class="api-method m-GET">GET</span></td></tr>
-<tr><td>🏢 Branch 公司</td><td><code>/api/branch</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>👥 Relation</td><td><code>/api/relation</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🏷 System 代碼</td><td><code>/api/system</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span> <span class="api-method m-PUT">PUT</span> <span class="api-method m-DELETE">DEL</span></td></tr>
-<tr><td>📅 Monthly 月度</td><td><code>/api/monthly</code></td><td>list / insert / update</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>🏦 Loan 貸款</td><td><code>/api/account</code></td><td>list / insert / update / delete</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📑 TempPO</td><td><code>/api/temp-po</code></td><td>list / upsert / convert</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-<tr><td>📋 xitems</td><td><code>/api/xitems</code></td><td>daily-status / chart</td><td><span class="api-method m-GET">GET</span></td></tr>
-<tr><td>👤 User</td><td><code>/api/user</code></td><td>login / register / list</td><td><span class="api-method m-GET">GET</span> <span class="api-method m-POST">POST</span></td></tr>
-</table>
-</div>
-
-<!-- ========== 5. BEP 數據流 ========== -->
-<h2>5️⃣ BEP 損益平衡分析 — 完整數據流</h2>
-<div class="card">
-<div class="flow">
-
-<div class="flow-row">
-  <div class="flow-node n-input">🖥 使用者輸入<br>公司別 + 年月</div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-api">🌐 GET /api/bep/query<br>bu_no + YYYY_MM</div>
-</div>
-
-<div class="flow-row"><div class="flow-arrow">⬇</div></div>
-
-<div class="flow-row" style="gap:16px;">
-  <div class="flow-node n-db">🗄 MGM_finance_summary<br>sale_amt (銷售金額)</div>
-  <div class="flow-node n-db">🗄 MGM_BEP_threshold<br>8 項門檻值</div>
-  <div class="flow-node n-process">🔄 FALLBACK<br>指定月無資料 → 取最新月</div>
-</div>
-
-<div class="flow-row"><div class="flow-arrow">⬇</div></div>
-
-<div class="flow-col">
-  <div class="flow-node n-formula">📐 即時公式鏈（後端計算）</div>
-  <pre style="margin-top:6px;text-align:left;">材料     = consumable + packaging + processing + misc_purchase + freight + customs + service_part_comp
-變動成本  = 材料 + variable_expense
-邊際貢獻  = sale_amt − 變動成本
-邊際貢獻率 = 邊際貢獻 / sale_amt × 100%
-損益平衡點 = fixed_cost / (邊際貢獻率 / 100)
-不足訂單  = sale_amt − 損益平衡點</pre>
-</div>
-
-<div class="flow-row"><div class="flow-arrow">⬇</div></div>
-
-<div class="flow-row" style="gap:16px;">
-  <div class="flow-node n-ui">🖥 四張公式卡即時顯示</div>
-  <div class="flow-node n-ui">🖥 黃色可編輯材料明細<br>（即時重算 debounce 250ms）</div>
-</div>
-
-<div class="flow-row" style="margin-top:16px;">
-  <div style="color:#95a5a6;font-weight:600;">🔽 點擊明細項目（如「消耗品」）</div>
-</div>
-
-<div class="flow-row"><div class="flow-arrow">⬇</div></div>
-
-<div class="flow-row" style="gap:16px;">
-  <div class="flow-node n-api">🌐 GET /api/bep/detail<br>item_key + BEP_ITEM_MAP 映射</div>
-  <div class="flow-node n-db">🗄 mgm_casher_details<br>查 amt_type 交易明細</div>
-</div>
-
-<div class="flow-row"><div class="flow-arrow">⬇</div></div>
-
-<div class="flow-row" style="gap:16px;">
-  <div class="flow-node n-ui">📋 Tab 1: 當月交易明細<br>日期 / 憑證號 / 摘要 / DR / CR / 累計餘額</div>
-  <div class="flow-node n-ui">📈 Tab 2: 歷史趨勢<br>12 月 bar chart + MoM 變化</div>
-</div>
-
-</div>
-</div>
-
-<!-- ========== 6. 導入導出流程 ========== -->
-<h2>6️⃣ Excel 匯入匯出流程</h2>
-<div class="card io-flow">
-
-<div class="io-col imp">
-  <h4>📥 Excel 匯入</h4>
-  <div class="io-step ok">① 前端上傳 .xlsx 檔案（ExcelJS 解析）</div>
-  <div class="io-step api">② POST /api/batch/import（後端讀取每個 Sheet）</div>
-  <div class="io-step">③ Row 2 讀取 field_code 對應 DB 欄位（固定不可變）</div>
-  <div class="io-step">④ 驗證：日期轉換（0000-00-00→null）、金額格式、公司代碼大寫</div>
-  <div class="io-step db">⑤ 使用 UPSERT（ON DUPLICATE KEY UPDATE）避免重複</div>
-  <div class="io-step db">⑥ 每個 Sheet 獨立 Transaction，失敗自動 Rollback</div>
-  <div class="io-step ok">⑦ 回傳成功筆數 / 失敗筆數 / 錯誤訊息</div>
-</div>
-
-<div class="io-col exp">
-  <h4>📤 Excel 匯出</h4>
-  <div class="io-step ok">① 使用者點「匯出」按鈕（指定公司 / 年月）</div>
-  <div class="io-step api">② GET /api/report/export/balance-sheet.xlsx<br>GET /api/report/export/pl-table.xlsx<br>GET /api/report/export/cash-flow.xlsx</div>
-  <div class="io-step">③ 後端查 finance_summary + 相關表</div>
-  <div class="io-step">④ 套用對應公式（calcPL / buildBalanceSheet / cashFlow indirect）</div>
-  <div class="io-step db">⑤ ExcelJS 生成 .xlsx（含公式、格式）</div>
-  <div class="io-step ok">⑥ 瀏覽器自動下載</div>
-</div>
-
-</div>
-</div>
-
-<!-- ========== 7. BEP_ITEM_MAP ========== -->
-<h2>7️⃣ BEP 項目與現金交易類型映射表</h2>
-<div class="card">
-<p style="color:#7f8c8d;font-size:13px;margin-bottom:10px;">點擊 BEP 頁面的變動成本明細項目時，後端依以下 BEP_ITEM_MAP 查詢 mgm_casher_details 的 amt_type。無對應項目的會顯示「固定基準值，無獨立交易明細」提示，並可切換到歷史趨勢 Tab 查看。</p>
-<table class="matrix">
-<tr><th>BEP 項目</th><th>item_key</th><th>casher_details amt_type</th><th>DB_CR</th><th>有交易資料</th></tr>
-<tr><td>消耗品</td><td><code>consumable</code></td><td>原料採購</td><td>CR 支出</td><td class="y">✔</td></tr>
-<tr><td>包裝費</td><td><code>packaging</code></td><td>廣告費</td><td>CR 支出</td><td class="y">✔</td></tr>
-<tr><td>加工費</td><td><code>processing</code></td><td>（無對應）</td><td>—</td><td class="n">✕</td></tr>
-<tr><td>雜項購置</td><td><code>misc_purchase</code></td><td>設備維修</td><td>CR 支出</td><td class="y">✔</td></tr>
-<tr><td>運費</td><td><code>freight</code></td><td>（無對應）</td><td>—</td><td class="n">✕</td></tr>
-<tr><td>進出口費用</td><td><code>customs</code></td><td>（無對應）</td><td>—</td><td class="n">✕</td></tr>
-<tr><td>服務零件與賠償</td><td><code>service_part_comp</code></td><td>（無對應）</td><td>—</td><td class="n">✕</td></tr>
-<tr><td>變動費用</td><td><code>variable_expense</code></td><td>差旅費</td><td>CR 支出</td><td class="y">✔</td></tr>
-<tr><td>材料合計</td><td><code>material_sum</code></td><td>原料採購 + 廣告費 + 設備維修</td><td>CR</td><td class="y">✔</td></tr>
-<tr><td>變動成本總計</td><td><code>variable_cost</code></td><td>以上全部 + 差旅費</td><td>CR</td><td class="y">✔</td></tr>
-<tr><td>固定成本</td><td><code>fixed_cost</code></td><td>工資 + 房租水電 + 利息支出</td><td>CR 支出</td><td class="y">✔</td></tr>
-<tr><td>銷售金額</td><td><code>sale_amt</code></td><td>銷貨收入 + 應收款收回 + 匯兌收益 + 利息收入</td><td>DR 收入</td><td class="y">✔</td></tr>
-</table>
-</div>
-
-<!-- ========== 8. 技術棧詳細 ========== -->
-<h2>8️⃣ 技術棧 & 關鍵依賴</h2>
-<div class="card">
-<h3>後端套件</h3>
-<table class="api-table">
-<tr><th>套件</th><th>版本</th><th>用途</th></tr>
-<tr><td><code>express</code></td><td>^4</td><td>Web 框架</td></tr>
-<tr><td><code>mysql2</code></td><td>^3</td><td>MySQL 驅動（Promise API）</td></tr>
-<tr><td><code>exceljs</code></td><td>^4</td><td>Excel 讀寫（匯入匯出）</td></tr>
-<tr><td><code>cors</code></td><td>^2</td><td>跨網域</td></tr>
-<tr><td><code>dotenv</code></td><td>^16</td><td>環境變數</td></tr>
-<tr><td><code>jest + supertest</code></td><td>^29</td><td>單元 / API 測試</td></tr>
-</table>
-
-<h3 style="margin-top:20px;">前端特性</h3>
-<ul style="margin-left:20px;line-height:2;">
-  <li>✓ 原生 HTML5 + CSS3 + ES6（無 React/Vue 框架）</li>
-  <li>✓ <code>registerPage(id, async fn)</code> 自定義頁面路由引擎</li>
-  <li>✓ i18n 多語：繁中 / 簡中 / EN</li>
-  <li>✓ 即時重算 debounce 250ms</li>
-  <li>✓ Modal 子彈窗（z-index 層級管理 + ESC 優先級）</li>
-  <li>✓ Pure CSS bar chart（無 chart.js 依賴）</li>
-  <li>✓ 可編輯材料明細（黃色 editable 區塊）</li>
-</ul>
-
-<h3 style="margin-top:20px;">DB 硬約束（不可違反）</h3>
-<pre>• 日期格式：YYYY-MM-DD；0000-00-00 自動 → null
-• 金額：DECIMAL(18,2) 不可加千分位 / $ 符號
-• YYYY_MM 格式：YYYY/MM（如 2025/12）
-• DB_CR：DR=收入、CR=支出（大寫）
-• TX_type：AR / AP（大寫）
-• VAT_rate：數字百分比（如 13 代表 13%）
-• stock_date：月末最後一天（new Date(Y, M, 0)）
-• BEP threshold UNIQUE KEY uq_bu_ym (bu_no, YYYY_MM)
-• forecast_detail UNIQUE KEY (bu_no, YYYY_MM, forecast_type)
-• ERMM_ARAP_detail UNIQUE KEY (bu_no, YYYY_MM)
-• 匯入用 UPSERT（ON DUPLICATE KEY UPDATE）</pre>
-</div>
-
-<!-- ========== 9. 模組互動流程 ========== -->
-<h2>9️⃣ 模組互動業務流程</h2>
-<div class="card">
-
-<h3>流程 A：訂單 → 出貨 → 發票 → 應收帳款</h3>
-<div class="flow" style="gap:14px;">
-<div class="flow-row">
-  <div class="flow-node n-input">① SO 銷售單<br><small>ermm_erp_so<br>so_no + item_code</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-process">② 送貨 DN<br><small>（ERMM_erp_so_dn 空表待填充）</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-process">③ 開立發票<br><small>mgm_invoice_details<br>invoice_no + client_id</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-db">④ AR 應收帳款聚合<br><small>ermm_arap_detail<br>AR_amt + ageing</small></div>
-</div>
-<div class="flow-row">
-  <div style="color:#95a5a6;font-size:12px;">📊 最終匯入 MGM_finance_summary → 影響 sale_amt + current_asset</div>
-</div>
-</div>
-
-<h3 style="margin-top:24px;">流程 B：採購 → 付款 → 應付帳款</h3>
-<div class="flow" style="gap:14px;">
-<div class="flow-row">
-  <div class="flow-node n-input">① PO 採購單<br><small>ermm_erp_po<br>po_no + item_code</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-process">② 驗收 + 入庫<br><small>（暫無專表）</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-process">③ 付款處理<br><small>pay_detail / check_detail<br>DB_CR=CR 支出</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-db">④ AP 應付帳款聚合<br><small>ermm_arap_detail<br>AP_amt + ageing</small></div>
-</div>
-<div class="flow-row">
-  <div style="color:#95a5a6;font-size:12px;">📊 最終匯入 MGM_finance_summary → 影響 current_debet</div>
-</div>
-</div>
-
-<h3 style="margin-top:24px;">流程 C：現金日記帳 → 財務摘要 → BEP/KPI/Risk 串聯</h3>
-<div class="flow" style="gap:14px;">
-<div class="flow-row">
-  <div class="flow-node n-input">💰 mgm_casher_details<br><small>每筆交易 DR/CR</small></div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-node n-db">📈 MGM_finance_summary<br><small>sale_amt / 資產 / 負債</small></div>
-</div>
-<div class="flow-row" style="gap:16px;">
-  <div class="flow-node n-api">⚖️ BEP 損益平衡<br><small>sale_amt ↔ threshold<br>→ BREAK_EVEN_POINT</small></div>
-  <div class="flow-node n-api">🎯 KPI 查詢<br><small>sale_amt → target<br>→ 達成率</small></div>
-  <div class="flow-node n-api">⚠️ 風險管理<br><small>多維度 → RED/YELLOW/GREEN</small></div>
-  <div class="flow-node n-api">🔮 預測分析<br><small>forecast_detail<br>vs 實際</small></div>
-</div>
-<div class="flow-row">
-  <div style="color:#95a5a6;font-size:12px;">📋 四個分析模組共享 finance_summary + 各自維度的額外表</div>
-</div>
-</div>
-
-<h3 style="margin-top:24px;">流程 D：Excel 批次匯入（數據上線主通道）</h3>
-<pre style="text-align:left;">前端 batch.js → POST /api/batch/import
-  ├─ ExcelJS 解析每個 Sheet
-  ├─ Row 2 field_code → DB 欄位映射（固定不可變）
-  ├─ 驗證：日期 / 金額 / 公司代碼 / DB_CR
-  ├─ UPSERT（ON DUPLICATE KEY UPDATE）
-  └─ 每 Sheet 獨立 Transaction → Rollback on fail
-
-涵蓋表：finance_summary / casher / invoice / pay / check / arap / po / so / loan / forecast / BEP_threshold</pre>
-</div>
-
-<!-- ========== 10. 頁面→API→DB 三層映射 ========== -->
-<h2>🔟 頁面 → API → DB 三層映射表</h2>
-<div class="card">
-<p style="color:#7f8c8d;font-size:13px;margin-bottom:10px;">每個前端頁面對應的後端路由模組與主要操作的 DB 表</p>
-<table class="api-table">
-<tr><th>頁面（nav id）</th><th>API 路由</th><th>主要 DB 表</th><th>CRUD</th></tr>
-<tr><td>dashboard</td><td><code>/api/summary</code> + <code>/api/risk</code></td><td>finance_summary, kpi_desc</td><td>R</td></tr>
-<tr><td>cash</td><td><code>/api/cash</code></td><td>mgm_casher_details</td><td>CRUD</td></tr>
-<tr><td>bank</td><td><code>/api/bank</code></td><td>mgm_bank_loan_details</td><td>CRUD</td></tr>
-<tr><td>pay</td><td><code>/api/pay</code></td><td>pay_detail</td><td>CRUD</td></tr>
-<tr><td>check</td><td><code>/api/check</code></td><td>check_detail</td><td>CRUD</td></tr>
-<tr><td>arap</td><td><code>/api/arap</code></td><td>ermm_arap_detail</td><td>R/Upsert</td></tr>
-<tr><td>invoice</td><td><code>/api/invoice</code></td><td>mgm_invoice_details</td><td>CRUD</td></tr>
-<tr><td>po</td><td><code>/api/po</code></td><td>ermm_erp_po</td><td>CRUD</td></tr>
-<tr><td>so</td><td><code>/api/so</code></td><td>ermm_erp_so</td><td>CRUD</td></tr>
-<tr><td>dn</td><td><code>/api/dn</code></td><td>ermm_erp_so_dn</td><td>CRUD</td></tr>
-<tr><td>summary</td><td><code>/api/summary</code></td><td>mgm_finance_summary</td><td>R</td></tr>
-<tr><td><b>bep</b></td><td><b><code>/api/bep</code></b></td><td><b>MGM_BEP_threshold + finance_summary + casher</b></td><td><b>R/Upsert</b></td></tr>
-<tr><td>kpiQuery</td><td><code>/api/kpi-query</code></td><td>mgm_kpi_desc + finance_summary</td><td>R</td></tr>
-<tr><td>kpi</td><td><code>/api/kpi</code></td><td>mgm_kpi_desc</td><td>CRUD</td></tr>
-<tr><td>risk</td><td><code>/api/risk</code></td><td>finance_summary + arap + kpi_desc</td><td>R</td></tr>
-<tr><td>forecast</td><td><code>/api/forecast</code></td><td>forecast_detail</td><td>R/Upsert</td></tr>
-<tr><td>report</td><td><code>/api/report</code></td><td>finance_summary（關聯 summary 公式）</td><td>R</td></tr>
-<tr><td>batch</td><td><code>/api/batch</code></td><td>多表 UPSERT</td><td>Upsert</td></tr>
-<tr><td>branch</td><td><code>/api/branch</code></td><td>branch_detail</td><td>CRUD</td></tr>
-<tr><td>relation</td><td><code>/api/relation</code></td><td>relation_detail</td><td>CRUD</td></tr>
-<tr><td>system</td><td><code>/api/system</code></td><td>cams_system_codes</td><td>CRUD</td></tr>
-<tr><td>monthly</td><td><code>/api/monthly</code></td><td>monthly_items</td><td>R/Upsert</td></tr>
-<tr><td>account</td><td><code>/api/account</code></td><td>mgm_bank_loan_details</td><td>CRUD</td></tr>
-<tr><td>tempPo</td><td><code>/api/temp-po</code></td><td>ermm_temp_po</td><td>R/Upsert</td></tr>
-<tr><td>trend</td><td><code>/api/summary</code></td><td>finance_summary</td><td>R</td></tr>
-<tr><td>xitems</td><td><code>/api/xitems</code></td><td>e2_xitems_daily_status</td><td>R</td></tr>
-<tr><td>user</td><td><code>/api/user</code></td><td>cams_xuser / leader_user</td><td>CRUD</td></tr>
-</table>
-</div>
-
-<div class="footer">
-  ERMM 財務模組 · 系統架構與流程圖 · 最後更新 2026-09-07<br>
-  GitHub: <a href="https://github.com/rocky1953/ERMM-finance-system" target="_blank">rocky1953/ERMM-finance-system</a>
-</div>
-
-</div>
 </body>
 </html>
