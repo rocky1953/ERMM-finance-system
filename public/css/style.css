@@ -113,15 +113,19 @@ body.locked #loginScreen { display: flex; }
 }
 .card-title { font-size: 1.05em; font-weight: 600; margin-bottom: 12px; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 6px; }
 
-/* ===== 仪表板页面（无滚动条，一屏完整显示） ===== */
+/* ===== 仪表板页面 ===== */
 .dash-page {
-    display: flex; flex-direction: column; gap: 10px; height: 100%; min-height: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    /* 允许页面滚动（原本一屏显示，现在加了 AI 摘要卡片后内容变长） */
+    height: auto; min-height: 100%;
 }
 .dash-page .kpi-grid { flex-shrink: 0; margin-bottom: 0; gap: 10px; }
 .dash-page .kpi-card { padding: 12px 14px; }
 .dash-page .kpi-card .kpi-value { font-size: 1.5em; }
 .dash-page .dash-charts-row {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-height: 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    /* 固定合理高度，不再依赖 flex:1 挤压 */
+    min-height: 260px; height: 260px;
 }
 .dash-page .dash-chart-card {
     height: 100%; margin-bottom: 0; padding: 10px 14px;
