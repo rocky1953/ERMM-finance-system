@@ -1,7 +1,7 @@
 # ERMM 财务模组 · 系统架构图与模块-资料表关系图
 
 > 基于代码事实抽取（routes/*.js、database/add_*.js、public/index.html 菜单、public/js/pages/*.js）
-> 生成日期：2026-10-06｜更新日期：2026-10-24（HN 账套 2023 全年补齐 + 数据对齐后更新）
+> 生成日期：2026-10-06｜更新日期：2026-11-05（智能化 AI 层上线后更新）
 
 ---
 
@@ -14,10 +14,10 @@ flowchart TB
     end
 
     subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口<br/>+ 侧边栏菜单 (43 页)"]
+        Index["index.html 入口<br/>+ 侧边栏菜单 (50 个入口 / 8 个分组)"]
         App["app.js<br/>路由/导航/弹窗/通用 UI"]
         I18n["i18n.js<br/>简/繁/英 三语"]
-        Pages["pages/*.js (41 个功能页)<br/>dashboard / dailyReport / finance / tax / integration / ..."]
+        Pages["pages/*.js (50 个功能入口)<br/>dashboard / dailyReport / finance / tax / integration<br/>aiqa / arSmart / dataQuality / cashForecast / ..."]
         Chart["Chart.js 图表引擎"]
     end
 
@@ -27,7 +27,7 @@ flowchart TB
         Static["静态资源服务<br/>public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 42 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 48 个路由)"]
         direction LR
         S1["📊 绩效闭环<br/>dailyReport"]
         S2["🔔 预警引擎<br/>alert"]
@@ -36,7 +36,7 @@ flowchart TB
         S5["💰 现金预测<br/>cashForecast"]
         S6["🧾 财务核算<br/>cash/invoice/pay/check/bank/account"]
         S7["📋 预算/管会/合并<br/>budget/mgmtAccounting/consolidation"]
-        S8["🤖 AI 能力<br/>aiqa/llm/diagnosis"]
+        S8["🤖 AI 能力<br/>aiqa/dailySummary/llm/diagnosis<br/>arSmart/dataQuality/scenario"]
         S9["📦 业务单据<br/>po/so/dn/tempPo"]
         S10["⚙️ 系统支撑<br/>system/user/batch/kpi/action"]
         S11["🔌 第三方资料整合<br/>integration"]
@@ -52,6 +52,7 @@ flowchart TB
         IntgT["第三方整合表<br/>intg_source / intg_job / intg_log"]
         TaxT["税务申报表<br/>vat_declarations / cit_annual_settlements / iit_withholding_*"]
         TaxIn["税务录入表<br/>tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
+        AiT["AI 知识库与摘要表<br/>ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / ermm_ai_records"]
     end
 
     subgraph EXTERNAL["⑥ 外部/支撑"]
@@ -74,7 +75,7 @@ flowchart TB
     S5 --> CoreT
     S6 --> CoreT
     S7 --> CoreT
-    S8 --> LLM & CoreT
+    S8 --> LLM & CoreT & AiT & BaseT
     S9 --> CoreT
     S10 --> BaseT & AuditT
     S11 --> IntgT & CoreT
@@ -126,7 +127,7 @@ flowchart TB
 | 25 | **年度趋势** | `/api/forecast` | trend | `mgm_finance_summary` `forecast_detail` | 年度趋势图表 |
 | 26 | **月度报表** | `/api/monthly` | monthly | `monthly_items` | 月度项目 |
 | 27 | **损益平衡** | `/api/bep` | bep | `mgm_bep_threshold` | BEP 阈值 |
-| 28 | **AI 问答** | `/api/aiqa` | aiqa | `ermm_ai_records` `llm_config` `mgm_finance_summary` `budget_detail` `mgmt_dept_pl` | AI 对话记录+配置 |
+| 28 | **AI 问答** | `/api/aiqa` | aiqa | `ermm_ai_records` `ermm_knowledge` `ermm_kb_miss_log` `llm_config` `mgm_finance_summary` `budget_detail` `mgmt_dept_pl` | **RAG**：n-gram 检索知识库 + LLM 作答；未命中写日志 |
 | 29 | **情景模拟** | `/api/scenario` | scenario | `budget_detail` `mgm_finance_summary` | 多情景测算 |
 | 30 | **异常诊断** | `/api/diagnosis` | (内嵌) | `mgm_finance_summary` `mgm_kpi_desc` | KPI 异常自动诊断 |
 | 31 | **采购单 PO** | `/api/po` | po | `ermm_erp_po` | 采购订单 |
@@ -142,6 +143,12 @@ flowchart TB
 | 41 | **仪表板** | `/api/summary` `/api/invoice` `/api/risk` | dashboard | `mgm_finance_summary` `mgm_invoice_details` `ermm_arap_detail` | **下钻钻取**：点击销售成本/收入柱体 → 弹窗显示当月 AR/AP 发票明细 |
 | 42 | **第三方资料整合** | `/api/integration` | integration | `intg_source` `intg_job` `intg_log` + 任意本地目标表 | **双通道**：Excel 导入 / SQL 直连第三方库；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单 |
 | **43** | **电子化报税** | `/api/tax` | tax | `vat_declarations` `cit_annual_settlements` `iit_withholding_batches` `iit_withholding_details` `tax_submit_receipts` `tax_vat_adjustments` `tax_cit_inputs` `tax_cit_adjustments` `payroll_details` `bonus_details` `mgm_invoice_details` `mgm_finance_summary` | **VAT/CIT/IIT 三税种**：算税→核对→提交→落库；支持按月/按季申报、年终奖单独计税、CIT 收入成本人工覆盖 |
+| 44 | **AR 智能催收** | `/api/ar-smart` | arSmart | `mgm_invoice_details` `ermm_arap_detail` `mgm_finance_summary` | **只读评分**：账龄40+逾期30+金额15+风险10+占比5 → 四级灯号排序 |
+| 45 | **数据质量扫描** | `/api/data-quality` | dataQuality | 全库只读（7 大类 20+ 项检核） | 一键体检；**只扫描不自动修复** |
+| 46 | **每日 AI 执行摘要** | `/api/daily-summary` | dashboard（摘要卡片） | `daily_ai_summary` `mgm_finance_summary` `alert_log` `mgm_casher_details` | LLM 生成自然语言摘要并落库，支持历史回看 |
+| 47 | **现金流概率预测** | `/api/cash-forecast/monte-carlo` | cashForecast（概率模式） | `mgm_casher_details` `mgm_cash_safe_level` | **Monte Carlo** 5000 次模拟 → P10/P50/P90 与负现金概率 |
+| 48 | **战情看板** | `/api/war-room` | warRoom | `mgm_finance_summary` `mgm_invoice_details` `ermm_arap_detail` | 高管实时经营看板 |
+| 49 | **系统文件** | 静态 `/docs/architecture` `/docs/data-model` | 新标签页 HTML | 无（纯文档，不落库） | **仅 admin='Yes'** 可打开，非管理员前端拦截提示 |
 
 ---
 
@@ -963,6 +970,132 @@ erDiagram
 
 ---
 
+### 3.11 智能化模块（AI 层 · RAG / 摘要 / 催收 / 质检 / 概率预测）
+
+> **模块性质**：**只读分析层**。自有表仅 3 张（`ermm_knowledge`、`ermm_kb_miss_log`、`daily_ai_summary`），复用 `llm_config` 与 `ermm_ai_records`；其余分析数据全部从既有业务表**只读取数**，不回写账务。
+> 设计原则：轻量 RAG（MySQL FULLTEXT + n-gram 关键词），**不引入向量数据库与 LLM 编排框架**。
+
+#### 3.11.1 资料表 ER 图
+
+```mermaid
+erDiagram
+    ermm_knowledge ||--o{ ermm_kb_miss_log : "未命中时记录 query"
+    llm_config ||--o{ daily_ai_summary : "provider/model"
+    llm_config ||--o{ ermm_ai_records : "对话模型"
+    mgm_finance_summary ||--o{ daily_ai_summary : "取数(只读)"
+
+    ermm_knowledge {
+        int uid PK
+        varchar title
+        text content
+        varchar category "tax/budget/annual/policy/benchmark/other"
+        varchar bu_no "HM/SZ/HN/ALL"
+        varchar year
+        varchar YYYY_MM
+        varchar source
+        varchar tags
+        int importance "1-5 检索加权"
+        tinyint is_active
+        datetime create_time
+    }
+
+    ermm_kb_miss_log {
+        int uid PK
+        varchar query "原始查询"
+        varchar bu_no
+        tinyint use_llm
+        int hit_count
+        varchar search_words "n-gram + split 切词"
+        varchar lang
+        varchar session_id
+        varchar client_ip
+        varchar user_id
+        datetime created_at
+    }
+
+    daily_ai_summary {
+        int uid PK
+        date summary_date
+        datetime generated_time
+        varchar period_label
+        varchar source_modules
+        varchar trigger_type "auto/manual/api"
+        varchar provider
+        varchar model
+        json data_json "财务快照+YoY+现金水位+风险"
+        varchar title
+        text content
+        json alerts_json
+        json actions_json
+        varchar xuser_id
+    }
+
+    llm_config {
+        int uid PK
+        varchar provider "deepseek/kimi"
+        varchar provider_name
+        text api_key
+        varchar base_url
+        varchar model
+        varchar status "USE/STOP"
+        tinyint is_default "1=预设使用"
+    }
+```
+
+#### 3.11.2 迁移脚本
+
+| 脚本 | 内容 |
+|---|---|
+| `013_industry_benchmark.sql` | 同业标杆表 `industry_benchmark`（benchmark 类知识取数源） |
+| `014_llm_is_default.sql` | `llm_config` 新增 `is_default` + `provider` 字段放开硬编码 |
+| `015_ermm_knowledge.sql` | 建 `ermm_knowledge` + 12 条种子知识 |
+| `016_ermm_knowledge_expand.sql` | 知识库扩充（政策 / 税务 / 数据字典） |
+| `017_daily_ai_summary.sql` | 建 `daily_ai_summary`（每日 AI 摘要） |
+| `018_ermm_knowledge_expand_2.sql` | 知识库二次扩充（累计 41 条 / 6 分类） |
+| `019_kb_miss_log.sql` | 建 `ermm_kb_miss_log`（RAG 未命中日志，驱动 KB 扩充） |
+
+#### 3.11.3 API 端点清单
+
+| 功能 | 方法 | 端点 | 说明 |
+|---|---|---|---|
+| AI 问答 | POST | `/api/aiqa/ask` | 提问 → 检索 → LLM → 回答 + 引用 |
+| 建议问题 | GET | `/api/aiqa/suggestions` | 按当期数据动态生成 |
+| 知识库查看 | GET | `/api/aiqa/knowledge` | 列出 `ermm_knowledge` 条目 |
+| 会话记录 | GET | `/api/aiqa/records` | 历史会话列表 |
+| 单会话 | GET | `/api/aiqa/conversation/:convId` | 多轮上下文 |
+| 生成摘要 | POST | `/api/daily-summary/generate` | 聚合取数 → LLM → 落库 |
+| 最新摘要 | GET | `/api/daily-summary/latest` | 仪表板卡片取数 |
+| 摘要历史 | GET | `/api/daily-summary/history` | 按日期回看 |
+| 摘要聚合 | GET | `/api/daily-summary/aggregate` | 结构化快照 |
+| AR 催收清单 | GET | `/api/ar-smart/collections` | 评分排序后的明细 |
+| 催收概览 | GET | `/api/ar-smart/overview` | 单公司分级汇总 |
+| 三公司概览 | GET | `/api/ar-smart/overview-all` | HM/SZ/HN |
+| 质量扫描 | GET | `/api/data-quality/scan` | 7 大类体检（约 39ms） |
+| 表健康度 | GET | `/api/data-quality/health` | 8 张核心表 |
+| 概率预测 | GET | `/api/cash-forecast/monte-carlo` | 5000 次模拟 |
+| LLM 服务商 | GET | `/api/llm/providers` | 列出 `llm_config`（含预设） |
+
+#### 3.11.4 核心规则
+
+| 功能 | 规则 |
+|---|---|
+| **RAG 检索** | 查询切分为 n-gram 2~4 滑窗 + 停用词过滤 → `LIKE` **OR 聚合**（任意命中即可）→ 分类加权：tax×1.5 / data_dict×1.3 / policy×1.2 / benchmark×1.0 / annual×0.8 → Top-K 拼上下文；召回为 0 时写 `ermm_kb_miss_log` |
+| **知识库规模** | 41 条 / 6 分类（annual 10 · policy 18 · tax 6 · benchmark 3 · data_dict 4） |
+| **AR 评分** | `Score = 账龄天数×40 + 逾期天数×30 + 金额规模×15 + 风险综合×10 + 单笔占比×5`；数据源 `mgm_invoice_details WHERE TX_type='AR'`；≥70 紧急 / 50~70 高优先 / 30~50 常规 / <30 正常 |
+| **数据质检** | finance_summary 6 项 · invoice 5 项 · bank_loan 3 项 · cash 1 项 · forecast 2 项 · reconcile 1 项 · 表健康度 8 张表；红=高风险、黄=提示 |
+| **概率预测** | 13 周 × 5000 次抽样（按历史收付波动），输出 P10/P50/P90 区间与负现金概率 |
+| **LLM 选型** | 统一走 `utils/llmClient.js → getDefaultProvider(pool)`，读 `llm_config` 中 `is_default=1 AND status='USE'` 的记录（当前为 DeepSeek） |
+
+#### 3.11.5 权限与安全
+
+| 项 | 说明 |
+|---|---|
+| 接口鉴权 | 全部 `/api/*` 经 `authRequired` 中间件校验 JWT |
+| 只读性 | 智能层不 INSERT/UPDATE 账务表，仅写自己的知识库、摘要与日志表 |
+| 系统文件菜单 | `/docs/architecture`、`/docs/data-model` 由前端 `openDocPage()` 校验 `admin='Yes'`，非管理员提示「你的权限不能使用这个模块功能」；静态文件本身未做服务端鉴权 |
+
+---
+
 ## 四、RUID 全链路追溯图（财务核心）
 
 ```mermaid
@@ -1020,7 +1153,7 @@ flowchart LR
 
 ---
 
-## 七、资料表清单（共 74 张）
+## 七、资料表清单（共 83 张 · 2026-11-05 实测 `information_schema`）
 
 | 模块域 | 表名 |
 |---|---|
@@ -1035,7 +1168,8 @@ flowchart LR
 | **分析预测** | forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc |
 | **第三方整合** | intg_source, intg_job, intg_log |
 | **电子化报税** | vat_declarations, cit_annual_settlements, iit_withholding_batches, iit_withholding_details, tax_submit_receipts, tax_vat_adjustments, tax_cit_inputs, tax_cit_adjustments, payroll_details, bonus_details |
-| **AI/其他** | ermm_ai_records, e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task |
+| **AI 智能层** | ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆） |
+| **其他** | e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task |
 
 ---
 
@@ -1068,6 +1202,7 @@ flowchart LR
 ---
 
 > 本文件所有关系均来自代码事实（routes/*.js 的 SQL 语句、database/add_*.js 的 DDL、index.html 菜单），未作臆造。Mermaid 图可在 VS Code / GitHub 直接渲染。
+> 2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44~#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→**83 张**（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
 > 2026-10-24 更新：① 新增电子化报税模块（3.10 节，含 VAT/CIT/IIT 三税种 + 10 张资料表 ER 图）；② 更新模块总表（42 个模块，新增 #43 电子化报税）；③ 更新资料表清单（80+ 张，新增税务申报表域）；④ 新增第八章「数据覆盖状态」（HN 2023 补齐后三账套 36 个月全对齐）；⑤ 更新架构图（服务层 42 个路由，数据层新增税务申报表与税务录入表）。
 > 2026-10-15 更新：① 新增 3.8 批次管线模块（7 步 ERP 加工管线）含数据流 ER 图 + API + 前端增强说明；② 月份格式统一 YYYY/MM → YYYY-MM（SQL 示例 + 字段字典 + 页面映射表）；③ 修正章节编号重复（原两个 3.5）；④ 日记账收入/支出兼容中文「借/贷」判断（routes/cash.js）；⑤ 批次管线前端增强（逐步进行自动推进 + 操作说明弹窗）。
 > 2026-10-09 更新：补充第三方资料整合模块（3.9 节 · intg_source / intg_job / intg_log）。

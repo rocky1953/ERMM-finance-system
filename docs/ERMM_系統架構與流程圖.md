@@ -1,7 +1,7 @@
 # ERMM 系统架构图与相关联流程图
 
 > 基于代码事实抽取（app.js / routes/*.js / services/*.js / scheduler/*.js / public/js/pages/*.js）
-> 生成日期：2026-10-20 ｜ 更新日期：2026-10-24 ｜ 适用版本：v3.1（含财务模块 + 第三方整合 + 批次管线 + 电子化报税）
+> 生成日期：2026-10-20 ｜ 更新日期：2026-11-05 ｜ 适用版本：v3.2（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层）
 
 ---
 
@@ -15,7 +15,7 @@ flowchart TB
     end
 
     subgraph GATEWAY["🚪 接入层"]
-        EXPRESS["Express 5 路由<br/>42 个路由模块"]
+        EXPRESS["Express 5 路由<br/>48 个路由模块"]
         AUTH["JWT 认证中间件<br/>authRequired"]
         PERM["权限分级<br/>员工/部门主管/高阶主管/管理员"]
     end
@@ -52,26 +52,35 @@ flowchart TB
             S17["算税引擎<br/>taxService<br/>VAT/CIT/IIT"]
             S18["提交受理<br/>(本地模拟回执)"]
         end
+        subgraph AI["🤖 智能化 AI 层"]
+            S19["AI 问答 + RAG 检索<br/>aiqa / searchKnowledge"]
+            S20["每日 AI 执行摘要<br/>dailySummary + llmClient"]
+            S21["AR 智能催收评分<br/>arSmart (5 维加权)"]
+            S22["数据质量扫描<br/>dataQuality (7 大类)"]
+            S23["现金流概率预测<br/>cashMonteCarlo (5000 次)"]
+        end
     end
 
-    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 74 表)"]
+    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 83 表)"]
         DB_HR["daily_report*<br/>alert_* / forecast_log"]
         DB_FIN["fin_voucher / fin_tax_return<br/>fin_reconciliation<br/>fin_ruid_ledger"]
         DB_CASH["mgm_casher_details<br/>mgm_cash_safe_level"]
         DB_ERP["ermm_erp_po / ermm_erp_so<br/>ermm_temp_po / ermm_arap_detail<br/>e2_xitems_daily_status"]
         DB_INTG["intg_source<br/>intg_job / intg_log"]
         DB_TAX["vat_declarations<br/>cit_annual_settlements<br/>iit_withholding_*<br/>tax_submit_receipts<br/>tax_*_adjustments / tax_cit_inputs<br/>payroll_details / bonus_details"]
+        DB_AI["ermm_knowledge / ermm_kb_miss_log<br/>daily_ai_summary / llm_config"]
     end
 
     subgraph EXTERNAL["🌐 外部系统"]
         EXT_DB["第三方 MySQL 数据库"]
         EXT_MAIL["SMTP 邮件服务"]
+        EXT_LLM["LLM API<br/>DeepSeek（预设）"]
     end
 
     BROWSER -->|HTTP/JWT| EXPRESS
     EXCEL_USER -->|上传 xlsx| EXPRESS
     EXPRESS --> AUTH --> PERM
-    PERM --> HR & FIN & CASH & ERP & INTG & TAX
+    PERM --> HR & FIN & CASH & ERP & INTG & TAX & AI
 
     S1 & S2 & S3 & S4 & S5 --> DB_HR
     S6 & S7 & S8 & S9 --> DB_FIN
@@ -79,16 +88,25 @@ flowchart TB
     S13 & S14 --> DB_ERP
     S15 & S16 --> DB_INTG
     S17 & S18 --> DB_TAX
+    S19 & S20 & S21 & S22 & S23 --> DB_AI
     S17 -->|取数| DB_FIN
     S17 -->|取数| DB_ERP
+    S19 -->|RAG 检索| DB_AI
+    S20 -->|取数| DB_FIN
+    S20 -->|取数| DB_CASH
+    S21 -->|取数| DB_ERP
+    S22 -->|全表体检| DATA
+    S23 -->|取数| DB_CASH
     S15 -->|SQL 只读| EXT_DB
     S15 -->|UPSERT 写入| DATA
     S4 -->|告警通知| EXT_MAIL
+    S19 & S20 -->|LLM 推理| EXT_LLM
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
     style GATEWAY fill:#fff3e0,stroke:#f57c00
     style SERVICE fill:#e8f5e9,stroke:#388e3c
     style DATA fill:#fce4ec,stroke:#c2185b
+    style AI fill:#ede7f6,stroke:#5e35b1
     style EXTERNAL fill:#f3e5f5,stroke:#7b1fa2
 ```
 
@@ -295,54 +313,120 @@ flowchart LR
 
 ---
 
-## 八、部署架构
+## 八、智能化（AI）流程图
+
+### 8.1 AI 问答 + RAG 检索链路
+
+```mermaid
+flowchart LR
+    Q["👤 用户提问"] --> API["POST /api/aiqa/ask"]
+    API --> NG["关键词切分<br/>n-gram 2~4 滑窗<br/>去停用词"]
+    NG --> SK["searchKnowledge<br/>LIKE OR 聚合检索<br/>+ 分类权重<br/>tax×1.5 / data_dict×1.3<br/>policy×1.2 / benchmark×1.0<br/>annual×0.8"]
+    SK --> HIT{"召回命中?"}
+    HIT -->|是| CTX["拼接上下文<br/>Top-K 知识条目"]
+    HIT -->|否| MISS["写入 ermm_kb_miss_log<br/>回答标注「未找到依据」"]
+    CTX --> LLM["llmClient.getDefaultProvider<br/>→ DeepSeek 预设"]
+    MISS --> LLM
+    LLM --> ANS["返回回答 + 引用来源"]
+    ANS --> SAVE["aiqa_conversation 落库<br/>（多轮上下文）"]
+    KB[("ermm_knowledge<br/>41 条 / 6 分类")] --> SK
+
+    style SK fill:#e8f5e9,stroke:#388e3c
+    style LLM fill:#ede7f6,stroke:#5e35b1
+```
+
+> 端点为 `/api/aiqa/ask`、`/api/aiqa/suggestions`、`/api/aiqa/knowledge`、`/api/aiqa/records`、`/api/aiqa/conversation/:convId`；知识库与未命中日志分别落在 `ermm_knowledge`、`ermm_kb_miss_log`。
+
+### 8.2 智能分析四链路（摘要 / 催收 / 质检 / 概率预测）
+
+```mermaid
+flowchart TB
+    subgraph SUMMARY["① 每日 AI 执行摘要（C-1）"]
+        AGG["汇总财务摘要 / 预警 / 收付款"] --> P1["精简 Prompt"] --> L1["LLM 生成"] --> D1["daily_ai_summary 落库"]
+    end
+
+    subgraph AR["② AR 智能催收（O-3）"]
+        INV["mgm_invoice_details<br/>TX_type='AR'"] --> SC["5 维加权评分<br/>账龄40 + 逾期30 + 金额15<br/>+ 风险10 + 单笔占比5"]
+        SC --> LV{"阈值分级"}
+        LV -->|"≥70"| E["🔴 紧急"]
+        LV -->|"50~70"| H["🟠 高优先"]
+        LV -->|"30~50"| M["🟡 常规"]
+        LV -->|"<30"| N["🟢 正常"]
+    end
+
+    subgraph DQ["③ 数据质量扫描（T-3）"]
+        SCAN["一键扫描 /api/data-quality/scan"] --> CAT["7 大类检查<br/>财务摘要6 / 发票5 / 贷款3<br/>现金1 / 预测2 / 勾稽1<br/>表健康度8"]
+        CAT --> RPT["问题清单：红=高风险 黄=提示<br/>仅扫描不自动修复"]
+    end
+
+    subgraph MC["④ 现金流概率预测（F-3）"]
+        HIST["mgm_casher_details<br/>历史流入/流出"] --> SIM["Monte Carlo 抽样<br/>5000 次 × 13 周"]
+        SIM --> BAND["P10 / P50 / P90 概率带"]
+        SIM --> RISK2["负现金概率 / 最差周缺口"]
+    end
+
+    style SUMMARY fill:#e3f2fd,stroke:#1976d2
+    style AR fill:#fce4ec,stroke:#c2185b
+    style DQ fill:#fff3e0,stroke:#f57c00
+    style MC fill:#e8f5e9,stroke:#388e3c
+```
+
+> 端点为 `/api/daily-summary/generate|latest|history|aggregate`、`/api/ar-smart/collections|overview|overview-all`、`/api/data-quality/scan|health`、`/api/cash-forecast/monte-carlo`。四个功能均为**只读分析**，不修改账务数据。
+
+---
+
+## 九、部署架构
 
 ```mermaid
 flowchart LR
     USER["👥 用户浏览器"] -->|HTTP :3008| NODE["Node.js<br/>node app.js"]
     subgraph NODE_PROC["同一进程内"]
-        NODE --> EXP["Express 路由 ×42"]
+        NODE --> EXP["Express 路由 ×48"]
         NODE --> SCH1["日报告警排程<br/>09:30/16:30/月末16:00"]
         NODE --> SCH2["整合批次排程<br/>每分钟 tick"]
     end
     EXP -->|mysql2 连接池<br/>limit 20| MYSQL[("MySQL 8<br/>ermm_db")]
     SCH1 & SCH2 --> MYSQL
+    EXP -->|HTTPS| LLMAPI["LLM API（DeepSeek 预设）"]
 
     style NODE_PROC fill:#e8f5e9,stroke:#388e3c
 ```
 
 ---
 
-## 九、模块间依赖关系总图
+## 十、模块间依赖关系总图
 
 ```mermaid
 flowchart TB
-    subgraph MOD["41 个前端页面模块"]
+    subgraph MOD["50 个前端入口 / 8 个菜单分组"]
         P_DR["日报/绩效/签核/审计/告警/预测"]
         P_FIN["财务入账/报税/勾稽/报税明细"]
-        P_CASH["日记账/现金预测/安全水位"]
+        P_CASH["日记账/现金预测/安全水位/概率预测"]
         P_ERP["PO暂存/批次管线"]
         P_INTG["第三方整合(5 Tab)"]
         P_TAX["电子化报税(4 Tab)<br/>VAT/CIT/IIT/录入维护"]
-        P_SYS["系统管理/用户/系统码"]
+        P_AI["AI 问答 / 每日摘要 / AR 智能催收<br/>数据质量扫描 / 情景模拟 / 战情看板"]
+        P_SYS["系统管理/用户/系统码/系统文件(管理员)"]
     end
 
     P_FIN -->|"RUID 贯穿"| P_FIN
     P_ERP -->|"ermm_erp_po 供数"| P_FIN
     P_FIN -->|"发票/财报取数"| P_TAX
     P_INTG -->|"UPSERT 写入"| P_DR & P_FIN & P_CASH & P_ERP
-    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX
+    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX & P_AI
+    P_AI -->|"只读取数"| P_FIN & P_CASH & P_ERP
 
     style MOD fill:#e3f2fd,stroke:#1976d2
 ```
 
 ---
 
-> **说明**：以上 9 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
+> **说明**：以上 11 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
 > 与 [ERMM_系統架構與模組資料表關係圖.md](ERMM_系統架構與模組資料表關係圖.md) 互补：本文侧重**运行时流程**，该文档侧重**资料表结构关系**。
 
 ---
 
 > **更新日志**
+> - 2026-11-05（v3.2）：① 新增第八章「智能化（AI）流程图」：AI 问答 RAG 检索链路 + 摘要/催收/质检/概率预测四链路；② 架构图服务层新增 AI 子域（S19~S23）、数据层新增 DB_AI（ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config）、外部新增 LLM API；③ 路由数 42→48、资料表 74→83、前端入口 41→50（8 个菜单分组）；④ 部署图补充 LLM API 出向调用；⑤ 新增系统文件菜单（`/docs/architecture`、`/docs/data-model`，仅管理员）。
 > - 2026-10-24：① 新增第三章「电子化报税流程图」（VAT/CIT/IIT 算税 → 落库 → 本地模拟提交）；② 架构图服务层新增 TAX 子域、数据层新增 DB_TAX（10 张税务表）；③ 路由数 41→42、资料表 68+→74、前端页面 40→41；④ 模块依赖图新增电子化报税节点。
 > - 2026-10-20：初版（v3.0，8 张流程图）。
