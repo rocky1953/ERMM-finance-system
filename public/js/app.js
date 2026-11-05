@@ -282,6 +282,17 @@ async function navigate(pageId, params = {}) {
     }
 }
 
+// ===== 系统文件（仅管理员可打开）=====
+function openDocPage(url) {
+    if (!Auth.isLoggedIn()) return false;
+    if (!Auth.isAdmin()) {
+        Auth.toast(t('docs.noPermission'), 'error');
+        return false;
+    }
+    window.open(url, '_blank', 'noopener');
+    return false;
+}
+
 // ===== 全局状态 =====
 const State = {
     bu_no: 'HM',

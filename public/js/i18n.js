@@ -45,6 +45,7 @@ const I18N = {
             'nav.docs': '系統文件',
             'nav.docArchitecture': '系統架構與流程圖',
             'nav.docDataModel': '模組資料表關係圖',
+            'docs.noPermission': '你的權限不能使用這個模組功能',
 
             // 頁面標題
             'page.dashboard': '財務儀表板',
@@ -1713,6 +1714,7 @@ const I18N = {
             'nav.docs': '系统文件',
             'nav.docArchitecture': '系统架构与流程图',
             'nav.docDataModel': '模块数据表关系图',
+            'docs.noPermission': '你的权限不能使用这个模块功能',
             'nav.system': '系统',
 
             // 页面标题
@@ -3377,6 +3379,7 @@ const I18N = {
             'nav.docs': 'Documentation',
             'nav.docArchitecture': 'Architecture & Flow',
             'nav.docDataModel': 'Data Model & ER Diagram',
+            'docs.noPermission': 'Your permission level cannot access this module',
             'nav.system': 'System',
 
             // Page titles
