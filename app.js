@@ -169,6 +169,18 @@ app.use((req, res, next) => {
 });
 app.use(express.static(path.join(__dirname, 'public'), { etag: false }));
 
+// 架構文件短網址（避免中文檔名 URL 編碼出錯）
+const DOC_ROUTES = {
+    '/docs/architecture': 'ERMM_系統架構與流程圖.html',
+    '/docs/data-model': 'ERMM_系統架構與模組資料表關係圖.html'
+};
+Object.entries(DOC_ROUTES).forEach(([route, file]) => {
+    app.get(route, (req, res) => {
+        res.sendFile(path.join(__dirname, 'public', file));
+    });
+});
+app.get('/docs', (req, res) => res.redirect('/docs/architecture'));
+
 // 根路徑 → 前端首頁
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
