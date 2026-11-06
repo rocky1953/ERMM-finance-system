@@ -14,6 +14,14 @@ const PUBLIC = path.join(ROOT, 'public');
 
 const FILES = [
     {
+        md: 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md',
+        title: 'ERMM 高管价值简报',
+        subtitle: 'CEO · CFO · COO · CTO 四高管视角',
+        accent: '#e65100',
+        accentSoft: '#fff3e0',
+        heroVariant: 'executive'   // PPT 大纲风格：每个 H1 = 一页幻灯片
+    },
+    {
         md: 'ERMM_系統架構與流程圖.md',
         title: 'ERMM 系統架構與流程圖',
         subtitle: '技術棧 · 分層架構 · 運行時流程 · AI 智能層',
@@ -103,11 +111,29 @@ function renderTokens(tokens) {
     }).join('');
 }
 
-function page({ title, subtitle, accent, accentSoft, body, toc, mermaidSrc, otherHref, generatedAt }) {
+function page({ title, subtitle, accent, accentSoft, body, toc, mermaidSrc, otherHref, generatedAt, heroVariant }) {
+    const isExec = heroVariant === 'executive';
     const tocHtml = toc
         .filter(t => t.depth <= 3)
         .map(t => `<a class="toc-item d${t.depth}" href="#${t.id}">${t.text}</a>`)
         .join('\n');
+
+    const execCss = isExec ? `
+.slide{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 34px;margin:26px 0;box-shadow:0 2px 8px rgba(0,0,0,.05);page-break-inside:avoid;}
+.slide-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--accent);}
+.slide-num{font-size:12px;font-weight:700;color:#fff;background:var(--accent);padding:3px 10px;border-radius:12px;letter-spacing:.04em;}
+.slide-title{font-size:20px;color:var(--ink);margin:0;}
+.slide p{font-size:14.5px;line-height:1.9;margin:8px 0;}
+.slide ul{margin:8px 0 8px 24px;}
+.slide li{font-size:14.5px;line-height:1.85;margin:5px 0;}
+.slide strong{color:var(--accent);}
+.slide blockquote{background:var(--accent-soft);border-left:4px solid var(--accent);padding:10px 16px;border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;margin:12px 0;}
+.slide hr{border:none;border-top:1px dashed var(--line);margin:16px 0;}
+` : '';
+    const heroCss = isExec ? `
+.hero{background:linear-gradient(135deg,var(--accent),#bf360c);}
+.hero h1::before{content:"📊 ";}
+` : '';
 
     return `<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -130,8 +156,9 @@ aside{width:280px;flex:0 0 280px;background:#fff;border-right:1px solid var(--li
 .toc-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
 .side-foot{margin-top:24px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.8;}
 .side-foot a{color:var(--accent);text-decoration:none;}
-main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
+main{flex:1;min-width:0;padding:34px 46px 90px;max-width:${isExec ? '1120px' : '1080px'};}
 .hero{background:linear-gradient(135deg,var(--accent),#3949ab);color:#fff;border-radius:14px;padding:26px 30px;margin-bottom:30px;}
+${heroCss}
 .hero h1{margin:0 0 8px;font-size:26px;font-weight:700;}
 .hero p{margin:0;font-size:13px;opacity:.92;}
 .doc h1{font-size:24px;margin:44px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--accent);color:var(--accent);}
@@ -139,6 +166,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 .doc h3{font-size:16px;margin:26px 0 10px;color:#2c3e50;}
 .doc p{margin:10px 0;}
 .doc ul,.doc ol{margin:10px 0 10px 22px;padding-left:8px;}
+${execCss}
 .doc li{margin:5px 0;}
 .doc blockquote{margin:14px 0;padding:10px 16px;background:#fff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
 .doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden;}
@@ -210,6 +238,27 @@ ${body}
 </html>`;
 }
 
+function wrapSlides(body) {
+    // 把 body 里的每个 H1（由 marked 渲染为 <h1 id="sec-N">...</h1>）及其后续兄弟元素
+    // 直到下一个 H1 为止，包裹成 <div class="slide">...</div>，并在 H1 上加编号徽章
+    let idx = 0;
+    let result = body.replace(
+        /<h1 id="sec-\d+">([^<]+)<\/h1>([\s\S]*?)(?=<h1 id="sec-\d+">|$)/g,
+        (match, title, rest) => {
+            idx += 1;
+            return `<div class="slide" data-slide="${idx}">
+<div class="slide-head">
+  <span class="slide-num">SLIDE ${String(idx).padStart(2, '0')}</span>
+  <h2 class="slide-title">${title}</h2>
+</div>
+${rest}</div>`;
+        }
+    );
+    // 顶层 slide 数（便于在 hero 或 toc 里展示）
+    result = `<div class="slide-count" style="display:none">${idx}</div>\n` + result;
+    return result;
+}
+
 (function main() {
     const md = buildMarkdown();
     const generatedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
@@ -218,21 +267,34 @@ ${body}
         const src = path.join(DOCS, f.md);
         const raw = fs.readFileSync(src, 'utf8');
         md.reset();
+        const isExec = f.heroVariant === 'executive';
 
-        // 移除頂部的引用區塊（由 hero 呈現）
-        const body = marked.parse(raw);
+        let body = marked.parse(raw);
+
+        if (isExec) {
+            // PPT 大纲风格：把每个 H1（及其后的兄弟元素直到下一个 H1）包裹成独立 .slide 卡片
+            body = wrapSlides(body);
+        }
 
         const common = { ...f, body, toc: md.getToc(), generatedAt };
+        // otherHref 互跳：exec ↔ flow ↔ data-model
         const isFlow = f.md.includes('流程圖');
+        const isModel = f.md.includes('資料表關係圖');
+        let altMd, altRoute;
+        if (isExec)      { altMd = 'ERMM_系統架構與流程圖.md'; altRoute = '/docs/architecture'; }
+        else if (isFlow) { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
+        else             { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
+        const altFile = altMd.replace(/\.md$/, '.html');
+
         const htmlDoc = page({
             ...common,
             mermaidSrc: '../public/vendor/mermaid.min.js',
-            otherHref: isFlow ? 'ERMM_系統架構與模組資料表關係圖.html' : 'ERMM_系統架構與流程圖.html'
+            otherHref: altFile
         });
         const htmlPub = page({
             ...common,
             mermaidSrc: '/vendor/mermaid.min.js',
-            otherHref: isFlow ? '/docs/data-model' : '/docs/architecture'
+            otherHref: altRoute
         });
 
         const outDoc = path.join(DOCS, f.md.replace(/\.md$/, '.html'));

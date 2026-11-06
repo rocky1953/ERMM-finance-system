@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 高管价值简报</title>
+<style>
+:root{--accent:#e65100;--accent-soft:#fff3e0;--ink:#1f2733;--muted:#6b7785;--line:#e3e8ef;--bg:#f6f8fb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;}
+.layout{display:flex;min-height:100vh;}
+aside{width:280px;flex:0 0 280px;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 16px 40px;}
+.brand{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.brand-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.toc-item{display:block;font-size:13px;color:#39424e;text-decoration:none;padding:6px 10px;border-radius:6px;border-left:3px solid transparent;}
+.toc-item.d2{padding-left:22px;color:var(--muted);}
+.toc-item.d3{padding-left:34px;font-size:12px;color:#8a95a3;}
+.toc-item:hover{background:var(--accent-soft);}
+.toc-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
+.side-foot{margin-top:24px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.8;}
+.side-foot a{color:var(--accent);text-decoration:none;}
+main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
+.hero{background:linear-gradient(135deg,var(--accent),#3949ab);color:#fff;border-radius:14px;padding:26px 30px;margin-bottom:30px;}
+
+.hero{background:linear-gradient(135deg,var(--accent),#bf360c);}
+.hero h1::before{content:"📊 ";}
+
+.hero h1{margin:0 0 8px;font-size:26px;font-weight:700;}
+.hero p{margin:0;font-size:13px;opacity:.92;}
+.doc h1{font-size:24px;margin:44px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--accent);color:var(--accent);}
+.doc h2{font-size:19px;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--accent);}
+.doc h3{font-size:16px;margin:26px 0 10px;color:#2c3e50;}
+.doc p{margin:10px 0;}
+.doc ul,.doc ol{margin:10px 0 10px 22px;padding-left:8px;}
+
+.slide{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 34px;margin:26px 0;box-shadow:0 2px 8px rgba(0,0,0,.05);page-break-inside:avoid;}
+.slide-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--accent);}
+.slide-num{font-size:12px;font-weight:700;color:#fff;background:var(--accent);padding:3px 10px;border-radius:12px;letter-spacing:.04em;}
+.slide-title{font-size:20px;color:var(--ink);margin:0;}
+.slide p{font-size:14.5px;line-height:1.9;margin:8px 0;}
+.slide ul{margin:8px 0 8px 24px;}
+.slide li{font-size:14.5px;line-height:1.85;margin:5px 0;}
+.slide strong{color:var(--accent);}
+.slide blockquote{background:var(--accent-soft);border-left:4px solid var(--accent);padding:10px 16px;border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;margin:12px 0;}
+.slide hr{border:none;border-top:1px dashed var(--line);margin:16px 0;}
+
+.doc li{margin:5px 0;}
+.doc blockquote{margin:14px 0;padding:10px 16px;background:#fff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden;}
+.doc th{background:var(--accent-soft);color:#243b53;text-align:left;font-weight:600;padding:9px 12px;border-bottom:2px solid var(--line);}
+.doc td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.doc tr:last-child td{border-bottom:none;}
+.doc tr:nth-child(even) td{background:#fbfcfe;}
+.doc code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:Consolas,"Courier New",monospace;font-size:12.5px;color:#0b5394;}
+.doc pre.code-block{background:#1e2530;color:#dbe4ee;padding:14px 16px;border-radius:8px;overflow:auto;font-size:12.5px;line-height:1.6;}
+.doc pre.code-block code{background:none;color:inherit;padding:0;}
+.diagram{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin:18px 0;overflow:auto;text-align:center;}
+.mermaid{font-size:13px;}
+.doc a{color:var(--accent);}
+.hr{border:none;height:1px;background:var(--line);margin:26px 0;}
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  aside{position:relative;width:auto;height:auto;flex:none;border-right:none;border-bottom:1px solid var(--line);}
+  main{padding:22px 18px 70px;}
+  .hero h1{font-size:20px;}
+}
+@media print{
+  aside{display:none;}
+  main{max-width:100%;padding:0;}
+  .hero{background:#fff;color:var(--ink);border:1px solid var(--line);}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand">ERMM Docs</div>
+  <div class="brand-sub">CEO · CFO · COO · CTO 四高管视角</div>
+  <nav id="toc">
+<a class="toc-item d1" href="#sec-2">封面：ERMM 智能财务管理平台</a>
+<a class="toc-item d1" href="#sec-3">系统总览（数字事实）</a>
+<a class="toc-item d1" href="#sec-4">CEO 视角：经营驾驶舱与战略掌控</a>
+<a class="toc-item d1" href="#sec-5">CEO 价值 1：一屏看清全公司经营态势</a>
+<a class="toc-item d1" href="#sec-6">CEO 价值 2：风险从「事后追责」变「事前预警」</a>
+<a class="toc-item d1" href="#sec-7">CEO 价值 3：绩效闭环驱动组织执行力</a>
+<a class="toc-item d1" href="#sec-8">CEO 价值 4：AI 辅助决策与趋势预判（RAG 知识问答 + Monte Carlo 概率预测）</a>
+<a class="toc-item d1" href="#sec-9">CFO 视角：核算自动化与合规风控</a>
+<a class="toc-item d1" href="#sec-10">CFO 价值 1：RUID 全链路追溯，账证表税一体</a>
+<a class="toc-item d1" href="#sec-11">CFO 价值 2：三大报表实时生成，且恒平衡</a>
+<a class="toc-item d1" href="#sec-12">CFO 价值 3：电子化报税，税务合规零遗漏</a>
+<a class="toc-item d1" href="#sec-13">CFO 税务合规 · 具体案例 1：小规模纳税人 VAT 免征判定</a>
+<a class="toc-item d1" href="#sec-14">CFO 税务合规 · 具体案例 2：年终奖计税方式比选</a>
+<a class="toc-item d1" href="#sec-15">CFO 税务合规 · 具体案例 3：CIT 汇算清缴人工覆盖留痕</a>
+<a class="toc-item d1" href="#sec-16">CFO 税务合规 · 具体案例 4：进项转出与留抵处理</a>
+<a class="toc-item d1" href="#sec-17">CFO 税务合规 · 具体案例 5：IIT 累计预扣，月度波动不愁</a>
+<a class="toc-item d1" href="#sec-18">CFO 税务合规 · 具体案例 6：申报数与账载数自动勾稽</a>
+<a class="toc-item d1" href="#sec-19">CFO 税务合规 · 具体案例 7：进项发票级追溯</a>
+<a class="toc-item d1" href="#sec-20">CFO 税务合规 · 具体案例 8：申报提交全程回执留档</a>
+<a class="toc-item d1" href="#sec-21">CFO 税务合规 · 具体案例 9：多账套同一套合规口径</a>
+<a class="toc-item d1" href="#sec-22">CFO 价值 4：现金流从「看余额」升级为「看 13 周 + 概率」</a>
+<a class="toc-item d1" href="#sec-23">CFO 价值 5：AR 催收智能排序 + 数据质量一键体检</a>
+<a class="toc-item d1" href="#sec-24">COO 视角：运营效率与流程自动化</a>
+<a class="toc-item d1" href="#sec-25">COO 价值 1：7 步批次管线，ERP 数据一键加工</a>
+<a class="toc-item d1" href="#sec-26">COO 价值 2：第三方数据整合，告别人工抄数</a>
+<a class="toc-item d1" href="#sec-27">COO 价值 3：人效与工时透明化</a>
+<a class="toc-item d1" href="#sec-28">COO 价值 4：运营异常分级预警，介入时机前置</a>
+<a class="toc-item d1" href="#sec-29">CTO 视角：架构现代化与安全可控</a>
+<a class="toc-item d1" href="#sec-30">CTO 价值 1：轻量现代化架构，低门槛可维护</a>
+<a class="toc-item d1" href="#sec-31">CTO 价值 2：安全与权限体系内建</a>
+<a class="toc-item d1" href="#sec-32">CTO 价值 3：开放整合能力，打破数据孤岛</a>
+<a class="toc-item d1" href="#sec-33">CTO 价值 4：AI 就绪与可观测性</a>
+<a class="toc-item d1" href="#sec-34">CTO 技术架构 · 具体案例 1：新模块「三板斧」落地实证</a>
+<a class="toc-item d1" href="#sec-35">CTO 技术架构 · 具体案例 2：幂等数据管线与一键回滚</a>
+<a class="toc-item d1" href="#sec-36">CTO 技术架构 · 具体案例 3：排程器防重入设计</a>
+<a class="toc-item d1" href="#sec-37">CTO 技术架构 · 具体案例 4：数据库连接治理</a>
+<a class="toc-item d1" href="#sec-38">CTO 技术架构 · 具体案例 5：前端安全与体验细节</a>
+<a class="toc-item d1" href="#sec-39">四高管价值对照总表</a>
+<a class="toc-item d1" href="#sec-40">量化价值速览</a>
+<a class="toc-item d1" href="#sec-41">结尾：系统定位</a>
+  </nav>
+  <div class="side-foot">
+    產生時間：2026-11-06 08:30<br>
+    <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
+    <a href="ERMM_系統架構與流程圖.html">切換另一份文件</a>
+  </div>
+</aside>
+<main>
+  <div class="hero">
+    <h1>ERMM 高管价值简报</h1>
+    <p>CEO · CFO · COO · CTO 四高管视角 ｜ 由 Markdown 自動產生（唯讀文件）</p>
+  </div>
+  <article class="doc">
+<div class="slide-count" style="display:none">40</div>
+<blockquote>
+<p>用法：本文档为 PPT 大纲格式（<code>#</code> = 一页幻灯片），可直接粘贴导入 Gamma、Kimi PPT、WPS AI、ChatPPT、MindShow 等工具自动生成简报；或经 Word 大纲视图导入 PowerPoint。
+版本：v3.2 ｜ 2026-11-05 ｜ 系统事实：48 个 API 路由 · 83 张资料表 · 50 个前端入口（8 个菜单分组）· 3 账套 × 36 个月数据 · AI 智能层（RAG 问答 / 每日摘要 / AR 催收评分 / 数据质量扫描 / 现金流概率预测）</p>
+</blockquote>
+<hr>
+<div class="slide" data-slide="1">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 01</span>
+  <h2 class="slide-title">封面：ERMM 智能财务管理平台</h2>
+</div>
+<ul>
+<li>从「事后记账」到「事前预警、事中控制、事后洞察」</li>
+<li>一套系统覆盖：绩效人效 · 财务核算 · 税务合规 · 资金预测 · 数据整合</li>
+<li>汇报对象：CEO / CFO / COO / CTO</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="2">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 02</span>
+  <h2 class="slide-title">系统总览（数字事实）</h2>
+</div>
+<ul>
+<li><strong>50 个前端入口 / 8 个菜单分组</strong>：仪表板、经营决策、ERP 原始单据、日常作业、财务分析·税务申报、财务预警·KPI、系统·主档管理、<strong>系统文件（管理员）</strong></li>
+<li><strong>48 个 API 路由 · 83 张资料表</strong>：统一 MySQL 数据底座，单一口径</li>
+<li><strong>三账套（HM / SZ / HN）× 36 个月</strong>：数据连续、资产负债表 108/108 全部平衡</li>
+<li><strong>两大自动化引擎</strong>：告警排程（工作日 09:30/16:30）+ 整合排程（分钟级）</li>
+<li><strong>AI 智能层 5 大能力</strong>：RAG 自然语言问答（41 条知识库 / 6 分类）、每日 AI 执行摘要、AR 催收智能排序、数据质量一键扫描、现金流 Monte Carlo 概率预测（5000 次模拟）</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="3">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 03</span>
+  <h2 class="slide-title">CEO 视角：经营驾驶舱与战略掌控</h2>
+</div>
+<p>CEO 的核心痛点：看不见实时经营状况、风险发现太晚、各公司数据口径不一、决策靠感觉。</p>
+<hr>
+</div><div class="slide" data-slide="4">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 04</span>
+  <h2 class="slide-title">CEO 价值 1：一屏看清全公司经营态势</h2>
+</div>
+<ul>
+<li><strong>KPI 仪表板</strong>：营收、毛利、现金流、风险灯号一屏呈现，点击红灯自动诊断 Top3 原因</li>
+<li><strong>多账套切换</strong>：HM / SZ / HN 三家公司同一口径对比，告别各报各的 Excel</li>
+<li><strong>管理收益</strong>：晨会前 5 分钟掌握全局，问题定位到「哪个公司、哪个月、哪个科目」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="5">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 05</span>
+  <h2 class="slide-title">CEO 价值 2：风险从「事后追责」变「事前预警」</h2>
+</div>
+<ul>
+<li><strong>五大告警规则</strong>：连续未交日报、工时异常、未解压积、延误压积、工作占比过低</li>
+<li><strong>自动扫描 + 邮件通知主管</strong>：工作日每天两轮，12 小时冷却去重不扰民</li>
+<li><strong>管理收益</strong>：问题在萌芽阶段暴露，CEO 看到的不再是「月度总结里的既成事实」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="6">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 06</span>
+  <h2 class="slide-title">CEO 价值 3：绩效闭环驱动组织执行力</h2>
+</div>
+<ul>
+<li><strong>日报 → 及时率 → 月度绩效 → 目标对比（绿/橙/红）</strong> 全链路自动化</li>
+<li><strong>签核锁定 + 审计日志</strong>：主管签核后硬锁（HTTP 423），修改留痕（人/IP/时间/新旧值）</li>
+<li><strong>管理收益</strong>：目标管理（OKR/KR）落地为每日数据，执行力可量化、可追溯</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="7">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 07</span>
+  <h2 class="slide-title">CEO 价值 4：AI 辅助决策与趋势预判（RAG 知识问答 + Monte Carlo 概率预测）</h2>
+</div>
+<ul>
+<li><strong>RAG 自然语言问答</strong>：内置 41 条 / 6 分类内部知识库（税务、政策、年报、同业标杆、数据字典），自然语言直接问「毛利率为什么下降」「发票丢了怎么补」——回答附引用来源，不是胡编</li>
+<li><strong>现金流 Monte Carlo 概率预测</strong>：5000 次模拟输出 P10 / P50 / P90 概率带，回答「下个月现金断档的可能性有多大」，告别单点拍脑袋</li>
+<li><strong>每日 AI 执行摘要</strong>：每天开工前一段自然语言摘要——昨天发生了什么、今天要盯什么，晨会前 5 分钟掌握全局</li>
+<li><strong>管理收益</strong>：战略决策有数据支撑，风险量化可见，资源配置提前布局</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="8">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 08</span>
+  <h2 class="slide-title">CFO 视角：核算自动化与合规风控</h2>
+</div>
+<p>CFO 的核心痛点：结账慢、账税对不上、税务申报人工量大、现金流预测靠拍脑袋。</p>
+<hr>
+</div><div class="slide" data-slide="9">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 09</span>
+  <h2 class="slide-title">CFO 价值 1：RUID 全链路追溯，账证表税一体</h2>
+</div>
+<ul>
+<li><strong>每笔凭证生成唯一 RUID</strong>：入账 → 纳税申报 → 勾稽对账全程贯穿</li>
+<li><strong>自动勾稽</strong>：金额一致 MATCHED / 金额不符标红 / 单边存在预警，异常直接定位</li>
+<li><strong>管理收益</strong>：审计轨迹完整，对账从「按月人工核对」变为「系统自动标差异」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="10">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 10</span>
+  <h2 class="slide-title">CFO 价值 2：三大报表实时生成，且恒平衡</h2>
+</div>
+<ul>
+<li><strong>资产负债表 / 损益表 / 现金流量表</strong>：任意公司、任意月份秒级出表，一键导出 Excel</li>
+<li><strong>数据质量保障</strong>：108 个月数据资产负债表 100% 平衡，销售成本可下钻到发票明细</li>
+<li><strong>管理收益</strong>：月结周期从数天缩短到分钟级，报表即查即有</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="11">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 11</span>
+  <h2 class="slide-title">CFO 价值 3：电子化报税，税务合规零遗漏</h2>
+</div>
+<ul>
+<li><strong>三税种全覆盖</strong>：VAT（13% 按月 / 3% 按季）、CIT（25% 年度汇算）、IIT（累计预扣 7 级累进）</li>
+<li><strong>年终奖双通道计税</strong>：单独计税 vs 并入综合所得自动比选最优</li>
+<li><strong>人工覆盖机制</strong>：财报取数与实务差异可手工调整留痕</li>
+<li><strong>管理收益</strong>：算税规则固化在系统，申报有据可查，降低税务稽查风险</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="12">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 12</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 1：小规模纳税人 VAT 免征判定</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：某账套季度应税销售额 285,000 元，财务不确定是否跨免征线</li>
+<li><strong>系统处理</strong>：按季汇总销项并自动比对 300,000 阈值 → 判定<strong>免征</strong>，申报表应纳税额 = 0</li>
+<li><strong>若下季度销售 320,000</strong>：系统自动恢复 3% 计税，无需人工翻政策</li>
+<li><strong>收益</strong>：政策规则内嵌系统，不会因人为疏漏「该免没享、该缴漏缴」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="13">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 13</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 2：年终奖计税方式比选</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：员工年终奖 96,000 元，年度累计薪资已处 20% 税率档</li>
+<li><strong>系统处理</strong>：<ul>
+<li>单独计税（SEPARATE）：96,000 ÷ 12 = 8,000 对照月度税率表 → 税额 9,090 元</li>
+<li>并入综合（COMBINED）：边际税额法试算 → 税额 19,200 元</li>
+<li>自动比选并采用较低者，<strong>单人节税 10,110 元</strong></li>
+</ul>
+</li>
+<li><strong>收益</strong>：每位员工自动选优，全司累计节税可观，且计算过程留档可解释</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="14">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 14</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 3：CIT 汇算清缴人工覆盖留痕</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：财报取数营业收入 1.8 亿，但审计调整后应为 1.78 亿；业务招待费需调增 40% 不得列支</li>
+<li><strong>系统处理</strong>：<ul>
+<li>通过 <code>tax_cit_inputs</code> 人工覆盖收入/成本口径</li>
+<li>通过 <code>tax_cit_adjustments</code> 录入纳税调增项</li>
+<li>25% 汇算自动重算，覆盖前值/覆盖后值双留痕</li>
+</ul>
+</li>
+<li><strong>收益</strong>：稽查问询时可逐条出示「谁改的、何时改、改前改后」，合规证据链完整</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="15">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 15</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 4：进项转出与留抵处理</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：一批原材料用于集体福利，进项税额 13,000 元不得抵扣需转出；上月留抵 50,000 元本月继续使用</li>
+<li><strong>系统处理</strong>：<code>tax_vat_adjustments</code> 录入转出额与留抵覆盖额 → VAT 申报自动并入计算</li>
+<li><strong>收益</strong>：特殊税务事项不再靠 Excel 旁挂，申报表 = 系统记录 = 可复核凭证</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="16">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 16</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 5：IIT 累计预扣，月度波动不愁</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：业务员 1 月佣金高（预扣税率跳到 10% 档）、2 月只有底薪（回落 3% 档），手工算税极易出错</li>
+<li><strong>系统处理</strong>：按<strong>累计预扣法</strong>自动累计 1-N 月收入与已扣税额，套 7 级累进表逐月结算，多退少补自动轧平</li>
+<li><strong>收益</strong>：全年 12 个月预扣精度到「分」，员工年终汇算补退税额趋近于零，减少薪酬争议</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="17">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 17</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 6：申报数与账载数自动勾稽</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：申报期截止前，财务需确认「申报销项税额」与「账面销项发票合计」是否一致</li>
+<li><strong>系统处理</strong>：<code>/api/tax/vat/reconcile</code> 一键勾稽——申报表 vs <code>mgm_invoice_details</code> 发票明细逐月比对，差异直接亮出</li>
+<li><strong>收益</strong>：申报前最后一道防线自动化，杜绝「报了 A 数、账是 B 数」的低级稽查风险</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="18">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 18</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 7：进项发票级追溯</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：供应商发票税率开错（13% 开成 9%），月底抵扣金额对不上</li>
+<li><strong>系统处理</strong>：进项按发票明细逐条入库，可按供应商/月份/税率下钻到单张发票（仪表板点击柱体即弹明细）</li>
+<li><strong>收益</strong>：差异定位从「翻一天凭证」变为「点击一次鼠标」，错票当月即可退回重开</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="19">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 19</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 8：申报提交全程回执留档</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：税局质疑「上月申报是否按时提交」，财务需举证</li>
+<li><strong>系统处理</strong>：每次提交生成唯一受理号（<code>TAX-{模块}-{时间戳}-{随机}</code>），回执落库 <code>tax_submit_receipts</code>，含提交人、时间、税种、期间</li>
+<li><strong>收益</strong>：申报历史可检索、可出示，举证从「翻邮箱找截图」变为「系统一键查询」</li>
+<li>⚠️ 当前版本为<strong>本地模拟受理</strong>（未接真实税局 API），回执格式与留档机制已就绪，待接口对接后直接沿用</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="20">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 20</span>
+  <h2 class="slide-title">CFO 税务合规 · 具体案例 9：多账套同一套合规口径</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：集团下 HM / SZ / HN 三家公司，各地财务对政策理解不一，申报口径参差</li>
+<li><strong>系统处理</strong>：三账套共用同一算税引擎（同一套税率表、阈值、公式），管理端可按账套切换对比</li>
+<li><strong>收益</strong>：集团税务政策「一处维护、三处生效」，杜绝同集团不同口径的内控缺陷</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="21">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 21</span>
+  <h2 class="slide-title">CFO 价值 4：现金流从「看余额」升级为「看 13 周 + 概率」</h2>
+</div>
+<ul>
+<li><strong>13 周滚动现金预测</strong>：基于历史收付节奏自动推算余额曲线</li>
+<li><strong>安全水位机制</strong>：周均流出 ×3（下限 300 万），跌破即标红预警</li>
+<li><strong>Monte Carlo 概率带</strong>：P10 / P50 / P90 区间，回答「下个月现金缺口 ≥ 500 万的概率是多少」</li>
+<li><strong>管理收益</strong>：资金缺口提前一个季度可见，且<strong>风险量化可比较</strong>（乐观 / 中性 / 悲观三套情景同时呈现），融资安排从「被逼到墙角」变为「从容布局」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="22">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 22</span>
+  <h2 class="slide-title">CFO 价值 5：AR 催收智能排序 + 数据质量一键体检</h2>
+</div>
+<ul>
+<li><strong>AR 智能催收排序</strong>：应收款按 5 维加权评分（账龄 40% + 逾期 30% + 金额 15% + 风险 10% + 单笔占比 5%）自动分出🔴紧急 / 🟠高优先 / 🟡常规 / 🟢正常四档，催收精力投到最该投的单据</li>
+<li><strong>数据质量自动扫描</strong>：一键扫描 7 大类 20+ 项（报表平衡 / 发票重复 / 金额为空 / 逻辑冲突），39ms 返回，红=高风险、黄=提示</li>
+<li><strong>管理收益</strong>：催收从「凭经验拍顺序」变为「评分驱动」；报表数字出问题不再等到月底——上线前一键体检，提前发现脏数据根因</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="23">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 23</span>
+  <h2 class="slide-title">COO 视角：运营效率与流程自动化</h2>
+</div>
+<p>COO 的核心痛点：跨部门数据靠人肉搬运、ERP 数据加工慢、运营异常发现滞后、人效看不清。</p>
+<hr>
+</div><div class="slide" data-slide="24">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 24</span>
+  <h2 class="slide-title">COO 价值 1：7 步批次管线，ERP 数据一键加工</h2>
+</div>
+<ul>
+<li><strong>PO 同步 → 汇率换算 → 供应商汇总 → 库存减值 → AR/AP 汇算 → 财务摘要重算</strong></li>
+<li>可一键全跑也可逐步执行，每步结果落库可查</li>
+<li><strong>管理收益</strong>：月度数据加工从「跨部门接力 2-3 天」压缩到「一键数分钟」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="25">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 25</span>
+  <h2 class="slide-title">COO 价值 2：第三方数据整合，告别人工抄数</h2>
+</div>
+<ul>
+<li><strong>双通道接入</strong>：Excel 上传（前端拖拽）+ SQL 直连第三方 MySQL（只读安全）</li>
+<li><strong>栏位映射 + 白名单校验 + 类型清洗 + 批次 UPSERT</strong>，全程日志可审计</li>
+<li><strong>排程自动化</strong>：每日定时 / 每 N 分钟自动同步，无人值守</li>
+<li><strong>管理收益</strong>：外部数据源接入从「专人每天 1 小时」变为「零人工」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="26">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 26</span>
+  <h2 class="slide-title">COO 价值 3：人效与工时透明化</h2>
+</div>
+<ul>
+<li><strong>每日工时 / 工作占比 / 未解事项 / 延误事项</strong> 逐人逐日记录</li>
+<li><strong>异常自动识别</strong>：工时 &gt;12h/日 或 &gt;60h/周自动告警，防止过劳与虚报</li>
+<li><strong>管理收益</strong>：人力负荷可视化，排班与编制决策有依据</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="27">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 27</span>
+  <h2 class="slide-title">COO 价值 4：运营异常分级预警，介入时机前置</h2>
+</div>
+<ul>
+<li><strong>KPI 红黄绿灯</strong>：与目标自动对比（达标 / 关注 / 介入）</li>
+<li><strong>趋势预测联动</strong>：风险等级高时提前干预，而非月底复盘</li>
+<li><strong>数据质量扫描</strong>上线后：批次管线跑完自动扫描，脏数据在加工环节就被拦截，不流入财务报表</li>
+<li><strong>管理收益</strong>：运营节奏从「月度复盘」提速到「每日纠偏 + 加工环节自动质检」</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="28">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 28</span>
+  <h2 class="slide-title">CTO 视角：架构现代化与安全可控</h2>
+</div>
+<p>CTO 的核心痛点：系统烟囱林立、数据孤岛、安全合规难审计、新技术（AI）落地无载体。</p>
+<hr>
+</div><div class="slide" data-slide="29">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 29</span>
+  <h2 class="slide-title">CTO 价值 1：轻量现代化架构，低门槛可维护</h2>
+</div>
+<ul>
+<li><strong>技术栈主流且克制</strong>：Node.js + Express 5 + MySQL 8 连接池，前端原生 SPA（无重型框架依赖）</li>
+<li><strong>48 个路由模块化</strong>（按业务域分 7 组：智能化 Top5 / 核心财务 / 税务 / 操作 / 预警 / 系统 / 日报），服务层与数据层分离，新增功能按「路由 + 页面 + 资料表」三板斧落地</li>
+<li><strong>管理收益</strong>：普通全栈工程师即可接手维护，无框架锁定、无 Vendor 绑定</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="30">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 30</span>
+  <h2 class="slide-title">CTO 价值 2：安全与权限体系内建</h2>
+</div>
+<ul>
+<li><strong>JWT（HS256）全链路认证</strong> + 401 自动登出，前端全局 fetch 拦截注入</li>
+<li><strong>四级权限</strong>：员工 / 部门主管 / 高阶主管 / 管理员，简繁体归一化防漏判</li>
+<li><strong>审计日志</strong>：敏感操作（签核解锁、资料增删改）记录人/IP/时间/新旧值快照；锁定记录 HTTP 423 硬拦</li>
+<li><strong>管理收益</strong>：满足内控与等保审计的基本要求，安全事件可回溯定责</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="31">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 31</span>
+  <h2 class="slide-title">CTO 价值 3：开放整合能力，打破数据孤岛</h2>
+</div>
+<ul>
+<li><strong>双通道接入</strong>：Excel（ExcelJS 解析）+ SQL 直连第三方 MySQL（连接池缓存、只读 LIMIT 防护）</li>
+<li><strong>栏位白名单校验</strong>（information_schema 实时校验）防注入，类型自动清洗</li>
+<li><strong>分钟级排程</strong>：每日定时 / 每 N 分钟，防重入设计（ticking + runningJobs + firedKeys）</li>
+<li><strong>管理收益</strong>：未来接 HR、供应链、银行系统沿用同一整合框架，无需另起烟囱</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="32">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 32</span>
+  <h2 class="slide-title">CTO 价值 4：AI 就绪与可观测性</h2>
+</div>
+<ul>
+<li><strong>AI 智能层完整落地</strong>（5 大能力均已上线，非 PPT 概念）：<ul>
+<li>RAG 知识问答（MySQL FULLTEXT + n-gram 2~4 滑窗 + 分类加权检索，<strong>轻量 RAG 不引入向量数据库</strong>）</li>
+<li>每日 AI 执行摘要（取财务/预警/收付款快照 → LLM 自然语言 → 落库可回看）</li>
+<li>AR 催收评分（5 维加权公式，纯数学计算不依赖 LLM，毫秒级）</li>
+<li>数据质量扫描（7 大类规则引擎，39ms 全表体检）</li>
+<li>Monte Carlo 概率预测（5000 次抽样 × 13 周，纯后端计算）</li>
+</ul>
+</li>
+<li><strong>LLM 服务商可切换</strong>：<code>llm_config</code> 多服务商并存，<code>is_default=1</code> 统一预设，当前为 DeepSeek</li>
+<li><strong>排程器、批次管线、整合作业全程日志</strong>（<code>intg_log</code> / 执行日志），系统行为可观测</li>
+<li><strong>三语 i18n（简/繁/英）</strong> 架构支持跨区域扩展</li>
+<li><strong>系统文件内置</strong>：架构图 + 数据表关系图 + 使用者操作手册，系统内直接查阅（<code>/docs/architecture</code>、<code>/docs/data-model</code>，仅 admin 可打开）</li>
+<li><strong>管理收益</strong>：AI 层「只读分析、不回写账务」的设计原则保证数据安全；后续接更多模型或加新 AI 功能只需扩展路由与知识库条目，不影响既有业务</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="33">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 33</span>
+  <h2 class="slide-title">CTO 技术架构 · 具体案例 1：新模块「三板斧」落地实证</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：业务方提出「电子化报税」新需求，涉及三税种、10 张新表、17 个 API</li>
+<li><strong>系统处理</strong>：按既定模式落地——<code>migrations/006</code> 建表 + <code>services/taxService.js</code> 算税引擎 + <code>routes/tax.js</code> 挂路由 + 前端 4 Tab 页面，<strong>未改动任何既有模块代码</strong></li>
+<li><strong>收益</strong>：架构扩展性被真实验证：新模块从设计到上线不改变旧链路，回归风险接近零</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="34">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 34</span>
+  <h2 class="slide-title">CTO 技术架构 · 具体案例 2：幂等数据管线与一键回滚</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：HN 账套需补齐 2023 全年 12 个月财报 + 120 张发票，写库操作必须可重跑、可撤销</li>
+<li><strong>系统处理</strong>：脚本支持 <code>--dry-run / --apply / --rollback</code> 三模式；先 DELETE 本次生成再重建保证幂等；已有行按 uid 原地 UPDATE；132 行写入包裹在<strong>单一事务</strong>中</li>
+<li><strong>收益</strong>：数据工程达到「可演练、可重入、可回滚」标准，生产数据操作不再提心吊胆</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="35">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 35</span>
+  <h2 class="slide-title">CTO 技术架构 · 具体案例 3：排程器防重入设计</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：分钟级整合排程若上一次作业未跑完又触发，会产生重复写库</li>
+<li><strong>系统处理</strong>：<code>intgScheduler</code> 三重防护——<code>ticking</code> 全局锁 + <code>runningJobs</code> 作业级锁 + <code>firedKeys</code> 触发键去重，同一时刻同一作业只跑一份</li>
+<li><strong>收益</strong>：7×24 无人值守运行的前提条件已具备，长时间运行无数据重复风险</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="36">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 36</span>
+  <h2 class="slide-title">CTO 技术架构 · 具体案例 4：数据库连接治理</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：主库 + 多个第三方库并存，连接泄漏或打满会拖垮全站</li>
+<li><strong>系统处理</strong>：主库 mysql2 连接池（limit 20）；第三方库 <code>sourcePools Map</code> 按 sourceId 缓存复用；第三方查询强制<strong>只读 SELECT + LIMIT</strong> 防拖表</li>
+<li><strong>收益</strong>：连接资源有上限、有复用、有隔离，多源整合不会反噬主系统稳定性</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="37">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 37</span>
+  <h2 class="slide-title">CTO 技术架构 · 具体案例 5：前端安全与体验细节</h2>
+</div>
+<ul>
+<li><strong>场景</strong>：SPA 中散布大量裸 <code>fetch</code>，JWT 漏带、401 无人处理、文件下载被拦截是常见坑</li>
+<li><strong>系统处理</strong>：全局 <code>fetch</code> 拦截器统一注入 <code>Authorization</code>；401 自动清 session 回登录页（登录请求除外）；文件下载走 <code>fetch blob</code> 携带 JWT 而非 <code>window.open</code></li>
+<li><strong>收益</strong>：安全策略「一处实现、全站生效」，新增页面无需重复处理认证逻辑</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="38">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 38</span>
+  <h2 class="slide-title">四高管价值对照总表</h2>
+</div>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>CEO</th>
+<th>CFO</th>
+<th>COO</th>
+<th>CTO</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>核心收益</td>
+<td>经营可视化 + 战略预警</td>
+<td>核算自动化 + 税务合规 + 现金流量化</td>
+<td>流程自动化 + 人效透明</td>
+<td>架构可控 + 安全合规 + AI 就绪</td>
+</tr>
+<tr>
+<td>关键功能</td>
+<td>仪表板 / AI 摘要 / RAG 问答 / Monte Carlo 预测</td>
+<td>RUID / 三大报表 / 电子报税 / AR 催收排序 / 数据质量扫描</td>
+<td>批次管线 / 数据整合 / 日报</td>
+<td>JWT权限 / 审计 / 整合框架 / AI 智能层（5 大能力）</td>
+</tr>
+<tr>
+<td>效率提升</td>
+<td>决策 5 分钟取数 + 每日 AI 摘要</td>
+<td>月结 数天→分钟；催收从拍顺序→评分排序</td>
+<td>数据加工 2-3天→数分钟</td>
+<td>新功能 三板斧快速落地；AI 层只读分析不改账务</td>
+</tr>
+<tr>
+<td>风险控制</td>
+<td>事前预警 + 概率量化（断档概率）</td>
+<td>账税勾稽 + 申报留痕 + 质量一键体检</td>
+<td>异常分级 + 提前介入</td>
+<td>全链路认证 + 操作可追溯 + LLM 服务商可切换</td>
+</tr>
+</tbody></table>
+<hr>
+</div><div class="slide" data-slide="39">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 39</span>
+  <h2 class="slide-title">量化价值速览</h2>
+</div>
+<ul>
+<li><strong>报表产出</strong>：月结周期 3 天 → 5 分钟</li>
+<li><strong>数据加工</strong>：ERP 月度加工 2-3 天 → 一键数分钟</li>
+<li><strong>报税准备</strong>：三税种取数计算自动化，人工核对量下降 80%+</li>
+<li><strong>异常发现</strong>：从月度复盘 → 工作日每日两轮自动扫描</li>
+<li><strong>数据可信度</strong>：108 个月资产负债表 100% 平衡，全链路 RUID 可追溯</li>
+<li><strong>AI 赋能</strong>：5 大智能功能已上线——41 条知识库覆盖税务/政策/年报；AR 催收评分毫秒级；数据质量扫描 39ms；现金流风险概率量化</li>
+<li><strong>催收提效</strong>：应收款从「人工扫一遍」→「评分排序 + 四档处理」，催款精力精准投放</li>
+</ul>
+<hr>
+</div><div class="slide" data-slide="40">
+<div class="slide-head">
+  <span class="slide-num">SLIDE 40</span>
+  <h2 class="slide-title">结尾：系统定位</h2>
+</div>
+<ul>
+<li>ERMM 不只是记账工具，而是 <strong>经营数据中枢 + AI 智能层</strong></li>
+<li>让 CEO 看得见方向（概率量化风险）、CFO 守得住底线（合规+质量双保险）、COO 抓得住效率（流程自动化）、CTO 控得住架构（轻量可读）</li>
+<li><strong>AI 层设计原则</strong>：只读分析、不回写账务，安全可控</li>
+<li><strong>下一步</strong>：真实税局对接、银行流水直连、知识库自动扩充（基于未命中日志）、预算滚动预测深化、T-3 一键修复功能</li>
+</ul>
+</div>
+  </article>
+</main>
+</div>
+<script src="../public/vendor/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose',
+      flowchart: { htmlLabels: true, curve: 'basis' }, er: { useMaxWidth: true } });
+  }
+  const links = Array.from(document.querySelectorAll('#toc .toc-item'));
+  const heads = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  function spy() {
+    let idx = 0;
+    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= 90) idx = i; });
+    links.forEach((a, i) => a.classList.toggle('active', i === idx));
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  spy();
+</script>
+</body>
+</html>

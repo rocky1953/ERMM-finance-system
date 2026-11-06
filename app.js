@@ -172,7 +172,8 @@ app.use(express.static(path.join(__dirname, 'public'), { etag: false }));
 // 架構文件短網址（避免中文檔名 URL 編碼出錯）
 const DOC_ROUTES = {
     '/docs/architecture': 'ERMM_系統架構與流程圖.html',
-    '/docs/data-model': 'ERMM_系統架構與模組資料表關係圖.html'
+    '/docs/data-model': 'ERMM_系統架構與模組資料表關係圖.html',
+    '/docs/executive':    'ERMM_高管價值簡報_CEO_CFO_COO_CTO.html'
 };
 Object.entries(DOC_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => {
