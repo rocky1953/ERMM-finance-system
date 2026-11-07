@@ -13,15 +13,18 @@ const chartDataLabelPlugin = {
         const fmtShort = (v) => {
             const n = Number(v) || 0;
             const abs = Math.abs(n);
-            // 英文界面使用 M/K/B，中文界面保留 万/亿
-            if ((typeof I18N !== 'undefined' && I18N.lang) === 'en') {
+            const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+            // 英文界面使用 M/K/B；繁体中文用 億/萬，简体中文用 亿/万
+            if (lang === 'en') {
                 if (abs >= 1e9) return (n / 1e9).toFixed(2) + 'B';
                 if (abs >= 1e6) return (n / 1e6).toFixed(1) + 'M';
                 if (abs >= 1e3) return Math.round(n / 1e3) + 'K';
                 return n.toFixed(0);
             }
-            if (abs >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-            if (abs >= 1e4) return Math.round(n / 1e4) + '万';
+            const unitYi = lang === 'zh-CN' ? '亿' : '億';
+            const unitWan = lang === 'zh-CN' ? '万' : '萬';
+            if (abs >= 1e8) return (n / 1e8).toFixed(2) + unitYi;
+            if (abs >= 1e4) return Math.round(n / 1e4) + unitWan;
             return n.toFixed(0);
         };
 
