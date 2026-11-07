@@ -62,6 +62,7 @@ registerPage('dashboard', async (c) => {
             <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.pl_chart')}<span class="dash-drill-hint">💡 ${t('dash.detail.hint')}</span></div>
                 <div class="dash-chart-box"><canvas id="plChart"></canvas></div>
+                <div class="dash-chart-note" id="plLegend"></div>
             </div>
             <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.bs_chart')}</div>
@@ -364,12 +365,14 @@ registerPage('dashboard', async (c) => {
                 Number(s.operation_profit_amt || 0),
                 Number(s.net_profit_amt || 0)
             ];
+            const plLabels = [t('dash.sale'), t('sum.cost'), t('sum.gross'), t('sum.op_income'), t('sum.op_profit'), t('sum.net')];
+            const plColors = ['#3498db','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c'];
             new Chart(document.getElementById('plChart'), {
                 type: 'bar',
                 plugins: [chartDataLabelPlugin],
                 data: {
-                    labels: [t('dash.sale'), t('sum.cost'), t('sum.gross'), t('sum.op_income'), t('sum.op_profit'), t('sum.net')],
-                    datasets: [{ data: plData, backgroundColor: ['#3498db','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c'] }]
+                    labels: plLabels,
+                    datasets: [{ data: plData, backgroundColor: plColors }]
                 },
                 options: {
                     responsive: true,
@@ -389,6 +392,14 @@ registerPage('dashboard', async (c) => {
                     }
                 }
             });
+
+            // 损益图图例（颜色对应各项目）
+            const plLegendEl = document.getElementById('plLegend');
+            if (plLegendEl) {
+                plLegendEl.innerHTML = plLabels
+                    .map((name, i) => `<span><i style="background:${plColors[i]}"></i>${name}</span>`)
+                    .join('');
+            }
 
             // 资产负债图
             new Chart(document.getElementById('bsChart'), {
