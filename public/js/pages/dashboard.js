@@ -10,11 +10,11 @@ registerPage('dashboard', async (c) => {
         <div class="dash-charts-row">
             <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.pl_chart')}<span class="dash-drill-hint">💡 ${t('dash.detail.hint')}</span></div>
-                <canvas id="plChart"></canvas>
+                <div class="dash-chart-box"><canvas id="plChart"></canvas></div>
             </div>
             <div class="card dash-chart-card">
                 <div class="card-title">${t('dash.bs_chart')}</div>
-                <canvas id="bsChart"></canvas>
+                <div class="dash-chart-box"><canvas id="bsChart"></canvas></div>
             </div>
         </div>
         <div class="card dash-risk-card">
@@ -321,7 +321,8 @@ registerPage('dashboard', async (c) => {
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 12 } } } },
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
                     scales: { y: { beginAtZero: true } },
                     // 仅销货收入(0)、销货成本(1) 可点击钻取
                     onHover: (evt, elements) => {
@@ -352,7 +353,23 @@ registerPage('dashboard', async (c) => {
                         backgroundColor: ['#3498db','#2c5f8d','#e74c3c','#c0392b','#27ae60']
                     }]
                 },
-                options: { responsive: true, plugins: { legend: { position: 'right' } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            // 鼠标移到图例时清空残留 tooltip，避免显示上一段弧的标签
+                            onHover: (evt, item, legend) => {
+                                const chart = legend.chart;
+                                if (chart.tooltip && chart.tooltip.getActiveElements().length) {
+                                    chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                                    chart.update('none');
+                                }
+                            }
+                        }
+                    }
+                }
             });
         } else {
             kpi.innerHTML = UI.empty('📭', `${YYYY_MM} ${t('dash.no_summary')}`);
