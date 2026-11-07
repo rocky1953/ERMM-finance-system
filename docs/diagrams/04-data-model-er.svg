@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 618" width="720" height="618" role="img" aria-label="ERMM 核心数据表 ER 关系图">
+  <style>
+    text { font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif; }
+    .th { font-size: 14px; font-weight: 500; fill: #171717; }
+    .ts { font-size: 12px; fill: #52525B; }
+    .tc { font-size: 12px; fill: #171717; font-family: "JetBrains Mono", Consolas, monospace; }
+    .arr { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .neutral rect { fill: #F7F7F8; stroke: rgba(23, 23, 23, 0.12); }
+    .brand rect { fill: #E5FFF2; stroke: #0FDC78; }
+    .brand .th, .brand .ts { fill: #004D26; }
+    .capsule rect { fill: #FFFFFF; stroke: rgba(23, 23, 23, 0.12); }
+  </style>
+  <rect width="720" height="618" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arwD" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+  </defs>
+
+  <g class="neutral">
+    <rect x="140" y="48" width="440" height="150" rx="8"/>
+    <text class="th" x="156" y="74">mgm_invoice_details</text>
+    <text class="ts" x="156" y="94">发票明细 · 主键 uid · AR 886 / AP 639</text>
+    <text class="tc" x="156" y="118">bu_no · TX_type</text>
+    <text class="tc" x="156" y="137">invoice_no</text>
+    <text class="tc" x="156" y="156">YYYY_MM</text>
+    <text class="tc" x="156" y="175">sub_amt / VAT_amt</text>
+  </g>
+
+  <g class="brand">
+    <rect x="140" y="248" width="440" height="150" rx="8"/>
+    <text class="th" x="156" y="274">mgm_finance_summary</text>
+    <text class="ts" x="156" y="294">月度财务汇总 · 键：bu_no + YYYY_MM</text>
+    <text class="tc" x="156" y="318">uid</text>
+    <text class="tc" x="156" y="337">AR_amt / AP_amt</text>
+    <text class="tc" x="156" y="356">ttl_asset_amt</text>
+    <text class="tc" x="156" y="375">Z_score / risk_color</text>
+  </g>
+
+  <g class="neutral">
+    <rect x="60" y="448" width="280" height="150" rx="8"/>
+    <text class="th" x="76" y="474">mgm_kpi_desc</text>
+    <text class="ts" x="76" y="494">KPI 定义与阈值 · 键：bu_no + KPI_id</text>
+    <text class="tc" x="76" y="518">KPI_value</text>
+    <text class="tc" x="76" y="537">KPI_color</text>
+    <text class="tc" x="76" y="556">KPI1 / KPI2</text>
+    <text class="tc" x="76" y="575">pct_type</text>
+  </g>
+
+  <g class="neutral">
+    <rect x="380" y="448" width="280" height="150" rx="8"/>
+    <text class="th" x="396" y="474">ermm_ai_records</text>
+    <text class="ts" x="396" y="494">AI 问答记录 · 主键 uid</text>
+    <text class="tc" x="396" y="518">bu_no</text>
+    <text class="tc" x="396" y="537">xuser_id</text>
+    <text class="tc" x="396" y="556">ai_records (JSON)</text>
+    <text class="tc" x="396" y="575">remark</text>
+  </g>
+
+  <path class="arr" d="M360 198 L360 244" marker-end="url(#arwD)"/>
+  <path class="arr" d="M280 398 L200 444" marker-end="url(#arwD)"/>
+  <path class="arr" d="M440 398 L520 444" marker-end="url(#arwD)"/>
+
+  <g class="capsule">
+    <rect x="376" y="202" width="112" height="24" rx="8"/>
+    <text class="ts" x="384" y="219">bu_no + 期间</text>
+  </g>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" width="720" height="480" role="img" aria-label="ERMM 系统分层架构图">
+  <style>
+    text { font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif; }
+    .th { font-size: 14px; font-weight: 500; fill: #171717; }
+    .ts { font-size: 12px; fill: #52525B; }
+    .arr { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .neutral rect { fill: #F7F7F8; stroke: rgba(23, 23, 23, 0.12); }
+    .brand rect { fill: #E5FFF2; stroke: #0FDC78; }
+    .brand .th, .brand .ts { fill: #004D26; }
+    .band { fill: none; stroke: rgba(23, 23, 23, 0.12); stroke-dasharray: 4 4; }
+  </style>
+  <rect width="720" height="480" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arwA" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+  </defs>
+
+  <text class="ts" x="40" y="18">① 接入层</text>
+  <rect class="band" x="32" y="24" width="656" height="78" rx="8"/>
+  <g class="neutral">
+    <rect x="48" y="38" width="300" height="52" rx="8"/>
+    <text class="th" x="62" y="59">4 类角色用户</text>
+    <text class="ts" x="62" y="77">CEO · CFO · CTO · COO</text>
+  </g>
+  <g class="neutral">
+    <rect x="364" y="38" width="308" height="52" rx="8"/>
+    <text class="th" x="378" y="59">系统文件入口</text>
+    <text class="ts" x="378" y="77">7 份 HTML · 管理员权限校验</text>
+  </g>
+
+  <text class="ts" x="40" y="126">② 前端层</text>
+  <rect class="band" x="32" y="132" width="656" height="72" rx="8"/>
+  <g class="neutral">
+    <rect x="48" y="144" width="612" height="48" rx="8"/>
+    <text class="th" x="62" y="164">原生 JS 单页应用（public/）</text>
+    <text class="ts" x="62" y="182">55 个入口 · 8 大分组 · registerPage / navigate</text>
+  </g>
+
+  <text class="ts" x="40" y="234">③ 服务层</text>
+  <rect class="band" x="32" y="240" width="656" height="112" rx="8"/>
+  <g class="neutral">
+    <rect x="46" y="258" width="148" height="64" rx="8"/>
+    <text class="th" x="60" y="282">业务单据</text>
+    <text class="ts" x="60" y="302">ERP + 日常作业</text>
+  </g>
+  <g class="neutral">
+    <rect x="204" y="258" width="148" height="64" rx="8"/>
+    <text class="th" x="218" y="282">财务报表</text>
+    <text class="ts" x="218" y="302">三表 · 税务 · 合并</text>
+  </g>
+  <g class="neutral">
+    <rect x="362" y="258" width="148" height="64" rx="8"/>
+    <text class="th" x="376" y="282">风控预警</text>
+    <text class="ts" x="376" y="302">Z 值 · KPI · 预警</text>
+  </g>
+  <g class="brand">
+    <rect x="520" y="258" width="148" height="64" rx="8"/>
+    <text class="th" x="534" y="282">智能决策</text>
+    <text class="ts" x="534" y="302">AI 问答 · 情景 · 看板</text>
+  </g>
+
+  <text class="ts" x="40" y="382">④ 数据层</text>
+  <rect class="band" x="32" y="388" width="656" height="76" rx="8"/>
+  <g class="neutral">
+    <rect x="48" y="400" width="330" height="48" rx="8"/>
+    <text class="th" x="62" y="420">MySQL ermm_db</text>
+    <text class="ts" x="62" y="438">83 张表 · 108 期财务汇总</text>
+  </g>
+  <g class="neutral">
+    <rect x="394" y="400" width="280" height="48" rx="8"/>
+    <text class="th" x="408" y="420">LLM 提供方</text>
+    <text class="ts" x="408" y="438">DeepSeek · 统一网关</text>
+  </g>
+
+  <path class="arr" d="M198 90 L198 140" marker-end="url(#arwA)"/>
+  <path class="arr" d="M518 90 L518 140" marker-end="url(#arwA)"/>
+  <path class="arr" d="M120 192 L120 254" marker-end="url(#arwA)"/>
+  <path class="arr" d="M278 192 L278 254" marker-end="url(#arwA)"/>
+  <path class="arr" d="M436 192 L436 254" marker-end="url(#arwA)"/>
+  <path class="arr" d="M594 192 L594 254" marker-end="url(#arwA)"/>
+  <path class="arr" d="M213 356 L213 396" marker-end="url(#arwA)"/>
+  <path class="arr" d="M534 356 L534 396" marker-end="url(#arwA)"/>
+</svg>

@@ -7,6 +7,10 @@
 
 ## 一、系统整体架构图（分层架构）
 
+![ERMM 分层架构图](diagrams/01-architecture-layers.svg)
+
+> 图 1：四层架构（接入层 / 前端层 / 服务层 / 数据层）。PNG 版见 [01-architecture-layers.png](diagrams/01-architecture-layers.png)
+
 ```mermaid
 flowchart TB
     subgraph CLIENT["① 客户端层"]
@@ -153,6 +157,10 @@ flowchart TB
 ---
 
 ## 三、核心模块资料表关系图（ER 图）
+
+![ERMM 核心数据表 ER 关系图](diagrams/04-data-model-er.svg)
+
+> 图 2：发票明细 → 月度汇总 → KPI / AI 记录的核心外键链路。PNG 版见 [04-data-model-er.png](diagrams/04-data-model-er.png)
 
 ### 3.1 工作日报表模块（P0/P1 核心）
 

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 414" width="720" height="414" role="img" aria-label="ERMM AI 智能层展开图">
+  <style>
+    text { font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif; }
+    .th { font-size: 14px; font-weight: 500; fill: #171717; }
+    .ts { font-size: 12px; fill: #52525B; }
+    .arr { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .neutral rect { fill: #F7F7F8; stroke: rgba(23, 23, 23, 0.12); }
+    .brand rect { fill: #E5FFF2; stroke: #0FDC78; }
+    .brand .th, .brand .ts { fill: #004D26; }
+    .band { fill: none; stroke: rgba(23, 23, 23, 0.12); stroke-dasharray: 4 4; }
+  </style>
+  <rect width="720" height="414" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arwC" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+  </defs>
+
+  <text class="ts" x="40" y="18">① AI 应用入口</text>
+  <rect class="band" x="32" y="24" width="656" height="110" rx="8"/>
+  <g class="neutral">
+    <rect x="46" y="46" width="148" height="76" rx="8"/>
+    <text class="th" x="60" y="70">AI 问答</text>
+    <text class="ts" x="60" y="92">RAG 检索</text>
+    <text class="ts" x="60" y="110">未命中日志</text>
+  </g>
+  <g class="neutral">
+    <rect x="204" y="46" width="148" height="76" rx="8"/>
+    <text class="th" x="218" y="70">AR 智能催收</text>
+    <text class="ts" x="218" y="92">账龄评分</text>
+    <text class="ts" x="218" y="110">四级灯号</text>
+  </g>
+  <g class="neutral">
+    <rect x="362" y="46" width="148" height="76" rx="8"/>
+    <text class="th" x="376" y="70">情景模拟</text>
+    <text class="ts" x="376" y="92">多版本测算</text>
+    <text class="ts" x="376" y="110">预算联动</text>
+  </g>
+  <g class="neutral">
+    <rect x="520" y="46" width="148" height="76" rx="8"/>
+    <text class="th" x="534" y="70">战情看板</text>
+    <text class="ts" x="534" y="92">实时经营</text>
+    <text class="ts" x="534" y="110">高管视图</text>
+  </g>
+
+  <text class="ts" x="40" y="158">② 统一 AI 网关</text>
+  <rect class="band" x="32" y="164" width="656" height="80" rx="8"/>
+  <g class="brand">
+    <rect x="46" y="182" width="612" height="48" rx="8"/>
+    <text class="th" x="60" y="202">llmClient.js · 统一调用网关</text>
+    <text class="ts" x="60" y="220">getDefaultProvider(pool) · chatCompletion · RAG 组装</text>
+  </g>
+
+  <text class="ts" x="40" y="268">③ 模型与数据底座</text>
+  <rect class="band" x="32" y="274" width="656" height="120" rx="8"/>
+  <g class="neutral">
+    <rect x="46" y="292" width="300" height="84" rx="8"/>
+    <text class="th" x="60" y="316">LLM 提供方</text>
+    <text class="ts" x="60" y="338">DeepSeek · Kimi</text>
+    <text class="ts" x="60" y="358">OpenAI 兼容 · 可扩展</text>
+  </g>
+  <g class="neutral">
+    <rect x="358" y="292" width="300" height="84" rx="8"/>
+    <text class="th" x="372" y="316">数据与知识</text>
+    <text class="ts" x="372" y="338">汇总 · 发票 · KPI</text>
+    <text class="ts" x="372" y="358">RAG 知识库 · 未命中日志</text>
+  </g>
+
+  <path class="arr" d="M120 122 L120 178" marker-end="url(#arwC)"/>
+  <path class="arr" d="M278 122 L278 178" marker-end="url(#arwC)"/>
+  <path class="arr" d="M436 122 L436 178" marker-end="url(#arwC)"/>
+  <path class="arr" d="M594 122 L594 178" marker-end="url(#arwC)"/>
+  <path class="arr" d="M196 230 L196 288" marker-end="url(#arwC)"/>
+  <path class="arr" d="M508 230 L508 288" marker-end="url(#arwC)"/>
+</svg>

@@ -7,6 +7,14 @@
 
 ## 一、整体系统架构图
 
+![ERMM 分层架构图](diagrams/01-architecture-layers.svg)
+
+> 图 1：四层架构（接入层 / 前端层 / 服务层 / 数据层）。PNG 版见 [01-architecture-layers.png](diagrams/01-architecture-layers.png)
+
+![ERMM 核心业务数据链路](diagrams/02-data-pipeline.svg)
+
+> 图 2：原始单据 → 月度汇总 → 报表与风控 → 智能决策。PNG 版见 [02-data-pipeline.png](diagrams/02-data-pipeline.png)
+
 ```mermaid
 flowchart TB
     subgraph CLIENT["🖥️ 客户端层"]
@@ -314,6 +322,10 @@ flowchart LR
 ---
 
 ## 八、智能化（AI）流程图
+
+![ERMM AI 智能层展开图](diagrams/03-ai-layer.svg)
+
+> 图 3：AI 应用入口 → 统一网关 → 模型与数据底座。PNG 版见 [03-ai-layer.png](diagrams/03-ai-layer.png)
 
 ### 8.1 AI 问答 + RAG 检索链路
 

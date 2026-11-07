@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 312" width="720" height="312" role="img" aria-label="ERMM 核心业务数据链路图">
+  <style>
+    text { font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif; }
+    .th { font-size: 14px; font-weight: 500; fill: #171717; }
+    .ts { font-size: 12px; fill: #52525B; }
+    .arr { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .neutral rect { fill: #F7F7F8; stroke: rgba(23, 23, 23, 0.12); }
+    .brand rect { fill: #E5FFF2; stroke: #0FDC78; }
+    .brand .th, .brand .ts { fill: #004D26; }
+  </style>
+  <rect width="720" height="312" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arwB" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+  </defs>
+
+  <g class="neutral">
+    <rect x="49" y="48" width="118" height="96" rx="8"/>
+    <text class="th" x="63" y="76">单据采集</text>
+    <text class="ts" x="63" y="100">ERP 单据</text>
+    <text class="ts" x="63" y="120">发票 · 收付</text>
+  </g>
+  <g class="neutral">
+    <rect x="217" y="48" width="118" height="96" rx="8"/>
+    <text class="th" x="231" y="76">月度汇总</text>
+    <text class="ts" x="231" y="100">108 期 · 3 公司</text>
+    <text class="ts" x="231" y="120">主档 · 口径</text>
+  </g>
+  <g class="neutral">
+    <rect x="385" y="48" width="118" height="96" rx="8"/>
+    <text class="th" x="399" y="76">报表与风控</text>
+    <text class="ts" x="399" y="100">三表 · 合并</text>
+    <text class="ts" x="399" y="120">Z 值 · KPI</text>
+  </g>
+  <g class="brand">
+    <rect x="553" y="48" width="118" height="96" rx="8"/>
+    <text class="th" x="567" y="76">智能决策</text>
+    <text class="ts" x="567" y="100">AI 问答</text>
+    <text class="ts" x="567" y="120">行动 · 看板</text>
+  </g>
+
+  <g class="neutral">
+    <rect x="217" y="232" width="286" height="56" rx="8"/>
+    <text class="th" x="231" y="254">MySQL ermm_db</text>
+    <text class="ts" x="231" y="272">83 张表 · 主档 · 历史汇总</text>
+  </g>
+
+  <path class="arr" d="M167 96 L213 96" marker-end="url(#arwB)"/>
+  <path class="arr" d="M335 96 L381 96" marker-end="url(#arwB)"/>
+  <path class="arr" d="M503 96 L549 96" marker-end="url(#arwB)"/>
+  <path class="arr" d="M360 228 L282 148" marker-end="url(#arwB)"/>
+</svg>
