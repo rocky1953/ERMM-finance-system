@@ -12,8 +12,16 @@ const chartDataLabelPlugin = {
         if (!ds) return;
         const fmtShort = (v) => {
             const n = Number(v) || 0;
-            if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(2) + '亿';
-            if (Math.abs(n) >= 1e4) return Math.round(n / 1e4) + '万';
+            const abs = Math.abs(n);
+            // 英文界面使用 M/K/B，中文界面保留 万/亿
+            if ((typeof I18N !== 'undefined' && I18N.lang) === 'en') {
+                if (abs >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+                if (abs >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+                if (abs >= 1e3) return Math.round(n / 1e3) + 'K';
+                return n.toFixed(0);
+            }
+            if (abs >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+            if (abs >= 1e4) return Math.round(n / 1e4) + '万';
             return n.toFixed(0);
         };
 
