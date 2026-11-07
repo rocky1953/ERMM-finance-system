@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
  * 三大財務報表路由
  * 資產負債表、損益表、現金流量表
  */
@@ -99,8 +99,7 @@ function buildBalanceSheet(cur) {
     const ar = v('AR_amt') + v('AR_bill_amt') + v('AR_temp_amt') + v('AR_affiliate_amt');
     const inventory = v('stock_P_amt') + v('stock_M_amt') + v('stock_S_amt') + v('stock_transit_amt');
     const prepay = v('prepay_EXP_amt') + v('prepay_goods_amt');
-    // 优先用汇总栏位（确保与 summary 表一致），否则退回分项加总
-    const total_current_asset = v('current_asset_amt') || (cash + ar + inventory + prepay);
+    const total_current_asset = cash + ar + inventory + prepay;
 
     // ===== 非流動資產 =====
     const building_net = v('building_amt') - v('acc_de_building');
@@ -111,25 +110,29 @@ function buildBalanceSheet(cur) {
     const long_inv = v('LQ_asset_amt');
     const long_recv = v('FX_asset_amt');
     const wip = v('WIP_M_amt') + v('WIP_labor_amt') + v('WIP_EXP_amt');
-    const total_non_current_asset = v('non_current_asset_amt') || (building_net + equip_net + vehicle_net + office_net + intangible + long_inv + long_recv + wip + v('other_asset_amt'));
+    const total_non_current_asset = building_net + equip_net + vehicle_net + office_net + intangible + long_inv + long_recv + wip + v('other_asset_amt');
 
-    // 总计：优先用 summary 汇总栏位
-    const total_asset = v('ttl_asset_amt') || (total_current_asset + total_non_current_asset);
+    // 資產總計：一律由分項加總，確保與畫面小計一致
+    const total_asset = total_current_asset + total_non_current_asset;
 
     // ===== 流動負債 =====
     const LQ_debet = v('loan_amt') + v('AP_amt') + v('AP_tax_amt') + v('AP_salary_amt') + v('AP_other_amt') + v('LQ_debet_amt') + v('deposit_liab_amt');
     const LT_debet = v('LT_loan_amt') + v('LT_debet_amt');
-    const current_debet = v('current_debet_amt') || LQ_debet;
-    const total_debet = v('ttl_debet_amt') || (current_debet + LT_debet);
+    const current_debet = LQ_debet;
+    const total_debet = current_debet + LT_debet;
 
-    // ===== 股東權益：优先用 summary.stockholder_amt =====
-    const equity = v('stockholder_amt') || (v('captial_stock') + v('captial_reserve') + v('legal_reserve') + v('accumulated_amt') + v('current_PL_amt'));
+    // ===== 股東權益：由各科目加總，確保與畫面明細一致 =====
+    const equity = v('captial_stock') + v('captial_reserve') + v('legal_reserve') + v('accumulated_amt') + v('current_PL_amt');
     const total_le = total_debet + equity;
 
     return {
         assets: {
-            current: { cash, ar, inventory, prepay },
-            non_current: { building_net, equip_net, vehicle_net, office_net, intangible, wip, long_inv, long_recv },
+            current: { cash, ar, inventory, prepay, total: total_current_asset },
+            non_current: {
+                building_net, equip_net, vehicle_net, office_net, intangible,
+                wip, long_inv, long_recv, other: v('other_asset_amt'),
+                total: total_non_current_asset
+            },
             total: total_asset
         },
         liabilities: {
@@ -137,9 +140,9 @@ function buildBalanceSheet(cur) {
                 loan: v('loan_amt'), ap: v('AP_amt'),
                 tax: v('AP_tax_amt'), salary: v('AP_salary_amt'),
                 other: v('AP_other_amt'), other_LQ: v('LQ_debet_amt'),
-                deposit: v('deposit_liab_amt')
+                deposit: v('deposit_liab_amt'), total: current_debet
             },
-            long_term: { LT_loan: v('LT_loan_amt'), LT_other: v('LT_debet_amt') },
+            long_term: { LT_loan: v('LT_loan_amt'), LT_other: v('LT_debet_amt'), total: LT_debet },
             total: total_debet
         },
         equity: {

@@ -43,25 +43,26 @@ async function loadReport() {
                     <div>
                         <h4 style="color:#2c5f8d;border-bottom:2px solid #2c5f8d;padding-bottom:5px;margin-bottom:10px">${t('rpt.assets')}</h4>
                         <table class="data-table">
-                            <tr><td>${t('rpt.current_assets')}</td><td class="num">${UI.fmt(bs.assets.current.cash + bs.assets.current.ar + bs.assets.current.inventory + bs.assets.current.prepay)}</td></tr>
+                            <tr><td>${t('rpt.current_assets')}</td><td class="num">${UI.fmt(bs.assets.current.total)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.cash')}</td><td class="num">${UI.fmt(bs.assets.current.cash)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.ar')}</td><td class="num">${UI.fmt(bs.assets.current.ar)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.inventory')}</td><td class="num">${UI.fmt(bs.assets.current.inventory)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.prepay')}</td><td class="num">${UI.fmt(bs.assets.current.prepay)}</td></tr>
-                            <tr><td>${t('rpt.non_current_assets')}</td><td class="num">${UI.fmt(bs.assets.non_current.building_net + bs.assets.non_current.equip_net + bs.assets.non_current.vehicle_net + bs.assets.non_current.office_net + bs.assets.non_current.intangible)}</td></tr>
+                            <tr><td>${t('rpt.non_current_assets')}</td><td class="num">${UI.fmt(bs.assets.non_current.total)}</td></tr>
                             <tr style="font-weight:bold;background:#e8f4fd"><td>${t('rpt.total_assets')}</td><td class="num">${UI.fmt(bs.assets.total)}</td></tr>
                         </table>
                     </div>
                     <div>
                         <h4 style="color:#e74c3c;border-bottom:2px solid #e74c3c;padding-bottom:5px;margin-bottom:10px">${t('rpt.liab_equity')}</h4>
                         <table class="data-table">
-                            <tr><td>${t('rpt.current_liab')}</td><td class="num">${UI.fmt(bs.liabilities.current.loan + bs.liabilities.current.ap + bs.liabilities.current.tax + bs.liabilities.current.salary + bs.liabilities.current.other)}</td></tr>
+                            <tr><td>${t('rpt.current_liab')}</td><td class="num">${UI.fmt(bs.liabilities.current.total)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.short_loan')}</td><td class="num">${UI.fmt(bs.liabilities.current.loan)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.ap')}</td><td class="num">${UI.fmt(bs.liabilities.current.ap)}</td></tr>
-                            <tr><td>${t('rpt.long_liab')}</td><td class="num">${UI.fmt(bs.liabilities.long_term.LT_loan)}</td></tr>
+                            <tr><td>${t('rpt.long_liab')}</td><td class="num">${UI.fmt(bs.liabilities.long_term.total)}</td></tr>
                             <tr><td>${t('rpt.equity')}</td><td class="num">${UI.fmt(bs.equity.total)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.capital')}</td><td class="num">${UI.fmt(bs.equity.capital)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.reserve')}</td><td class="num">${UI.fmt(bs.equity.reserve)}</td></tr>
+                            <tr><td style="padding-left:20px">${t('rpt.legal_reserve')}</td><td class="num">${UI.fmt(bs.equity.legal_reserve)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.accumulated')}</td><td class="num">${UI.fmt(bs.equity.accumulated)}</td></tr>
                             <tr><td style="padding-left:20px">${t('rpt.current_pl')}</td><td class="num">${UI.fmt(bs.equity.current_PL)}</td></tr>
                             <tr style="font-weight:bold;background:#fde8e8"><td>${t('rpt.total_le')}</td><td class="num">${UI.fmt(bs.liabilities_equity.total)}</td></tr>
