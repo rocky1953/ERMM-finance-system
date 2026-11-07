@@ -1,6 +1,57 @@
 /**
  * 仪表板页面
  */
+/**
+ * 图表数据标签插件：柱状图标数值、环形图标占比
+ */
+const chartDataLabelPlugin = {
+    id: 'dataLabel',
+    afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const ds = chart.data.datasets[0];
+        if (!ds) return;
+        const fmtShort = (v) => {
+            const n = Number(v) || 0;
+            if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(2) + '亿';
+            if (Math.abs(n) >= 1e4) return Math.round(n / 1e4) + '万';
+            return n.toFixed(0);
+        };
+
+        if (chart.config.type === 'bar') {
+            const meta = chart.getDatasetMeta(0);
+            ctx.save();
+            ctx.font = '10px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.fillStyle = '#52525B';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            meta.data.forEach((bar, i) => {
+                const v = Number(ds.data[i] || 0);
+                if (!v) return;
+                ctx.fillText(fmtShort(v), bar.x, bar.y - 4);
+            });
+            ctx.restore();
+        } else if (chart.config.type === 'doughnut') {
+            const total = ds.data.reduce((a, b) => a + (Number(b) || 0), 0);
+            if (total <= 0) return;
+            const meta = chart.getDatasetMeta(0);
+            ctx.save();
+            ctx.font = '600 11px "PingFang SC", "Microsoft YaHei", sans-serif';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            meta.data.forEach((arc, i) => {
+                const span = Math.abs(arc.endAngle - arc.startAngle);
+                if (span < 0.3) return; // 过小扇区放不下文字，由 tooltip 展示
+                const pct = (Number(ds.data[i] || 0) / total) * 100;
+                const angle = (arc.startAngle + arc.endAngle) / 2;
+                const r = (arc.innerRadius + arc.outerRadius) / 2;
+                ctx.fillText(pct.toFixed(1) + '%', arc.x + Math.cos(angle) * r, arc.y + Math.sin(angle) * r);
+            });
+            ctx.restore();
+        }
+    }
+};
+
 registerPage('dashboard', async (c) => {
     const { bu_no, YYYY_MM } = State;
 
@@ -315,6 +366,7 @@ registerPage('dashboard', async (c) => {
             ];
             new Chart(document.getElementById('plChart'), {
                 type: 'bar',
+                plugins: [chartDataLabelPlugin],
                 data: {
                     labels: [t('dash.sale'), t('sum.cost'), t('sum.gross'), t('sum.op_income'), t('sum.op_profit'), t('sum.net')],
                     datasets: [{ data: plData, backgroundColor: ['#3498db','#e74c3c','#27ae60','#f39c12','#9b59b6','#1abc9c'] }]
@@ -322,6 +374,7 @@ registerPage('dashboard', async (c) => {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 18 } },
                     plugins: { legend: { display: false } },
                     scales: { y: { beginAtZero: true } },
                     // 仅销货收入(0)、销货成本(1) 可点击钻取
@@ -340,6 +393,7 @@ registerPage('dashboard', async (c) => {
             // 资产负债图
             new Chart(document.getElementById('bsChart'), {
                 type: 'doughnut',
+                plugins: [chartDataLabelPlugin],
                 data: {
                     labels: [t('rpt.current_assets'), t('rpt.non_current_assets'), t('rpt.current_liab'), t('rpt.long_liab'), t('rpt.equity')],
                     datasets: [{
