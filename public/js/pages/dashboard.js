@@ -76,7 +76,7 @@ registerPage('dashboard', async (c) => {
                 <div class="dash-chart-note" id="plLegend"></div>
             </div>
             <div class="card dash-chart-card">
-                <div class="card-title">${t('dash.bs_chart')}</div>
+                <div class="card-title">${t('dash.bs_chart')}<span class="dash-drill-hint">💡 ${t('dash.bsd.hint')}</span></div>
                 <div class="dash-chart-box"><canvas id="bsChart"></canvas></div>
             </div>
         </div>
@@ -325,6 +325,95 @@ registerPage('dashboard', async (c) => {
         }
     }
 
+    // ===== 資產負債環形圖扇區明細彈窗（取 /api/report/balance-sheet 分項，與扇區金額同源）=====
+    async function openBSDetail(idx) {
+        const titles = [
+            t('rpt.current_assets'), t('rpt.non_current_assets'),
+            t('rpt.current_liab'), t('rpt.long_liab'), t('rpt.equity')
+        ];
+        const title = titles[idx];
+        if (!title) return;
+
+        let ov = document.getElementById('dashBsOverlay');
+        if (!ov) ov = buildDashModal('dashBsOverlay', 'dashBsTitle', 'dashBsSub', 'dashBsBody');
+        ov.querySelector('#dashBsTitle').textContent = `📊 ${title}`;
+        ov.querySelector('#dashBsSub').textContent = `${State.bu_no}  ·  ${State.YYYY_MM}`;
+        const body = ov.querySelector('#dashBsBody');
+        body.innerHTML = `<div class="empty-state"><div class="icon">⏳</div>${t('loading')}</div>`;
+        ov.classList.add('show');
+
+        try {
+            const res = await API.get(`/api/report/balance-sheet?bu_no=${encodeURIComponent(State.bu_no)}&YYYY_MM=${encodeURIComponent(State.YYYY_MM)}`);
+            const bs = (res.data && res.data.balance_sheet) || res.data || {};
+            const a = bs.assets || {}, ac = a.current || {}, anc = a.non_current || {};
+            const l = bs.liabilities || {}, lc = l.current || {}, ll = l.long_term || {};
+            const eq = bs.equity || {};
+            const cats = [
+                { total: ac.total, items: [[t('rpt.cash'), ac.cash], [t('rpt.ar'), ac.ar], [t('rpt.inventory'), ac.inventory], [t('rpt.prepay'), ac.prepay]] },
+                {
+                    total: anc.total, items: [
+                        [t('bs.building'), anc.building_net], [t('bs.equipment'), anc.equip_net],
+                        [t('bs.vehicle'), anc.vehicle_net], [t('bs.office'), anc.office_net],
+                        [t('bs.intangible'), anc.intangible], [t('bs.wip'), anc.wip],
+                        [t('bs.long_inv'), anc.long_inv], [t('bs.long_recv'), anc.long_recv],
+                        [t('bs.other_asset'), anc.other]
+                    ]
+                },
+                {
+                    total: lc.total, items: [
+                        [t('rpt.short_loan'), lc.loan], [t('rpt.ap'), lc.ap], [t('bs.tax'), lc.tax],
+                        [t('bs.salary'), lc.salary], [t('bs.other_payable'), lc.other],
+                        [t('bs.other_lq'), lc.other_LQ], [t('bs.deposit'), lc.deposit]
+                    ]
+                },
+                { total: ll.total, items: [[t('bs.lt_loan'), ll.LT_loan], [t('bs.lt_other'), ll.LT_other]] },
+                {
+                    total: eq.total, items: [
+                        [t('rpt.capital'), eq.capital], [t('rpt.reserve'), eq.reserve],
+                        [t('rpt.legal_reserve'), eq.legal_reserve], [t('rpt.accumulated'), eq.accumulated],
+                        [t('rpt.current_pl'), eq.current_PL]
+                    ]
+                }
+            ];
+            const cat = cats[idx];
+            const total = Number(cat.total || 0);
+            const rows = cat.items
+                .map(([name, val]) => [name, Number(val || 0)])
+                .filter(([, val]) => Math.abs(val) > 0.005);
+
+            if (!rows.length) {
+                body.innerHTML = UI.empty('📭', t('inv.no_data'));
+            } else {
+                const pct = (val) => (total ? UI.fmt(Math.abs(val) / Math.abs(total) * 100, 1) : '0.0');
+                body.innerHTML = `
+                    <div class="dash-detail-tablewrap">
+                    <table class="dash-detail-table">
+                        <thead><tr>
+                            <th>${t('dash.bsd.item')}</th>
+                            <th class="num">${t('inv.amount')}</th>
+                            <th class="num">${t('dash.bsd.share')}</th>
+                        </tr></thead>
+                        <tbody>
+                            ${rows.map(([name, val]) => `
+                                <tr>
+                                    <td>${name}</td>
+                                    <td class="num">${UI.fmt(val)}</td>
+                                    <td class="num">${pct(val)}%</td>
+                                </tr>`).join('')}
+                        </tbody>
+                        <tfoot><tr>
+                            <td>${t('dash.bsd.total')}</td>
+                            <td class="num">${UI.fmt(total)}</td>
+                            <td class="num">100.0%</td>
+                        </tr></tfoot>
+                    </table>
+                    </div>`;
+            }
+        } catch (err) {
+            body.innerHTML = `<div class="empty-state"><div class="icon">❌</div><div>${t('load_failed')}: ${err.message}</div></div>`;
+        }
+    }
+
     try {
         const [summary, risk] = await Promise.allSettled([
             API.get(`/api/summary?bu_no=${bu_no}&YYYY_MM=${YYYY_MM}`),
@@ -432,6 +521,14 @@ registerPage('dashboard', async (c) => {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    // 点击任一扇区查看该类别明细
+                    onHover: (evt, elements) => {
+                        evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                    },
+                    onClick: (evt, elements) => {
+                        if (!elements.length) return;
+                        openBSDetail(elements[0].index);
+                    },
                     plugins: {
                         legend: {
                             position: 'right',
