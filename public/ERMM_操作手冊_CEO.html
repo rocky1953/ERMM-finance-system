@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 操作手冊 — CEO</title>
+<style>
+:root{--accent:#e65100;--accent-soft:#fff3e0;--ink:#1f2733;--muted:#6b7785;--line:#e3e8ef;--bg:#f6f8fb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;}
+.layout{display:flex;min-height:100vh;}
+aside{width:280px;flex:0 0 280px;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 16px 40px;}
+.brand{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.brand-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.toc-item{display:block;font-size:13px;color:#39424e;text-decoration:none;padding:6px 10px;border-radius:6px;border-left:3px solid transparent;}
+.toc-item.d2{padding-left:22px;color:var(--muted);}
+.toc-item.d3{padding-left:34px;font-size:12px;color:#8a95a3;}
+.toc-item:hover{background:var(--accent-soft);}
+.toc-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
+.side-foot{margin-top:24px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.8;}
+.side-foot a{color:var(--accent);text-decoration:none;}
+main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
+.hero{background:linear-gradient(135deg,var(--accent),#3949ab);color:#fff;border-radius:14px;padding:26px 30px;margin-bottom:30px;}
+
+.hero h1{margin:0 0 8px;font-size:26px;font-weight:700;}
+.hero p{margin:0;font-size:13px;opacity:.92;}
+.doc h1{font-size:24px;margin:44px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--accent);color:var(--accent);}
+.doc h2{font-size:19px;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--accent);}
+.doc h3{font-size:16px;margin:26px 0 10px;color:#2c3e50;}
+.doc p{margin:10px 0;}
+.doc ul,.doc ol{margin:10px 0 10px 22px;padding-left:8px;}
+
+.doc li{margin:5px 0;}
+.doc blockquote{margin:14px 0;padding:10px 16px;background:#fff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden;}
+.doc th{background:var(--accent-soft);color:#243b53;text-align:left;font-weight:600;padding:9px 12px;border-bottom:2px solid var(--line);}
+.doc td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.doc tr:last-child td{border-bottom:none;}
+.doc tr:nth-child(even) td{background:#fbfcfe;}
+.doc code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:Consolas,"Courier New",monospace;font-size:12.5px;color:#0b5394;}
+.doc pre.code-block{background:#1e2530;color:#dbe4ee;padding:14px 16px;border-radius:8px;overflow:auto;font-size:12.5px;line-height:1.6;}
+.doc pre.code-block code{background:none;color:inherit;padding:0;}
+.diagram{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin:18px 0;overflow:auto;text-align:center;}
+.mermaid{font-size:13px;}
+.doc a{color:var(--accent);}
+.hr{border:none;height:1px;background:var(--line);margin:26px 0;}
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  aside{position:relative;width:auto;height:auto;flex:none;border-right:none;border-bottom:1px solid var(--line);}
+  main{padding:22px 18px 70px;}
+  .hero h1{font-size:20px;}
+}
+@media print{
+  aside{display:none;}
+  main{max-width:100%;padding:0;}
+  .hero{background:#fff;color:var(--ink);border:1px solid var(--line);}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand">ERMM Docs</div>
+  <div class="brand-sub">看全局 · 抓方向 · 定資源｜每日 5 分鐘例行</div>
+  <nav id="toc">
+<a class="toc-item d1" href="#sec-2">二、登录与界面（每次必用）</a>
+<a class="toc-item d1" href="#sec-3">三、每日 5 分钟例行（推荐顺序）</a>
+<a class="toc-item d1" href="#sec-4">四、核心操作详解</a>
+<a class="toc-item d2" href="#sec-5">4.1 仪表板（📊 财务仪表板）</a>
+<a class="toc-item d2" href="#sec-6">4.2 AI 问答（🤖 经营决策组）</a>
+<a class="toc-item d2" href="#sec-7">4.3 战情看板（⚔️）</a>
+<a class="toc-item d2" href="#sec-8">4.4 多维下钻（🔍）</a>
+<a class="toc-item d2" href="#sec-9">4.5 同业标杆（📊）</a>
+<a class="toc-item d2" href="#sec-10">4.6 情景模拟（🎯）</a>
+<a class="toc-item d2" href="#sec-11">4.7 合并报表（📋）</a>
+<a class="toc-item d2" href="#sec-12">4.8 现金预测（💧）</a>
+<a class="toc-item d2" href="#sec-13">4.9 预警通知（🔔）与行动追踪（✅）</a>
+<a class="toc-item d2" href="#sec-14">4.10 系统文件（🗺️ / 📊 / 🗄️）</a>
+<a class="toc-item d1" href="#sec-15">五、你的权限范围</a>
+<a class="toc-item d1" href="#sec-16">六、每周 / 每月固定动作</a>
+<a class="toc-item d1" href="#sec-17">七、常见问题</a>
+  </nav>
+  <div class="side-foot">
+    產生時間：2026-11-07 02:32<br>
+    <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
+    <a href="/docs/architecture">切換另一份文件</a>
+  </div>
+</aside>
+<main>
+  <div class="hero">
+    <h1>ERMM 操作手冊 — CEO</h1>
+    <p>看全局 · 抓方向 · 定資源｜每日 5 分鐘例行 ｜ 由 Markdown 自動產生（唯讀文件）</p>
+  </div>
+  <article class="doc">
+<blockquote>
+<p>适用角色：CEO（总经理 / 董事长）｜适用版本：v3.2（2026-11-05）
+系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜建议浏览器：Chrome / Edge
+本手册只写<strong>你实际会点到的地方</strong>：菜单名、页面名、操作顺序。技术细节不在本手册范围。</p>
+</blockquote>
+<p>CEO 在系统中的角色是<strong>看全局、抓方向、定资源</strong>，不是录单据、不是做账。因此你的日常只有三类动作：</p>
+<ol>
+<li><strong>看一眼</strong>：仪表板、战情看板、每日 AI 摘要 —— 30 秒掌握公司今天的状态。</li>
+<li><strong>问一句</strong>：AI 问答 —— 有疑问直接打字问，不用等财务出报表。</li>
+<li><strong>推一下</strong>：行动追踪、预警通知 —— 把该谁做的事派下去，并看是否闭环。</li>
+</ol>
+<hr>
+<h1 id="sec-2">二、登录与界面（每次必用）</h1><ul>
+<li><strong>登录</strong>：打开 <a href="http://localhost:3008">http://localhost:3008</a> → 输入账号密码 → 进入仪表板。登录状态会自动保持，关掉浏览器再开通常无需重登。</li>
+<li><strong>左上角 🏢 ERMM</strong>：点击可打开系统架构图（了解系统全貌，只读）。</li>
+<li><strong>顶部公司切换</strong>：HM / SZ / HN —— 切换后所有页面只显示该公司的数据；看合并数据请用「合并报表」。</li>
+<li><strong>顶部月份选择</strong>：决定你看到的是哪个月的数据。看趋势请在「年度趋势」页切换整年。</li>
+<li><strong>右上角语言切换</strong>：简中 / 繁中 / English。</li>
+</ul>
+<hr>
+<h1 id="sec-3">三、每日 5 分钟例行（推荐顺序）</h1><table>
+<thead>
+<tr>
+<th>顺序</th>
+<th>菜单路径</th>
+<th>你要看什么</th>
+<th>判断标准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>仪表板 → <strong>每日 AI 执行摘要</strong>卡片</td>
+<td>昨天发生了什么、今天要盯什么</td>
+<td>读 3 行摘要，记下提到的风险项</td>
+</tr>
+<tr>
+<td>2</td>
+<td>仪表板 → 核心指标卡（营收 / 毛利率 / 现金 / Z-Score）</td>
+<td>与上月、与目标对比</td>
+<td>红黄灯即为需要关注</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>预警通知</strong>（经营决策组）</td>
+<td>系统自动推送的异常</td>
+<td>红色预警当天处理或指派</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>战情看板</strong></td>
+<td>三家公司并排对比</td>
+<td>找出明显落后的一家</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>行动追踪</strong></td>
+<td>上次交办事项是否闭环</td>
+<td>逾期未完成的点名</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>如果摘要卡片空白，说明当期数据还没生成 —— 点卡片上的「重新生成」即可（需稍等 LLM 返回）。</p>
+</blockquote>
+<hr>
+<h1 id="sec-4">四、核心操作详解</h1><h2 id="sec-5">4.1 仪表板（📊 财务仪表板）</h2><ul>
+<li><strong>目的</strong>：一屏掌握营收、成本、毛利、现金、风险五条主线。</li>
+<li><strong>操作</strong>：<ol>
+<li>选好公司与月份 → 页面自动加载。</li>
+<li>上方是 <strong>AI 执行摘要</strong>；中部是核心指标卡；下方是趋势图表。</li>
+<li>点击任一指标卡 → 进入对应明细页（如点 Z-Score 看评分区间说明）。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：指标卡的数字口径与「三大报表」一致，若两者不一致，请先跑「数据质量扫描」。</li>
+</ul>
+<h2 id="sec-6">4.2 AI 问答（🤖 经营决策组）</h2><ul>
+<li><strong>目的</strong>：用大白话问经营问题，系统检索内部知识库（税务政策、年报、同业数据、数据字典）后给出带依据的回答。</li>
+<li><strong>操作步骤</strong>：<ol>
+<li>侧边栏「经营决策」→ <strong>AI 问答</strong>。</li>
+<li>在输入框提问，例如：<ul>
+<li>「这个月毛利率下降的主要原因是什么？」</li>
+<li>「三家公司的现金水位谁最紧张？」</li>
+<li>「发票丢失怎么补办？」</li>
+</ul>
+</li>
+<li>回答下方有<strong>引用来源</strong>，可点开核对；若显示「未找到依据」，说明知识库未收录，请联系财务或 CTO 补充。</li>
+<li>左侧历史会话可继续追问，系统记得上下文。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：AI 回答是<strong>决策参考</strong>，涉及金额与合规结论，以报表和正式文件为准。</li>
+</ul>
+<h2 id="sec-7">4.3 战情看板（⚔️）</h2><ul>
+<li><strong>目的</strong>：三家公司横向对比，快速定位「哪家掉队」。</li>
+<li><strong>操作</strong>：进入即看，按指标（营收 / 毛利 / 现金流 / 风险）对比；切换月份看不同期间。</li>
+<li><strong>建议</strong>：每周一固定看一次，作为周会开场。</li>
+</ul>
+<h2 id="sec-8">4.4 多维下钻（🔍）</h2><ul>
+<li><strong>目的</strong>：从汇总数字钻到具体单据，回答「这个数是怎么来的」。</li>
+<li><strong>操作</strong>：选择公司 → 月份 → 指标（营收 / 成本 / 费用 / 现金）→ 逐层下钻到明细记录。</li>
+<li><strong>典型用法</strong>：毛利异常时，下钻到成本项 → 找到异常科目 → 再交给财务核查。</li>
+</ul>
+<h2 id="sec-9">4.5 同业标杆（📊）</h2><ul>
+<li><strong>目的</strong>：与行业基准对比，判断「是我们做得差，还是行业都差」。</li>
+<li><strong>操作</strong>：选择指标与期间 → 查看本公司 vs 行业分位值。</li>
+<li><strong>注意</strong>：标杆数据由财务维护，若长期未更新可提醒 CFO。</li>
+</ul>
+<h2 id="sec-10">4.6 情景模拟（🎯）</h2><ul>
+<li><strong>目的</strong>：做「如果……会怎样」的推演（如营收下滑 10%、回款延迟 30 天）。</li>
+<li><strong>操作</strong>：进入页面 → 调整假设参数（营收增减、成本变动、回款天数）→ 提交模拟 → 查看对利润与现金的影响。</li>
+<li><strong>建议</strong>：重大决策前跑 2~3 个情景（乐观 / 中性 / 悲观），把结论带进决策会。</li>
+</ul>
+<h2 id="sec-11">4.7 合并报表（📋）</h2><ul>
+<li><strong>目的</strong>：看三家公司合并后的整体经营结果（消除内部交易后）。</li>
+<li><strong>操作</strong>：进入页面 → 选择期间 → 查看合并损益 / 合并资产负债 / 合并现金流。</li>
+<li><strong>注意</strong>：合并口径由财务维护，如与单家公司相加不一致，属正常的内部交易抵销。</li>
+</ul>
+<h2 id="sec-12">4.8 现金预测（💧）</h2><ul>
+<li><strong>目的</strong>：知道未来 13 周现金够不够用。</li>
+<li><strong>操作</strong>：<ol>
+<li>进入「现金预测」→ 默认显示 13 周点估计曲线。</li>
+<li>切换 <strong>Monte Carlo 概率模式</strong> → 显示 P10 / P50 / P90 区间带与「出现负现金的概率」。</li>
+</ol>
+</li>
+<li><strong>建议</strong>：只要概率超过 30%，就该让 CFO 准备融资或压缩支出。</li>
+</ul>
+<h2 id="sec-13">4.9 预警通知（🔔）与行动追踪（✅）</h2><ul>
+<li><strong>预警通知</strong>：系统按规则自动生成；红色=需当日处理，黄色=本周内处理。</li>
+<li><strong>行动追踪</strong>：在此登记你要推动的事项，指定负责人与期限；后续在此看完成状态。</li>
+<li><strong>建议</strong>：所有口头交办都落一条，避免「说过但没人做」。</li>
+</ul>
+<h2 id="sec-14">4.10 系统文件（🗺️ / 📊 / 🗄️）</h2><ul>
+<li><strong>仅管理员账号可见可用</strong>。内含：系统架构与流程图、高管价值简报、模块数据表关系图。</li>
+<li>非管理员点击会提示「你的权限不能使用这个模块功能」。</li>
+</ul>
+<hr>
+<h1 id="sec-15">五、你的权限范围</h1><table>
+<thead>
+<tr>
+<th>能做</th>
+<th>不能做（需 CFO / CTO 账号）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查看全部报表与看板</td>
+<td>财务入账 / 凭证过账</td>
+</tr>
+<tr>
+<td>AI 问答、情景模拟</td>
+<td>报税计算与提交</td>
+</tr>
+<tr>
+<td>登记与查看行动追踪</td>
+<td>系统设定、使用者管理、KPI 门槛</td>
+</tr>
+<tr>
+<td>查看预警</td>
+<td>批次管线执行、第三方整合配置</td>
+</tr>
+<tr>
+<td>打开系统文件（仅管理员账号）</td>
+<td>直接修改业务单据</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="sec-16">六、每周 / 每月固定动作</h1><ul>
+<li><strong>每周一</strong>：战情看板 + 行动追踪未完成项 → 周会开场 5 分钟。</li>
+<li><strong>每月 3 日前</strong>：看上月合并报表与月度趋势，确认经营结论。</li>
+<li><strong>每季度</strong>：跑一次情景模拟（季度目标假设）+ 同业标杆对比，调整资源配置。</li>
+<li><strong>随时</strong>：看到红色预警 → 当天指派；看到 AI 摘要提到的风险 → 追问 AI 问答。</li>
+</ul>
+<hr>
+<h1 id="sec-17">七、常见问题</h1><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>仪表板数字与财务报表不一致</td>
+<td>让财务跑「数据质量扫描」，先排除脏数据</td>
+</tr>
+<tr>
+<td>AI 摘要卡片空白</td>
+<td>点「重新生成」；仍失败请联系 CTO 检查 LLM 设定</td>
+</tr>
+<tr>
+<td>AI 问答答「未找到依据」</td>
+<td>知识库未收录该主题，请 CTO 补充条目</td>
+</tr>
+<tr>
+<td>点击系统文件没反应</td>
+<td>浏览器缓存旧版，按 <code>Ctrl+Shift+R</code> 硬刷新</td>
+</tr>
+<tr>
+<td>看不到某家公司数据</td>
+<td>检查顶部公司切换，或该月数据尚未加工（找 COO 跑批次管线）</td>
+</tr>
+<tr>
+<td>登录后被踢回登录页</td>
+<td>用管理员或有效账号重新登录；持续出现请联系 CTO</td>
+</tr>
+</tbody></table>
+<hr>
+<p><em>配套阅读：《ERMM 高管价值简报》（系统文件 → 📊 高管价值简报）。</em></p>
+
+  </article>
+</main>
+</div>
+<script src="/vendor/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose',
+      flowchart: { htmlLabels: true, curve: 'basis' }, er: { useMaxWidth: true } });
+  }
+  const links = Array.from(document.querySelectorAll('#toc .toc-item'));
+  const heads = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  function spy() {
+    let idx = 0;
+    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= 90) idx = i; });
+    links.forEach((a, i) => a.classList.toggle('active', i === idx));
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  spy();
+</script>
+</body>
+</html>

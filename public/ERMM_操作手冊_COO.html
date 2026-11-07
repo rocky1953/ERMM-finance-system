@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 操作手冊 — COO</title>
+<style>
+:root{--accent:#6d4c41;--accent-soft:#efebe9;--ink:#1f2733;--muted:#6b7785;--line:#e3e8ef;--bg:#f6f8fb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;}
+.layout{display:flex;min-height:100vh;}
+aside{width:280px;flex:0 0 280px;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 16px 40px;}
+.brand{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.brand-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.toc-item{display:block;font-size:13px;color:#39424e;text-decoration:none;padding:6px 10px;border-radius:6px;border-left:3px solid transparent;}
+.toc-item.d2{padding-left:22px;color:var(--muted);}
+.toc-item.d3{padding-left:34px;font-size:12px;color:#8a95a3;}
+.toc-item:hover{background:var(--accent-soft);}
+.toc-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
+.side-foot{margin-top:24px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.8;}
+.side-foot a{color:var(--accent);text-decoration:none;}
+main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
+.hero{background:linear-gradient(135deg,var(--accent),#3949ab);color:#fff;border-radius:14px;padding:26px 30px;margin-bottom:30px;}
+
+.hero h1{margin:0 0 8px;font-size:26px;font-weight:700;}
+.hero p{margin:0;font-size:13px;opacity:.92;}
+.doc h1{font-size:24px;margin:44px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--accent);color:var(--accent);}
+.doc h2{font-size:19px;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--accent);}
+.doc h3{font-size:16px;margin:26px 0 10px;color:#2c3e50;}
+.doc p{margin:10px 0;}
+.doc ul,.doc ol{margin:10px 0 10px 22px;padding-left:8px;}
+
+.doc li{margin:5px 0;}
+.doc blockquote{margin:14px 0;padding:10px 16px;background:#fff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden;}
+.doc th{background:var(--accent-soft);color:#243b53;text-align:left;font-weight:600;padding:9px 12px;border-bottom:2px solid var(--line);}
+.doc td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.doc tr:last-child td{border-bottom:none;}
+.doc tr:nth-child(even) td{background:#fbfcfe;}
+.doc code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:Consolas,"Courier New",monospace;font-size:12.5px;color:#0b5394;}
+.doc pre.code-block{background:#1e2530;color:#dbe4ee;padding:14px 16px;border-radius:8px;overflow:auto;font-size:12.5px;line-height:1.6;}
+.doc pre.code-block code{background:none;color:inherit;padding:0;}
+.diagram{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin:18px 0;overflow:auto;text-align:center;}
+.mermaid{font-size:13px;}
+.doc a{color:var(--accent);}
+.hr{border:none;height:1px;background:var(--line);margin:26px 0;}
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  aside{position:relative;width:auto;height:auto;flex:none;border-right:none;border-bottom:1px solid var(--line);}
+  main{padding:22px 18px 70px;}
+  .hero h1{font-size:20px;}
+}
+@media print{
+  aside{display:none;}
+  main{max-width:100%;padding:0;}
+  .hero{background:#fff;color:var(--ink);border:1px solid var(--line);}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand">ERMM Docs</div>
+  <div class="brand-sub">工作日报 · 行动追踪 · 预警纠偏 · 单据流程</div>
+  <nav id="toc">
+<a class="toc-item d1" href="#sec-2">二、登录与全局操作</a>
+<a class="toc-item d1" href="#sec-3">三、每日必做：工作日报</a>
+<a class="toc-item d2" href="#sec-4">3.1 填报日报（📝 工作日报表）</a>
+<a class="toc-item d2" href="#sec-5">3.2 审核日报（部门主管）</a>
+<a class="toc-item d2" href="#sec-6">3.3 工作未完成分析（📊）</a>
+<a class="toc-item d1" href="#sec-7">四、执行与追踪</a>
+<a class="toc-item d2" href="#sec-8">4.1 行动追踪（✅ 经营决策组）</a>
+<a class="toc-item d2" href="#sec-9">4.2 预警通知（🔔）</a>
+<a class="toc-item d2" href="#sec-10">4.3 仪表板（📊 财务仪表板）—— 只看不看懂的地方</a>
+<a class="toc-item d1" href="#sec-11">五、单据与流程作业</a>
+<a class="toc-item d2" href="#sec-12">5.1 ERP 原始单据（🛒 / 📦 / 🚚 / 📥）</a>
+<a class="toc-item d2" href="#sec-13">5.2 付款与票据（💳 / 📝 / 🏦）</a>
+<a class="toc-item d2" href="#sec-14">5.3 现金预测（💧 经营决策组）—— 你只需要看结论</a>
+<a class="toc-item d2" href="#sec-15">5.4 应收应付（📐）</a>
+<a class="toc-item d1" href="#sec-16">六、批次与数据（作业侧配合）</a>
+<a class="toc-item d2" href="#sec-17">6.1 批次管线（⚙️ 系统组）</a>
+<a class="toc-item d2" href="#sec-18">6.2 数据质量扫描（🛠️ 日常作业组）</a>
+<a class="toc-item d1" href="#sec-19">七、每周 / 每月固定动作</a>
+<a class="toc-item d1" href="#sec-20">八、你的权限范围</a>
+<a class="toc-item d1" href="#sec-21">九、常见问题</a>
+  </nav>
+  <div class="side-foot">
+    產生時間：2026-11-07 02:32<br>
+    <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
+    <a href="/docs/architecture">切換另一份文件</a>
+  </div>
+</aside>
+<main>
+  <div class="hero">
+    <h1>ERMM 操作手冊 — COO</h1>
+    <p>工作日报 · 行动追踪 · 预警纠偏 · 单据流程 ｜ 由 Markdown 自動產生（唯讀文件）</p>
+  </div>
+  <article class="doc">
+<blockquote>
+<p>适用角色：COO（营运长 / 部门主管 / 日常作业负责人）｜适用版本：v3.2（2026-11-05）
+系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜建议浏览器：Chrome / Edge
+本手册聚焦「每天要交的作业、要盯的进度、要追的异常」。</p>
+</blockquote>
+<p>COO / 部门主管在系统里是<strong>作业执行与异常纠偏</strong>的角色：</p>
+<ol>
+<li><strong>交作业</strong>：工作日报每天填、每周审、每月汇总。</li>
+<li><strong>看进度</strong>：行动追踪、工作未完成分析 —— 谁没做完、卡在哪。</li>
+<li><strong>纠异常</strong>：预警通知、数据质量扫描 —— 问题在当天/本周解决，不拖到月底。</li>
+<li><strong>管单据</strong>：ERP 原始单据（采购单、销售订单、交货单）与付款/票据流程。</li>
+</ol>
+<hr>
+<h1 id="sec-2">二、登录与全局操作</h1><ul>
+<li><strong>登录</strong>：<a href="http://localhost:3008">http://localhost:3008</a> → 账号密码 → 仪表板。</li>
+<li><strong>公司切换</strong>：HM / SZ / HN —— 你负责哪家就切到哪家。</li>
+<li><strong>月份选择</strong>：决定日报、统计与报表的期间。</li>
+<li><strong>语言切换</strong>：简 / 繁 / 英。</li>
+<li><strong>左上角 🏢 ERMM</strong>：打开系统架构图（了解数据怎么流转）。</li>
+</ul>
+<hr>
+<h1 id="sec-3">三、每日必做：工作日报</h1><h2 id="sec-4">3.1 填报日报（📝 工作日报表）</h2><ul>
+<li><strong>目的</strong>：当天做了什么事、花了多久、遇到什么问题，形成可统计的工作量数据。</li>
+<li><strong>操作步骤</strong>：<ol>
+<li>侧边栏「日常作业 · 工作日报」→ <strong>工作日报表</strong>。</li>
+<li>选择日期（默认今天）→ 新增事项：填写事项内容、所属项目、开始/结束时间或工时、完成状态。</li>
+<li>保存 → 当日日报即为「已提交」状态。</li>
+<li>当天漏填可补录（受期间锁定规则限制，跨月通常不允许补）。</li>
+</ol>
+</li>
+<li><strong>填写要求</strong>：<ul>
+<li>一条记录只写一件事，便于后续统计工时。</li>
+<li>未完成的事项状态标「未完成」，并写明原因/待办人（后续会自动进入「工作未完成分析」）。</li>
+</ul>
+</li>
+<li><strong>常见错误</strong>：只写一句「处理日常事务」→ 无法统计工时，按规范拆成具体事项。</li>
+</ul>
+<h2 id="sec-5">3.2 审核日报（部门主管）</h2><ul>
+<li><strong>操作</strong>：进入工作日报表 → 切换到「审核」视图 → 选择下属与日期 → 逐条确认或退回。</li>
+<li><strong>审核要点</strong>：工时是否合理、事项是否具体、未完成原因是否写清。</li>
+<li><strong>退回</strong>：填写退回原因，下属修正后重新提交。</li>
+</ul>
+<h2 id="sec-6">3.3 工作未完成分析（📊）</h2><ul>
+<li><strong>目的</strong>：找出「反复未完成」的事项与卡点，作为周会输入。</li>
+<li><strong>操作</strong>：进入页面 → 选公司与期间 → 按人员/项目查看未完成清单与占比。</li>
+<li><strong>用法</strong>：每周五看一次 → 把高频未完成项转成「行动追踪」并指派。</li>
+</ul>
+<hr>
+<h1 id="sec-7">四、执行与追踪</h1><h2 id="sec-8">4.1 行动追踪（✅ 经营决策组）</h2><ul>
+<li><strong>目的</strong>：把口头交办变成可跟踪的任务，避免「说过就忘」。</li>
+<li><strong>操作</strong>：<ol>
+<li>进入「行动追踪」→ 新增事项：事项内容、负责人、截止日期、优先级。</li>
+<li>负责人完成后更新状态；你在此查看逾期项。</li>
+</ol>
+</li>
+<li><strong>建议</strong>：周会前筛出所有逾期项，逐条确认卡点。</li>
+</ul>
+<h2 id="sec-9">4.2 预警通知（🔔）</h2><ul>
+<li><strong>目的</strong>：系统按规则自动生成的营运异常提醒（如日报未交、指标偏离、数据异常）。</li>
+<li><strong>操作</strong>：进入即可查看；红色=当日处理，黄色=本周处理。</li>
+<li><strong>处理方式</strong>：能当场解决的直接解决；需跨部门协调的转「行动追踪」。</li>
+</ul>
+<h2 id="sec-10">4.3 仪表板（📊 财务仪表板）—— 只看不看懂的地方</h2><ul>
+<li><strong>你重点看</strong>：AI 执行摘要（当天要盯什么）、核心指标灯号、预警条数。</li>
+<li><strong>不需要</strong>深入钻财务科目，那是 CFO 的活；但摘要里提到的运营问题要跟进。</li>
+</ul>
+<hr>
+<h1 id="sec-11">五、单据与流程作业</h1><h2 id="sec-12">5.1 ERP 原始单据（🛒 / 📦 / 🚚 / 📥）</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>用途</th>
+<th>操作要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>采购单 PO</td>
+<td>查采购下单与到货情况</td>
+<td>按供应商/单据号筛选；状态跟踪</td>
+</tr>
+<tr>
+<td>销售订单 SO</td>
+<td>查接单与出货情况</td>
+<td>按客户/订单号筛选</td>
+</tr>
+<tr>
+<td>SO 交货单</td>
+<td>查出货明细</td>
+<td>与 SO 对应核对</td>
+</tr>
+<tr>
+<td>PO 暂存</td>
+<td>待确认的采购单暂存区</td>
+<td>确认后转入正式 PO</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>注意</strong>：这些是<strong>原始单据的查询与核对</strong>，录入源头在 ERP 系统；本系统以只读/同步为主，改动请回 ERP 操作，避免两边不一致。</li>
+</ul>
+<h2 id="sec-13">5.2 付款与票据（💳 / 📝 / 🏦）</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>用途</th>
+<th>操作要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>付款明细</td>
+<td>查付款计划与执行</td>
+<td>按供应商/期间筛选</td>
+</tr>
+<tr>
+<td>票据管理</td>
+<td>应收应付票据登记与到期提醒</td>
+<td>到期前处理</td>
+</tr>
+<tr>
+<td>银行贷款</td>
+<td>贷款台账与还款计划</td>
+<td>关注还款日与额度</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>作业要求</strong>：付款申请前先确认「现金预测」水位（见 5.3），避免周内现金不足。</li>
+</ul>
+<h2 id="sec-14">5.3 现金预测（💧 经营决策组）—— 你只需要看结论</h2><ul>
+<li><strong>操作</strong>：进入「现金预测」→ 看 13 周曲线与安全水位；如显示概率模式，看「负现金概率」。</li>
+<li><strong>你的用法</strong>：安排大额付款前先看一眼，必要时向 CFO 申请调整付款节奏。</li>
+</ul>
+<h2 id="sec-15">5.4 应收应付（📐）</h2><ul>
+<li><strong>操作</strong>：进入「应收应付」→ 按客户/供应商查看余额与账龄 → 与 AR 智能催收清单配合使用（催收由 CFO 主导，你负责业务侧配合）。</li>
+</ul>
+<hr>
+<h1 id="sec-16">六、批次与数据（作业侧配合）</h1><h2 id="sec-17">6.1 批次管线（⚙️ 系统组）</h2><ul>
+<li><strong>用途</strong>：把当期原始数据加工成可分析的数据。</li>
+<li><strong>你的角色</strong>：通常由 IT/财务执行；若你被授权，操作是「选公司与月份 → 执行 → 看每步状态」。</li>
+<li><strong>重要</strong>：批次没跑完，仪表板、报表、预警都没有当期数据 —— 发现数据缺失先问这一项。</li>
+</ul>
+<h2 id="sec-18">6.2 数据质量扫描（🛠️ 日常作业组）</h2><ul>
+<li><strong>用途</strong>：检查数据是否脏、缺、重、矛盾。</li>
+<li><strong>你的用法</strong>：周报/月报数据异常时跑一次，把结果转给财务或 IT 修复。</li>
+<li><strong>注意</strong>：只扫描不修复，修复需责任人确认。</li>
+</ul>
+<hr>
+<h1 id="sec-19">七、每周 / 每月固定动作</h1><ul>
+<li><strong>每日下班前</strong>：确认本部门日报已全部提交（未交的当日提醒）。</li>
+<li><strong>每周五</strong>：工作未完成分析 → 筛高频卡点 → 转行动追踪 → 周会同步。</li>
+<li><strong>每周一</strong>：看战情看板对比三家公司，确认本周重点。</li>
+<li><strong>每月初</strong>：审上月日报汇总，确认工时与产出；配合财务完成数据补录。</li>
+</ul>
+<hr>
+<h1 id="sec-20">八、你的权限范围</h1><table>
+<thead>
+<tr>
+<th>能做</th>
+<th>需更高权限</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>填报/审核本人及下属日报</td>
+<td>财务入账、凭证</td>
+</tr>
+<tr>
+<td>行动追踪、预警处理</td>
+<td>报税计算与提交</td>
+</tr>
+<tr>
+<td>查看 ERP 原始单据、付款/票据/贷款</td>
+<td>系统设定、使用者管理、KPI 门槛</td>
+</tr>
+<tr>
+<td>查看现金预测、应收应付</td>
+<td>批次管线执行（除非被授权）</td>
+</tr>
+<tr>
+<td>数据质量扫描</td>
+<td>系统文件（仅管理员）</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="sec-21">九、常见问题</h1><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>日报保存失败</td>
+<td>检查日期是否跨月锁定、必填项是否齐全</td>
+</tr>
+<tr>
+<td>未完成分析里没有我今天的事项</td>
+<td>日报中该事项需标「未完成」并写原因</td>
+</tr>
+<tr>
+<td>仪表板没有当月数据</td>
+<td>该月批次未跑完，联系 IT/财务执行批次管线</td>
+</tr>
+<tr>
+<td>预警太多不知从何下手</td>
+<td>先处理红色（当日），黄色统一在周五批量处理</td>
+</tr>
+<tr>
+<td>付款后现金紧张</td>
+<td>付款前先看现金预测水位，与 CFO 协调节奏</td>
+</tr>
+<tr>
+<td>ERP 单据在本系统改不了</td>
+<td>原始单据以 ERP 为准，请回 ERP 修改后同步</td>
+</tr>
+<tr>
+<td>点击系统文件没反应</td>
+<td>需管理员账号；普通账号会有无权限提示</td>
+</tr>
+</tbody></table>
+
+  </article>
+</main>
+</div>
+<script src="/vendor/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose',
+      flowchart: { htmlLabels: true, curve: 'basis' }, er: { useMaxWidth: true } });
+  }
+  const links = Array.from(document.querySelectorAll('#toc .toc-item'));
+  const heads = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  function spy() {
+    let idx = 0;
+    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= 90) idx = i; });
+    links.forEach((a, i) => a.classList.toggle('active', i === idx));
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  spy();
+</script>
+</body>
+</html>

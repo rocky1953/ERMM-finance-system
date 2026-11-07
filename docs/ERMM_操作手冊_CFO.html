@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 操作手冊 — CFO</title>
+<style>
+:root{--accent:#2e7d32;--accent-soft:#e8f5e9;--ink:#1f2733;--muted:#6b7785;--line:#e3e8ef;--bg:#f6f8fb;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;}
+.layout{display:flex;min-height:100vh;}
+aside{width:280px;flex:0 0 280px;background:#fff;border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:22px 16px 40px;}
+.brand{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.brand-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.toc-item{display:block;font-size:13px;color:#39424e;text-decoration:none;padding:6px 10px;border-radius:6px;border-left:3px solid transparent;}
+.toc-item.d2{padding-left:22px;color:var(--muted);}
+.toc-item.d3{padding-left:34px;font-size:12px;color:#8a95a3;}
+.toc-item:hover{background:var(--accent-soft);}
+.toc-item.active{background:var(--accent-soft);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
+.side-foot{margin-top:24px;padding-top:14px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted);line-height:1.8;}
+.side-foot a{color:var(--accent);text-decoration:none;}
+main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
+.hero{background:linear-gradient(135deg,var(--accent),#3949ab);color:#fff;border-radius:14px;padding:26px 30px;margin-bottom:30px;}
+
+.hero h1{margin:0 0 8px;font-size:26px;font-weight:700;}
+.hero p{margin:0;font-size:13px;opacity:.92;}
+.doc h1{font-size:24px;margin:44px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--accent);color:var(--accent);}
+.doc h2{font-size:19px;margin:34px 0 12px;padding-left:12px;border-left:4px solid var(--accent);}
+.doc h3{font-size:16px;margin:26px 0 10px;color:#2c3e50;}
+.doc p{margin:10px 0;}
+.doc ul,.doc ol{margin:10px 0 10px 22px;padding-left:8px;}
+
+.doc li{margin:5px 0;}
+.doc blockquote{margin:14px 0;padding:10px 16px;background:#fff;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;color:#4a5568;font-size:13.5px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.doc table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);border-radius:8px;overflow:hidden;}
+.doc th{background:var(--accent-soft);color:#243b53;text-align:left;font-weight:600;padding:9px 12px;border-bottom:2px solid var(--line);}
+.doc td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+.doc tr:last-child td{border-bottom:none;}
+.doc tr:nth-child(even) td{background:#fbfcfe;}
+.doc code{background:#eef2f7;padding:1px 6px;border-radius:4px;font-family:Consolas,"Courier New",monospace;font-size:12.5px;color:#0b5394;}
+.doc pre.code-block{background:#1e2530;color:#dbe4ee;padding:14px 16px;border-radius:8px;overflow:auto;font-size:12.5px;line-height:1.6;}
+.doc pre.code-block code{background:none;color:inherit;padding:0;}
+.diagram{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;margin:18px 0;overflow:auto;text-align:center;}
+.mermaid{font-size:13px;}
+.doc a{color:var(--accent);}
+.hr{border:none;height:1px;background:var(--line);margin:26px 0;}
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  aside{position:relative;width:auto;height:auto;flex:none;border-right:none;border-bottom:1px solid var(--line);}
+  main{padding:22px 18px 70px;}
+  .hero h1{font-size:20px;}
+}
+@media print{
+  aside{display:none;}
+  main{max-width:100%;padding:0;}
+  .hero{background:#fff;color:var(--ink);border:1px solid var(--line);}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside>
+  <div class="brand">ERMM Docs</div>
+  <div class="brand-sub">月度结账七步 · 现金预测 · AR 催收 · 数据质检 · 报税</div>
+  <nav id="toc">
+<a class="toc-item d1" href="#sec-2">二、登录与全局操作</a>
+<a class="toc-item d1" href="#sec-3">三、月度结账标准流程（按顺序执行）</a>
+<a class="toc-item d2" href="#sec-4">3.1 ① 数据质量扫描（🛠️ 日常作业组）</a>
+<a class="toc-item d2" href="#sec-5">3.2 ② 财务摘要核对（📋 财务分析组）</a>
+<a class="toc-item d2" href="#sec-6">3.3 ③ 三大报表（📈）</a>
+<a class="toc-item d2" href="#sec-7">3.4 ④ 风险预警（⚠️）</a>
+<a class="toc-item d2" href="#sec-8">3.5 ⑤ 财务入账 / 凭证（📒）</a>
+<a class="toc-item d2" href="#sec-9">3.6 ⑥ 电子化报税（🧮）</a>
+<a class="toc-item d2" href="#sec-10">3.7 ⑦ 合并报表（📋）</a>
+<a class="toc-item d1" href="#sec-11">四、现金管理（💧 + 🎯）</a>
+<a class="toc-item d2" href="#sec-12">4.1 现金预测（13 周 + 概率）</a>
+<a class="toc-item d2" href="#sec-13">4.2 AR 智能催收（🎯）</a>
+<a class="toc-item d1" href="#sec-14">五、预算与分析</a>
+<a class="toc-item d1" href="#sec-15">六、每周 / 每月 / 每季动作</a>
+<a class="toc-item d1" href="#sec-16">七、权限与边界</a>
+<a class="toc-item d1" href="#sec-17">八、常见问题</a>
+  </nav>
+  <div class="side-foot">
+    產生時間：2026-11-07 02:32<br>
+    <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
+    <a href="ERMM_系統架構與流程圖.html">切換另一份文件</a>
+  </div>
+</aside>
+<main>
+  <div class="hero">
+    <h1>ERMM 操作手冊 — CFO</h1>
+    <p>月度结账七步 · 现金预测 · AR 催收 · 数据质检 · 报税 ｜ 由 Markdown 自動產生（唯讀文件）</p>
+  </div>
+  <article class="doc">
+<blockquote>
+<p>适用角色：CFO（财务长 / 财务主管）｜适用版本：v3.2（2026-11-05）
+系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜建议浏览器：Chrome / Edge
+本手册覆盖你日常真正要操作的模块：看数、算账、报税、管现金、催收、质检。</p>
+</blockquote>
+<p>CFO 是系统的<strong>主要深度使用者</strong>：既要看结果（报表），也要管过程（入账、报税、现金、催收），还要保证数据可信（质量扫描）。系统里 50 个入口中，约 30 个与你的职责直接相关。</p>
+<hr>
+<h1 id="sec-2">二、登录与全局操作</h1><ul>
+<li><strong>登录</strong>：<a href="http://localhost:3008">http://localhost:3008</a> → 账号密码 → 仪表板。</li>
+<li><strong>公司切换（HM / SZ / HN）</strong>：所有页面按 <code>bu_no</code> 取数，切公司即切账套。</li>
+<li><strong>月份选择（YYYY-MM）</strong>：报表、日报、报税的期间口径。</li>
+<li><strong>语言切换</strong>：简 / 繁 / 英。</li>
+<li><strong>左上角 🏢 ERMM</strong>：打开系统架构图。</li>
+</ul>
+<hr>
+<h1 id="sec-3">三、月度结账标准流程（按顺序执行）</h1><pre class="code-block"><code>① 数据质检（数据质量扫描）→ ② 财务摘要核对 → ③ 三大报表出表
+→ ④ 风险预警处理 → ⑤ 财务入账/凭证 → ⑥ 电子化报税 → ⑦ 合并报表</code></pre><h2 id="sec-4">3.1 ① 数据质量扫描（🛠️ 日常作业组）</h2><ul>
+<li><strong>目的</strong>：出报表前先确认底层数据没有脏、缺、重、矛盾。</li>
+<li><strong>操作</strong>：<ol>
+<li>侧边栏「日常作业 · 工作日报」→ <strong>数据质量扫描</strong>。</li>
+<li>点击 <strong>「开始扫描」</strong>，数十毫秒返回。</li>
+<li>按 <strong>7 大类</strong> 查看结果：财务摘要 6 项 / 发票 5 项 / 银行贷款 3 项 / 现金 1 项 / 预测 2 项 / 勾稽 1 项 / 数据表健康度 8 张表。</li>
+<li>🔴 红色 = 高风险（报表不平衡、金额为空、重复单据），必须处理；🟡 黄色 = 提示项，可择期处理。</li>
+<li>点问题卡片可看受影响记录数与样例，回到对应业务页修正。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：当前版本<strong>只扫描不自动修复</strong>，修复需人工确认，避免误改历史账。</li>
+</ul>
+<h2 id="sec-5">3.2 ② 财务摘要核对（📋 财务分析组）</h2><ul>
+<li><strong>操作</strong>：进入「财务摘要」→ 选公司与月份 → 核对收入、成本、费用、利润、资产、负债六组关键数。</li>
+<li><strong>核对要点</strong>：与「三大报表」交叉比对；与上月环比看异常跳变。</li>
+</ul>
+<h2 id="sec-6">3.3 ③ 三大报表（📈）</h2><ul>
+<li><strong>操作</strong>：进入「三大报表」→ 切换资产负债表 / 损益表 / 现金流量表 → 选期间。</li>
+<li><strong>校验标准</strong>：资产负债表必须平衡（系统内 108 个月已全部平衡）；出现不平衡先回 3.1 质检。</li>
+<li><strong>导出</strong>：页面支持导出，用于对外报送或归档。</li>
+</ul>
+<h2 id="sec-7">3.4 ④ 风险预警（⚠️）</h2><ul>
+<li><strong>操作</strong>：进入「风险预警」→ 查看 5 套模型：Z-Score / Z2 / Z3 / BZ 破产概率 / JZ 营运能力。</li>
+<li><strong>判断</strong>：灯号红色优先处理；Z-Score 卡片可查看评分公式与区间。</li>
+<li><strong>联动</strong>：预警项可转「行动追踪」，指派责任人。</li>
+</ul>
+<h2 id="sec-8">3.5 ⑤ 财务入账 / 凭证（📒）</h2><ul>
+<li><strong>操作</strong>：进入「财务入账／报税」→ 按期间筛选待入账单据 → 核对后入账/生成凭证。</li>
+<li><strong>注意</strong>：入账动作影响报表数字，<strong>入账前务必先跑一次数据质量扫描</strong>；已入账凭证的更正走冲销，不直接改数。</li>
+</ul>
+<h2 id="sec-9">3.6 ⑥ 电子化报税（🧮）</h2><ul>
+<li><strong>操作</strong>（三种税分四个页签）：<ol>
+<li><strong>VAT 增值税</strong>：选期间 → 取数算税 → 核对销项/进项 → 提交（本地模拟受理，返回受理号与状态）。</li>
+<li><strong>CIT 企业所得税</strong>：录入/确认收入成本参数（支持人工覆盖）→ 算税 → 提交。</li>
+<li><strong>IIT 个人所得税</strong>：导入薪资明细（含年终奖单独计税）→ 计算 → 提交。</li>
+<li><strong>录入维护</strong>：VAT 调整、CIT 参数、薪资、年终奖的原始录入。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：提交为<strong>本地模拟受理</strong>，不产生真实税局效力；申报记录全程留痕（<code>tax_submit_receipts</code>）。</li>
+</ul>
+<h2 id="sec-10">3.7 ⑦ 合并报表（📋）</h2><ul>
+<li><strong>操作</strong>：选期间 → 查看合并三大报表；系统自动抵销内部交易。</li>
+<li><strong>注意</strong>：合并口径依赖各公司当月数据齐全，缺一家会导致结果失真 —— 先确认三家都已跑完批次。</li>
+</ul>
+<hr>
+<h1 id="sec-11">四、现金管理（💧 + 🎯）</h1><h2 id="sec-12">4.1 现金预测（13 周 + 概率）</h2><ul>
+<li><strong>操作</strong>：<ol>
+<li>「经营决策」→ <strong>现金预测</strong> → 默认 13 周滚动预测。</li>
+<li>切换 <strong>Monte Carlo 概率模式</strong> → P10 / P50 / P90 区间带 + 负现金概率。</li>
+<li>调整假设（回款天数、付款计划）→ 重算，做 What-if。</li>
+</ol>
+</li>
+<li><strong>判断</strong>：安全水位 = 周均流出 ×3（下限 300 万），跌破即标红；概率 &gt;30% 需提前安排融资或压支出。</li>
+</ul>
+<h2 id="sec-13">4.2 AR 智能催收（🎯）</h2><ul>
+<li><strong>目的</strong>：应收款按「该先催谁」自动排序，避免凭感觉。</li>
+<li><strong>操作</strong>：<ol>
+<li>「日常作业」→ <strong>AR 智能催收</strong> → 顶部看四个风险等级笔数与金额。</li>
+<li>清单按综合评分排序，显示账龄、逾期天数、金额、客户、等级灯号。</li>
+<li>按灯号处理：<ul>
+<li>🔴 紧急（≥70）：当日联系，必要时暂停发货</li>
+<li>🟠 高优先（50~70）：本周内跟进</li>
+<li>🟡 常规（30~50）：常规提醒</li>
+<li>🟢 正常（&lt;30）：无需主动催收</li>
+</ul>
+</li>
+<li>切换公司查看各账套清单。</li>
+</ol>
+</li>
+<li><strong>评分公式</strong>：账龄 40% + 逾期 30% + 金额规模 15% + 风险综合 10% + 单笔占比 5%。</li>
+<li><strong>注意</strong>：清单是<strong>建议排序</strong>，系统不自动发催收函。</li>
+</ul>
+<hr>
+<h1 id="sec-14">五、预算与分析</h1><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>路径</th>
+<th>用途</th>
+<th>操作要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>预算编制</td>
+<td>经营决策 → 预算编制</td>
+<td>年度/月度预算下达与执行对比</td>
+<td>选期间 → 填/导入预算 → 查看月度执行进度</td>
+</tr>
+<tr>
+<td>损益平衡分析</td>
+<td>财务分析 → 损益平衡分析</td>
+<td>算保本点</td>
+<td>输入固定成本/变动成本率 → 得出保本营收</td>
+</tr>
+<tr>
+<td>管理会计</td>
+<td>经营决策 → 管理会计</td>
+<td>部门损益（dept P&amp;L）</td>
+<td>选部门与期间</td>
+</tr>
+<tr>
+<td>年度趋势</td>
+<td>财务分析 → 年度趋势</td>
+<td>看 36 个月走势</td>
+<td>适合年度复盘</td>
+</tr>
+<tr>
+<td>库存减值</td>
+<td>财务分析 → 库存减值</td>
+<td>存货跌价准备测算</td>
+<td>按库龄/售价测算</td>
+</tr>
+<tr>
+<td>KPI 门槛</td>
+<td>系统管理 → KPI 门槛</td>
+<td>设定红黄绿灯阈值</td>
+<td>修改后影响全站预警（需管理员）</td>
+</tr>
+<tr>
+<td>YG003 异常甄别</td>
+<td>财务预警 → YG003</td>
+<td>报表异常自动甄别</td>
+<td>月度结账后跑一次</td>
+</tr>
+</tbody></table>
+<hr>
+<h1 id="sec-15">六、每周 / 每月 / 每季动作</h1><ul>
+<li><strong>每日</strong>：看仪表板 AI 摘要 → AR 智能催收清单（🔴 当天处理）。</li>
+<li><strong>每周</strong>：现金预测看 13 周缺口 → 更新收付款计划 → 预警处理。</li>
+<li><strong>每月</strong>：按第三章 ①~⑦ 顺序完成结账；报税前跑一次数据质量扫描。</li>
+<li><strong>每季</strong>：预算执行复盘 + 风险模型复核 + 同业标杆对比。</li>
+</ul>
+<hr>
+<h1 id="sec-16">七、权限与边界</h1><table>
+<thead>
+<tr>
+<th>你的权限</th>
+<th>需要 CTO / 管理员</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查看全部财务数据、报表</td>
+<td>使用者管理、系统设定</td>
+</tr>
+<tr>
+<td>数据质量扫描、AR 催收</td>
+<td>批次管线执行、第三方整合配置</td>
+</tr>
+<tr>
+<td>财务入账、报税计算与提交</td>
+<td>汇率与系统码维护</td>
+</tr>
+<tr>
+<td>预算编制、风险预警处理</td>
+<td>系统文件（需 admin=&#39;Yes&#39;）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>财务入账、报税提交等敏感操作受角色权限控制；若按钮不可用，说明当前账号角色不足，请联系管理员。</p>
+</blockquote>
+<hr>
+<h1 id="sec-17">八、常见问题</h1><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>资产负债表不平衡</td>
+<td>先跑数据质量扫描 → 查勾稽类问题 → 修正后再出表</td>
+</tr>
+<tr>
+<td>报税金额与账面不一致</td>
+<td>检查 VAT 调整/CIT 覆盖参数是否已录入；检查期间是否一致</td>
+</tr>
+<tr>
+<td>AR 催收清单为空</td>
+<td>当期无 <code>TX_type=&#39;AR&#39;</code> 发票明细，或该公司无应收</td>
+</tr>
+<tr>
+<td>现金预测图只有一条线</td>
+<td>未切换到 Monte Carlo 概率模式</td>
+</tr>
+<tr>
+<td>数据质量扫描提示重复单据</td>
+<td>到发票管理页确认后在业务页作废，不要直接改库</td>
+</tr>
+<tr>
+<td>入账后报表数字变了但推不动</td>
+<td>检查是否跨期间入账；已入账请走冲销</td>
+</tr>
+<tr>
+<td>系统文件打不开</td>
+<td>需管理员账号；非管理员会提示无权限</td>
+</tr>
+</tbody></table>
+
+  </article>
+</main>
+</div>
+<script src="../public/vendor/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose',
+      flowchart: { htmlLabels: true, curve: 'basis' }, er: { useMaxWidth: true } });
+  }
+  const links = Array.from(document.querySelectorAll('#toc .toc-item'));
+  const heads = links.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  function spy() {
+    let idx = 0;
+    heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= 90) idx = i; });
+    links.forEach((a, i) => a.classList.toggle('active', i === idx));
+  }
+  document.addEventListener('scroll', spy, { passive: true });
+  spy();
+</script>
+</body>
+</html>

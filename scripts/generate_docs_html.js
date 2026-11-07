@@ -34,6 +34,38 @@ const FILES = [
         subtitle: '分層架構 · 模組 × 資料表 · ER 圖 · 索引與遷移',
         accent: '#6a1b9a',
         accentSoft: '#ede7f6'
+    },
+    {
+        md: 'ERMM_操作手冊_CEO.md',
+        title: 'ERMM 操作手冊 — CEO',
+        subtitle: '看全局 · 抓方向 · 定資源｜每日 5 分鐘例行',
+        accent: '#e65100',
+        accentSoft: '#fff3e0',
+        route: '/docs/manual-ceo'
+    },
+    {
+        md: 'ERMM_操作手冊_CFO.md',
+        title: 'ERMM 操作手冊 — CFO',
+        subtitle: '月度结账七步 · 现金预测 · AR 催收 · 数据质检 · 报税',
+        accent: '#2e7d32',
+        accentSoft: '#e8f5e9',
+        route: '/docs/manual-cfo'
+    },
+    {
+        md: 'ERMM_操作手冊_CTO.md',
+        title: 'ERMM 操作手冊 — CTO',
+        subtitle: '部署运维 · 账号权限 · 批次整合 · 故障排查',
+        accent: '#0277bd',
+        accentSoft: '#e1f5fe',
+        route: '/docs/manual-cto'
+    },
+    {
+        md: 'ERMM_操作手冊_COO.md',
+        title: 'ERMM 操作手冊 — COO',
+        subtitle: '工作日报 · 行动追踪 · 预警纠偏 · 单据流程',
+        accent: '#6d4c41',
+        accentSoft: '#efebe9',
+        route: '/docs/manual-coo'
     }
 ];
 
@@ -277,13 +309,13 @@ ${rest}</div>`;
         }
 
         const common = { ...f, body, toc: md.getToc(), generatedAt };
-        // otherHref 互跳：exec ↔ flow ↔ data-model
-        const isFlow = f.md.includes('流程圖');
-        const isModel = f.md.includes('資料表關係圖');
+        // otherHref 互跳：exec ↔ flow ↔ data-model；手册 → 架构图
+        const isManual = f.md.includes('操作手冊');
         let altMd, altRoute;
-        if (isExec)      { altMd = 'ERMM_系統架構與流程圖.md'; altRoute = '/docs/architecture'; }
-        else if (isFlow) { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
-        else             { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
+        if (isExec)        { altMd = 'ERMM_系統架構與流程圖.md'; altRoute = '/docs/architecture'; }
+        else if (isManual) { altMd = 'ERMM_系統架構與流程圖.md'; altRoute = '/docs/architecture'; }
+        else if (f.md.includes('流程圖')) { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
+        else               { altMd = 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md'; altRoute = '/docs/executive'; }
         const altFile = altMd.replace(/\.md$/, '.html');
 
         const htmlDoc = page({

@@ -173,7 +173,11 @@ app.use(express.static(path.join(__dirname, 'public'), { etag: false }));
 const DOC_ROUTES = {
     '/docs/architecture': 'ERMM_系統架構與流程圖.html',
     '/docs/data-model': 'ERMM_系統架構與模組資料表關係圖.html',
-    '/docs/executive':    'ERMM_高管價值簡報_CEO_CFO_COO_CTO.html'
+    '/docs/executive':    'ERMM_高管價值簡報_CEO_CFO_COO_CTO.html',
+    '/docs/manual-ceo':   'ERMM_操作手冊_CEO.html',
+    '/docs/manual-cfo':   'ERMM_操作手冊_CFO.html',
+    '/docs/manual-cto':   'ERMM_操作手冊_CTO.html',
+    '/docs/manual-coo':   'ERMM_操作手冊_COO.html'
 };
 Object.entries(DOC_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => {
