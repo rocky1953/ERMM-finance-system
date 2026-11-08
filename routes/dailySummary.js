@@ -20,8 +20,9 @@ const { ok, fail, fail500 } = require('../utils/response');
 const { chatCompletion, getDefaultProvider } = require('../utils/llmClient');
 // 不依赖 aiqa.js 的内部 normalizeLang（aiqa 只导出 router）
 function normalizeLang(input) {
-    const l = String(input || 'zh-TW').toLowerCase();
-    if (l.startsWith('zh')) return 'zh-TW'; // 统一繁中（AI 摘要习惯繁中输出）
+    const l = String(input || 'zh-TW').toLowerCase().replace('_', '-');
+    if (l === 'zh-cn' || l.startsWith('zh-hans') || l === 'zh-sg') return 'zh-CN';
+    if (l.startsWith('zh')) return 'zh-TW';
     if (l.startsWith('en')) return 'en';
     return 'zh-TW';
 }
@@ -337,7 +338,12 @@ async function generateSummary(aggregate, lang) {
     };
 
     // 用緊湊格式 JSON — 減少 token（不用 null, 2 縮排）
-    const promptContent = `財務數據期間：${period}\n\n${JSON.stringify(context)}`;
+    const periodLabel = {
+        'zh-CN': `财务数据期间：${period}\n\n`,
+        'en': `Financial data period: ${period}\n\n`,
+        'zh-TW': `財務數據期間：${period}\n\n`
+    }[uiLang];
+    const promptContent = periodLabel + JSON.stringify(context);
 
     const messages = [
         { role: 'system', content: DAILY_SYSTEM_PROMPTS[uiLang] },
@@ -380,6 +386,7 @@ router.post('/generate', async (req, res) => {
     const t0 = Date.now();
     try {
         const { lang, force } = req.body;
+        const normLang = normalizeLang(lang);
 
         // 检查今天是否已生成过
         if (!force) {
@@ -402,14 +409,14 @@ router.post('/generate', async (req, res) => {
         // Step 2: 调 LLM 生成（可能失败，失败时存聚合数据 + fallback 文字）
     let title = '', content = '', provider = '', model = '', duration_ms = 0, alerts_json = null, actions_json = null;
     try {
-        const r = await generateSummary(aggregate, lang || 'zh-TW');
+        const r = await generateSummary(aggregate, normLang);
         console.log('[daily-summary] LLM 摘要生成成功！provider=' + r.provider + ' duration=' + r.duration_ms + 'ms content_len=' + (r.content?.length || 0));
         title = r.title; content = r.content;
         provider = r.provider; model = r.model; duration_ms = r.duration_ms;
     } catch (llmErr) {
             console.error('[daily-summary] LLM 生成失敗，使用 fallback:', llmErr?.message || String(llmErr), llmErr?.stack || '');
             title = `每日財務快報（${aggregate.generated_at}）— LLM 暫不可用`;
-            content = buildFallbackText(aggregate, lang || 'zh-TW', llmErr?.message || String(llmErr) || 'unknown');
+            content = buildFallbackText(aggregate, normLang, llmErr?.message || String(llmErr) || 'unknown');
             provider = 'fallback';
         }
 
