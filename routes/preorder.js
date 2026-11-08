@@ -7,14 +7,26 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, n } = require('../utils/response');
 
-// ===== 客戶自動完成（listbox 資料源）=====
+// ===== 客戶自動完成（listbox 資料源：往來對象客戶 ∪ 專案主檔客戶）=====
 router.get('/customers', async (req, res) => {
     try {
         const q = `%${req.query.q || ''}%`;
+        const bu = req.query.bu || '';
+        const params = [q, q];
+        let buFilter = '';
+        if (bu) { buFilter = ' AND r.bu_no=?'; params.push(bu); }
+        params.push(q, q);
         const [rows] = await pool.execute(
-            `SELECT DISTINCT customer_id, customer_name FROM mgm_customer_projects
-             WHERE customer_id LIKE ? OR customer_name LIKE ?
-             ORDER BY customer_id LIMIT 20`, [q, q]);
+            `SELECT customer_id, customer_name FROM (
+                SELECT r.relation_id AS customer_id, r.relation_name AS customer_name
+                FROM relation_detail r
+                WHERE r.relation_type='客户' AND r.inuse_flag='USE'
+                  AND (r.relation_id LIKE ? OR r.relation_name LIKE ?)${buFilter}
+                UNION
+                SELECT p.customer_id, p.customer_name FROM mgm_customer_projects p
+                WHERE p.customer_id LIKE ? OR p.customer_name LIKE ?
+            ) x
+            ORDER BY customer_id LIMIT 20`, params);
         ok(res, rows);
     } catch (err) { fail500(res, err); }
 });
