@@ -677,7 +677,8 @@ async function loadDailySummary() {
     const btn = document.getElementById('aiSumGenBtn');
     if (!card) return;
     try {
-        const res = await API.get('/api/daily-summary/latest');
+        const lang = (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW';
+        const res = await API.get(`/api/daily-summary/latest?lang=${encodeURIComponent(lang)}`);
         if (!res.data?.has_summary) {
             // 没历史 — 显示聚合快照 + 引导
             const agg = res.data?.aggregate;
@@ -713,13 +714,18 @@ async function loadDailySummary() {
 }
 
 function renderAggregateTeaser(agg) {
+    const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+    const T = {
+        'zh-TW': { snap: '快覽', sale: '合併營收', np: '淨利', margin: '利潤率', risk: '風險' },
+        'zh-CN': { snap: '快照', sale: '合并营收', np: '净利', margin: '利润率', risk: '风险' },
+        'en': { snap: 'Snapshot', sale: 'Consolidated Revenue', np: 'Net Profit', margin: 'Margin', risk: 'Risk' }
+    }[lang.startsWith('zh') ? (lang === 'zh-CN' ? 'zh-CN' : 'zh-TW') : 'en'];
     const g = agg.group_consolidated || {};
-    const r = agg.risk_ranking || [];
     const a = (agg.alerts || []).slice(0, 3);
     let html = `<div style="background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;">`;
-    html += `<b>📊 ${g.period || ''} 快覽：</b> 合併營收 <b>${(+g.consolidated_sale).toLocaleString()}</b> · 淨利 <b>${(+g.consolidated_net_profit).toLocaleString()}</b> · 利潤率 ${g.profit_margin}`;
+    html += `<b>📊 ${g.period || ''} ${T.snap}：</b> ${T.sale} <b>${(+g.consolidated_sale).toLocaleString()}</b> · ${T.np} <b>${(+g.consolidated_net_profit).toLocaleString()}</b> · ${T.margin} ${g.profit_margin}`;
     if (a.length > 0) {
-        html += `<br><b>⚠️ 風險：</b>`;
+        html += `<br><b>⚠️ ${T.risk}：</b>`;
         a.forEach(x => html += `<span style="color:${x.level === 'danger' ? '#dc2626' : '#f59e0b'};margin-right:8px;">${x.bu}: ${x.msg}</span>`);
     }
     html += `</div>`;

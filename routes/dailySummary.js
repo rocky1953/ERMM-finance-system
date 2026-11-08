@@ -31,7 +31,29 @@ const BU_INDUSTRY = { HM: '制造业', SZ: '制造业', HN: '批发零售业' };
 const ALL_BU = ['HM', 'SZ', 'HN'];
 
 // ===== 1. 聚合结构化数据 =====
-async function buildAggregateData() {
+async function buildAggregateData(lang) {
+    const uiLang = normalizeLang(lang);
+    // 風險/現金 alert 文案隨語言輸出，避免繁中界面出現簡體字
+    const A = {
+        'zh-TW': {
+            zDanger: (z) => `Z_score=${z}，低於破產警戒線 1.23`,
+            zWatch: (z) => `Z_score=${z}，處於灰色地帶`,
+            cashDanger: (p) => `現金僅安全水位 ${p}%`,
+            cashWarn: (p) => `現金低於安全水位 80%（ratio=${p}%）`
+        },
+        'zh-CN': {
+            zDanger: (z) => `Z_score=${z}，低于破产警戒线 1.23`,
+            zWatch: (z) => `Z_score=${z}，处于灰色地带`,
+            cashDanger: (p) => `现金仅安全水位 ${p}%`,
+            cashWarn: (p) => `现金低于安全水位 80%（ratio=${p}%）`
+        },
+        'en': {
+            zDanger: (z) => `Z_score=${z}, below bankruptcy threshold 1.23`,
+            zWatch: (z) => `Z_score=${z}, in grey zone`,
+            cashDanger: (p) => `Cash only at ${p}% of safe level`,
+            cashWarn: (p) => `Cash below 80% safe level (ratio=${p}%)`
+        }
+    }[uiLang];
     const result = {
         generated_at: new Date().toISOString().slice(0, 10),
         companies: {},
@@ -84,20 +106,20 @@ async function buildAggregateData() {
     for (const item of riskSorted) {
         if (item.flag === 'high_risk') {
             result.alerts.push({ type: 'Z_score', level: 'danger', bu: item.bu,
-                msg: `Z_score=${Number(item.Z_score).toFixed(2)}，低于破产警戒线 1.23` });
+                msg: A.zDanger(Number(item.Z_score).toFixed(2)) });
         } else if (item.flag === 'watch') {
             result.alerts.push({ type: 'Z_score', level: 'warning', bu: item.bu,
-                msg: `Z_score=${Number(item.Z_score).toFixed(2)}，处于灰色地带` });
+                msg: A.zWatch(Number(item.Z_score).toFixed(2)) });
         }
     }
     for (const bu of ALL_BU) {
         const cp = result.companies[bu].cash_position;
         if (cp && cp.ratio < 0.5) {
             result.alerts.push({ type: 'cash', level: 'danger', bu,
-                msg: `现金仅安全水位 ${(cp.ratio*100).toFixed(1)}%` });
+                msg: A.cashDanger((cp.ratio*100).toFixed(1)) });
         } else if (cp && cp.ratio < 0.8) {
             result.alerts.push({ type: 'cash', level: 'warning', bu,
-                msg: `现金低于安全水位 80%（ratio=${(cp.ratio*100).toFixed(1)}%）` });
+                msg: A.cashWarn((cp.ratio*100).toFixed(1)) });
         }
     }
 
@@ -404,7 +426,7 @@ router.post('/generate', async (req, res) => {
         }
 
         // Step 1: 聚合
-        const aggregate = await buildAggregateData();
+        const aggregate = await buildAggregateData(normLang);
 
         // Step 2: 调 LLM 生成（可能失败，失败时存聚合数据 + fallback 文字）
     let title = '', content = '', provider = '', model = '', duration_ms = 0, alerts_json = null, actions_json = null;
@@ -463,7 +485,7 @@ router.get('/latest', async (req, res) => {
         );
         if (!row) {
             // 无历史时，只聚合数据返回（让前端显示"尚未生成，点击生成"状态）
-            const agg = await buildAggregateData();
+            const agg = await buildAggregateData(req.query.lang);
             return ok(res, { has_summary: false, aggregate: agg });
         }
         let data = row.data_json;
@@ -497,7 +519,7 @@ router.get('/history', async (req, res) => {
 // GET /api/daily-summary/aggregate — 只拿聚合数据（不调 LLM，用于手动看实时状态）
 router.get('/aggregate', async (req, res) => {
     try {
-        const data = await buildAggregateData();
+        const data = await buildAggregateData(req.query.lang);
         ok(res, data);
     } catch (err) { fail500(res, err); }
 });
