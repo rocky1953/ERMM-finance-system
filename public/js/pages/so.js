@@ -57,6 +57,8 @@ function editSO(r) {
 
 const SOForm = {
     _uid: null,
+    _custCache: null, // 往來對象客戶快取（按 BU）
+    _custTimer: null,
     open(d) {
         d = d || {};
         const opts = I18N.statusOptions('so_status');
@@ -66,7 +68,10 @@ const SOForm = {
             <div class="form-row">
                 <div class="form-group"><label>${t('so.form.so_nbr')}</label><input id="so_fid" value="${d.so_nbr || ''}"></div>
                 <div class="form-group"><label>${t('so.form.date')}</label><input type="date" id="so_fdate" value="${(d.so_date || '').substring(0,10)}"></div>
-                <div class="form-group"><label>${t('so.form.client_id')}</label><input id="so_fcid" value="${d.client_id || ''}"></div>
+                <div class="form-group" style="position:relative"><label>${t('so.form.client_id')}</label>
+                    <input id="so_fcid" value="${d.client_id || ''}" autocomplete="off" oninput="SOForm.onCustInput()">
+                    <div id="so_cust_list"></div>
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('so.form.client_name')}</label><input id="so_fcn" value="${d.client_name || ''}"></div>
@@ -87,7 +92,45 @@ const SOForm = {
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('so.btn.cancel')}</button>
             <button class="btn btn-primary" onclick="SOForm.save()">💾 ${t('so.btn.save')}</button>`);
+        this.preloadCustomers();
     },
+
+    // 載入往來對象客戶（客戶類別、USE），按 BU 快取
+    async preloadCustomers() {
+        try {
+            const res = await API.get(`/api/relation?bu_no=${State.bu_no}&relation_type=${encodeURIComponent('客户')}&inuse_flag=USE`);
+            this._custCache = res.data || [];
+        } catch { this._custCache = []; }
+    },
+
+    // 客戶 ID 輸入 → 300ms 防抖後本地篩選出 listbox
+    onCustInput() {
+        clearTimeout(this._custTimer);
+        this._custTimer = setTimeout(() => {
+            const q = document.getElementById('so_fcid').value.trim().toLowerCase();
+            const list = document.getElementById('so_cust_list');
+            if (!q || !this._custCache) { list.innerHTML = ''; return; }
+            const rows = this._custCache
+                .filter(r => (r.relation_id || '').toLowerCase().includes(q) || (r.relation_name || '').toLowerCase().includes(q))
+                .slice(0, 10);
+            list.innerHTML = rows.length
+                ? `<div style="position:absolute;z-index:10050;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:2px;">` +
+                  rows.map(r => `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;"
+                        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"
+                        onclick="SOForm.pickCustomer('${(r.relation_id || '').replace(/'/g, "\\'")}','${(r.relation_name || '').replace(/'/g, "\\'")}')">
+                        <span>${r.relation_name || ''}</span><span style="color:#94a3b8;font-size:12px;">${r.relation_id}</span>
+                   </div>`).join('') + `</div>`
+                : '';
+        }, 300);
+    },
+
+    // 選定客戶 → 帶出客戶名稱並關閉 listbox
+    pickCustomer(relationId, relationName) {
+        document.getElementById('so_fcid').value = relationId;
+        document.getElementById('so_fcn').value = relationName;
+        document.getElementById('so_cust_list').innerHTML = '';
+    },
+
     async save() {
         const body = {
             bu_no: State.bu_no,
