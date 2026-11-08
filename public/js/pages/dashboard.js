@@ -178,6 +178,49 @@ registerPage('dashboard', async (c) => {
         return ov;
     }
 
+    // ===== 將彈窗內表格匯出為 CSV（UTF-8 BOM 以相容 Excel 中文）=====
+    function safeFilename(s) {
+        return String(s || '')
+            .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+            .replace(/[\\/:*?"<>|]+/g, '_')
+            .replace(/\s+/g, '_');
+    }
+    function exportTableCSV(bodyId, filename) {
+        const body = document.getElementById(bodyId);
+        const table = body && body.querySelector('table');
+        if (!table) { UI.toast(t('load_failed'), 'error'); return; }
+        const rows = [];
+        table.querySelectorAll('tr').forEach(tr => {
+            const cells = Array.from(tr.querySelectorAll('th,td')).map(td => {
+                let text = (td.textContent || '').replace(/\s+/g, ' ').trim();
+                if (/^-?[0-9,]+(\.\d+)?$/.test(text)) text = text.replace(/,/g, '');
+                if (/[",\n]/.test(text)) text = '"' + text.replace(/"/g, '""') + '"';
+                return text;
+            });
+            rows.push(cells.join(','));
+        });
+        const csv = '\ufeff' + rows.join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename.endsWith('.csv') ? filename : filename + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+    }
+    function ensureExportBtn(ov, bodyId, nameGetter) {
+        let btn = ov.querySelector('.dash-export-btn');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-primary dash-export-btn';
+            btn.textContent = `📥 ${t('export')}`;
+            ov.querySelector('.dash-detail-footer').prepend(btn);
+        }
+        btn.onclick = () => exportTableCSV(bodyId, nameGetter());
+    }
+
     // ===== 损益柱状图明细钻取弹窗（销货收入＝AR 销项发票／销货成本＝AP 进项发票）=====
     function ensureDashDetailModal() {
         let ov = document.getElementById('dashDetailOverlay');
@@ -278,6 +321,10 @@ registerPage('dashboard', async (c) => {
         ov.querySelector('#dashDetailSub').textContent = `${State.bu_no}  ·  ${State.YYYY_MM}`;
         const body = ov.querySelector('#dashDetailBody');
         body.innerHTML = `<div class="empty-state"><div class="icon">⏳</div>${t('loading')}</div>`;
+        const plTitle = isSale ? t('dash.detail.sale_title') : t('dash.detail.cost_title');
+        ensureExportBtn(ov, 'dashDetailBody', () => safeFilename(`${plTitle}_${State.bu_no}_${State.YYYY_MM}`));
+        const plExpBtn = ov.querySelector('.dash-export-btn');
+        if (plExpBtn) plExpBtn.style.display = 'none';
         ov.classList.add('show');
         try {
             const q = `bu_no=${encodeURIComponent(State.bu_no)}&YYYY_MM=${encodeURIComponent(State.YYYY_MM)}&TX_type=${isSale ? 'AR' : 'AP'}`;
@@ -289,6 +336,7 @@ registerPage('dashboard', async (c) => {
             }
             const sumAmt = rows.reduce((acc, r) => acc + Number(r.amt || 0), 0);
             const sumTax = rows.reduce((acc, r) => acc + Number(r.tax_amt || 0), 0);
+            if (plExpBtn) plExpBtn.style.display = '';
             const esc = (v) => (v == null || v === '' ? '-' : String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
             body.innerHTML = `
                 <div class="dash-detail-tablewrap">
@@ -340,6 +388,9 @@ registerPage('dashboard', async (c) => {
         ov.querySelector('#dashBsSub').textContent = `${State.bu_no}  ·  ${State.YYYY_MM}`;
         const body = ov.querySelector('#dashBsBody');
         body.innerHTML = `<div class="empty-state"><div class="icon">⏳</div>${t('loading')}</div>`;
+        ensureExportBtn(ov, 'dashBsBody', () => safeFilename(`${title}_${State.bu_no}_${State.YYYY_MM}`));
+        const bsExpBtn = ov.querySelector('.dash-export-btn');
+        if (bsExpBtn) bsExpBtn.style.display = 'none';
         ov.classList.add('show');
 
         try {
@@ -384,6 +435,7 @@ registerPage('dashboard', async (c) => {
             if (!rows.length) {
                 body.innerHTML = UI.empty('📭', t('inv.no_data'));
             } else {
+                if (bsExpBtn) bsExpBtn.style.display = '';
                 const pct = (val) => (total ? UI.fmt(Math.abs(val) / Math.abs(total) * 100, 1) : '0.0');
                 body.innerHTML = `
                     <div class="dash-detail-tablewrap">
