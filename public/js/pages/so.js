@@ -95,39 +95,35 @@ const SOForm = {
         this.preloadCustomers();
     },
 
-    // 載入往來對象客戶（客戶類別、USE），按 BU 快取
-    async preloadCustomers() {
-        try {
-            const res = await API.get(`/api/relation?bu_no=${State.bu_no}&relation_type=${encodeURIComponent('客户')}&inuse_flag=USE`);
-            this._custCache = res.data || [];
-        } catch { this._custCache = []; }
-    },
+    // 客戶來源與預估訂單一致：往來對象客戶 ∪ 專案主檔客戶（/api/preorders/customers）
+    async preloadCustomers() { /* 改為即時查詢，無需預載 */ },
 
-    // 客戶 ID 輸入 → 300ms 防抖後本地篩選出 listbox
+    // 客戶 ID 輸入 → 300ms 防抖後查詢 listbox（含 CUST-xxx 與 HM/HN/SZ-Cxxx）
     onCustInput() {
         clearTimeout(this._custTimer);
-        this._custTimer = setTimeout(() => {
-            const q = document.getElementById('so_fcid').value.trim().toLowerCase();
+        this._custTimer = setTimeout(async () => {
+            const q = document.getElementById('so_fcid').value.trim();
             const list = document.getElementById('so_cust_list');
-            if (!q || !this._custCache) { list.innerHTML = ''; return; }
-            const rows = this._custCache
-                .filter(r => (r.relation_id || '').toLowerCase().includes(q) || (r.relation_name || '').toLowerCase().includes(q))
-                .slice(0, 10);
-            list.innerHTML = rows.length
-                ? `<div style="position:absolute;z-index:10050;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:2px;">` +
-                  rows.map(r => `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;"
-                        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"
-                        onclick="SOForm.pickCustomer('${(r.relation_id || '').replace(/'/g, "\\'")}','${(r.relation_name || '').replace(/'/g, "\\'")}')">
-                        <span>${r.relation_name || ''}</span><span style="color:#94a3b8;font-size:12px;">${r.relation_id}</span>
-                   </div>`).join('') + `</div>`
-                : '';
+            if (!q) { list.innerHTML = ''; return; }
+            try {
+                const res = await API.get(`/api/preorders/customers?q=${encodeURIComponent(q)}`);
+                const rows = res.data || [];
+                list.innerHTML = rows.length
+                    ? `<div style="position:absolute;z-index:10050;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:2px;">` +
+                      rows.map(r => `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;"
+                            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"
+                            onclick="SOForm.pickCustomer('${(r.customer_id || '').replace(/'/g, "\\'")}','${(r.customer_name || '').replace(/'/g, "\\'")}')">
+                            <span>${r.customer_name || ''}</span><span style="color:#94a3b8;font-size:12px;">${r.customer_id}</span>
+                       </div>`).join('') + `</div>`
+                    : '';
+            } catch { list.innerHTML = ''; }
         }, 300);
     },
 
     // 選定客戶 → 帶出客戶名稱並關閉 listbox
-    pickCustomer(relationId, relationName) {
-        document.getElementById('so_fcid').value = relationId;
-        document.getElementById('so_fcn').value = relationName;
+    pickCustomer(customerId, customerName) {
+        document.getElementById('so_fcid').value = customerId;
+        document.getElementById('so_fcn').value = customerName;
         document.getElementById('so_cust_list').innerHTML = '';
     },
 
