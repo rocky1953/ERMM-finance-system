@@ -46,12 +46,17 @@ registerPage('preorder', async (c) => {
         <div class="card" style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
                 <div class="card-title" style="margin:0;">📊 ${t('cmp.title')}</div>
-                <div style="display:flex;gap:6px;" id="cmpYearTabs">
-                    <button class="btn btn-sm cmp-tab active" data-year="2023" onclick="CmpChart.switchYear(2023)">2023</button>
-                    <button class="btn btn-sm cmp-tab" data-year="2024" onclick="CmpChart.switchYear(2024)">2024</button>
-                    <button class="btn btn-sm cmp-tab" data-year="2025" onclick="CmpChart.switchYear(2025)">2025</button>
-                    <button class="btn btn-sm cmp-tab" data-year="all" onclick="CmpChart.switchYear('all')">${t('cmp.all_years')}</button>
+                <div style="display:flex;gap:6px;align-items:center;" id="cmpYearTabs">
+                    <span style="font-size:11px;color:#7f8c8d;">${t('cmp.start_year')}</span>
+                    <button class="btn btn-sm cmp-tab active" data-start="2023" onclick="CmpChart.switchStart(2023)">2023</button>
+                    <button class="btn btn-sm cmp-tab" data-start="2024" onclick="CmpChart.switchStart(2024)">2024</button>
+                    <button class="btn btn-sm cmp-tab" data-start="2025" onclick="CmpChart.switchStart(2025)">2025</button>
+                    <span id="cmpRange" style="font-size:12px;font-weight:700;color:#1a3c5e;margin-left:4px;">2023~2025</span>
                 </div>
+            </div>
+            <div id="cmpViewBar" style="display:none;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px;">
+                <button class="btn btn-sm" onclick="CmpChart.backToYears()">← ${t('cmp.back_years')}</button>
+                <span id="cmpViewTitle" style="font-weight:700;color:#2c3e50;"></span>
             </div>
             <div class="cmp-box"><canvas id="cmpChart"></canvas></div>
             <div class="cmp-summary" id="cmpSummary"></div>
@@ -280,29 +285,57 @@ async function delPreorder(uid) {
 const CmpChart = {
     chart: null,
     years: null,
-    mode: 'year',   // year | all
-    curYear: 2023,
+    mode: 'years',    // years（三年年度对比）| months（单年月度）
+    startYear: 2023,
+    curYear: null,
 
     async init() {
         if (!document.getElementById('cmpChart')) return;
         try {
-            const res = await API.get('/api/preorders/comparison?yearFrom=2023&yearTo=2025');
-            this.years = (res.data && res.data.years) || [];
-            this.render();
+            await this.load();
         } catch (e) {
             const box = document.getElementById('cmpChart');
             if (box) box.parentElement.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`;
         }
     },
 
-    switchYear(y) {
-        if (y === 'all') { this.mode = 'all'; }
-        else { this.mode = 'year'; this.curYear = Number(y); }
+    async load() {
+        const res = await API.get(`/api/preorders/comparison?yearFrom=${this.startYear}&yearTo=${this.startYear + 2}`);
+        this.years = (res.data && res.data.years) || [];
+        const range = document.getElementById('cmpRange');
+        if (range) range.textContent = `${this.startYear}~${this.startYear + 2}`;
+        this.render();
+    },
+
+    // 選擇起始年度 → 重新載入連續三年（如 2024 → 2024~2026）
+    async switchStart(y) {
+        this.startYear = Number(y);
+        this.mode = 'years';
+        this.curYear = null;
         document.querySelectorAll('#cmpYearTabs .cmp-tab')
-            .forEach(b => b.classList.toggle('active', String(b.dataset.year) === String(y)));
+            .forEach(b => b.classList.toggle('active', String(b.dataset.start) === String(y)));
+        this.hideDetail();
+        try { await this.load(); } catch (e) { console.error(e); }
+    },
+
+    // 進入某年度的月度視圖
+    enterYear(y) {
+        this.mode = 'months';
+        this.curYear = Number(y);
+        this.hideDetail();
+        this.render();
+    },
+
+    backToYears() {
+        this.mode = 'years';
+        this.curYear = null;
+        this.hideDetail();
+        this.render();
+    },
+
+    hideDetail() {
         const d = document.getElementById('cmpDetail');
         if (d) { d.style.display = 'none'; d.innerHTML = ''; }
-        this.render();
     },
 
     monthLabels() {
@@ -316,18 +349,18 @@ const CmpChart = {
         if (!canvas || !this.years || !this.years.length) return;
         if (this.chart) { this.chart.destroy(); this.chart = null; }
 
-        let labels, preData, actData, unitLabel;
-        if (this.mode === 'all') {
-            labels = this.years.map(y => String(y.year));
-            preData = this.years.map(y => y.total.preAmt);
-            actData = this.years.map(y => y.total.actAmt);
-            unitLabel = t('cmp.year_total');
-        } else {
+        const isMonths = this.mode === 'months';
+        let labels, preData, actData;
+
+        if (isMonths) {
             const yd = this.years.find(y => y.year === this.curYear) || this.years[0];
             labels = this.monthLabels().concat([t('cmp.year_total')]);
             preData = yd.months.map(m => m.preAmt).concat([yd.total.preAmt]);
             actData = yd.months.map(m => m.actAmt).concat([yd.total.actAmt]);
-            unitLabel = String(yd.year);
+        } else {
+            labels = this.years.map(y => String(y.year));
+            preData = this.years.map(y => y.total.preAmt);
+            actData = this.years.map(y => y.total.actAmt);
         }
 
         const preColor = '#3498db', actColor = '#27ae60';
@@ -381,30 +414,45 @@ const CmpChart = {
             plugins: [preCmpLabelPlugin]
         });
 
-        // 圖例說明 + 年度/月份摘要
-        const yd = this.mode === 'all' ? null : (this.years.find(y => y.year === this.curYear) || this.years[0]);
+        // 視圖切換列（僅月度視圖顯示）
+        const bar = document.getElementById('cmpViewBar');
+        const title = document.getElementById('cmpViewTitle');
+        if (bar && title) {
+            bar.style.display = isMonths ? 'flex' : 'none';
+            if (isMonths) title.textContent = `${this.curYear} ${t('cmp.month_view')}`;
+        }
+
+        // 摘要行：當前視圖的預估/實際合計與達成率
         const sum = document.getElementById('cmpSummary');
         if (sum) {
-            const pre = this.mode === 'all' ? this.years.reduce((s, y) => s + y.total.preAmt, 0) : yd.total.preAmt;
-            const act = this.mode === 'all' ? this.years.reduce((s, y) => s + y.total.actAmt, 0) : yd.total.actAmt;
+            let pre, act, scope;
+            if (isMonths) {
+                const yd = this.years.find(y => y.year === this.curYear) || this.years[0];
+                pre = yd.total.preAmt; act = yd.total.actAmt; scope = String(yd.year);
+            } else {
+                pre = this.years.reduce((s, y) => s + y.total.preAmt, 0);
+                act = this.years.reduce((s, y) => s + y.total.actAmt, 0);
+                scope = `${this.startYear}~${this.startYear + 2}`;
+            }
             const rate = pre > 0 ? (act / pre * 100).toFixed(1) + '%' : '-';
             sum.innerHTML = `
                 <span><i style="background:${preColor}"></i>${t('cmp.pre')}：${UI.fmt(pre)}</span>
                 <span><i style="background:${actColor}"></i>${t('cmp.act')}：${UI.fmt(act)}</span>
                 <span>${t('cmp.rate')}：<b style="color:${act >= pre ? '#1e8449' : '#c0392b'}">${rate}</b></span>
-                <span>${unitLabel}</span>`;
+                <span>${scope}</span>`;
         }
     },
 
     onBarClick(els) {
         if (!els || !els.length) return;
         const i = els[0].index;
-        if (this.mode === 'all') {
+        // 年度視圖：點年度柱 → 進入該年月度視圖
+        if (this.mode !== 'months') {
             const y = this.years[i];
-            if (y) this.loadDetail(y.year, 0);
+            if (y) this.enterYear(y.year);
             return;
         }
-        // 0~11 → 月份；12 → 年度合計
+        // 月度視圖：0~11 → 該月明細；12 → 全年明細
         if (i < 12) this.loadDetail(this.curYear, i + 1);
         else this.loadDetail(this.curYear, 0);
     },
