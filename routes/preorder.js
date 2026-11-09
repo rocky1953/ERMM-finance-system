@@ -41,6 +41,82 @@ router.get('/customers/:customerId/projects', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ===== 預估 vs 實際 比較分析（逐月 + 年度合計）=====
+router.get('/comparison', async (req, res) => {
+    try {
+        const yf = Math.min(Number(req.query.yearFrom) || 2023, 2100);
+        const yt = Math.min(Number(req.query.yearTo) || 2025, 2100);
+        const [pre] = await pool.execute(
+            `SELECT YEAR(order_date) y, MONTH(order_date) m, COUNT(*) cnt, COALESCE(SUM(order_amt),0) amt
+             FROM mgm_preorder_lists WHERE YEAR(order_date) BETWEEN ? AND ?
+             GROUP BY y, m`, [yf, yt]);
+        const [act] = await pool.execute(
+            `SELECT YEAR(so_date) y, MONTH(so_date) m, COUNT(*) cnt,
+                    COALESCE(SUM(so_qty * unit_price),0) amt
+             FROM ermm_erp_so WHERE YEAR(so_date) BETWEEN ? AND ?
+             GROUP BY y, m`, [yf, yt]);
+
+        const idx = (rows) => {
+            const map = {};
+            rows.forEach(r => { map[`${r.y}-${r.m}`] = { amt: Number(r.amt) || 0, cnt: Number(r.cnt) || 0 }; });
+            return map;
+        };
+        const preMap = idx(pre), actMap = idx(act);
+
+        const years = [];
+        for (let y = yf; y <= yt; y++) {
+            const months = [];
+            let tp = 0, tc = 0, ta = 0, tac = 0;
+            for (let m = 1; m <= 12; m++) {
+                const p = preMap[`${y}-${m}`] || { amt: 0, cnt: 0 };
+                const a = actMap[`${y}-${m}`] || { amt: 0, cnt: 0 };
+                months.push({ month: m, preAmt: p.amt, preCnt: p.cnt, actAmt: a.amt, actCnt: a.cnt });
+                tp += p.amt; tc += p.cnt; ta += a.amt; tac += a.cnt;
+            }
+            years.push({
+                year: y,
+                months,
+                total: {
+                    preAmt: tp, preCnt: tc, actAmt: ta, actCnt: tac,
+                    rate: tp > 0 ? (ta / tp) * 100 : null
+                }
+            });
+        }
+        ok(res, { years });
+    } catch (err) { fail500(res, err); }
+});
+
+// ===== 比較分析明細（指定年/月；month 省略表示全年）=====
+router.get('/comparison/detail', async (req, res) => {
+    try {
+        const year = Number(req.query.year);
+        const month = Number(req.query.month) || 0;
+        if (!year) return fail(res, '請指定年份', 400);
+        const mWhere = month ? ' AND MONTH(order_date)=?' : '';
+        const aWhere = month ? ' AND MONTH(so_date)=?' : '';
+        const mParams = month ? [year, month] : [year];
+
+        const [preorders] = await pool.execute(
+            `SELECT preorder_Id, user_id, user_name, customer_id, project_id, project_name,
+                    order_amt, order_date, status, remark
+             FROM mgm_preorder_lists WHERE YEAR(order_date)=?${mWhere}
+             ORDER BY order_date, preorder_Id`, mParams);
+        const [actuals] = await pool.execute(
+            `SELECT so_nbr, bu_no, client_id, client_name, xitems, so_qty, unit_price,
+                    (so_qty * unit_price) AS amt, so_date, status
+             FROM ermm_erp_so WHERE YEAR(so_date)=?${aWhere}
+             ORDER BY so_date, so_nbr`, mParams);
+
+        ok(res, {
+            year, month,
+            preorders,
+            actuals,
+            preTotal: preorders.reduce((s, r) => s + Number(r.order_amt || 0), 0),
+            actTotal: actuals.reduce((s, r) => s + Number(r.amt || 0), 0)
+        });
+    } catch (err) { fail500(res, err); }
+});
+
 // ===== 預估訂單清單 =====
 router.get('/', async (req, res) => {
     try {

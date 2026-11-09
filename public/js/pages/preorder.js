@@ -1,8 +1,63 @@
 /**
  * 銷售預估訂單頁面（含客戶→專案自動帶出 listbox）
  */
+/**
+ * 比較圖數據標籤插件（柱頂顯示金額）
+ */
+const preCmpLabelPlugin = {
+    id: 'preCmpLabel',
+    afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const fmt = (v) => {
+            const n = Number(v) || 0;
+            const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+            if (lang === 'en') {
+                if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+                if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+                if (Math.abs(n) >= 1e3) return Math.round(n / 1e3) + 'K';
+                return n.toFixed(0);
+            }
+            const yi = lang === 'zh-TW' ? '億' : '亿';
+            const wan = lang === 'zh-TW' ? '萬' : '万';
+            if (Math.abs(n) >= 1e8) return (n / 1e8).toFixed(2) + yi;
+            if (Math.abs(n) >= 1e4) return Math.round(n / 1e4) + wan;
+            return n.toFixed(0);
+        };
+        ctx.save();
+        ctx.font = '10px "PingFang SC","Microsoft YaHei",sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        chart.data.datasets.forEach((ds, di) => {
+            if (ds.type === 'line') return;
+            const meta = chart.getDatasetMeta(di);
+            ctx.fillStyle = ds.labelColor || '#52525B';
+            meta.data.forEach((bar, i) => {
+                const v = Number(ds.data[i] || 0);
+                if (!v) return;
+                ctx.fillText(fmt(v), bar.x, bar.y - 3);
+            });
+        });
+        ctx.restore();
+    }
+};
+
 registerPage('preorder', async (c) => {
     c.innerHTML = `
+        <div class="card" style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <div class="card-title" style="margin:0;">📊 ${t('cmp.title')}</div>
+                <div style="display:flex;gap:6px;" id="cmpYearTabs">
+                    <button class="btn btn-sm cmp-tab active" data-year="2023" onclick="CmpChart.switchYear(2023)">2023</button>
+                    <button class="btn btn-sm cmp-tab" data-year="2024" onclick="CmpChart.switchYear(2024)">2024</button>
+                    <button class="btn btn-sm cmp-tab" data-year="2025" onclick="CmpChart.switchYear(2025)">2025</button>
+                    <button class="btn btn-sm cmp-tab" data-year="all" onclick="CmpChart.switchYear('all')">${t('cmp.all_years')}</button>
+                </div>
+            </div>
+            <div class="cmp-box"><canvas id="cmpChart"></canvas></div>
+            <div class="cmp-summary" id="cmpSummary"></div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px;">💡 ${t('cmp.click_hint')}</div>
+            <div id="cmpDetail" style="display:none;margin-top:12px;"></div>
+        </div>
         <div class="card">
             <div class="toolbar" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 <button class="btn btn-primary" onclick="PreorderForm.open()">➕ ${t('pre.add')}</button>
@@ -28,9 +83,25 @@ registerPage('preorder', async (c) => {
         .pre-listbox .opt{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;}
         .pre-listbox .opt:hover,.pre-listbox .opt.active{background:#eff6ff;}
         .pre-listbox .opt .cid{color:#94a3b8;font-size:12px;}
+        .cmp-tab{background:#fff;border:1px solid #cbd5e1;color:#475569;}
+        .cmp-tab.active{background:#1a3c5e;border-color:#1a3c5e;color:#fff;}
+        .cmp-box{position:relative;width:100%;height:280px;min-width:0;}
+        .cmp-box canvas{display:block;}
+        .cmp-summary{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11px;line-height:1.3;color:#7f8c8d;}
+        .cmp-summary span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+        .cmp-summary i{display:inline-block;width:9px;height:9px;border-radius:2px;}
+        .cmp-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+        @media (max-width:900px){.cmp-detail-grid{grid-template-columns:minmax(0,1fr);}}
+        .cmp-detail-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:#2c3e50;margin-bottom:6px;}
+        .cmp-detail-wrap{max-height:280px;overflow:auto;border:1px solid #ecf0f1;border-radius:8px;}
+        .cmp-detail-wrap table{margin:0;font-size:12px;min-width:100%;}
+        .cmp-detail-wrap table th,.cmp-detail-wrap table td{white-space:nowrap;padding:6px 8px;}
+        .cmp-detail-wrap thead th{position:sticky;top:0;background:#f8f9fa;z-index:1;}
         </style>
     `;
     loadPreorders();
+    // 延遲至腳本定義完成後再初始化圖表（避免自動導航時 CmpChart 尚未定義）
+    setTimeout(() => CmpChart.init(), 0);
 });
 
 function preStatusBadge(s) {
@@ -202,3 +273,210 @@ async function delPreorder(uid) {
         loadPreorders();
     } catch (e) { UI.toast(e.message, 'error'); }
 }
+
+/* =====================================================================
+ * 預估 vs 實際 比較分析圖
+ * ===================================================================== */
+const CmpChart = {
+    chart: null,
+    years: null,
+    mode: 'year',   // year | all
+    curYear: 2023,
+
+    async init() {
+        if (!document.getElementById('cmpChart')) return;
+        try {
+            const res = await API.get('/api/preorders/comparison?yearFrom=2023&yearTo=2025');
+            this.years = (res.data && res.data.years) || [];
+            this.render();
+        } catch (e) {
+            const box = document.getElementById('cmpChart');
+            if (box) box.parentElement.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`;
+        }
+    },
+
+    switchYear(y) {
+        if (y === 'all') { this.mode = 'all'; }
+        else { this.mode = 'year'; this.curYear = Number(y); }
+        document.querySelectorAll('#cmpYearTabs .cmp-tab')
+            .forEach(b => b.classList.toggle('active', String(b.dataset.year) === String(y)));
+        const d = document.getElementById('cmpDetail');
+        if (d) { d.style.display = 'none'; d.innerHTML = ''; }
+        this.render();
+    },
+
+    monthLabels() {
+        const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+        if (lang === 'en') return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return Array.from({ length: 12 }, (_, i) => (i + 1) + t('cmp.month_unit'));
+    },
+
+    render() {
+        const canvas = document.getElementById('cmpChart');
+        if (!canvas || !this.years || !this.years.length) return;
+        if (this.chart) { this.chart.destroy(); this.chart = null; }
+
+        let labels, preData, actData, unitLabel;
+        if (this.mode === 'all') {
+            labels = this.years.map(y => String(y.year));
+            preData = this.years.map(y => y.total.preAmt);
+            actData = this.years.map(y => y.total.actAmt);
+            unitLabel = t('cmp.year_total');
+        } else {
+            const yd = this.years.find(y => y.year === this.curYear) || this.years[0];
+            labels = this.monthLabels().concat([t('cmp.year_total')]);
+            preData = yd.months.map(m => m.preAmt).concat([yd.total.preAmt]);
+            actData = yd.months.map(m => m.actAmt).concat([yd.total.actAmt]);
+            unitLabel = String(yd.year);
+        }
+
+        const preColor = '#3498db', actColor = '#27ae60';
+        this.chart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: t('cmp.pre'), data: preData, backgroundColor: preColor, labelColor: '#1f6fa8', borderRadius: 3, maxBarThickness: 26 },
+                    { label: t('cmp.act'), data: actData, backgroundColor: actColor, labelColor: '#1e8449', borderRadius: 3, maxBarThickness: 26 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 20 } },
+                interaction: { mode: 'index', intersect: false },
+                onClick: (evt, els) => this.onBarClick(els),
+                onHover: (evt, els) => { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, boxHeight: 12, font: { size: 11 }, usePointStyle: true } },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${UI.fmt(ctx.parsed.y)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 10 },
+                            callback: (v) => {
+                                const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+                                if (lang === 'en') {
+                                    if (Math.abs(v) >= 1e9) return (v / 1e9) + 'B';
+                                    if (Math.abs(v) >= 1e6) return (v / 1e6) + 'M';
+                                    if (Math.abs(v) >= 1e3) return (v / 1e3) + 'K';
+                                    return v;
+                                }
+                                if (Math.abs(v) >= 1e8) return (v / 1e8) + (lang === 'zh-TW' ? '億' : '亿');
+                                if (Math.abs(v) >= 1e4) return (v / 1e4) + (lang === 'zh-TW' ? '萬' : '万');
+                                return v;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [preCmpLabelPlugin]
+        });
+
+        // 圖例說明 + 年度/月份摘要
+        const yd = this.mode === 'all' ? null : (this.years.find(y => y.year === this.curYear) || this.years[0]);
+        const sum = document.getElementById('cmpSummary');
+        if (sum) {
+            const pre = this.mode === 'all' ? this.years.reduce((s, y) => s + y.total.preAmt, 0) : yd.total.preAmt;
+            const act = this.mode === 'all' ? this.years.reduce((s, y) => s + y.total.actAmt, 0) : yd.total.actAmt;
+            const rate = pre > 0 ? (act / pre * 100).toFixed(1) + '%' : '-';
+            sum.innerHTML = `
+                <span><i style="background:${preColor}"></i>${t('cmp.pre')}：${UI.fmt(pre)}</span>
+                <span><i style="background:${actColor}"></i>${t('cmp.act')}：${UI.fmt(act)}</span>
+                <span>${t('cmp.rate')}：<b style="color:${act >= pre ? '#1e8449' : '#c0392b'}">${rate}</b></span>
+                <span>${unitLabel}</span>`;
+        }
+    },
+
+    onBarClick(els) {
+        if (!els || !els.length) return;
+        const i = els[0].index;
+        if (this.mode === 'all') {
+            const y = this.years[i];
+            if (y) this.loadDetail(y.year, 0);
+            return;
+        }
+        // 0~11 → 月份；12 → 年度合計
+        if (i < 12) this.loadDetail(this.curYear, i + 1);
+        else this.loadDetail(this.curYear, 0);
+    },
+
+    async loadDetail(year, month) {
+        const box = document.getElementById('cmpDetail');
+        if (!box) return;
+        box.style.display = 'block';
+        box.innerHTML = `<div style="padding:20px;text-align:center;color:#94a3b8">⏳ ${t('loading')}</div>`;
+        try {
+            const res = await API.get(`/api/preorders/comparison/detail?year=${year}&month=${month || ''}`);
+            const d = res.data || {};
+            const title = month
+                ? `${year}-${String(month).padStart(2, '0')}`
+                : `${year} ${t('cmp.whole_year')}`;
+            const lang = (typeof I18N !== 'undefined' && I18N.lang) || 'zh-TW';
+            const preRows = (d.preorders || []).map(r => `<tr>
+                <td>${r.preorder_Id}</td>
+                <td>${(r.order_date || '').substring(0, 10)}</td>
+                <td>${r.user_name || r.user_id || '-'}</td>
+                <td>${r.customer_id || '-'}</td>
+                <td>${r.project_name || r.project_id || '-'}</td>
+                <td class="num">${UI.fmt(r.order_amt)}</td>
+                <td>${preStatusBadge(r.status)}</td>
+            </tr>`).join('');
+            const actRows = (d.actuals || []).map(r => `<tr>
+                <td>${r.so_nbr}</td>
+                <td>${(r.so_date || '').substring(0, 10)}</td>
+                <td>${r.bu_no || '-'}</td>
+                <td>${r.client_id || '-'}</td>
+                <td>${r.client_name || '-'}</td>
+                <td>${r.xitems || '-'}</td>
+                <td class="num">${UI.fmt(r.amt)}</td>
+            </tr>`).join('');
+
+            box.innerHTML = `
+                <div class="cmp-detail-grid">
+                    <div>
+                        <div class="cmp-detail-head">
+                            <span style="color:#1f6fa8">🔵 ${t('cmp.pre_detail')} · ${title}</span>
+                            <span>${(d.preorders || []).length} ${t('cmp.count')} / ${UI.fmt(d.preTotal)}</span>
+                        </div>
+                        <div class="cmp-detail-wrap">
+                            <table class="data-table">
+                                <thead><tr>
+                                    <th>${t('pre.col.id')}</th><th>${t('pre.col.date')}</th><th>${t('pre.col.user')}</th>
+                                    <th>${t('pre.col.customer')}</th><th>${t('pre.col.project')}</th>
+                                    <th class="num">${t('pre.col.amt')}</th><th>${t('pre.col.status')}</th>
+                                </tr></thead>
+                                <tbody>${preRows || `<tr><td colspan="7" style="text-align:center;color:#94a3b8">${t('cmp.no_data')}</td></tr>`}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="cmp-detail-head">
+                            <span style="color:#1e8449">🟢 ${t('cmp.act_detail')} · ${title}</span>
+                            <span>${(d.actuals || []).length} ${t('cmp.count')} / ${UI.fmt(d.actTotal)}</span>
+                        </div>
+                        <div class="cmp-detail-wrap">
+                            <table class="data-table">
+                                <thead><tr>
+                                    <th>${t('cmp.so_nbr')}</th><th>${t('pre.col.date')}</th><th>BU</th>
+                                    <th>${t('cmp.client_id')}</th><th>${t('cmp.client_name')}</th>
+                                    <th>${t('cmp.items')}</th><th class="num">${t('pre.col.amt')}</th>
+                                </tr></thead>
+                                <tbody>${actRows || `<tr><td colspan="7" style="text-align:center;color:#94a3b8">${t('cmp.no_data')}</td></tr>`}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
+        } catch (e) {
+            box.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`;
+        }
+    }
+};
