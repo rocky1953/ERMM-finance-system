@@ -46,11 +46,17 @@ registerPage('preorder', async (c) => {
         <div class="card" style="margin-bottom:12px;">
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
                 <div class="card-title" style="margin:0;">📊 ${t('cmp.title')}</div>
-                <div style="display:flex;gap:6px;align-items:center;" id="cmpYearTabs">
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;" id="cmpYearTabs">
                     <span style="font-size:11px;color:#7f8c8d;">${t('cmp.start_year')}</span>
-                    <button class="btn btn-sm cmp-tab active" data-start="2023" onclick="CmpChart.switchStart(2023)">2023</button>
-                    <button class="btn btn-sm cmp-tab" data-start="2024" onclick="CmpChart.switchStart(2024)">2024</button>
-                    <button class="btn btn-sm cmp-tab" data-start="2025" onclick="CmpChart.switchStart(2025)">2025</button>
+                    <select id="cmpStartYear" class="cmp-year-sel" onchange="CmpChart.onRangeChange()">
+                        ${Array.from({ length: 11 }, (_, i) => 2020 + i)
+                            .map(y => `<option value="${y}"${y === 2023 ? ' selected' : ''}>${y}</option>`).join('')}
+                    </select>
+                    <span style="font-size:11px;color:#7f8c8d;">${t('cmp.end_year')}</span>
+                    <select id="cmpEndYear" class="cmp-year-sel" onchange="CmpChart.onRangeChange()">
+                        ${Array.from({ length: 11 }, (_, i) => 2020 + i)
+                            .map(y => `<option value="${y}"${y === 2025 ? ' selected' : ''}>${y}</option>`).join('')}
+                    </select>
                     <span id="cmpRange" style="font-size:12px;font-weight:700;color:#1a3c5e;margin-left:4px;">2023~2025</span>
                 </div>
             </div>
@@ -90,6 +96,8 @@ registerPage('preorder', async (c) => {
         .pre-listbox .opt .cid{color:#94a3b8;font-size:12px;}
         .cmp-tab{background:#fff;border:1px solid #cbd5e1;color:#475569;}
         .cmp-tab.active{background:#1a3c5e;border-color:#1a3c5e;color:#fff;}
+        .cmp-year-sel{padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;background:#fff;color:#2c3e50;outline:none;}
+        .cmp-year-sel:focus{border-color:#1a3c5e;}
         .cmp-box{position:relative;width:100%;height:280px;min-width:0;}
         .cmp-box canvas{display:block;}
         .cmp-summary{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11px;line-height:1.3;color:#7f8c8d;}
@@ -285,8 +293,9 @@ async function delPreorder(uid) {
 const CmpChart = {
     chart: null,
     years: null,
-    mode: 'years',    // years（三年年度对比）| months（单年月度）
+    mode: 'years',    // years（年度对比）| months（单年月度）
     startYear: 2023,
+    endYear: 2025,
     curYear: null,
 
     async init() {
@@ -300,22 +309,28 @@ const CmpChart = {
     },
 
     async load() {
-        const res = await API.get(`/api/preorders/comparison?yearFrom=${this.startYear}&yearTo=${this.startYear + 2}`);
+        const res = await API.get(`/api/preorders/comparison?yearFrom=${this.startYear}&yearTo=${this.endYear}`);
         this.years = (res.data && res.data.years) || [];
         const range = document.getElementById('cmpRange');
-        if (range) range.textContent = `${this.startYear}~${this.startYear + 2}`;
+        if (range) range.textContent = `${this.startYear}~${this.endYear}`;
         this.render();
     },
 
-    // 選擇起始年度 → 重新載入連續三年（如 2024 → 2024~2026）
-    async switchStart(y) {
-        this.startYear = Number(y);
+    // 起始/結束年度變更 → 依所選區間重新查詢
+    async onRangeChange() {
+        let s = Number(document.getElementById('cmpStartYear').value);
+        let e = Number(document.getElementById('cmpEndYear').value);
+        // 起始不得大於結束；自動修正另一端
+        if (s > e) {
+            e = s;
+            document.getElementById('cmpEndYear').value = String(e);
+        }
+        this.startYear = s;
+        this.endYear = e;
         this.mode = 'years';
         this.curYear = null;
-        document.querySelectorAll('#cmpYearTabs .cmp-tab')
-            .forEach(b => b.classList.toggle('active', String(b.dataset.start) === String(y)));
         this.hideDetail();
-        try { await this.load(); } catch (e) { console.error(e); }
+        try { await this.load(); } catch (err) { console.error(err); }
     },
 
     // 進入某年度的月度視圖
@@ -432,7 +447,7 @@ const CmpChart = {
             } else {
                 pre = this.years.reduce((s, y) => s + y.total.preAmt, 0);
                 act = this.years.reduce((s, y) => s + y.total.actAmt, 0);
-                scope = `${this.startYear}~${this.startYear + 2}`;
+                scope = `${this.startYear}~${this.endYear}`;
             }
             const rate = pre > 0 ? (act / pre * 100).toFixed(1) + '%' : '-';
             sum.innerHTML = `
