@@ -63,22 +63,26 @@ function renderProduct(rows) {
 }
 
 function renderCustomer(rows) {
-    const maxProfit = Math.max(...rows.map(r => Math.abs(r.profit_amt || 0)), 1);
+    const maxSale = Math.max(...rows.map(r => Number(r.sale_amt || 0)), 1);
+    const total = rows.reduce((s, r) => s + Number(r.sale_amt || 0), 0);
+    const orders = rows.reduce((s, r) => s + Number(r.order_cnt || 0), 0);
     return `<table class="data-table">
-        <thead><tr><th>排名</th><th>客户</th><th>贡献度</th><th class="num">毛利率</th><th class="num">毛利额</th><th class="num">营收</th></tr></thead>
+        <thead><tr><th>排名</th><th>客户</th><th>销售贡献度</th><th class="num">占比</th><th class="num">订单数</th><th class="num">销售额</th></tr></thead>
         <tbody>${rows.map((r, i) => {
             const noCls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
-            const barW = Math.abs(r.profit_amt) / maxProfit * 100;
-            const barColor = r.profit_amt >= 0 ? '#27ae60' : '#e74c3c';
+            const barW = Number(r.sale_amt || 0) / maxSale * 100;
             return `<tr>
                 <td><span class="rank-no ${noCls}">${i + 1}</span></td>
                 <td><b>${r.client_id}</b></td>
-                <td><div class="rank-bar"><div class="rank-bar-fg" style="width:${barW}%;background:${barColor};"></div></div></td>
-                <td class="num" style="color:${r.profit_rate < 0 ? '#e74c3c' : '#27ae60'}">${UI.fmt(r.profit_rate, 1)}%</td>
-                <td class="num" style="color:${r.profit_amt < 0 ? '#e74c3c' : ''}">${UI.fmt(r.profit_amt)}</td>
+                <td><div class="rank-bar"><div class="rank-bar-fg" style="width:${barW}%;background:#2563eb;"></div></div></td>
+                <td class="num">${Number(r.contribution_pct || 0).toFixed(1)}%</td>
+                <td class="num">${r.order_cnt}</td>
                 <td class="num">${UI.fmt(r.sale_amt)}</td>
             </tr>`;
-        }).join('')}</tbody></table>`;
+        }).join('')}</tbody>
+        <tfoot><tr><td colspan="3" style="text-align:right;"><b>合计（${rows.length} 家客户）</b></td>
+            <td class="num"><b>100.0%</b></td><td class="num"><b>${orders}</b></td><td class="num"><b>${UI.fmt(total)}</b></td></tr></tfoot>
+    </table>`;
 }
 
 function renderDepartment(rows) {

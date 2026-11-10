@@ -48,7 +48,8 @@ router.get('/product', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
-// 客戶貢獻度
+// 客戶貢獻度（僅統計 AR 銷售發票；貢獻度 = 該客戶銷售額 / 全部客戶銷售額）
+// 註：AP 發票的 client_id 是供應商，與客戶無對應成本關係，不可混入客戶毛利
 router.get('/customer', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
@@ -56,25 +57,28 @@ router.get('/customer', async (req, res) => {
         const [rows] = await pool.execute(`
             SELECT
                 i.client_id,
-                SUM(CASE WHEN i.TX_type='AR' THEN i.sub_amt ELSE 0 END) AS sale_amt,
-                SUM(CASE WHEN i.TX_type='AR' THEN i.sub_amt ELSE 0 END)
-                  - SUM(CASE WHEN i.TX_type='AP' THEN i.sub_amt ELSE 0 END) AS profit_amt
+                COUNT(*) AS order_cnt,
+                SUM(i.sub_amt) AS sale_amt,
+                SUM(SUM(i.sub_amt)) OVER () AS total_sale
             FROM mgm_invoice_details i
             WHERE i.bu_no=? ${YYYY_MM ? 'AND i.YYYY_MM=?' : ''}
+              AND i.TX_type='AR'
               AND i.client_id IS NOT NULL AND i.client_id <> ''
             GROUP BY i.client_id
-            ORDER BY profit_amt DESC
+            ORDER BY sale_amt DESC
             LIMIT 20
         `, YYYY_MM ? [bu_no, YYYY_MM] : [bu_no]);
 
-        const totalProfit = rows.reduce((s, r) => s + Number(r.profit_amt || 0), 0);
-        const data = rows.map(r => ({
-            client_id: r.client_id,
-            sale_amt: Number(r.sale_amt || 0),
-            profit_amt: Number(r.profit_amt || 0),
-            profit_rate: Number(r.sale_amt || 0) > 0 ? (Number(r.profit_amt) / Number(r.sale_amt) * 100) : 0,
-            contribution_pct: totalProfit !== 0 ? (Number(r.profit_amt) / totalProfit * 100) : 0
-        }));
+        const totalSale = rows.length ? Number(rows[0].total_sale || 0) : 0;
+        const data = rows.map(r => {
+            const sale = Number(r.sale_amt || 0);
+            return {
+                client_id: r.client_id,
+                order_cnt: r.order_cnt,
+                sale_amt: sale,
+                contribution_pct: totalSale > 0 ? (sale / totalSale * 100) : 0
+            };
+        });
         ok(res, data);
     } catch (err) { fail500(res, err); }
 });
