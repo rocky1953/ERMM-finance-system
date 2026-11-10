@@ -20,9 +20,11 @@ const INTEGER_METRICS = new Set(['DELAYS', 'UNRESOLVED']);
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 function shiftYM(ym, k) {
-    const [y, m] = ym.split('/').map(Number);
+    // 分隔符跟隨輸入：'2025/12'→'2025/11'（測試慣例）、'2025-12'→'2025-11'（資料庫 YYYY_MM 格式）
+    const sep = ym.includes('/') ? '/' : '-';
+    const [y, m] = ym.split(/[/-]/).map(Number);
     const d = new Date(y, m - 1 - k, 1);
-    return `${d.getFullYear()}/${pad2(d.getMonth() + 1)}`;
+    return `${d.getFullYear()}${sep}${pad2(d.getMonth() + 1)}`;
 }
 function nextYM(ym) { return shiftYM(ym, -1); }
 function round1(v) { return Math.round(v * 10) / 10; }
