@@ -155,8 +155,11 @@ registerPage('dataQuality', async (c) => {
             </div>`;
         document.body.appendChild(ov);
         const card = ov.firstElementChild;
-        ov.addEventListener('click', (e) => { if (!card.contains(e.target)) ov.classList.remove('show'); });
-        ov.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => ov.classList.remove('show')));
+        // 關閉走事件委託：footer 按鈕每次開啟都會重建，必須委託到 overlay 才不會失效
+        ov.addEventListener('click', (e) => {
+            if (e.target.closest('[data-close]')) { ov.classList.remove('show'); return; }
+            if (!card.contains(e.target)) ov.classList.remove('show');
+        });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.classList.remove('show'); });
         return ov;
     };
