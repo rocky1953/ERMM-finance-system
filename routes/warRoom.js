@@ -13,6 +13,70 @@ const { ok, fail, fail500 } = require('../utils/response');
 // 工具：安全取數值
 const num = (v) => (v === null || v === undefined || isNaN(v)) ? 0 : Number(v);
 
+// ============ 漏斗明細鑽取（點擊漏斗 bar 顯示該階段明細） ============
+router.get('/funnel-detail', async (req, res) => {
+    try {
+        const { bu_no, YYYY_MM, stage } = req.query;
+        if (!bu_no) return fail(res, '需要 bu_no');
+        if (!['PO', 'SO', 'DN', 'AR'].includes(stage)) return fail(res, 'stage 須為 PO/SO/DN/AR');
+
+        const ym = YYYY_MM || null;
+        const ymCond = ym ? 'AND YYYY_MM=?' : '';
+        const ymParam = ym ? [ym] : [];
+        let rows = [];
+
+        if (stage === 'PO') {
+            [rows] = await pool.execute(`
+                SELECT po_id, supplier_name, xitems, po_qty, unit_price_local,
+                       po_amount_local, po_date, po_status
+                FROM ermm_erp_po
+                WHERE bu_no=? ${ymCond}
+                ORDER BY po_amount_local DESC LIMIT 300
+            `, [bu_no, ...ymParam]);
+        } else if (stage === 'SO') {
+            [rows] = await pool.execute(`
+                SELECT so_nbr, client_id, xitems, so_qty, unit_price,
+                       (so_qty * unit_price) AS amt, YYYY_MM
+                FROM ermm_erp_so
+                WHERE bu_no=? ${ymCond}
+                ORDER BY amt DESC LIMIT 300
+            `, [bu_no, ...ymParam]);
+        } else if (stage === 'DN') {
+            // DN 無金額欄位：DN 的 so_nbr 與 invoice 的 order_id 同編號體系（SO+BU 前綴），
+            // 用該訂單 AR 發票金額 × (DN_qty / so_qty) 分攤推估
+            [rows] = await pool.execute(`
+                SELECT d.DN_date, d.so_nbr, d.client_name, d.xitems,
+                       d.DN_qty, d.so_qty,
+                       (d.DN_qty / NULLIF(d.so_qty, 0) * COALESCE(inv.inv_amt, 0)) AS est_amt
+                FROM ermm_erp_so_dn d
+                LEFT JOIN (
+                    SELECT bu_no, order_id, SUM(sub_amt) AS inv_amt
+                    FROM mgm_invoice_details WHERE TX_type='AR'
+                    GROUP BY bu_no, order_id
+                ) inv ON inv.bu_no = d.bu_no AND inv.order_id = d.so_nbr
+                WHERE d.bu_no=? ${ym ? `AND DATE_FORMAT(d.DN_date,'%Y-%m')=?` : ''}
+                ORDER BY est_amt DESC LIMIT 300
+            `, [bu_no, ...ymParam]);
+        } else if (stage === 'AR') {
+            [rows] = await pool.execute(`
+                SELECT invoice_no, order_id, client_id, sub_amt, payment,
+                       wk_date, ageing_days
+                FROM mgm_invoice_details
+                WHERE bu_no=? ${ymCond} AND TX_type='AR'
+                ORDER BY sub_amt DESC LIMIT 300
+            `, [bu_no, ...ymParam]);
+        }
+
+        ok(res, rows.map(r => {
+            const o = {};
+            Object.keys(r).forEach(k => {
+                o[k] = (r[k] instanceof Date) ? r[k].toISOString().slice(0, 10) : r[k];
+            });
+            return o;
+        }));
+    } catch (err) { fail500(res, err); }
+});
+
 // ============ 戰情總覽 ============
 router.get('/overview', async (req, res) => {
     try {

@@ -40,7 +40,7 @@ const WarRoom = {
             return;
         }
 
-        // ===== 漏斗 =====
+        // ===== 漏斗（點擊 bar 顯示該階段明細） =====
         const funnel = (d.funnel || []).map((s, i) => {
             const max = Math.max(...d.funnel.map(f => f.value || 0), 1);
             const pct = Math.max(4, (s.value / max) * 100);
@@ -51,7 +51,7 @@ const WarRoom = {
                         <b>${this.stageLabel(s)}</b>
                         <span>${this.fmt(s.value)}${I18N.lang === 'en' ? '' : ' 元'}${s.qty ? (I18N.lang === 'en' ? ' (' + this.fmt(s.qty) + ' pcs)' : '（' + this.fmt(s.qty) + ' 件）') : ''}</span>
                     </div>
-                    <div style="background:#eee;border-radius:6px;overflow:hidden;">
+                    <div style="background:#eee;border-radius:6px;overflow:hidden;cursor:pointer;" title="${t('warRoom.click_detail') || '點擊查看明細'}" onclick="WarRoom.openFunnel('${s.stage}')">
                         <div style="width:${pct}%;background:${colors[i]};height:28px;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;color:#fff;font-size:12px;font-weight:600;transition:width .4s;">
                             ${s.value > 0 ? '' : ''}
                         </div>
@@ -166,4 +166,193 @@ WarRoom.refresh = async function () {
     } catch (e) {
         box.innerHTML = `<div class="card"><p style="color:#e74c3c">❌ ${t('load_failed')}: ${e.message}</p></div>`;
     }
+};
+
+// ===== 漏斗明細鑽取彈窗 =====
+WarRoom._funnelMeta = {
+    PO: {
+        title: () => t('warRoom.funnel_po') || '採購金額',
+        cols: [
+            { k: 'po_id', label: '采购单号' },
+            { k: 'supplier_name', label: '供应商' },
+            { k: 'xitems', label: '品项' },
+            { k: 'po_qty', label: '数量', num: true, qty: true },
+            { k: 'unit_price_local', label: '单价', num: true, money: true },
+            { k: 'po_amount_local', label: '金额', num: true, money: true, sum: true },
+            { k: 'po_date', label: '日期' },
+            { k: 'po_status', label: '状态' }
+        ]
+    },
+    SO: {
+        title: () => t('warRoom.funnel_so') || '銷售訂單',
+        cols: [
+            { k: 'so_nbr', label: '订单号' },
+            { k: 'client_id', label: '客户' },
+            { k: 'xitems', label: '品项' },
+            { k: 'so_qty', label: '数量', num: true, qty: true },
+            { k: 'unit_price', label: '单价', num: true, money: true },
+            { k: 'amt', label: '金额', num: true, money: true, sum: true }
+        ]
+    },
+    DN: {
+        title: () => t('warRoom.funnel_dn') || '交貨出庫',
+        cols: [
+            { k: 'DN_date', label: '出货日期' },
+            { k: 'so_nbr', label: '订单号' },
+            { k: 'client_name', label: '客户' },
+            { k: 'xitems', label: '品项' },
+            { k: 'DN_qty', label: '出库数量', num: true, qty: true, sum: true },
+            { k: 'so_qty', label: '订单数量', num: true, qty: true },
+            { k: 'est_amt', label: '推估金额', num: true, money: true, sum: true }
+        ]
+    },
+    AR: {
+        title: () => t('warRoom.funnel_ar') || '應收(回款)',
+        cols: [
+            { k: 'invoice_no', label: '发票号' },
+            { k: 'order_id', label: '订单号' },
+            { k: 'client_id', label: '客户' },
+            { k: 'sub_amt', label: '发票金额', num: true, money: true, sum: true },
+            { k: 'payment', label: '已收款', num: true, money: true, sum: true },
+            { k: 'wk_date', label: '开票日期' },
+            { k: 'ageing_days', label: '账龄(天)', num: true }
+        ]
+    }
+};
+
+WarRoom.ensureFunnelModal = function () {
+    if (!document.getElementById('wrFunnelStyle')) {
+        const st = document.createElement('style');
+        st.id = 'wrFunnelStyle';
+        st.textContent = `
+.wr-funnel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:9999;align-items:center;justify-content:center;}
+.wr-funnel-overlay.show{display:flex;}
+.wr-funnel-card{background:#fff;border-radius:12px;width:90%;max-width:860px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
+.wr-funnel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;}
+.wr-funnel-title{font-size:1.05em;font-weight:700;}
+.wr-funnel-close{background:none;border:none;color:#fff;font-size:1.3em;cursor:pointer;padding:0 4px;line-height:1;}
+.wr-funnel-close:hover{opacity:.7;}
+.wr-funnel-sub{padding:8px 20px;background:#f8f9fa;color:#7f8c8d;font-size:.88em;border-bottom:1px solid #ecf0f1;}
+.wr-funnel-body{padding:16px 20px;overflow-y:auto;flex:1;}
+.wr-funnel-footer{padding:12px 20px;border-top:1px solid #eee;text-align:right;background:#fafafa;}
+.wr-funnel-table{width:100%;border-collapse:collapse;font-size:.9em;}
+.wr-funnel-table th,.wr-funnel-table td{padding:8px 10px;border-bottom:1px solid #ecf0f1;}
+.wr-funnel-table thead th{background:#f8f9fa;color:#2c3e50;font-weight:700;text-align:left;}
+.wr-funnel-table th.num,.wr-funnel-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.wr-funnel-table tbody tr:hover{background:#f4f8fc;}
+.wr-funnel-table tfoot td{font-weight:800;background:#eaf2f8;color:#1a5276;}`;
+        document.head.appendChild(st);
+    }
+    let ov = document.getElementById('wrFunnelOverlay');
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = 'wrFunnelOverlay';
+    ov.className = 'wr-funnel-overlay';
+    ov.innerHTML = `
+        <div class="wr-funnel-card">
+            <div class="wr-funnel-header">
+                <span class="wr-funnel-title" id="wrFunnelTitle"></span>
+                <button type="button" class="wr-funnel-close" data-close>✕</button>
+            </div>
+            <div class="wr-funnel-sub" id="wrFunnelSub"></div>
+            <div class="wr-funnel-body" id="wrFunnelBody"></div>
+            <div class="wr-funnel-footer">
+                <button type="button" class="btn" data-close>${t('modal.close') || '關閉'}</button>
+            </div>
+        </div>`;
+    document.body.appendChild(ov);
+    const card = ov.firstElementChild;
+    ov.addEventListener('click', (e) => { if (!card.contains(e.target)) ov.classList.remove('show'); });
+    ov.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => ov.classList.remove('show')));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.classList.remove('show'); });
+    return ov;
+};
+
+WarRoom.funnelNumFmt = function (v, kind) {
+    const n = Number(v || 0);
+    if (kind === 'money') return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (kind === 'qty') return Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(1);
+    return n.toLocaleString('en-US');
+};
+
+WarRoom.openFunnel = async function (stage) {
+    const meta = this._funnelMeta[stage];
+    if (!meta) return;
+    const bu = document.getElementById('wrBu').value;
+    const ym = document.getElementById('wrMonth').value;
+    const ov = this.ensureFunnelModal();
+    const body = ov.querySelector('#wrFunnelBody');
+    ov.querySelector('#wrFunnelTitle').textContent = `📋 ${meta.title()} 明細`;
+    ov.querySelector('#wrFunnelSub').textContent = `${bu}  ·  ${ym || '全期間'}`;
+    body.innerHTML = `<div style="text-align:center;padding:30px;color:#999;">${t('loading') || '載入中...'}</div>`;
+    ov.classList.add('show');
+
+    try {
+        const res = await API.get(`/api/war-room/funnel-detail?bu_no=${bu}&YYYY_MM=${ym}&stage=${stage}`);
+        const rows = res.data || [];
+        if (rows.length === 0) {
+            body.innerHTML = `<div style="text-align:center;padding:30px;color:#999;">${t('warRoom.no_data') || '暫無資料'}</div>`;
+            return;
+        }
+        // 合計行（僅對標記 sum 的欄位）
+        const sums = {};
+        meta.cols.forEach(c => {
+            if (c.sum) sums[c.k] = rows.reduce((s, r) => s + Number(r[c.k] || 0), 0);
+        });
+        body.innerHTML = `<div style="overflow-x:auto;"><table class="wr-funnel-table">
+            <thead><tr>${meta.cols.map(c => `<th class="${c.num ? 'num' : ''}">${c.label}</th>`).join('')}</tr></thead>
+            <tbody>${rows.map(r => `<tr>${meta.cols.map(c => {
+                const v = r[c.k];
+                const txt = (v === null || v === undefined || v === '') ? '-' : (c.num ? this.funnelNumFmt(v, c.money ? 'money' : 'qty') : String(v));
+                return `<td class="${c.num ? 'num' : ''}">${txt}</td>`;
+            }).join('')}</tr>`).join('')}</tbody>
+            ${(() => {
+                const firstSumIdx = meta.cols.findIndex(x => x.sum);
+                if (firstSumIdx < 0) return '';
+                return `<tfoot><tr>${meta.cols.map((c, i) => {
+                    if (i === 0) return `<td colspan="${firstSumIdx || 1}"><b>合計（${rows.length} 筆）</b></td>`;
+                    if (c.sum) return `<td class="num"><b>${this.funnelNumFmt(sums[c.k], c.money ? 'money' : 'qty')}</b></td>`;
+                    return `<td></td>`;
+                }).join('')}</tr></tfoot>`;
+            })()}
+        </table></div>`;
+
+        // CSV 匯出按鈕
+        let btn = ov.querySelector('.wr-funnel-export');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-primary wr-funnel-export';
+            ov.querySelector('.wr-funnel-footer').prepend(btn);
+        }
+        btn.textContent = `📥 ${t('export') || '匯出'}`;
+        btn.onclick = () => WarRoom.exportFunnelCSV(meta, rows, `${stage}_${bu}_${ym || 'all'}`);
+    } catch (e) {
+        body.innerHTML = `<p style="color:#e74c3c">❌ ${e.message}</p>`;
+    }
+};
+
+WarRoom.exportFunnelCSV = function (meta, rows, filename) {
+    const esc = (s) => {
+        let text = String(s === null || s === undefined ? '' : s);
+        if (/^-?[0-9,]+(\.\d+)?$/.test(text)) text = text.replace(/,/g, '');
+        if (/[",\n]/.test(text)) text = '"' + text.replace(/"/g, '""') + '"';
+        return text;
+    };
+    const lines = [meta.cols.map(c => c.label).join(',')];
+    rows.forEach(r => lines.push(meta.cols.map(c => esc(r[c.k])).join(',')));
+    // 合計
+    const sums = meta.cols.filter(c => c.sum);
+    if (sums.length) {
+        lines.push(meta.cols.map(c => c === sums[0] ? '合計' : (c.sum ? esc(rows.reduce((s, r) => s + Number(r[c.k] || 0), 0)) : '')).join(','));
+    }
+    const csv = '\ufeff' + lines.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.endsWith('.csv') ? filename : filename + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
 };
