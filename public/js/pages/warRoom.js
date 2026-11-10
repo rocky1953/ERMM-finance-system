@@ -174,7 +174,7 @@ WarRoom._funnelMeta = {
         title: () => t('warRoom.funnel_po') || '採購金額',
         cols: [
             { k: 'po_id', label: '采购单号' },
-            { k: 'supplier_name', label: '供应商' },
+            { k: 'supplier_name', label: '供应商', wide: true },
             { k: 'xitems', label: '品项' },
             { k: 'po_qty', label: '数量', num: true, qty: true },
             { k: 'unit_price_local', label: '单价', num: true, money: true },
@@ -187,7 +187,7 @@ WarRoom._funnelMeta = {
         title: () => t('warRoom.funnel_so') || '銷售訂單',
         cols: [
             { k: 'so_nbr', label: '订单号' },
-            { k: 'client_id', label: '客户' },
+            { k: 'client_id', label: '客户', wide: true },
             { k: 'xitems', label: '品项' },
             { k: 'so_qty', label: '数量', num: true, qty: true },
             { k: 'unit_price', label: '单价', num: true, money: true },
@@ -199,7 +199,7 @@ WarRoom._funnelMeta = {
         cols: [
             { k: 'DN_date', label: '出货日期' },
             { k: 'so_nbr', label: '订单号' },
-            { k: 'client_name', label: '客户' },
+            { k: 'client_name', label: '客户', wide: true },
             { k: 'xitems', label: '品项' },
             { k: 'DN_qty', label: '出库数量', num: true, qty: true, sum: true },
             { k: 'so_qty', label: '订单数量', num: true, qty: true },
@@ -211,7 +211,7 @@ WarRoom._funnelMeta = {
         cols: [
             { k: 'invoice_no', label: '发票号' },
             { k: 'order_id', label: '订单号' },
-            { k: 'client_id', label: '客户' },
+            { k: 'client_id', label: '客户', wide: true },
             { k: 'sub_amt', label: '发票金额', num: true, money: true, sum: true },
             { k: 'payment', label: '已收款', num: true, money: true, sum: true },
             { k: 'wk_date', label: '开票日期' },
@@ -227,7 +227,7 @@ WarRoom.ensureFunnelModal = function () {
         st.textContent = `
 .wr-funnel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:9999;align-items:center;justify-content:center;}
 .wr-funnel-overlay.show{display:flex;}
-.wr-funnel-card{background:#fff;border-radius:12px;width:90%;max-width:860px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
+.wr-funnel-card{background:#fff;border-radius:12px;width:90%;max-width:960px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
 .wr-funnel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;}
 .wr-funnel-title{font-size:1.05em;font-weight:700;}
 .wr-funnel-close{background:none;border:none;color:#fff;font-size:1.3em;cursor:pointer;padding:0 4px;line-height:1;}
@@ -300,11 +300,11 @@ WarRoom.openFunnel = async function (stage) {
             if (c.sum) sums[c.k] = rows.reduce((s, r) => s + Number(r[c.k] || 0), 0);
         });
         body.innerHTML = `<div style="overflow-x:auto;"><table class="wr-funnel-table">
-            <thead><tr>${meta.cols.map(c => `<th class="${c.num ? 'num' : ''}">${c.label}</th>`).join('')}</tr></thead>
+            <thead><tr>${meta.cols.map(c => `<th class="${c.num ? 'num' : ''}"${c.wide ? ' style="white-space:nowrap;min-width:110px;"' : ''}>${c.label}</th>`).join('')}</tr></thead>
             <tbody>${rows.map(r => `<tr>${meta.cols.map(c => {
                 const v = r[c.k];
                 const txt = (v === null || v === undefined || v === '') ? '-' : (c.num ? this.funnelNumFmt(v, c.money ? 'money' : 'qty') : String(v));
-                return `<td class="${c.num ? 'num' : ''}">${txt}</td>`;
+                return `<td class="${c.num ? 'num' : ''}"${c.wide ? ' style="white-space:nowrap;min-width:110px;"' : ''}>${txt}</td>`;
             }).join('')}</tr>`).join('')}</tbody>
             ${(() => {
                 const firstSumIdx = meta.cols.findIndex(x => x.sum);
