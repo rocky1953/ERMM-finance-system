@@ -126,10 +126,13 @@ function renderProbCard(mc, stressRev = 0, stressCost = 0) {
     const pAll = adjustProb(mc.prob_all, stressFactor);
     const maxProb = adjustProb(mc.max_gap_prob, stressFactor);
 
-    // 壓力後 P10（與 MC 圖表同一 shift 公式），讓壓力效果在概率為 0 時也可見
+    // 壓力後 P10（與 MC 圖表同一 shift 模型）：收入下降/支出上升都讓每週淨流入惡化，
+    // 效果隨週數累積（第 w 週偏移 = 週均流入/流出 × 壓力% × w），方向恒為不利（向下）
     const w13 = mc.weekly[12] || {};
-    const shift13 = (w13.median || 0) * (factorRev - 1) + (w13.median || 0) * (factorCost - 1) * 0.5;
-    const worstStressed = (w13.p10 || 0) + shift13 * 0.8;
+    const wk13 = w13.week || 13;
+    const shift13 = -(mc.ar_avg_weekly || 0) * (stressRev / 100) * wk13
+                  - (mc.ap_avg_weekly || 0) * (stressCost / 100) * wk13;
+    const worstStressed = (w13.p10 || 0) + shift13;
 
     const riskLevel = pAll >= 30 ? { color: '#e74c3c', bg: '#fdecea', label: t('cash.risk_high') || '高風險' }
                    : pAll >= 10 ? { color: '#f39c12', bg: '#fef9e7', label: t('cash.risk_mid') || '中風險' }
@@ -194,21 +197,18 @@ function renderPointChart(d) {
 }
 
 function renderMCChart(mc, stressRev = 0, stressCost = 0, safeLevel) {
-    const factorRev = (100 - stressRev) / 100;
-    const factorCost = (100 + stressCost) / 100;
-
-    // 壓力測試後的每週分位（線性近似：收入 × factorRev，支出 × factorCost）
+    // 壓力測試後的每週分位（物理模型：收入下降 → 週流入減少；支出上升 → 週流出增加；
+    // 第 w 週餘額偏移 = 週均流入/流出 × 壓力% × w，隨週數累積且方向恒向下）
     const weeks = mc.weekly.map(w => {
-        const inflowFactor = factorRev;
-        // 壓力測試：讓餘額向不利方向偏移
-        const shift = (w.median) * (factorRev - 1) + (w.median) * (factorCost - 1) * 0.5;
+        const shift = -(mc.ar_avg_weekly || 0) * (stressRev / 100) * w.week
+                    - (mc.ap_avg_weekly || 0) * (stressCost / 100) * w.week;
         return {
             week: w.week,
-            p10: w.p10 + shift * 0.8,
-            p25: w.p25 + shift * 0.6,
-            median: w.median + shift * 0.5,
-            p75: w.p75 + shift * 0.4,
-            p90: w.p90 + shift * 0.3,
+            p10: w.p10 + shift,
+            p25: w.p25 + shift,
+            median: w.median + shift,
+            p75: w.p75 + shift,
+            p90: w.p90 + shift,
             p10_orig: w.p10
         };
     });
