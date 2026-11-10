@@ -9,39 +9,44 @@ const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 
 // 產品毛利排行
-// 依賴 ermm_erp_so 的 product_id / product_name 與 mgm_invoice_details 的成本
+// 銷售額來自 ermm_erp_so 品項(xitems)；ERP 無工單/BOM（ermm_erp_mo 空），SO 與 PO 訂單號不重疊，
+// 無法精確配對材料成本，故毛利額＝品項銷售額 × 當月財務月結實際毛利率（mgm_finance_summary 分攤估算）
 router.get('/product', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no) return fail(res, '需要 bu_no');
-        // 若 ermm_erp_so 無 product 欄位，用 mock 邏輯：以 invoice 的 order_id 前綴當產品
         const [rows] = await pool.execute(`
+            WITH fin AS (
+                SELECT YYYY_MM,
+                       CASE WHEN sale_amt > 0 THEN BIZ_major_margin_amt / sale_amt ELSE 0 END AS gm_rate
+                FROM mgm_finance_summary
+                WHERE bu_no=? ${YYYY_MM ? 'AND YYYY_MM=?' : ''}
+            )
             SELECT
-                COALESCE(NULLIF(SUBSTRING_INDEX(i.order_id, '_', 1), ''), '其他') AS product_name,
+                s.xitems AS product_name,
                 COUNT(*) AS order_cnt,
-                SUM(CASE WHEN i.TX_type='AR' THEN i.sub_amt ELSE 0 END) AS sale_amt,
-                SUM(CASE WHEN i.TX_type='AP' THEN i.sub_amt ELSE 0 END) AS cost_amt,
-                SUM(CASE WHEN i.TX_type='AR' THEN i.sub_amt ELSE 0 END)
-                  - SUM(CASE WHEN i.TX_type='AP' THEN i.sub_amt ELSE 0 END) AS profit_amt
-            FROM mgm_invoice_details i
-            WHERE i.bu_no=? ${YYYY_MM ? 'AND i.YYYY_MM=?' : ''}
-            GROUP BY product_name
-            ORDER BY profit_amt DESC
+                SUM(s.so_qty * s.unit_price) AS sale_amt,
+                SUM(SUM(s.so_qty * s.unit_price)) OVER () AS total_sale,
+                SUM(s.so_qty * s.unit_price * COALESCE(f.gm_rate, 0)) AS est_profit
+            FROM ermm_erp_so s
+            LEFT JOIN fin f ON f.YYYY_MM = s.YYYY_MM
+            WHERE s.bu_no=? ${YYYY_MM ? 'AND s.YYYY_MM=?' : ''}
+            GROUP BY s.xitems
+            ORDER BY est_profit DESC
             LIMIT 20
-        `, YYYY_MM ? [bu_no, YYYY_MM] : [bu_no]);
+        `, YYYY_MM ? [bu_no, YYYY_MM, bu_no, YYYY_MM] : [bu_no, bu_no]);
 
-        const totalProfit = rows.reduce((s, r) => s + Number(r.profit_amt || 0), 0);
+        const totalSale = rows.length ? Number(rows[0].total_sale || 0) : 0;
         const data = rows.map(r => {
             const sale = Number(r.sale_amt || 0);
-            const profit = Number(r.profit_amt || 0);
+            const profit = Number(r.est_profit || 0);
             return {
-                product_name: r.product_name,
+                product_name: r.product_name || '未分類',
                 order_cnt: r.order_cnt,
                 sale_amt: sale,
-                cost_amt: Number(r.cost_amt || 0),
                 profit_amt: profit,
                 profit_rate: sale > 0 ? (profit / sale * 100) : 0,
-                contribution_pct: totalProfit !== 0 ? (profit / totalProfit * 100) : 0
+                contribution_pct: totalSale > 0 ? (profit / totalSale * 100) : 0
             };
         });
         ok(res, data);
@@ -50,32 +55,44 @@ router.get('/product', async (req, res) => {
 
 // 客戶貢獻度（僅統計 AR 銷售發票；貢獻度 = 該客戶銷售額 / 全部客戶銷售額）
 // 註：AP 發票的 client_id 是供應商，與客戶無對應成本關係，不可混入客戶毛利
+// 毛利率同產品毛利：取當月財務月結實際毛利率分攤估算（ERP 無 BOM 無法按客戶精確算毛利）
 router.get('/customer', async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
         if (!bu_no) return fail(res, '需要 bu_no');
         const [rows] = await pool.execute(`
+            WITH fin AS (
+                SELECT YYYY_MM,
+                       CASE WHEN sale_amt > 0 THEN BIZ_major_margin_amt / sale_amt ELSE 0 END AS gm_rate
+                FROM mgm_finance_summary
+                WHERE bu_no=? ${YYYY_MM ? 'AND YYYY_MM=?' : ''}
+            )
             SELECT
                 i.client_id,
                 COUNT(*) AS order_cnt,
                 SUM(i.sub_amt) AS sale_amt,
-                SUM(SUM(i.sub_amt)) OVER () AS total_sale
+                SUM(SUM(i.sub_amt)) OVER () AS total_sale,
+                SUM(i.sub_amt * COALESCE(f.gm_rate, 0)) AS est_profit
             FROM mgm_invoice_details i
+            LEFT JOIN fin f ON f.YYYY_MM = i.YYYY_MM
             WHERE i.bu_no=? ${YYYY_MM ? 'AND i.YYYY_MM=?' : ''}
               AND i.TX_type='AR'
               AND i.client_id IS NOT NULL AND i.client_id <> ''
             GROUP BY i.client_id
             ORDER BY sale_amt DESC
             LIMIT 20
-        `, YYYY_MM ? [bu_no, YYYY_MM] : [bu_no]);
+        `, YYYY_MM ? [bu_no, YYYY_MM, bu_no, YYYY_MM] : [bu_no, bu_no]);
 
         const totalSale = rows.length ? Number(rows[0].total_sale || 0) : 0;
         const data = rows.map(r => {
             const sale = Number(r.sale_amt || 0);
+            const profit = Number(r.est_profit || 0);
             return {
                 client_id: r.client_id,
                 order_cnt: r.order_cnt,
                 sale_amt: sale,
+                profit_amt: profit,
+                profit_rate: sale > 0 ? (profit / sale * 100) : 0,
                 contribution_pct: totalSale > 0 ? (sale / totalSale * 100) : 0
             };
         });
