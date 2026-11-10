@@ -76,7 +76,10 @@ const POForm = {
             <div class="form-row">
                 <div class="form-group"><label>${t('po.form.po_id')}</label><input id="po_fid" value="${d.po_id || ''}"></div>
                 <div class="form-group"><label>${t('po.form.date')}</label><input type="date" id="po_fdate" value="${(d.po_date || '').substring(0,10)}"></div>
-                <div class="form-group"><label>${t('po.form.supplier')}</label><input id="po_fsup" value="${d.supplier_name || ''}"></div>
+                <div class="form-group" style="position:relative"><label>${t('po.form.supplier')}</label>
+                    <input id="po_fsup" value="${d.supplier_name || ''}" autocomplete="off" oninput="POForm.onSupInput()">
+                    <div id="po_sup_list"></div>
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('po.form.xitems')}</label><input id="po_fmat" value="${d.xitems || ''}"></div>
@@ -102,6 +105,42 @@ const POForm = {
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('po.btn.cancel')}</button>
             <button class="btn btn-primary" onclick="POForm.save()">💾 ${t('po.btn.save')}</button>`);
+        this.preloadSuppliers();
+    },
+
+    // 供應商 listbox：資料來源「往來對象」（relation_type=供應商、USE），按當前事業部預載
+    async preloadSuppliers() {
+        try {
+            const res = await API.get(`/api/relation?bu_no=${State.bu_no}&relation_type=${encodeURIComponent('供应商')}&inuse_flag=USE`);
+            this._supCache = res.data || [];
+        } catch { this._supCache = []; }
+    },
+
+    // 供應商輸入 → 300ms 防抖後本地篩選出 listbox
+    onSupInput() {
+        clearTimeout(this._supTimer);
+        this._supTimer = setTimeout(() => {
+            const q = document.getElementById('po_fsup').value.trim().toLowerCase();
+            const list = document.getElementById('po_sup_list');
+            if (!q || !this._supCache) { list.innerHTML = ''; return; }
+            const rows = this._supCache
+                .filter(r => (r.relation_id || '').toLowerCase().includes(q) || (r.relation_name || '').toLowerCase().includes(q))
+                .slice(0, 10);
+            list.innerHTML = rows.length
+                ? `<div style="position:absolute;z-index:10050;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:2px;">` +
+                  rows.map(r => `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;"
+                        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"
+                        onclick="POForm.pickSupplier('${(r.relation_name || '').replace(/'/g, "\\'")}')">
+                        <span>${r.relation_name || ''}</span><span style="color:#94a3b8;font-size:12px;">${r.relation_id}</span>
+                   </div>`).join('') + `</div>`
+                : '';
+        }, 300);
+    },
+
+    // 選定供應商 → 帶出名稱並關閉 listbox
+    pickSupplier(supplierName) {
+        document.getElementById('po_fsup').value = supplierName;
+        document.getElementById('po_sup_list').innerHTML = '';
     },
     async save() {
         const body = {
