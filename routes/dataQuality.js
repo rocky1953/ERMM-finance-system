@@ -204,10 +204,18 @@ async function scanForecast() {
             `${missing.length} 个月份缺 forecast_detail`, missing.slice(0,5).map(m => m.YYYY_MM).join(', ')));
     } catch (e) {}
     try {
+        // 已做過「標記 archive」修復的表有 status 欄位，僅統計未歸檔(active)的過期資料
+        let fcCond = `YYYY_MM < DATE_FORMAT(CURDATE(), '%Y-%m')`;
+        try {
+            const [cols] = await pool.execute(
+                `SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'forecast_detail' AND COLUMN_NAME = 'status'`);
+            if (cols[0].c > 0) fcCond += ` AND status = 'active'`;
+        } catch (e) {}
         const [[cnt]] = await pool.execute(
-            `SELECT COUNT(*) AS c FROM forecast_detail WHERE YYYY_MM < DATE_FORMAT(CURDATE(), '%Y-%m')`);
+            `SELECT COUNT(*) AS c FROM forecast_detail WHERE ${fcCond}`);
         if (cnt.c > 0) issues.push(issue('F-OLD', 'INFO', 'forecast', 'forecast_detail',
-            `forecast_detail 里有 ${cnt.c} 条已过期月份`, '过期预测可清理或标记为 archive'));
+            `forecast_detail 里有 ${cnt.c} 条已过期月份`, '过期预测可点击查看明细并一键标记为 archive'));
     } catch (e) {}
     return issues;
 }
@@ -253,6 +261,89 @@ async function scanHealth() {
     }
     return issues;
 }
+
+// ===== 規則明細查詢（點擊問題項顯示命中資料） =====
+const RULE_DETAIL_SQL = {
+    'S-Z0':   { cols: ['bu_no', 'YYYY_MM', 'Z_score'], sql: `SELECT bu_no, YYYY_MM, Z_score FROM mgm_finance_summary WHERE Z_score IS NULL OR Z_score = 0 ORDER BY bu_no, YYYY_MM LIMIT 200` },
+    'S-NULL': { cols: ['bu_no', 'YYYY_MM', 'sale_amt', 'net_profit_amt', 'total_assets'], sql: `SELECT bu_no, YYYY_MM, sale_amt, net_profit_amt, total_assets FROM mgm_finance_summary WHERE sale_amt IS NULL OR net_profit_amt IS NULL OR total_assets IS NULL ORDER BY bu_no, YYYY_MM LIMIT 200` },
+    'S-S0':   { cols: ['bu_no', 'YYYY_MM', 'sale_amt', 'net_profit_amt'], sql: `SELECT bu_no, YYYY_MM, sale_amt, net_profit_amt FROM mgm_finance_summary WHERE (sale_amt IS NULL OR sale_amt = 0) AND net_profit_amt IS NOT NULL AND net_profit_amt != 0 ORDER BY bu_no, YYYY_MM LIMIT 200` },
+    'S-COST': { cols: ['bu_no', 'YYYY_MM', 'sale_amt', 'sale_cost_amt'], sql: `SELECT bu_no, YYYY_MM, sale_amt, sale_cost_amt FROM mgm_finance_summary WHERE sale_amt > 0 AND sale_cost_amt > sale_amt ORDER BY bu_no, YYYY_MM LIMIT 200` },
+    'S-DUP':  { cols: ['bu_no', 'YYYY_MM', 'cnt', 'keep_uid', 'all_uids'], sql: `SELECT bu_no, YYYY_MM, COUNT(*) AS cnt, MIN(uid) AS keep_uid, GROUP_CONCAT(uid ORDER BY uid) AS all_uids FROM mgm_finance_summary GROUP BY bu_no, YYYY_MM HAVING cnt > 1 LIMIT 200` },
+    'I-TX':   { cols: ['uid', 'bu_no', 'order_id', 'TX_type', 'sub_amt', 'YYYY_MM'], sql: `SELECT uid, bu_no, order_id, TX_type, sub_amt, YYYY_MM FROM mgm_invoice_details WHERE TX_type NOT IN ('AR','AP') LIMIT 200` },
+    'I-NEG':  { cols: ['uid', 'bu_no', 'TX_type', 'order_id', 'client_id', 'sub_amt', 'YYYY_MM'], sql: `SELECT uid, bu_no, TX_type, order_id, client_id, sub_amt, YYYY_MM FROM mgm_invoice_details WHERE sub_amt < 0 LIMIT 200` },
+    'I-AGE':  { cols: ['uid', 'bu_no', 'TX_type', 'order_id', 'client_id', 'ageing_days', 'wk_date'], sql: `SELECT uid, bu_no, TX_type, order_id, client_id, ageing_days, wk_date FROM mgm_invoice_details WHERE ageing_days > 2000 ORDER BY ageing_days DESC LIMIT 200` },
+    'I-PAY':  { cols: ['uid', 'bu_no', 'TX_type', 'order_id', 'client_id', 'sub_amt', 'payment', 'over_amt'], sql: `SELECT uid, bu_no, TX_type, order_id, client_id, sub_amt, payment, (payment - sub_amt) AS over_amt FROM mgm_invoice_details WHERE payment > sub_amt AND sub_amt > 0 ORDER BY over_amt DESC LIMIT 200` },
+    'I-DUP':  { cols: ['invoice_no', 'cnt', 'keep_uid', 'all_uids'], sql: `SELECT invoice_no, COUNT(*) AS cnt, MIN(uid) AS keep_uid, GROUP_CONCAT(uid ORDER BY uid) AS all_uids FROM mgm_invoice_details WHERE invoice_no IS NOT NULL AND invoice_no <> '' GROUP BY invoice_no HAVING cnt > 1 LIMIT 200` },
+    'F-OLD':  { cols: ['uid', 'bu_no', 'YYYY_MM', 'forecast_type', 'forecast_amt', 'actual_amt'], sql: `SELECT uid, bu_no, YYYY_MM, forecast_type, forecast_amt, actual_amt FROM forecast_detail WHERE YYYY_MM < DATE_FORMAT(CURDATE(), '%Y-%m') ORDER BY bu_no, YYYY_MM LIMIT 200` },
+    'R-AR':   { cols: ['bu_no', 'YYYY_MM', 'arap_ar', 'inv_ar', 'diff'], sql: `SELECT d.bu_no, d.YYYY_MM, d.AR_amt AS arap_ar, inv.ar_sum AS inv_ar, ROUND(d.AR_amt - inv.ar_sum, 2) AS diff FROM ermm_arap_detail d LEFT JOIN (SELECT bu_no, YYYY_MM, SUM(sub_amt) AS ar_sum FROM mgm_invoice_details WHERE TX_type='AR' GROUP BY bu_no, YYYY_MM) inv ON inv.bu_no = d.bu_no AND inv.YYYY_MM = d.YYYY_MM WHERE ABS(d.AR_amt - COALESCE(inv.ar_sum,0)) > 1 LIMIT 200` }
+};
+
+router.get('/rule-detail', async (req, res) => {
+    try {
+        const { rule_id } = req.query;
+        const conf = RULE_DETAIL_SQL[rule_id];
+        if (!conf) return ok(res, { rows: [], cols: [], note: '此規則為彙總/表級檢查，無逐筆明細' });
+        const [rows] = await pool.execute(conf.sql);
+        ok(res, { rows, cols: conf.cols, total: rows.length, note: rows.length >= 200 ? '最多顯示 200 筆' : '' });
+    } catch (err) { fail500(res, err); }
+});
+
+// ===== 一鍵修復（僅開放安全、可解釋的動作） =====
+const RULE_FIX = {
+    'I-PAY': {
+        label: '將 payment 修正為發票金額（sub_amt），消除超收/超付',
+        run: async () => {
+            const [r] = await pool.execute(
+                `UPDATE mgm_invoice_details SET payment = sub_amt WHERE payment > sub_amt AND sub_amt > 0`);
+            return r.affectedRows;
+        }
+    },
+    'F-OLD': {
+        label: '為 forecast_detail 增加 status 欄位（若缺）並將過期月份標記為 archive',
+        run: async () => {
+            const [cols] = await pool.execute(
+                `SELECT COUNT(*) AS c FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'forecast_detail' AND COLUMN_NAME = 'status'`);
+            if (cols[0].c === 0) {
+                await pool.execute(`ALTER TABLE forecast_detail ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'`);
+            }
+            const [r] = await pool.execute(
+                `UPDATE forecast_detail SET status = 'archive' WHERE YYYY_MM < DATE_FORMAT(CURDATE(), '%Y-%m')`);
+            return r.affectedRows;
+        }
+    },
+    'I-DUP': {
+        label: '重複發票去重：每組 invoice_no 僅保留 uid 最小一筆（其餘刪除）',
+        run: async () => {
+            const [r] = await pool.execute(
+                `DELETE t1 FROM mgm_invoice_details t1
+                 JOIN mgm_invoice_details t2
+                   ON t1.invoice_no = t2.invoice_no AND t1.uid > t2.uid
+                 WHERE t1.invoice_no IS NOT NULL AND t1.invoice_no <> ''`);
+            return r.affectedRows;
+        }
+    },
+    'S-DUP': {
+        label: '財務摘要去重：每組 bu_no+YYYY_MM 僅保留 uid 最小一筆（其餘刪除）',
+        run: async () => {
+            const [r] = await pool.execute(
+                `DELETE t1 FROM mgm_finance_summary t1
+                 JOIN mgm_finance_summary t2
+                   ON t1.bu_no = t2.bu_no AND t1.YYYY_MM = t2.YYYY_MM AND t1.uid > t2.uid`);
+            return r.affectedRows;
+        }
+    }
+};
+
+router.post('/rule-fix', async (req, res) => {
+    try {
+        const { rule_id } = req.body || {};
+        const conf = RULE_FIX[rule_id];
+        if (!conf) return res.status(400).json({ success: false, message: `規則 ${rule_id} 不支援自動修復` });
+        const affected = await conf.run();
+        ok(res, { rule_id, affected, label: conf.label });
+    } catch (err) { fail500(res, err); }
+});
 
 // ===== 主扫描入口 =====
 const CATEGORIES = [
