@@ -2186,6 +2186,37 @@ router.get('/analysis/time-category', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ============ 分析：時間分類明細（點擊柱圖/環圖鑽取） ============
+router.get('/analysis/time-detail', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        const q = req.query;
+        const year = Number(q.year);
+        const mo = normalizeMonth(year, q.month || q.YYYY_MM);
+        if (!year || !mo) return fail(res, '年度/月份格式不正确', 400);
+        const wk = trimOrNull(q.wk_type);
+        if (!wk) return fail(res, '需要 wk_type', 400);
+
+        const where = ['bu_no=?', 'YYYY_MM=?', 'wk_type=?'];
+        const params = [trimOrNull(q.bu_no) || 'HM', mo.ym, wk];
+        if (trimOrNull(q.depart_id)) { where.push('depart_id=?'); params.push(trimOrNull(q.depart_id)); }
+        const target = resolveTarget(actor, trimOrNull(q.user_id));
+        if (target) { where.push('user_id=?'); params.push(target); }
+
+        const [rows] = await pool.execute(`
+            SELECT report_date, user_name, depart_id, from_time, to_time, use_time,
+                   SUBSTRING(projects, 1, 80) AS projects, client_id
+              FROM daily_report_detail
+             WHERE ${where.join(' AND ')}
+             ORDER BY report_date, user_name
+             LIMIT 300
+        `, params);
+        const total = rows.reduce((s, r) => s + Number(r.use_time || 0), 0);
+        ok(res, { rows, total_hours: Math.round(total * 100) / 100, wk_type: wk });
+    } catch (err) { fail500(res, err); }
+});
+
 // ============ 分析：客户类别 ============
 router.get('/analysis/client', async (req, res) => {
     try {

@@ -2517,17 +2517,51 @@
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
                             <div><canvas id="drChartBar" height="260"></canvas></div>
                             <div><canvas id="drChartDonut" height="260"></canvas></div>
-                        </div>`;
+                        </div>
+                        <div style="margin-top:8px;font-size:12px;color:#94a3b8;text-align:center;">💡 ${t('dr.an.click_hint') || '點擊柱狀圖或圓餅圖扇區可查看該分類明細'}</div>`;
                     const qs = new URLSearchParams(p);
                     const res = await API.get('/api/daily-report/analysis/time-category?' + qs.toString());
                     const labels = res.data.map(r => this.wkLabel(r.wk_type));
                     const data = res.data.map(r => Number(r.hours));
+                    // 點擊鑽取：柱圖與環圖都用 index 對應 res.data
+                    const drill = (elements) => {
+                        if (!elements || !elements.length) return;
+                        const item = res.data[elements[0].index];
+                        if (item) this.openTimeDetail(item.wk_type, Number(item.hours), p);
+                    };
                     this.charts.push(new Chart(document.getElementById('drChartBar'), {
                         type: 'bar',
                         data: { labels, datasets: [{ label: t('dr.axis.hours'), data, backgroundColor: COLORS }] },
                         options: { responsive: true, plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, padding: 12 } } },
-                            scales: { y: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } } } }
+                            scales: { y: { beginAtZero: true, title: { display: true, text: t('dr.axis.hours') } } },
+                            onClick: (evt, elements) => drill(elements),
+                            onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+                        }
                     }));
+                    // 環圖百分比標籤（本頁專用插件：>3% 扇區中心顯示比率）
+                    const donutPctPlugin = {
+                        id: 'drDonutPct',
+                        afterDraw(chart) {
+                            const ds = chart.data.datasets[0];
+                            const sum = ds.data.reduce((s, v) => s + Number(v || 0), 0) || 1;
+                            const meta = chart.getDatasetMeta(0);
+                            const ctx = chart.ctx;
+                            ctx.save();
+                            ctx.font = '600 11px system-ui, sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            meta.data.forEach((el, i) => {
+                                const v = Number(ds.data[i] || 0);
+                                if (v <= 0) return;
+                                const pct = v / sum * 100;
+                                if (pct < 3) return;
+                                const pos = el.getCenterPoint();
+                                ctx.fillStyle = '#fff';
+                                ctx.fillText(pct.toFixed(1) + '%', pos.x, pos.y);
+                            });
+                            ctx.restore();
+                        }
+                    };
                     this.charts.push(new Chart(document.getElementById('drChartDonut'), {
                         type: 'doughnut',
                         data: { labels, datasets: [{ data, backgroundColor: COLORS }] },
@@ -2535,7 +2569,11 @@
                             tooltip: { callbacks: { label: (ctx) => {
                                 const sum = ctx.dataset.data.reduce((s, v) => s + Number(v || 0), 0) || 1;
                                 return `${ctx.label}: ${UI.fmt(ctx.parsed)} (${(ctx.parsed / sum * 100).toFixed(1)}%)`;
-                            } } } } }
+                            } } } },
+                            onClick: (evt, elements) => drill(elements),
+                            onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+                        },
+                        plugins: [donutPctPlugin]
                     }));
                 } else if (kind === 'client') {
                     body.innerHTML = `
@@ -2596,6 +2634,93 @@
             } catch (e) {
                 body.innerHTML = `<p style="color:#e74c3c"></p>`;
                 body.querySelector('p').textContent = e.message;
+            }
+        },
+
+        // ===== 時間分類明細彈窗（柱圖/環圖點擊鑽取） =====
+        ensureTimeModal() {
+            if (!document.getElementById('drTimeModalStyle')) {
+                const st = document.createElement('style');
+                st.id = 'drTimeModalStyle';
+                st.textContent = `
+.dr-time-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:9999;align-items:center;justify-content:center;}
+.dr-time-overlay.show{display:flex;}
+.dr-time-card{background:#fff;border-radius:12px;width:90%;max-width:920px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.25);overflow:hidden;}
+.dr-time-header{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:linear-gradient(135deg,#2c3e50,#34495e);color:#fff;}
+.dr-time-title{font-size:1.05em;font-weight:700;}
+.dr-time-close{background:none;border:none;color:#fff;font-size:1.3em;cursor:pointer;padding:0 4px;line-height:1;}
+.dr-time-close:hover{opacity:.7;}
+.dr-time-sub{padding:8px 20px;background:#f8f9fa;color:#64748b;font-size:.88em;border-bottom:1px solid #e2e8f0;}
+.dr-time-body{padding:16px 20px;overflow-y:auto;flex:1;}
+.dr-time-table{width:100%;border-collapse:collapse;font-size:.9em;}
+.dr-time-table th,.dr-time-table td{padding:8px 10px;border-bottom:1px solid #e2e8f0;}
+.dr-time-table thead th{background:#f8f9fa;color:#1e293b;font-weight:700;text-align:left;white-space:nowrap;}
+.dr-time-table td.num,.dr-time-table th.num{text-align:right;font-variant-numeric:tabular-nums;}
+.dr-time-table tbody tr:hover{background:#f1f5f9;}
+.dr-time-table tfoot td{font-weight:800;background:#eaf2f8;color:#1a5276;}`;
+                document.head.appendChild(st);
+            }
+            let ov = document.getElementById('drTimeModalOverlay');
+            if (ov) return ov;
+            ov = document.createElement('div');
+            ov.id = 'drTimeModalOverlay';
+            ov.className = 'dr-time-overlay';
+            ov.innerHTML = `
+                <div class="dr-time-card">
+                    <div class="dr-time-header">
+                        <span class="dr-time-title" id="drTimeTitle"></span>
+                        <button type="button" class="dr-time-close" data-close>✕</button>
+                    </div>
+                    <div class="dr-time-sub" id="drTimeSub"></div>
+                    <div class="dr-time-body" id="drTimeBody"></div>
+                    <div style="padding:12px 20px;border-top:1px solid #e2e8f0;text-align:right;background:#fafafa;">
+                        <button type="button" class="btn" data-close>${t('modal.close') || '關閉'}</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+            const card = ov.firstElementChild;
+            ov.addEventListener('click', (e) => {
+                if (e.target.closest('[data-close]')) { ov.classList.remove('show'); return; }
+                if (!card.contains(e.target)) ov.classList.remove('show');
+            });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ov.classList.remove('show'); });
+            return ov;
+        },
+
+        async openTimeDetail(wkType, hours, analysisParams) {
+            const ov = this.ensureTimeModal();
+            const body = ov.querySelector('#drTimeBody');
+            ov.querySelector('#drTimeTitle').textContent = `📋 ${this.wkLabel(wkType)} 明細`;
+            ov.querySelector('#drTimeSub').textContent = t('loading') || '載入中...';
+            body.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8;">⏳ ${t('loading') || '載入中...'}</div>`;
+            ov.classList.add('show');
+
+            try {
+                const qs = new URLSearchParams(analysisParams || {});
+                qs.set('wk_type', wkType);
+                const res = await API.get('/api/daily-report/analysis/time-detail?' + qs.toString());
+                const d = res.data || {};
+                const rows = d.rows || [];
+                ov.querySelector('#drTimeSub').textContent = `${d.total_hours || 0} ${t('dr.axis.hours') || '小時'} · ${rows.length} 筆`;
+                if (rows.length === 0) {
+                    body.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8;">${t('dr.empty') || '暫無資料'}</div>`;
+                    return;
+                }
+                const fmtDate = (v) => v ? String(v).slice(0, 10) : '-';
+                body.innerHTML = `<div style="overflow-x:auto;"><table class="dr-time-table">
+                    <thead><tr><th>日期</th><th>撰写人</th><th>工作内容</th><th>起止时间</th><th class="num">小时</th></tr></thead>
+                    <tbody>${rows.map(r => `<tr>
+                        <td style="white-space:nowrap;">${esc(fmtDate(r.report_date))}</td>
+                        <td style="white-space:nowrap;">${esc(r.user_name)}</td>
+                        <td title="${esc(r.projects)}">${esc(String(r.projects || '-').length > 42 ? String(r.projects).slice(0, 42) + '…' : (r.projects || '-'))}</td>
+                        <td style="white-space:nowrap;color:#64748b;">${esc(r.from_time || '')} ~ ${esc(r.to_time || '')}</td>
+                        <td class="num">${Number(r.use_time || 0).toFixed(1)}</td>
+                    </tr>`).join('')}</tbody>
+                    <tfoot><tr><td colspan="4" style="text-align:right;"><b>合計（${rows.length} 筆）</b></td>
+                        <td class="num"><b>${Number(d.total_hours || 0).toFixed(1)}</b></td></tr></tfoot>
+                </table></div>`;
+            } catch (e) {
+                body.innerHTML = `<p style="color:#e74c3c">❌ ${esc(e.message)}</p>`;
             }
         }
     };
