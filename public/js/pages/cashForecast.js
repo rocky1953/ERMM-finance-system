@@ -126,6 +126,11 @@ function renderProbCard(mc, stressRev = 0, stressCost = 0) {
     const pAll = adjustProb(mc.prob_all, stressFactor);
     const maxProb = adjustProb(mc.max_gap_prob, stressFactor);
 
+    // 壓力後 P10（與 MC 圖表同一 shift 公式），讓壓力效果在概率為 0 時也可見
+    const w13 = mc.weekly[12] || {};
+    const shift13 = (w13.median || 0) * (factorRev - 1) + (w13.median || 0) * (factorCost - 1) * 0.5;
+    const worstStressed = (w13.p10 || 0) + shift13 * 0.8;
+
     const riskLevel = pAll >= 30 ? { color: '#e74c3c', bg: '#fdecea', label: t('cash.risk_high') || '高風險' }
                    : pAll >= 10 ? { color: '#f39c12', bg: '#fef9e7', label: t('cash.risk_mid') || '中風險' }
                    :              { color: '#27ae60', bg: '#eafaf1', label: t('cash.risk_low') || '低風險' };
@@ -154,8 +159,8 @@ function renderProbCard(mc, stressRev = 0, stressCost = 0) {
             </div>
             <div class="kpi-card blue">
                 <div class="kpi-label">${t('cash.worst_case') || '最差情境（13週 P10）'}</div>
-                <div class="kpi-value">${UI.fmt(mc.weekly[12]?.p10 || mc.worst_case)}</div>
-                <div class="kpi-sub">${t('cash.history') || '歷史參數'}：AR ${mc.ar_days}天 / AP ${mc.ap_days}天</div>
+                <div class="kpi-value">${UI.fmt(worstStressed)}</div>
+                <div class="kpi-sub">${(stressRev || stressCost) ? `${t('cash.worst_scenario') || '最差情境'} P10：${UI.fmt(w13.p10 || 0)}<br>` : ''}${t('cash.history') || '歷史參數'}：AR ${mc.ar_days}天 / AP ${mc.ap_days}天</div>
             </div>
         </div>`;
 }
@@ -196,7 +201,7 @@ function renderMCChart(mc, stressRev = 0, stressCost = 0, safeLevel) {
     const weeks = mc.weekly.map(w => {
         const inflowFactor = factorRev;
         // 壓力測試：讓餘額向不利方向偏移
-        const shift = (w.p50) * (factorRev - 1) + (w.p50) * (factorCost - 1) * 0.5;
+        const shift = (w.median) * (factorRev - 1) + (w.median) * (factorCost - 1) * 0.5;
         return {
             week: w.week,
             p10: w.p10 + shift * 0.8,
@@ -263,15 +268,13 @@ function applyStress() {
     document.getElementById('stressRevVal').textContent = rev.value + '%';
     document.getElementById('stressCostVal').textContent = cost.value + '%';
 
+    if (!_mcData) return;
+    // 概率風險卡不論圖表模式（點估計/Monte Carlo）都即時更新
+    renderProbCard(_mcData, Number(rev.value), Number(cost.value));
+    // 僅 Monte Carlo 概率帶模式重繪壓力後曲線
     const mode = document.querySelector('input[name="cfMode"]:checked')?.value;
-    if (_mcData && mode === 'monte') {
-        renderProbCard(_mcData, Number(rev.value), Number(cost.value));
-        const safe = _mcData.weekly ? undefined : _mcData.safe_level;
-        // 從 weekly 取 safe_level
-        const [, weeklyRes] = [null, null];
+    if (mode === 'monte') {
         const bu = document.getElementById('cfBu').value;
-        const safeLevel = Number(rev?.dataset?.safe || 3000000);
-        // 重拉一次 weekly 獲取 safe_level
         API.get(`/api/cash-forecast/weekly?bu_no=${bu}&weeks=13`).then(r => {
             renderMCChart(_mcData, Number(rev.value), Number(cost.value), r.data?.safe_level || 3000000);
         });
