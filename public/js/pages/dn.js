@@ -58,7 +58,10 @@ const DNForm = {
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('po.col.xitems')}</label><input id="df_x" value="${d.xitems||''}"></div>
-                <div class="form-group" style="flex:1"><label>${t('so.col.client')}</label><input id="df_cl" value="${d.client_name||''}" style="width:100%"></div>
+                <div class="form-group" style="flex:1;position:relative"><label>${t('so.col.client')}</label>
+                    <input id="df_cl" value="${d.client_name||''}" style="width:100%" autocomplete="off" oninput="DNForm.onCustInput()">
+                    <div id="dn_cust_list"></div>
+                </div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('dn.th.dn_qty')}</label><input type="number" id="df_dq" step="0.0001" value="${d.DN_qty||0}"></div>
@@ -66,6 +69,34 @@ const DNForm = {
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="DNForm.save(${d.uid||0})">${t('save')}</button>`);
         if (d.bu_no) document.getElementById('df_bu').value = d.bu_no;
+    },
+
+    // 客戶 listbox：資料來源與銷售訂單一致（往來對象客戶 ∪ 專案主檔客戶）
+    onCustInput() {
+        clearTimeout(this._custTimer);
+        this._custTimer = setTimeout(async () => {
+            const q = document.getElementById('df_cl').value.trim();
+            const list = document.getElementById('dn_cust_list');
+            if (!q) { list.innerHTML = ''; return; }
+            try {
+                const res = await API.get(`/api/preorders/customers?q=${encodeURIComponent(q)}`);
+                const rows = res.data || [];
+                list.innerHTML = rows.length
+                    ? `<div style="position:absolute;z-index:10050;left:0;right:0;max-height:220px;overflow-y:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);margin-top:2px;">` +
+                      rows.map(r => `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:8px;"
+                            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''"
+                            onclick="DNForm.pickCustomer('${(r.customer_name || '').replace(/'/g, "\\'")}')">
+                            <span>${r.customer_name || ''}</span><span style="color:#94a3b8;font-size:12px;">${r.customer_id}</span>
+                       </div>`).join('') + `</div>`
+                    : '';
+            } catch { list.innerHTML = ''; }
+        }, 300);
+    },
+
+    // 選定客戶 → 帶出客戶名稱並關閉 listbox
+    pickCustomer(customerName) {
+        document.getElementById('df_cl').value = customerName;
+        document.getElementById('dn_cust_list').innerHTML = '';
     },
     async save(uid) {
         const body = {
