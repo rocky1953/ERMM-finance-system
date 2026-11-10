@@ -5279,6 +5279,35 @@ const I18N = {
         return Object.keys(m).map(chs => ({ value: chs, label: this.t(m[chs]) }));
     },
 
+    // 部門名稱多語言（DB 以簡體中文存值，此處僅做顯示轉換）
+    _deptDict: {
+        '人事部': { 'zh-CN': '人事部', 'zh-TW': '人事部', en: 'HR Dept' },
+        '生产部': { 'zh-CN': '生产部', 'zh-TW': '生產部', en: 'Production Dept' },
+        '生產部': { 'zh-CN': '生产部', 'zh-TW': '生產部', en: 'Production Dept' },
+        '研发部': { 'zh-CN': '研发部', 'zh-TW': '研發部', en: 'R&D Dept' },
+        '研發部': { 'zh-CN': '研发部', 'zh-TW': '研發部', en: 'R&D Dept' },
+        '营业部': { 'zh-CN': '营业部', 'zh-TW': '營業部', en: 'Sales Dept' },
+        '營業部': { 'zh-CN': '营业部', 'zh-TW': '營業部', en: 'Sales Dept' },
+        '业务部': { 'zh-CN': '业务部', 'zh-TW': '業務部', en: 'Business Dept' },
+        '業務部': { 'zh-CN': '业务部', 'zh-TW': '業務部', en: 'Business Dept' },
+        '财务部': { 'zh-CN': '财务部', 'zh-TW': '財務部', en: 'Finance Dept' },
+        '財務部': { 'zh-CN': '财务部', 'zh-TW': '財務部', en: 'Finance Dept' },
+        '采购部': { 'zh-CN': '采购部', 'zh-TW': '採購部', en: 'Procurement Dept' },
+        '採購部': { 'zh-CN': '采购部', 'zh-TW': '採購部', en: 'Procurement Dept' },
+        '管理部': { 'zh-CN': '管理部', 'zh-TW': '管理部', en: 'Admin Dept' },
+        '资讯部': { 'zh-CN': '资讯部', 'zh-TW': '資訊部', en: 'IT Dept' },
+        '資訊部': { 'zh-CN': '资讯部', 'zh-TW': '資訊部', en: 'IT Dept' },
+        '未分类': { 'zh-CN': '未分类', 'zh-TW': '未分類', en: 'Unassigned' },
+        '未分類': { 'zh-CN': '未分类', 'zh-TW': '未分類', en: 'Unassigned' }
+    },
+
+    /** 部門名稱顯示轉換：查無對照時原樣返回 */
+    deptName(name) {
+        if (!name) return name;
+        const rec = this._deptDict[String(name).trim()];
+        return rec ? (rec[this._lang] || rec['zh-CN']) : name;
+    },
+
     t(key, params) {
         const dict = this._dict[this._lang] || this._dict['zh-TW'];
         let s = dict[key] || key;
@@ -5328,3 +5357,6 @@ const I18N = {
 
 // 全局翻译函数（可選 params 做 {key} 插值）
 function t(key, params) { return I18N.t(key, params); }
+
+// 部門名稱顯示轉換（DB 存簡體中文 → 當前語言）
+function tDept(name) { return I18N.deptName(name); }

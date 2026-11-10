@@ -1343,6 +1343,10 @@
                     : '<span style="background:#eafaf1;color:#1e8449;padding:2px 8px;border-radius:10px;font-size:12px;">🟢 NORMAL</span>';
             const dirArrow = dir => dir === 'OVER' ? '<span style="color:#c0392b;">↑</span>'
                 : dir === 'UNDER' ? '<span style="color:#5d6d7e;">↓</span>' : '';
+            // 部門範圍顯示部門名（多語言），人員範圍維持姓名原文
+            const scopeLabel = r => fc.scope === 'DEPT'
+                ? tDept(r.scope_name || r.scope_id)
+                : (r.scope_name || r.scope_id);
 
             el.innerHTML = `
                 <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;margin-bottom:14px;">
@@ -1350,7 +1354,7 @@
                         <div class="toolbar" style="margin-bottom:6px;gap:8px;">
                             <b style="font-size:14px;">🔮 ${esc(d.target_ym)} ${t('dr.fc.chart_title')}</b>
                             <select id="fcObject" style="margin-left:auto;max-width:200px;" onchange="DRApp.fcPick(this.value)">
-                                ${rows.map(r => `<option value="${esc(r.scope_id)}" ${r.scope_id === fc.selected ? 'selected' : ''}>${esc(r.scope_name || r.scope_id)}</option>`).join('')}
+                                ${rows.map(r => `<option value="${esc(r.scope_id)}" ${r.scope_id === fc.selected ? 'selected' : ''}>${esc(scopeLabel(r))}</option>`).join('')}
                             </select>
                         </div>
                         <div style="position:relative;height:300px;"><canvas id="fcChart"></canvas></div>
@@ -1358,7 +1362,7 @@
                     </div>
                     <div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px;">
                         ${cur ? `
-                            <div style="color:#7f8c8d;font-size:0.85em;">${esc(cur.scope_name || cur.scope_id)} · ${esc(d.target_ym)}</div>
+                            <div style="color:#7f8c8d;font-size:0.85em;">${esc(scopeLabel(cur))} · ${esc(d.target_ym)}</div>
                             <div style="font-size:2em;font-weight:700;color:#6c3483;margin:6px 0;">${UI.fmt(cur.forecast_val, isInt ? 0 : 1)}${unit}</div>
                             <div style="margin:8px 0;">${riskBadge(cur.risk_level)} ${dirArrow(cur.risk_dir)}</div>
                             <table style="width:100%;font-size:13px;margin-top:8px;">
@@ -1379,14 +1383,14 @@
                     </tr></thead>
                     <tbody>
                         ${rows.map(r => `<tr style="cursor:pointer;${r.scope_id === fc.selected ? 'background:#f4ecf7;' : ''}" onclick="DRApp.fcPick('${esc(r.scope_id).replace(/'/g, "\\'")}')">
-                            <td>${esc(r.scope_name || r.scope_id)}</td>
+                            <td>${esc(scopeLabel(r))}</td>
                             <td style="text-align:right;font-weight:600;">${UI.fmt(r.forecast_val, isInt ? 0 : 1)}${unit}</td>
                             <td style="text-align:right;color:#7f8c8d;">${UI.fmt(r.lower_bound, isInt ? 0 : 1)} ~ ${UI.fmt(r.upper_bound, isInt ? 0 : 1)}</td>
                             <td style="text-align:center;">${riskBadge(r.risk_level)} ${dirArrow(r.risk_dir)}</td>
                             <td style="text-align:center;">${r.history_n}</td>
                         </tr>`).join('')}
                         ${insufficient.map(x => `<tr style="color:#aaa;">
-                            <td>${esc(x.scope_name || x.scope_id)}</td>
+                            <td>${esc(scopeLabel(x))}</td>
                             <td colspan="4" style="text-align:center;">${t('dr.fc.insufficient', { n: x.history_n })}</td>
                         </tr>`).join('')}
                     </tbody>
