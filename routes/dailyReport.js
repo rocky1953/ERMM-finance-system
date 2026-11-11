@@ -293,8 +293,13 @@ router.get('/meta', async (req, res) => {
              ORDER BY user_id
         `);
         const [clientRows] = await pool.query(`
-            SELECT DISTINCT client_id FROM daily_report_detail
-             WHERE client_id IS NOT NULL AND client_id<>'' ORDER BY client_id
+            SELECT DISTINCT name FROM (
+                SELECT relation_name AS name FROM relation_detail
+                 WHERE relation_type='客户' AND (inuse_flag='USE' OR inuse_flag IS NULL)
+                UNION
+                SELECT client_id AS name FROM daily_report_detail
+                 WHERE client_id IS NOT NULL AND client_id<>''
+            ) t ORDER BY name
         `);
         const [itemsRows] = await pool.query(`
             SELECT DISTINCT items_id FROM daily_report_detail
@@ -306,7 +311,7 @@ router.get('/meta', async (req, res) => {
             life_types: LIFE_TYPES,
             departments: deptRows.map(r => r.dept),
             writers: writerRows,
-            clients: clientRows.map(r => r.client_id),
+            clients: clientRows.map(r => r.name).filter(Boolean),
             items: itemsRows.map(r => r.items_id),
             me: { user_id: actor.user_id, user_name: actor.user_name, depart_id: actor.xuser_dept, isManager: actor.isManager, isSenior: actor.isSenior }
         });
