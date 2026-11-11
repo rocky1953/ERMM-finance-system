@@ -1,10 +1,23 @@
-﻿/**
+/**
  * 系統管理路由 - 碼表/公司別/匯率/KPI
  */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, pagination } = require('../utils/response');
+
+// ===== 碼表类型列表（所有已存在的 code_type） =====
+router.get('/codes/types', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(`
+            SELECT code_type, COUNT(*) cnt
+              FROM cams_system_codes
+             GROUP BY code_type
+             ORDER BY code_type
+        `);
+        ok(res, rows);
+    } catch (err) { fail500(res, err); }
+});
 
 // ===== 碼表 CRUD =====
 router.get('/codes', async (req, res) => {

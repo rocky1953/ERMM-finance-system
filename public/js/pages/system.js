@@ -8,14 +8,10 @@ registerPage('system', async (c) => {
             <div class="card-title">🔧 ${t('sys.codes')}</div>
             <div class="toolbar">
                 ${_mgr ? `<button class="btn btn-primary" onclick="CodeForm.open()">➕ ${t('sys.add_code')}</button>` : ''}
-                <button class="btn btn-success" onclick="loadCodes()">🔄 ${t('refresh')}</button>
+                <button class="btn btn-success" onclick="refreshCodeTypes();loadCodes()">🔄 ${t('refresh')}</button>
                 <div class="spacer"></div>
                 <select id="codeType" onchange="loadCodes()" style="padding:6px;border:1px solid #ddd;border-radius:6px;">
                     <option value="">${t('sys.all')}</option>
-                    <option value="CURRENCY">${t('sys.currency')}</option>
-                    <option value="BUSINESS_ID">${t('sys.business')}</option>
-                    <option value="AGEING_STOCK">${t('sys.ageing')}</option>
-                    <option value="BATCH_CONTROL">${t('sys.batch_ctrl')}</option>
                 </select>
             </div>
             <div id="codeTable">${t('loading')}</div>
@@ -43,10 +39,25 @@ registerPage('system', async (c) => {
             </div>
         </div>
     `;
+    await refreshCodeTypes();
     loadCodes();
     loadSysKPI();
     loadLLMProviders();
 });
+
+// 刷新码表类型全局缓存（供顶部筛选下拉和弹窗类型下拉共用）
+window.refreshCodeTypes = async function() {
+    try {
+        const res = await API.get('/api/system/codes/types');
+        window._codeTypeOptions = res.data || [];
+        const el = document.getElementById('codeType');
+        if (el) {
+            const cur = el.value;
+            el.innerHTML = `<option value="">${t('sys.all')}</option>` +
+                window._codeTypeOptions.map(o => `<option value="${o.code_type}" ${o.code_type===cur?'selected':''}>${o.code_type} (${o.cnt})</option>`).join('');
+        }
+    } catch {}
+};
 
 // ============ LLM API Key 管理 ============
 async function loadLLMProviders() {
@@ -444,12 +455,16 @@ const CodeForm = {
         this._render(d, !!id);
     },
     _render(d, isEdit) {
+        // 类型下拉：动态来自码表 + 「+ 新建类型」入口
+        const typeOpts = (window._codeTypeOptions || [])
+            .map(o => `<option value="${o.code_type}" ${o.code_type===d.code_type?'selected':''}>${o.code_type}</option>`)
+            .join('');
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + ' ' + t('sys.codes'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.type')}</label>
                     <select id="cf_type">
-                        <option>CURRENCY</option><option>BUSINESS_ID</option>
-                        <option>AGEING_STOCK</option><option>BATCH_CONTROL</option>
+                        ${typeOpts || '<option value="">—</option>'}
+                        ${!isEdit ? '<option value="__NEW__">➕ ' + (t('sys.new_type') || '新建类型…') + '</option>' : ''}
                     </select></div>
                 <div class="form-group"><label>${t('sys.code')}</label><input id="cf_val" value="${d.code_value||''}"></div>
                 <div class="form-group"><label>${t('system.form.desc')}</label><input id="cf_desc" value="${d.value_description||''}"></div>
@@ -481,11 +496,19 @@ const CodeForm = {
             sort_order: Number(document.getElementById('cf_sort').value)||0,
             inuse_flag: document.getElementById('cf_use').value,
         };
+        // 新建类型处理
+        if (body.code_type === '__NEW__') {
+            const n = prompt(t('sys.prompt_new_type') || '请输入新的字典类型代号（英文，如 RELATION_TYPE）：', '');
+            if (!n) return;
+            const clean = n.trim().toUpperCase().replace(/\s+/g, '_');
+            if (!/^[A-Z0-9_]+$/.test(clean)) { alert(t('codeTable.bad_name') || '类型代号只能是大写英文字母、数字和下划线'); return; }
+            body.code_type = clean;
+        }
         if (!body.code_value) { UI.toast(t('system.msg.code_empty'),'error'); return; }
         try {
             if (id) { await API.put(`/api/system/codes/${id}`, body); UI.toast(t('saved'),'success'); }
             else { await API.post('/api/system/codes', body); UI.toast(t('system.msg.added'),'success'); }
-            UI.closeModal(); loadCodes();
+            UI.closeModal(); refreshCodeTypes(); loadCodes();
         } catch(e) { UI.toast(e.message,'error'); }
     }
 };
