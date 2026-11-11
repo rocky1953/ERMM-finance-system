@@ -77,6 +77,7 @@ const financeRoutes = require('./routes/finance');
 const integrationRoutes = require('./routes/integration');
 const taxRoutes = require('./routes/tax');
 const warRoomRoutes = require('./routes/warRoom');
+const codesRoutes = require('./routes/codes');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -133,6 +134,7 @@ app.use('/api/finance', financeRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/tax', taxRoutes);
 app.use('/api/war-room', warRoomRoutes);
+app.use('/api/codes', codesRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {
