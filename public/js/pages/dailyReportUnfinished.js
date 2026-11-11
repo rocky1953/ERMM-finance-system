@@ -52,7 +52,7 @@
             month: String(new Date().getMonth() + 1).padStart(2, '0'),
             depart_id: ''
         },
-        detail: { user_id: '', user_name: '', year: '', month: '', page: 1, pageSize: 10, rows: [], total: 0 },
+        detail: { user_id: '', user_name: '', year: '', month: '', page: 1, pageSize: 13, rows: [], total: 0 },
         monthly: { user_id: '', user_name: '', year: '' },
 
         wkLabel(v) { return WK_KEYS[v] ? t(WK_KEYS[v]) : (v || '-'); },
@@ -186,7 +186,7 @@
             this.chartFilters.month = String(month);
             this.view = 'detail';
             this.destroyCharts();
-            this.detail = { user_id: userId, user_name: userName || userId, year, month, page: 1, pageSize: 10, rows: [], total: 0 };
+            this.detail = { user_id: userId, user_name: userName || userId, year, month, page: 1, pageSize: 13, rows: [], total: 0 };
             this.renderDetail();
         },
 
