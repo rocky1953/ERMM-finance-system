@@ -36,7 +36,7 @@ async function loadBank() {
                     <td class="num">${UI.fmt(r.interest_rate, 2)}</td>
                     <td class="text-center">${r.pay_terms || '-'}</td>
                     <td class="num ${diff < 0 ? 'negative' : diff > 0 ? 'positive' : ''}">${diff !== 0 ? UI.fmt(diff) : '-'}</td>
-                    <td>${r.status1 || '-'}</td>
+                    <td>${tStatus(r.status1) || '-'}</td>
                     ${_mgr ? `<td><button class="btn btn-danger btn-sm" onclick="delBank(${r.uid})">${t('delete')}</button></td>` : ''}
                 </tr>`;
             }).join('')}</tbody>

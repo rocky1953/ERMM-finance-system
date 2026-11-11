@@ -5308,6 +5308,24 @@ const I18N = {
         return rec ? (rec[this._lang] || rec['zh-CN']) : name;
     },
 
+    // 貸款狀態多語言（DB 存量值中英文混雜：'Active' 與 '使用中' 同義）
+    _statusDict: {
+        'Active': { 'zh-CN': '使用中', 'zh-TW': '使用中', en: 'Active' },
+        'active': { 'zh-CN': '使用中', 'zh-TW': '使用中', en: 'Active' },
+        '使用中': { 'zh-CN': '使用中', 'zh-TW': '使用中', en: 'Active' },
+        'Closed': { 'zh-CN': '已结清', 'zh-TW': '已結清', en: 'Closed' },
+        'closed': { 'zh-CN': '已结清', 'zh-TW': '已結清', en: 'Closed' },
+        '已结清': { 'zh-CN': '已结清', 'zh-TW': '已結清', en: 'Closed' },
+        '已結清': { 'zh-CN': '已结清', 'zh-TW': '已結清', en: 'Closed' }
+    },
+
+    /** 狀態值顯示轉換：查無對照時原樣返回 */
+    statusName(name) {
+        if (!name) return name;
+        const rec = this._statusDict[String(name).trim()];
+        return rec ? (rec[this._lang] || rec['zh-CN']) : name;
+    },
+
     t(key, params) {
         const dict = this._dict[this._lang] || this._dict['zh-TW'];
         let s = dict[key] || key;
@@ -5360,3 +5378,6 @@ function t(key, params) { return I18N.t(key, params); }
 
 // 部門名稱顯示轉換（DB 存簡體中文 → 當前語言）
 function tDept(name) { return I18N.deptName(name); }
+
+// 狀態值顯示轉換（DB 存量中英文混雜 → 當前語言）
+function tStatus(name) { return I18N.statusName(name); }
