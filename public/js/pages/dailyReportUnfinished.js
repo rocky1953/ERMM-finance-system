@@ -243,6 +243,18 @@
                 if (d.rows.length === 0) {
                     el.innerHTML = UI.empty('📝', t('dr.empty'));
                 } else {
+                    // 延遲內容 / 仍未解決內容 自適應歸類：
+                    //  DB 寫入時未嚴格區分 projects1/projects2 語義，僅一個有值時統一歸為「延遲內容」
+                    //  兩個都有值時：projects1 → 延遲內容、projects2 → 仍未解決內容（待決策/後續事項）
+                    const classify = (r) => {
+                        const p1 = r.projects1 ? String(r.projects1).trim() : '';
+                        const p2 = r.projects2 ? String(r.projects2).trim() : '';
+                        if (!p1 && !p2) return { delay: '', unresolved: '' };
+                        if (p1 && !p2) return { delay: p1, unresolved: '' };
+                        if (!p1 && p2) return { delay: p2, unresolved: '' };
+                        // 兩個都有值：p1 偏向延遲事件、p2 偏向待決策事項
+                        return { delay: p1, unresolved: p2 };
+                    };
                     el.innerHTML = `<table class="data-table">
                         <thead><tr>
                             <th>${t('dr.col.seq')}</th>
@@ -250,13 +262,15 @@
                             <th>${t('dr.delay_content')}</th>
                             <th>${t('dr.still_unresolved')}</th>
                         </tr></thead>
-                        <tbody>${d.rows.map((r, i) => `
-                            <tr>
+                        <tbody>${d.rows.map((r, i) => {
+                            const c = classify(r);
+                            return `<tr>
                                 <td>${(d.page - 1) * d.pageSize + i + 1}</td>
                                 <td>${esc(r.report_date)}</td>
-                                <td style="color:#e67e22;">${r.projects1 ? esc(r.projects1) : '-'}</td>
-                                <td style="color:#e74c3c;">${r.projects2 ? esc(r.projects2) : '-'}</td>
-                            </tr>`).join('')}</tbody>
+                                <td style="color:#e67e22;">${c.delay ? esc(c.delay) : '-'}</td>
+                                <td style="color:#e74c3c;">${c.unresolved ? esc(c.unresolved) : '-'}</td>
+                            </tr>`;
+                        }).join('')}</tbody>
                     </table>`;
                 }
                 this.renderDetailPager();
