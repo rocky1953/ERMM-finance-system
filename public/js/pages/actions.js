@@ -1,6 +1,7 @@
 /**
  * 行动追踪看板页面
  * 待处理 / 进行中 / 已完成 三栏 Kanban
+ * 状态/优先级下拉来自 ACTION_STATUS / ACTION_PRIORITY 码表
  */
 registerPage('actions', async (c) => {
     c.innerHTML = `
@@ -55,9 +56,28 @@ function taskCard(t) {
     </div>`;
 }
 
+// 下拉选项生成（读码表，回退硬编码）
+async function _actionPrOpts() {
+    const list = await CodeHelper.list('ACTION_PRIORITY', [
+        { code_value: 'low',    value_description: '低' },
+        { code_value: 'medium', value_description: '中' },
+        { code_value: 'high',   value_description: '高' }
+    ]);
+    return list.map(o => `<option value="${o.code_value}">${o.value_description || o.code_value}</option>`).join('');
+}
+async function _actionStOpts() {
+    const list = await CodeHelper.list('ACTION_STATUS', [
+        { code_value: 'pending', value_description: '待处理' },
+        { code_value: 'doing',   value_description: '进行中' },
+        { code_value: 'done',    value_description: '已完成' }
+    ]);
+    return list.map(o => `<option value="${o.code_value}">${o.value_description || o.code_value}</option>`).join('');
+}
+
 // 新建任务表单
 const ActionForm = {
     async open() {
+        const prSel = await _actionPrOpts();
         UI.modal('新建行动任务', `
             <div class="form-row"><label>任务标题 *</label><input id="af_title" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             <div class="form-row"><label>描述</label><textarea id="af_desc" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea></div>
@@ -66,12 +86,13 @@ const ActionForm = {
                 <div><label>截止日</label><input type="date" id="af_due" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div><label>优先级</label><select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></select></div>
+                <div><label>优先级</label>
+                    <select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">${prSel}</select></div>
                 <div><label>来源指标</label><input id="af_kpi" placeholder="如 gross_profit" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
         `, `<button class="btn btn-ghost" onclick="UI.closeModal()">取消</button>
             <button class="btn btn-primary" onclick="ActionForm.save()">储存</button>`);
-        await Codes.renderSelect('#af_pr', 'ACTION_PRIORITY', { selected: 'medium' });
+        document.getElementById('af_pr').value = 'medium';
     },
     async save() {
         const data = {
@@ -99,12 +120,15 @@ const ActionDetail = {
     async open(uid) {
         const res = await API.get(`/api/action/${uid}`);
         const t = res.data;
+        const stSel = await _actionStOpts();
         UI.modal(`任务：${t.title}`, `
             <p><b>描述：</b>${t.description || '-'}</p>
             <p><b>负责人：</b>${t.assignee || '-'} ｜ <b>截止日：</b>${t.due_date || '-'} ｜ <b>优先级：</b>${t.priority}</p>
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
                 <div><label>状态</label>
-                    <select id="ad_status" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></select>
+                    <select id="ad_status" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
+                        ${stSel}
+                    </select>
                 </div>
                 <div><label>进度 ${t.progress}%</label>
                     <input type="range" id="ad_prg" min="0" max="100" value="${t.progress}" oninput="document.getElementById('ad_prg_v').textContent=this.value+'%'">
@@ -114,7 +138,7 @@ const ActionDetail = {
         `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
             <button class="btn btn-danger" onclick="ActionDetail.del(${t.uid})">删除</button>
             <button class="btn btn-primary" onclick="ActionDetail.save(${t.uid})">储存</button>`);
-        await Codes.renderSelect('#ad_status', 'ACTION_STATUS', { selected: t.status });
+        if (t.status) document.getElementById('ad_status').value = t.status;
     },
     async save(uid) {
         try {

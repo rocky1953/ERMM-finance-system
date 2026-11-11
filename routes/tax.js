@@ -19,7 +19,6 @@ const router = express.Router();
 const { ok, fail, fail500, n } = require('../utils/response');
 const { VAT, CIT, IIT, Submit } = require('../services/taxService');
 const { pool } = require('../config/db');
-const { citAdjTypes } = require('../services/codeCache');
 
 function resolveBuNo(reqBody, reqQuery) {
     return reqBody?.bu_no || reqQuery?.bu_no || null; // 不猜測，交由 service 層校驗
@@ -356,7 +355,10 @@ router.post('/iit/bonus/calculate', async (req, res) => {
 // =====================================================================
 // 4. 人工錄入（算稅引擎無法自動取數的欄位）
 // =====================================================================
-// CIT_ADJ_TYPES 改为 codeCache.citAdjTypes() getter 动态取码表
+
+const codeCache = require('../services/codeCache');
+let CIT_ADJ_TYPES = ['TAX_FREE_INCOME', 'ADJ_INCREASE', 'ADJ_DECREASE', 'TAX_EXEMPTION', 'TAX_CREDIT'];
+(async () => { try { const v = await codeCache.values('CIT_ADJ_TYPE', CIT_ADJ_TYPES); if (v?.length) CIT_ADJ_TYPES = v; } catch {} })();
 
 /** GET /inputs/vat?bu_no=&taxPeriod= */
 router.get('/inputs/vat', async (req, res) => {
@@ -484,7 +486,7 @@ router.put('/inputs/cit', async (req, res) => {
 
         const list = Array.isArray(d.adjustments) ? d.adjustments : [];
         for (const a of list) {
-            if (!citAdjTypes().includes(a.type)) {
+            if (!CIT_ADJ_TYPES.includes(a.type)) {
                 return fail(res, `調整類型不合法：${a.type}`);
             }
             if (!Number.isFinite(Number(a.amount))) return fail(res, '調整金額必須是數字');

@@ -46,11 +46,17 @@ async function loadBank() {
 
 const BankForm = {
     async open() {
+        const typeList = await CodeHelper.list('LOAN_TYPE', [
+            { code_value: 'Short-term', value_description: '短期贷款' },
+            { code_value: 'Long-term',  value_description: '长期贷款' },
+            { code_value: 'FX Loan',    value_description: '外汇贷款' }
+        ]);
+        const typeSel = typeList.map(o => `<option value="${o.code_value}">${o.code_value}${o.value_description ? ' — ' + o.value_description : ''}</option>`).join('');
         UI.modal(t('bank.add'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('bank.loan_id')}</label><input id="bf_id" placeholder="LOAN001"></div>
                 <div class="form-group"><label>${t('bank.bank')}</label><input id="bf_bank"></div>
-                <div class="form-group"><label>${t('bank.loan_type')}</label><select id="bf_type"></select></div>
+                <div class="form-group"><label>${t('bank.loan_type')}</label><select id="bf_type">${typeSel}</select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('bank.loan_amt')}</label><input type="number" id="bf_amt" value="0"></div>
@@ -63,7 +69,6 @@ const BankForm = {
                 <div class="form-group"><label>End Date</label><input type="date" id="bf_end"></div>
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="BankForm.save()">${t('save')}</button>`);
-        await Codes.renderSelect('#bf_type', 'LOAN_TYPE', { useDescription: false });
     },
     async save() {
         const body = {

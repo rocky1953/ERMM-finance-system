@@ -169,6 +169,39 @@ const API = (() => {
     };
 })();
 
+// ===== 码表通用读取器（带内存缓存，失败时回退到 fallback） =====
+const CodeHelper = {
+    _cache: {},           // { code_type: [{code_value, value_description, ...}] }
+    _pending: {},         // 正在加载中的 Promise（防并发）
+
+    /** 返回指定 code_type 的 active 码值数组，失败则返回 fallback */
+    async list(codeType, fallback = []) {
+        if (this._cache[codeType]) return this._cache[codeType];
+        if (this._pending[codeType]) return this._pending[codeType];
+        this._pending[codeType] = API.get(`/api/codes/active-values?code_type=${encodeURIComponent(codeType)}`)
+            .then(res => {
+                const arr = res.data || [];
+                if (arr.length) this._cache[codeType] = arr;
+                return arr.length ? arr : fallback;
+            })
+            .catch(() => fallback)
+            .finally(() => { delete this._pending[codeType]; });
+        return this._pending[codeType];
+    },
+
+    /** 直接返回字符串数组（仅 code_value），方便拼下拉 */
+    async values(codeType, fallback = []) {
+        const arr = await this.list(codeType, fallback);
+        return arr.map(r => typeof r === 'string' ? r : r.code_value);
+    },
+
+    /** 刷新全部缓存（码表管理新增/删除后调用） */
+    invalidate(codeType) {
+        if (codeType) delete this._cache[codeType];
+        else this._cache = {};
+    }
+};
+
 const UI = {
     toast(msg, type = 'info') {
         const el = document.createElement('div');
@@ -298,89 +331,3 @@ const State = {
     bu_no: 'HM',
     YYYY_MM: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0')
 };
-
-// ===== 系统码表缓存（从 cams_system_codes /api/codes/active-values 读取） =====
-// 用法：
-//   await Codes.ensure('RELATION_TYPE');                // 预加载
-//   Codes.renderSelect('#relType', 'RELATION_TYPE');    // 直接渲染 <select>
-//   const list = Codes.get('RELATION_TYPE');            // 取 [{code_value, value_description, ...}]
-const Codes = (() => {
-    const cache = {};        // { code_type: [{code_value, value_description, value_number1, ...}] }
-    const loading = {};      // 并发去重 Promise
-    const FAILBACK = {       // 硬编码兜底（码表没种子时页面仍可工作）
-        BUSINESS_ID:        [{code_value:'HM',value_description:'华明'},{code_value:'HN',value_description:'华能'},{code_value:'SZ',value_description:'深圳公司'}],
-        RELATION_TYPE:      [{code_value:'客户'},{code_value:'供应商'},{code_value:'关系人'}],
-        ACTION_STATUS:      [{code_value:'pending',value_description:'待处理'},{code_value:'doing',value_description:'进行中'},{code_value:'done',value_description:'已完成'}],
-        ACTION_PRIORITY:    [{code_value:'low',value_description:'低'},{code_value:'medium',value_description:'中'},{code_value:'high',value_description:'高'}],
-        LOAN_TYPE:          [{code_value:'Short-term'},{code_value:'Long-term'},{code_value:'FX Loan'}],
-        FLAG:               [{code_value:'USE',value_description:'启用'},{code_value:'NOUSE',value_description:'停用'}],
-        LOAN_STATUS:        [{code_value:'使用中'},{code_value:'Active'},{code_value:'已结清'},{code_value:'Closed'}],
-        WK_TYPE:            [{code_value:'日常工作'},{code_value:'职业发展'},{code_value:'财务状况'},{code_value:'健康'},{code_value:'娱乐休闲'},{code_value:'家庭'},{code_value:'朋友圈'},{code_value:'个人成长'},{code_value:'自我实现'}],
-        TAX_TYPE:           [{code_value:'VAT'},{code_value:'CIT'},{code_value:'ST'},{code_value:'IT'}],
-        FILE_STATUS:        [{code_value:'DRAFT'},{code_value:'SUBMITTED'},{code_value:'FILED'},{code_value:'PENDING'},{code_value:'REJECTED'}],
-        CIT_ADJ_TYPE:       [{code_value:'TAX_FREE_INCOME'},{code_value:'ADJ_INCREASE'},{code_value:'ADJ_DECREASE'},{code_value:'TAX_EXEMPTION'},{code_value:'TAX_CREDIT'}],
-    };
-
-    async function ensure(codeType) {
-        if (cache[codeType]) return cache[codeType];
-        if (loading[codeType]) return loading[codeType];
-        loading[codeType] = (async () => {
-            try {
-                const res = await API.get(`/api/codes/active-values?code_type=${encodeURIComponent(codeType)}`);
-                cache[codeType] = res.data || [];
-            } catch (e) {
-                console.warn(`[Codes] 加载 ${codeType} 失败，使用硬编码兜底：`, e.message);
-                cache[codeType] = FAILBACK[codeType] || [];
-            } finally {
-                delete loading[codeType];
-            }
-            return cache[codeType];
-        })();
-        return loading[codeType];
-    }
-
-    function get(codeType) { return cache[codeType] || []; }
-
-    /**
-     * 渲染 <select> 的 option。
-     * @param {string|HTMLElement} selector - CSS 选择器或 DOM
-     * @param {string} codeType - 码表 code_type
-     * @param {object} [opts] - { placeholder:'全部', useDescription:true, valueKey:'code_value', labelKey:'code_value', selected:'' }
-     */
-    async function renderSelect(selector, codeType, opts = {}) {
-        const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (!el) return;
-        const { placeholder, valueKey = 'code_value', labelKey = 'code_value', useDescription = true, selected } = opts;
-        const list = await ensure(codeType);
-        // 保留当前已选值
-        const cur = selected ?? el.value;
-        el.innerHTML = '';
-        if (placeholder !== undefined) {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = placeholder;
-            el.appendChild(opt);
-        }
-        for (const item of list) {
-            const opt = document.createElement('option');
-            opt.value = item[valueKey] ?? item.code_value;
-            const label = useDescription && item.value_description ? item.value_description : item[labelKey] ?? item.code_value;
-            opt.textContent = label;
-            if (cur && opt.value === cur) opt.selected = true;
-            el.appendChild(opt);
-        }
-        if (cur) el.value = cur;
-    }
-
-    /** 批量渲染：传 { '#sel1': 'TYPE_A', '#sel2': 'TYPE_B' } 或 { '#sel1': { codeType:'TYPE_A', placeholder:'全部' } } */
-    async function renderAll(map) {
-        await Promise.all(Object.entries(map).map(([sel, cfg]) =>
-            typeof cfg === 'string' ? renderSelect(sel, cfg) : renderSelect(sel, cfg.codeType, cfg)
-        ));
-    }
-
-    /** 清空缓存（码表管理页新增/修改后可调用） */
-    function invalidate(codeType) { if (codeType) delete cache[codeType]; else Object.keys(cache).forEach(k => delete cache[k]); }
-
-    return { ensure, get, renderSelect, renderAll, invalidate };
-})();

@@ -9,14 +9,15 @@ const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { scanBu } = require('../services/drAlertScanner');
 
-const { managerTypes } = require('../services/codeCache');
-
 // ============ M3 身份解析（與 routes/dailyReport.js 同口徑） ============
+const codeCache = require('../services/codeCache');
+let MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
+(async () => { try { const v = await codeCache.values('USER_ROLE', MANAGER_TYPES); if (v?.length) MANAGER_TYPES = v; } catch {} })();
 function isManagerRole(admin, xuserType) {
     const norm = (s) => String(s || '')
         .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
         .replace(/高价/g, '高階');
-    return admin === 'Yes' || managerTypes().includes(norm(xuserType));
+    return admin === 'Yes' || MANAGER_TYPES.includes(norm(xuserType));
 }
 async function resolveActor(req) {
     let uid = req.user && req.user.user_id;
