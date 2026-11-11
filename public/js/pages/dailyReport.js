@@ -82,8 +82,8 @@
         },
 
         // ============ 列表视图 ============
-        async loadMeta() {
-            if (this.meta) return;
+        async loadMeta(force = false) {
+            if (!force && this.meta) return;
             const res = await API.get('/api/daily-report/meta');
             this.meta = res.data;
             this.me = res.data.me;
@@ -260,9 +260,11 @@
         },
 
         // ============ 表单视图 ============
-        openForm() {
+        async openForm() {
             this.view = 'form';
             this.destroyCharts();
+            // 強制刷新 meta：新增/修改後往來對象可能變動；客戶/專案 listbox 依賴最新
+            await this.loadMeta(true);
             this.formRows = [{ projects: '', from_time: '08:00', to_time: '08:30', wk_type: '日常工作', client_id: '', items_id: '' }];
             this.renderForm(this.todayStr(), null);
         },
