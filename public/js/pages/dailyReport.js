@@ -274,7 +274,12 @@
             const sl = !!signLock;
             const windowLocked = Math.abs(this.daysFromToday(dateStr)) > 7;
             const clients = (this.meta.clients || []).map(x => `<option value="${esc(x)}">`).join('');
-            const items = (this.meta.items || []).map(x => `<option value="${esc(x)}">`).join('');
+            const projMap = this.meta.projectIdName || {};
+            const items = (this.meta.items || []).map(x => {
+                const pn = projMap[x];
+                const label = pn ? `${esc(x)} · ${esc(pn)}` : esc(x);
+                return `<option value="${esc(x)}">${label}</option>`;
+            }).join('');
             const lockBanner = sl ? `
                     <div style="background:#fdf2e3;border:1px solid #e67e22;color:#a04000;padding:10px 14px;border-radius:8px;margin-bottom:10px;">
                         🔒 <b>${t('dr.sign.form_banner')}</b>

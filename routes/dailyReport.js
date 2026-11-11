@@ -301,10 +301,22 @@ router.get('/meta', async (req, res) => {
                  WHERE client_id IS NOT NULL AND client_id<>''
             ) t ORDER BY name
         `);
+        // 專案代碼：往來對象專案主表 mgm_customer_projects（active）優先 + 日報歷史 items_id 兜底
+        // 同時返回 { project_id → project_name } 映射，前端 datalist 顯示「代碼 · 專案名」方便識別
         const [itemsRows] = await pool.query(`
-            SELECT DISTINCT items_id FROM daily_report_detail
-             WHERE items_id IS NOT NULL AND items_id<>'' ORDER BY items_id
+            SELECT DISTINCT id FROM (
+                SELECT project_id AS id FROM mgm_customer_projects WHERE COALESCE(status,'active')='active'
+                UNION
+                SELECT items_id AS id FROM daily_report_detail
+                 WHERE items_id IS NOT NULL AND items_id<>''
+            ) t WHERE id IS NOT NULL AND id<>'' ORDER BY id
         `);
+        const [projMapRows] = await pool.query(`
+            SELECT project_id, project_name FROM mgm_customer_projects
+             WHERE COALESCE(status,'active')='active'
+        `);
+        const projectIdName = {};
+        projMapRows.forEach(r => { if (r.project_id) projectIdName[r.project_id] = r.project_name || ''; });
 
         ok(res, {
             wk_types: WK_TYPES,
@@ -312,7 +324,8 @@ router.get('/meta', async (req, res) => {
             departments: deptRows.map(r => r.dept),
             writers: writerRows,
             clients: clientRows.map(r => r.name).filter(Boolean),
-            items: itemsRows.map(r => r.items_id),
+            items: itemsRows.map(r => r.id),
+            projectIdName,
             me: { user_id: actor.user_id, user_name: actor.user_name, depart_id: actor.xuser_dept, isManager: actor.isManager, isSenior: actor.isSenior }
         });
     } catch (err) { fail500(res, err); }
