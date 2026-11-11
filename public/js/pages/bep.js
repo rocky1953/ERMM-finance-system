@@ -11,6 +11,7 @@
     const fmtPct = v => (Number(v) || 0).toFixed(2) + '%';
 
     let BEP = null;
+    let _buHtml = '';
 
     function compute(sale_amt, vals) {
         const material = vals.consumable + vals.packaging + vals.processing
@@ -180,7 +181,7 @@
         return '<div class="bep-wrap">'
             + '<div class="bep-toolbar">'
             + '<label>' + t('bep.toolbar.bu') + ':</label>'
-            + '<select id="bepBU"><option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option></select>'
+            + '<select id="bepBU">' + _buHtml + '</select>'
             + '<label>' + t('bep.toolbar.ym') + ':</label>'
             + '<input type="text" id="bepYM" placeholder="YYYY-MM" value="' + defYM + '">'
             + '<button class="btn-refresh" onclick="bepLoad()">' + t('bep.toolbar.load') + '</button>'
@@ -904,6 +905,7 @@
     }
 
     registerPage('bep', async function(container) {
+        _buHtml = await CodeHelper.buSel();
         container.innerHTML = getHTML();
         var ids = ['bep_sale_input','bep_consumable','bep_packaging','bep_processing','bep_misc_purchase',
                    'bep_freight','bep_customs','bep_service_part_comp',

@@ -3,11 +3,11 @@
  */
 registerPage('kpi', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('kpi.form.bu')}：<select id="kpiBU" onchange="loadKPI()"><option value="">${t('sys.all')}</option>
-                    <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
+                <label>${t('kpi.form.bu')}：<select id="kpiBU" onchange="loadKPI()">${_buAll}</select></label>
                 <label>${t('kpi.form.pct_type')}：<select id="kpiPct" onchange="loadKPI()"><option value="">${t('sys.all')}</option>
                     <option value="asc">asc（${t('kpiQuery.threshold_asc')}）</option><option value="desc">desc（${t('kpiQuery.threshold_desc')}）</option></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="KpiThresholdForm.open()">➕ ${t('kpi.add')}</button>` : ''}
@@ -54,7 +54,8 @@ async function loadKPI() {
 }
 
 const KpiThresholdForm = {
-    open(uid, currentValue) {
+    async open(uid, currentValue) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) {
             API.get(`/api/kpi/${uid}`).then(res => {
                 const data = res.data;
@@ -72,7 +73,7 @@ const KpiThresholdForm = {
         UI.modal(isEdit ? t('kpi.form.title_edit') : t('kpi.form.title_new'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('kpi.form.bu')}</label>
-                    <select id="kf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                    <select id="kf_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>KPI ID</label><input id="kf_id" value="${d.KPI_id||''}"></div>
                 <div class="form-group"><label>${t('kpi.form.name')}</label><input id="kf_name" value="${d.KPI_name||''}"></div>
             </div>

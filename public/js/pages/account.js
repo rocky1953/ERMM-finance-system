@@ -3,11 +3,11 @@
  */
 registerPage('account', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('sys.business')}：<select id="aBU" onchange="loadAccount()"><option value="">${t('sys.all')}</option>
-                    <option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>${t('sys.business')}：<select id="aBU" onchange="loadAccount()">${_buAll}</select></label>
                 <label>${t('monthly.ym')}：<input type="month" id="aYM" onchange="loadAccount()"></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="AccountForm.open()">➕ ${t('account.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadAccount()">🔄 ${t('refresh')}</button>
@@ -46,7 +46,8 @@ async function loadAccount() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 const AccountForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) API.get(`/api/account/${uid}`).then(r => this._render(r.data)).catch(e => UI.toast(e.message,'error'));
         else this._render({ bu_no: State.bu_no });
     },
@@ -54,7 +55,7 @@ const AccountForm = {
         const isEdit = !!d.uid;
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('account.title'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('sys.business')}</label><select id="af_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('sys.business')}</label><select id="af_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="af_ym" value="${(d.YYYY_MM||'')}"></div>
                 <div class="form-group"><label>${t('account.th.type')}</label><input id="af_type" value="${d.acct_type||''}"></div>
             </div>

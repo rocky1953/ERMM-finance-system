@@ -3,11 +3,11 @@
  */
 registerPage('dn', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('sys.business')}：<select id="dnBU" onchange="loadDN()"><option value="">${t('sys.all')}</option>
-                    <option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>${t('sys.business')}：<select id="dnBU" onchange="loadDN()">${_buAll}</select></label>
                 <label>${t('dn.so_nbr')}：<input id="dnSO" onchange="loadDN()"></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="DNForm.open()">➕ ${t('dn.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadDN()">🔄 ${t('refresh')}</button>
@@ -44,7 +44,8 @@ async function loadDN() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 const DNForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) API.get(`/api/dn/${uid}`).then(r => this._render(r.data)).catch(e => UI.toast(e.message,'error'));
         else this._render({ bu_no: State.bu_no });
     },
@@ -52,7 +53,7 @@ const DNForm = {
         const isEdit = !!d.uid;
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('dn.title'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('sys.business')}</label><select id="df_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('sys.business')}</label><select id="df_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('dn.so_nbr')}</label><input id="df_so" value="${d.so_nbr||''}"></div>
                 <div class="form-group"><label>${t('dn.th.dn_date')}</label><input type="date" id="df_date" value="${d.DN_date||''}"></div>
             </div>

@@ -3,11 +3,11 @@
  */
 registerPage('monthly', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('sys.business')}：<select id="mBU" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
-                    <option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>${t('sys.business')}：<select id="mBU" onchange="loadMonthly()">${_buAll}</select></label>
                 <label>${t('monthly.ym')}：<input type="month" id="mYM" onchange="loadMonthly()"></label>
                 <label>${t('relation.th.type')}：<select id="mType" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
                     <option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></label>
@@ -53,7 +53,8 @@ async function loadMonthly() {
 }
 
 const MonthlyForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) API.get(`/api/monthly/${uid}`).then(r => this._render(r.data)).catch(e => UI.toast(e.message,'error'));
         else this._render({ bu_no: State.bu_no, DB_CR: 'CR' });
     },
@@ -62,7 +63,7 @@ const MonthlyForm = {
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('monthly.title'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.business')}</label>
-                    <select id="mf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                    <select id="mf_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'')}"></div>
                 <div class="form-group"><label>${t('relation.th.type')}</label>
                     <select id="mf_type"><option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></div>

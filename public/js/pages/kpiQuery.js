@@ -264,12 +264,12 @@ const CATEGORY_DESC = {
 function buildYGRender(pageId) {
     const cfg = YG_CONFIG[pageId];
     return async (c) => {
+        const _buAll = await CodeHelper.buSel({includeAll:true});
         c.innerHTML = `
             <div class="card">
                 <div class="toolbar">
                     <label>${t('kpiQuery.toolbar.bu')}：<select id="ygBU" onchange="ygLoad('${pageId}')">
-                        <option value="">${t('kpiQuery.toolbar.bu_placeholder')}</option>
-                        <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option>
+                        ${_buAll}
                     </select></label>
                     <label>${t('kpiQuery.toolbar.year')}：<input type="number" id="ygY" min="2000" max="2100" style="width:80px;" onchange="ygLoad('${pageId}')"></label>
                     <label>${t('kpiQuery.toolbar.month')}：<input type="number" id="ygM" min="1" max="12" style="width:60px;" onchange="ygLoad('${pageId}')"></label>

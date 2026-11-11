@@ -3,12 +3,13 @@
  * 预算 vs 实际比较、差异分析、年度预算汇总
  */
 registerPage('budget', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">预算编制与执行 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">预算 vs 实际差异分析</small></h2>
             <div>
                 <select id="bdBu" onchange="loadBudget()" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <select id="bdYear" onchange="loadBudget()" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                     <option value="2025">2025</option><option value="2024">2024</option>

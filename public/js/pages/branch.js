@@ -3,11 +3,11 @@
  */
 registerPage('branch', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('sys.business')}：<select id="brBU" onchange="loadBranch()"><option value="">${t('sys.all')}</option>
-                    <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
+                <label>${t('sys.business')}：<select id="brBU" onchange="loadBranch()">${_buAll}</select></label>
                 <label>${t('system.col.status')}：<select id="brFlag" onchange="loadBranch()"><option value="">${t('sys.all')}</option>
                     <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="BranchForm.open()">➕ ${t('branch.btn.add')}</button>` : ''}
@@ -51,7 +51,8 @@ async function loadBranch() {
 }
 
 const BranchForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) {
             API.get(`/api/branch/${uid}`).then(res => this._render(res.data))
                .catch(e => UI.toast(e.message,'error'));
@@ -64,7 +65,7 @@ const BranchForm = {
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('branch.title'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.business')}</label>
-                    <select id="bf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                    <select id="bf_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('branch.th.id')}</label><input id="bf_id" value="${d.branch_id||''}"></div>
                 <div class="form-group"><label>${t('system.col.status')}</label>
                     <select id="bf_flag"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>

@@ -555,7 +555,8 @@ async function loadSysKPI() {
 }
 
 const KpiForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) {
             API.get(`/api/kpi/${uid}`).then(r => this._render(r.data, true))
                 .catch(() => API.get(`/api/system/kpi?bu_no=${State.bu_no}`).then(r => {
@@ -570,7 +571,7 @@ const KpiForm = {
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + ' KPI', `
             <div class="form-row">
                 <div class="form-group"><label>${t('sys.business')}</label>
-                    <select id="kf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                    <select id="kf_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('sys.kpi_id')}</label><input id="kf_id" value="${d.KPI_id||''}" ${isEdit?'disabled':''}></div>
                 <div class="form-group"><label>${t('sys.kpi_name')}</label><input id="kf_name" value="${d.KPI_name||''}"></div>
             </div>

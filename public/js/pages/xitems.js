@@ -4,6 +4,7 @@
  */
 registerPage('xitems', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     const ageingOpts = [
         { value: '',  label: t('sys.all') },
         { value: 'A 正常',     label: t('xi.aging_A') },
@@ -14,8 +15,7 @@ registerPage('xitems', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('topbar.bu')}：<select id="xiBU" onchange="loadXitems()"><option value="">${t('sys.all')}</option>
-                    <option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>${t('topbar.bu')}：<select id="xiBU" onchange="loadXitems()">${_buAll}</select></label>
                 <label>${t('xi.aging_label')}：<select id="xiAge" onchange="loadXitems()">
                     ${ageingOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
                 </select></label>
@@ -76,7 +76,8 @@ async function loadXitems() {
 }
 
 const XitemsForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) API.get(`/api/xitems/${uid}`).then(r => this._render(r.data)).catch(e => UI.toast(e.message,'error'));
         else this._render({ bu_no: State.bu_no, exchange_rate: 1 });
     },
@@ -91,7 +92,7 @@ const XitemsForm = {
         ];
         UI.modal((isEdit ? t('modal.edit_po') : t('xi.add')), `
             <div class="form-row">
-                <div class="form-group"><label>${t('xi.col.bu')}</label><select id="xi_fbu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('xi.col.bu')}</label><select id="xi_fbu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('xi.col.xitems')}</label><input id="xi_fx" value="${d.xitems||''}"></div>
                 <div class="form-group"><label>${t('xi.form.date_label')}</label><input type="date" id="xi_fdate" value="${d.stock_date||''}"></div>
             </div>

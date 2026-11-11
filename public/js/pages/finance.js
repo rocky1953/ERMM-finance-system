@@ -3,6 +3,8 @@
  * 对应 docs/财务核心业务流程图.md
  */
 registerPage('finance', async (c) => {
+    const _bu = await CodeHelper.buSel();
+    Finance._bu = _bu;
     c.innerHTML = `
         <div class="card" style="padding:16px;">
             <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #eee;">
@@ -39,7 +41,7 @@ window.Finance = {
     async renderVouchers(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="fvBU"><option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>BU：<select id="fvBU">${this._bu||''}</select></label>
                 <label>期间：<input type="month" id="fvYM"></label>
                 <label>状态：<select id="fvStatus"><option value="">全部</option>
                     <option>DRAFT</option><option>SUBMITTED</option><option>APPROVED</option><option>REJECTED</option><option>POSTED</option></select></label>
@@ -204,7 +206,7 @@ window.Finance = {
     async renderTax(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="ftBU"><option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>BU：<select id="ftBU">${this._bu||''}</select></label>
                 <label>期间：<input type="month" id="ftYM"></label>
                 <label>税种：<select id="ftType"><option value="">全部</option>
                     <option value="VAT">增值税</option><option value="IT">企业所得税</option><option value="ST">印花税</option></select></label>
@@ -425,7 +427,7 @@ window.Finance = {
     async renderRecon(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="frBU"><option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>BU：<select id="frBU">${this._bu||''}</select></label>
                 <label>期间：<input type="month" id="frYM"></label>
                 <button class="btn btn-warning" onclick="Finance.runRecon()">▶ 执行勾稽</button>
                 <button class="btn btn-success" onclick="Finance.loadRecon()">🔄</button>

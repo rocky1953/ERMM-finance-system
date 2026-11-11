@@ -29,12 +29,13 @@ function resetConvId() {
 
 registerPage('aiqa', async (c) => {
     const convId = getConvId(); // 本次页面会话的 conversation_id
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">🤖 ${t('page.aiqa')} <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">${t('aiqa.subtitle')}</small></h2>
             <div>
                 <select id="aiBu" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <input type="month" id="aiMonth" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;" title="${t('aiqa.month')}">
             </div>
@@ -351,11 +352,11 @@ const AIRecords = {
     pageSize: 10,
 
     async open() {
+        const _buAll = await CodeHelper.buSel({includeAll:true, allLabel: t('airecords.all_bu')});
         UI.modal(`📋 ${t('airecords.title')}`, `
             <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
                 <select id="airBu" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="">${t('airecords.all_bu')}</option>
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_buAll}
                 </select>
                 <input type="text" id="airKw" placeholder="${t('airecords.kw_ph')}" style="flex:1;min-width:180px;padding:6px 10px;border:1px solid #ddd;border-radius:6px;" onkeydown="if(event.key==='Enter')AIRecords.search()">
                 <button class="btn btn-primary btn-sm" onclick="AIRecords.search()">🔍 ${t('airecords.search')}</button>

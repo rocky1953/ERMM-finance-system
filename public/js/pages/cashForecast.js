@@ -3,6 +3,7 @@
  * 未来 13 周滚动预测（點估計 + Monte Carlo 概率分佈 + 壓力測試）
  */
 registerPage('cashForecast', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
             <h2 style="margin:0;font-size:20px;">💧 ${t('cash.forecast_title') || '現金流量預測'}
@@ -10,7 +11,7 @@ registerPage('cashForecast', async (c) => {
             </h2>
             <div>
                 <select id="cfBu" onchange="loadCashForecast()" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <button class="btn btn-outline" onclick="openSafeLevelModal()" style="margin-left:6px;">⚙ ${t('cash.safe_level') || '安全水位'}</button>
                 <button class="btn btn-success" onclick="loadCashForecast()" style="margin-left:6px;">🔄</button>

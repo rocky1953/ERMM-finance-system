@@ -136,14 +136,13 @@ const WarRoom = {
 };
 
 registerPage('warRoom', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
             <h2 style="margin:0;font-size:20px;">${t('warRoom.title')} <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">${t('warRoom.subtitle')}</small></h2>
             <div>
                 <select id="wrBu" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option>
-                    <option value="SZ">SZ</option>
-                    <option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <input type="month" id="wrMonth" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                 <button class="btn btn-primary" onclick="WarRoom.refresh()" style="margin-left:6px;">🔄 ${t('refresh')}</button>

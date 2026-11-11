@@ -3,12 +3,13 @@
  * 乐观/基准/悲观 三情景参数设定，模拟对关键财务指标的冲击
  */
 registerPage('scenario', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">财务情景模拟 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">假设性情景对关键指标的冲击分析</small></h2>
             <div>
                 <select id="scBu" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <input type="month" id="scMonth" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                 <button class="btn btn-primary" onclick="Scenario.run()" style="margin-left:6px;">▶ 执行模拟</button>

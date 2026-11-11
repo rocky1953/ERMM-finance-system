@@ -3,12 +3,13 @@
  * 部门损益、成本结构、人效分析
  */
 registerPage('mgmtAccounting', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">管理会计 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">部门损益 · 成本结构 · 人效分析</small></h2>
             <div>
                 <select id="maBu" onchange="loadMA()" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <select id="maYear" onchange="loadMA()" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                     <option value="2025">2025</option><option value="2024">2024</option>

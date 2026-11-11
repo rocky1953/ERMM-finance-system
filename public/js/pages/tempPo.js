@@ -3,11 +3,11 @@
  */
 registerPage('tempPo', async (c) => {
     const _mgr = Auth.isManager();
+    const _buAll = await CodeHelper.buSel({includeAll:true});
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('topbar.bu')}：<select id="tpBU" onchange="loadTempPo()"><option value="">${t('sys.all')}</option>
-                    <option>HM</option><option>HN</option><option>SZ</option></select></label>
+                <label>${t('topbar.bu')}：<select id="tpBU" onchange="loadTempPo()">${_buAll}</select></label>
                 <label>${t('tp.form.batch')}：<input id="tpBatch" onchange="loadTempPo()" placeholder="batch_id"></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="TempPoForm.open()">➕ ${t('tp.add')}</button>
                 <button class="btn btn-warning" onclick="batchStep1()">▶ ${t('tp.run_step1')}</button>` : ''}
@@ -51,7 +51,8 @@ async function loadTempPo() {
 }
 
 const TempPoForm = {
-    open(uid) {
+    async open(uid) {
+        this._buSel = await CodeHelper.buSel();
         if (uid) API.get(`/api/temp-po/${uid}`).then(r => this._render(r.data)).catch(e => UI.toast(e.message,'error'));
         else this._render({ bu_no: State.bu_no, exchange_rate: 1 });
     },
@@ -59,7 +60,7 @@ const TempPoForm = {
         const isEdit = !!d.uid;
         UI.modal((isEdit ? t('modal.edit_po') : t('po.form.title_new')), `
             <div class="form-row">
-                <div class="form-group"><label>${t('tp.form.bu')}</label><select id="tp_fbu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
+                <div class="form-group"><label>${t('tp.form.bu')}</label><select id="tp_fbu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('tp.col.po_id')}</label><input id="tp_fid" value="${d.po_id||''}"></div>
                 <div class="form-group"><label>${t('tp.form.batch')}</label><input id="tp_fbat" value="${d.batch_id||''}" placeholder="auto or Bxxxx"></div>
             </div>

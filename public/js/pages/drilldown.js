@@ -3,12 +3,13 @@
  * 产品毛利排行 / 客户贡献度 / 部门费用分析
  */
 registerPage('drilldown', async (c) => {
+    const _bu = await CodeHelper.buSel();
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <h2 style="margin:0;font-size:20px;">多维度下钻分析 <small style="font-size:13px;color:#7f8c8d;font-weight:normal;">找出吃利润的产品、客户、部门</small></h2>
             <div>
                 <select id="ddBu" onchange="loadDrilldown()" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
-                    <option value="HM">HM</option><option value="SZ">SZ</option><option value="HN">HN</option>
+                    ${_bu}
                 </select>
                 <select id="ddTab" onchange="loadDrilldown()" style="padding:7px;border:1px solid #ddd;border-radius:6px;margin-left:6px;">
                     <option value="product">产品毛利</option>
