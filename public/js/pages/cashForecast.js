@@ -293,9 +293,10 @@ async function cashAttribution() {
     const mask = document.createElement('div');
     mask.className = 'modal-mask';
     mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const stressLabel = `${t('cash.stress_pressure') || '壓力'} ${t('cash.revenue_drop') || '收入下降'}-${rev}% / ${t('cash.cost_rise') || '支出上升'}+${cost}%`;
     mask.innerHTML = `<div style="background:#fff;border-radius:10px;width:720px;max-height:86vh;overflow:auto;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h3 style="margin:0;font-size:16px;">🧠 ${t('cash.ai_attribution') || 'AI 智能归因'} <span style="font-size:12px;color:#7f8c8d;font-weight:normal;">${bu} · 压力 收入-${rev}% / 支出+${cost}%</span></h3>
+            <h3 style="margin:0;font-size:16px;">🧠 ${t('cash.ai_attribution') || 'AI 智能归因'} <span style="font-size:12px;color:#7f8c8d;font-weight:normal;">${bu} · ${stressLabel}</span></h3>
             <button onclick="this.closest('.modal-mask').remove()" style="border:none;background:transparent;font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div id="cfAttrBody" style="color:#7f8c8d;font-size:13px;">⏳ ${t('loading')}</div>
@@ -334,11 +335,11 @@ async function cashAttribution() {
             : '';
 
         body.innerHTML = `
-            <div style="margin-bottom:14px;"><b style="color:#2c3e50;">📋 Top3 拖累原因（規則引擎）</b></div>
+            <div style="margin-bottom:14px;"><b style="color:#2c3e50;">📋 ${t('cash.top_reasons') || 'Top3 拖累原因'}</b></div>
             ${topHtml}
-            <div style="margin:18px 0 10px;"><b style="color:#2c3e50;">🤖 AI 根因解釋（${d.provider} · ${d.model}）</b></div>
+            <div style="margin:18px 0 10px;"><b style="color:#2c3e50;">🤖 ${t('cash.ai_engine') || 'AI 根因解釋'}（${d.provider} · ${d.model}）</b></div>
             <div style="color:#2c3e50;line-height:1.75;white-space:pre-wrap;font-size:14px;background:#fafafa;padding:12px;border-radius:6px;">${d.explanation || ''}</div>
-            ${suggHtml ? `<div style="margin:16px 0 8px;"><b style="color:#2c3e50;">💡 改進建議</b></div>${suggHtml}` : ''}
+            ${suggHtml ? `<div style="margin:16px 0 8px;"><b style="color:#2c3e50;">💡 ${t('cash.suggestions') || '改進建議'}</b></div>${suggHtml}` : ''}
         `;
     } catch (e) {
         const body = document.getElementById('cfAttrBody');
