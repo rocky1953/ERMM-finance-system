@@ -117,18 +117,20 @@ const CodeTable = {
     },
 
     // ------- 弹窗：新增类型 -------
-    addType() {
+    async addType() {
         const name = prompt(t('codeTable.prompt_new_type') || '请输入新的字典类型代号（英文，如 RELATION_TYPE、WK_TYPE）：', '');
         if (!name) return;
         const clean = name.trim().toUpperCase().replace(/\s+/g, '_');
         if (!/^[A-Z0-9_]+$/.test(clean)) { alert(t('codeTable.bad_name') || '类型代号只能是大写英文字母、数字和下划线'); return; }
         // 同时创建第一笔码值作为入口
         const val = prompt(t('codeTable.prompt_first_value') || `为类型「${clean}」输入第一笔码值（可留空，之后再加）：`, '');
-        const body = { code_type: clean, code_value: (val || clean).trim(), inuse_flag: 'USE' };
-        API.post('/api/codes', body).then(() => {
+        try {
+            await API.post('/api/codes', { code_type: clean, code_value: (val || clean).trim(), inuse_flag: 'USE' });
+            await API.post('/api/codes/refresh', { code_type: clean });
+            Codes.invalidate(clean);
             this.curType = clean;
             this.init();
-        }).catch(e => alert(e.message));
+        } catch (e) { alert(e.message); }
     },
 
     // ------- 弹窗：新增码值 -------
@@ -217,6 +219,9 @@ const CodeTable = {
                 } else {
                     await API.post('/api/codes', body);
                 }
+                // 通知后端清缓存 + 前端清缓存
+                await API.post('/api/codes/refresh', { code_type: codeType });
+                Codes.invalidate(codeType);
                 mask.remove();
                 this.curType = codeType;
                 await this.init();
@@ -226,6 +231,13 @@ const CodeTable = {
 
     async del(id, label) {
         if (!confirm(`${t('codeTable.confirm_delete') || '确定删除码值'}「${label}」?`)) return;
-        try { await API.delete(`/api/codes/${id}`); this.loadCodes(); } catch (e) { alert(e.message); }
+        try {
+            await API.delete(`/api/codes/${id}`);
+            if (this.curType) {
+                await API.post('/api/codes/refresh', { code_type: this.curType });
+                Codes.invalidate(this.curType);
+            }
+            this.loadCodes();
+        } catch (e) { alert(e.message); }
     }
 };

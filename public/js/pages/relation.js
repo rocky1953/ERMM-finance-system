@@ -1,23 +1,26 @@
 /**
  * 往来对象 relation_detail CRUD（客户 / 供应商 / 关系人主档）
+ * 下拉类型 → 系统码表：BUSINESS_ID / RELATION_TYPE / FLAG
  */
 registerPage('relation', async (c) => {
     const _mgr = Auth.isManager();
     c.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <label>${t('sys.business')}：<select id="relBU" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
-                    <option value="HM">HM</option><option value="HN">HN</option><option value="SZ">SZ</option></select></label>
-                <label>${t('relation.th.type')}：<select id="relType" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
-                    <option value="客户">${t('relation.type.customer')}</option><option value="供应商">${t('relation.type.supplier')}</option><option value="关系人">${t('relation.type.related')}</option></select></label>
-                <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"><option value="">${t('sys.all')}</option>
-                    <option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></label>
+                <label>${t('sys.business')}：<select id="relBU" onchange="loadRelation()"></select></label>
+                <label>${t('relation.th.type')}：<select id="relType" onchange="loadRelation()"></select></label>
+                <label>${t('system.col.status')}：<select id="relFlag" onchange="loadRelation()"></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="RelationForm.open()">➕ ${t('relation.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadRelation()">🔄 ${t('refresh')}</button>
             </div>
             <div id="relationTable">${t('loading')}</div>
         </div>
     `;
+    await Codes.renderAll({
+        '#relBU':   { codeType: 'BUSINESS_ID',  placeholder: t('sys.all'), useDescription: false },
+        '#relType': { codeType: 'RELATION_TYPE', placeholder: t('sys.all') },
+        '#relFlag': { codeType: 'FLAG',         placeholder: t('sys.all') },
+    });
     document.getElementById('relBU').value = State.bu_no;
     loadRelation();
 });
@@ -66,16 +69,13 @@ const RelationForm = {
             this._render({ bu_no: State.bu_no, inuse_flag: 'USE', relation_type: '供应商' });
         }
     },
-    _render(d) {
+    async _render(d) {
         const isEdit = !!d.uid;
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('relation.title'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('sys.business')}</label>
-                    <select id="rf_bu"><option>HM</option><option>HN</option><option>SZ</option></select></div>
-                <div class="form-group"><label>${t('relation.th.type')}</label>
-                    <select id="rf_type"><option>客户</option><option>供应商</option><option>关系人</option></select></div>
-                <div class="form-group"><label>${t('system.col.status')}</label>
-                    <select id="rf_flag"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
+                <div class="form-group"><label>${t('sys.business')}</label><select id="rf_bu"></select></div>
+                <div class="form-group"><label>${t('relation.th.type')}</label><select id="rf_type"></select></div>
+                <div class="form-group"><label>${t('system.col.status')}</label><select id="rf_flag"></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('relation.th.id')}</label><input id="rf_id" value="${d.relation_id||''}"></div>
@@ -90,6 +90,12 @@ const RelationForm = {
                 <div class="form-group" style="flex:1"><label>${t('relation.form.address')}</label><input id="rf_addr" value="${d.address||''}" style="width:100%"></div>
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="RelationForm.save(${d.uid||0})">${t('save')}</button>`);
+
+        await Codes.renderAll({
+            '#rf_bu':   { codeType: 'BUSINESS_ID',  useDescription: false },
+            '#rf_type': { codeType: 'RELATION_TYPE' },
+            '#rf_flag': { codeType: 'FLAG' },
+        });
         if (d.bu_no) document.getElementById('rf_bu').value = d.bu_no;
         if (d.relation_type) document.getElementById('rf_type').value = d.relation_type;
         if (d.inuse_flag) document.getElementById('rf_flag').value = d.inuse_flag;

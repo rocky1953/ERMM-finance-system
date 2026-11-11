@@ -57,7 +57,7 @@ function taskCard(t) {
 
 // 新建任务表单
 const ActionForm = {
-    open() {
+    async open() {
         UI.modal('新建行动任务', `
             <div class="form-row"><label>任务标题 *</label><input id="af_title" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             <div class="form-row"><label>描述</label><textarea id="af_desc" rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></textarea></div>
@@ -66,11 +66,12 @@ const ActionForm = {
                 <div><label>截止日</label><input type="date" id="af_due" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
             <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div><label>优先级</label><select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>
+                <div><label>优先级</label><select id="af_pr" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></select></div>
                 <div><label>来源指标</label><input id="af_kpi" placeholder="如 gross_profit" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
             </div>
         `, `<button class="btn btn-ghost" onclick="UI.closeModal()">取消</button>
             <button class="btn btn-primary" onclick="ActionForm.save()">储存</button>`);
+        await Codes.renderSelect('#af_pr', 'ACTION_PRIORITY', { selected: 'medium' });
     },
     async save() {
         const data = {
@@ -95,29 +96,25 @@ const ActionForm = {
 
 // 任务详情（更新状态/进度）
 const ActionDetail = {
-    open(uid) {
-        API.get(`/api/action/${uid}`).then(res => {
-            const t = res.data;
-            UI.modal(`任务：${t.title}`, `
-                <p><b>描述：</b>${t.description || '-'}</p>
-                <p><b>负责人：</b>${t.assignee || '-'} ｜ <b>截止日：</b>${t.due_date || '-'} ｜ <b>优先级：</b>${t.priority}</p>
-                <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-                    <div><label>状态</label>
-                        <select id="ad_status" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">
-                            <option value="pending" ${t.status==='pending'?'selected':''}>待处理</option>
-                            <option value="doing" ${t.status==='doing'?'selected':''}>进行中</option>
-                            <option value="done" ${t.status==='done'?'selected':''}>已完成</option>
-                        </select>
-                    </div>
-                    <div><label>进度 ${t.progress}%</label>
-                        <input type="range" id="ad_prg" min="0" max="100" value="${t.progress}" oninput="document.getElementById('ad_prg_v').textContent=this.value+'%'">
-                        <span id="ad_prg_v">${t.progress}%</span>
-                    </div>
+    async open(uid) {
+        const res = await API.get(`/api/action/${uid}`);
+        const t = res.data;
+        UI.modal(`任务：${t.title}`, `
+            <p><b>描述：</b>${t.description || '-'}</p>
+            <p><b>负责人：</b>${t.assignee || '-'} ｜ <b>截止日：</b>${t.due_date || '-'} ｜ <b>优先级：</b>${t.priority}</p>
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+                <div><label>状态</label>
+                    <select id="ad_status" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></select>
                 </div>
-            `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
-                <button class="btn btn-danger" onclick="ActionDetail.del(${t.uid})">删除</button>
-                <button class="btn btn-primary" onclick="ActionDetail.save(${t.uid})">储存</button>`);
-        });
+                <div><label>进度 ${t.progress}%</label>
+                    <input type="range" id="ad_prg" min="0" max="100" value="${t.progress}" oninput="document.getElementById('ad_prg_v').textContent=this.value+'%'">
+                    <span id="ad_prg_v">${t.progress}%</span>
+                </div>
+            </div>
+        `, `<button class="btn btn-ghost" onclick="UI.closeModal()">关闭</button>
+            <button class="btn btn-danger" onclick="ActionDetail.del(${t.uid})">删除</button>
+            <button class="btn btn-primary" onclick="ActionDetail.save(${t.uid})">储存</button>`);
+        await Codes.renderSelect('#ad_status', 'ACTION_STATUS', { selected: t.status });
     },
     async save(uid) {
         try {

@@ -45,12 +45,12 @@ async function loadBank() {
 }
 
 const BankForm = {
-    open() {
+    async open() {
         UI.modal(t('bank.add'), `
             <div class="form-row">
                 <div class="form-group"><label>${t('bank.loan_id')}</label><input id="bf_id" placeholder="LOAN001"></div>
                 <div class="form-group"><label>${t('bank.bank')}</label><input id="bf_bank"></div>
-                <div class="form-group"><label>${t('bank.loan_type')}</label><select id="bf_type"><option>Short-term</option><option>Long-term</option><option>FX Loan</option></select></div>
+                <div class="form-group"><label>${t('bank.loan_type')}</label><select id="bf_type"></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('bank.loan_amt')}</label><input type="number" id="bf_amt" value="0"></div>
@@ -63,6 +63,7 @@ const BankForm = {
                 <div class="form-group"><label>End Date</label><input type="date" id="bf_end"></div>
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="BankForm.save()">${t('save')}</button>`);
+        await Codes.renderSelect('#bf_type', 'LOAN_TYPE', { useDescription: false });
     },
     async save() {
         const body = {

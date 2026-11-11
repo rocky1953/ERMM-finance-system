@@ -221,6 +221,9 @@ async function start() {
         console.error('❌ 資料庫連線失敗，服務未啟動');
         process.exit(1);
     }
+    // 预加载系统码表缓存
+    const { initAll } = require('./services/codeCache');
+    await initAll();
     app.listen(PORT, () => {
         console.log(`\n🚀 ERMM 財務模組 API 已啟動: http://localhost:${PORT}`);
         console.log(`📖 API 文件: http://localhost:${PORT}/api/health`);

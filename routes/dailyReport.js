@@ -120,18 +120,17 @@ async function loadYearOkrs(bu, yyyy) {
     return m;
 }
 
-// 时间类别（生命平衡轮）固定 9 项，顺序即图表展示顺序
-const WK_TYPES = ['日常工作', '职业发展', '财务状况', '健康', '娱乐休闲', '家庭', '朋友圈', '个人成长', '自我实现'];
-// 生命平衡轮八大模块（生活类）
-const LIFE_TYPES = WK_TYPES.slice(1);
-// 经理级身份：admin='Yes' 或兼容繁简体的主管类别（部門主管/部门主管、高階主管/高阶主管、部門經理/部门经理）及历史错别字
-const MANAGER_TYPES = ['部門主管', '高階主管', '部門經理', '部门主管', '部门经理', '高阶主管', '高价主管'];
+const { wkTypes, lifeTypes, managerTypes } = require('../services/codeCache');
+
+// 时间类别、生活类别、经理身份 —— 全部从系统码表读取，由 codeCache 提供 getter
+// 每次访问动态取（已预加载则拿码表值，否则拿硬编码兜底）
+
 // 经理身份归一化：xuser_type 先做简→繁关键映射再判断；admin 自 migration 012 起統一 Yes/No
 function isManagerRole(admin, xuserType) {
     const norm = (s) => String(s || '')
         .replace(/部门/g, '部門').replace(/经理/g, '經理').replace(/高阶/g, '高階')
         .replace(/高价/g, '高階');
-    return admin === 'Yes' || MANAGER_TYPES.includes(norm(xuserType));
+    return admin === 'Yes' || managerTypes().includes(norm(xuserType));
 }
 // 高階权限：仅 管理员(admin='Yes') 或 高階主管 —— 解锁等制衡性操作仅限此身份
 function isSeniorRole(admin, xuserType) {
@@ -319,8 +318,8 @@ router.get('/meta', async (req, res) => {
         projMapRows.forEach(r => { if (r.project_id) projectIdName[r.project_id] = r.project_name || ''; });
 
         ok(res, {
-            wk_types: WK_TYPES,
-            life_types: LIFE_TYPES,
+            wk_types: wkTypes(),
+            life_types: lifeTypes(),
             departments: deptRows.map(r => r.dept),
             writers: writerRows,
             clients: clientRows.map(r => r.name).filter(Boolean),
@@ -2027,7 +2026,7 @@ router.post('/', async (req, res) => {
             if (tMin <= fMin) return fail(res, '结束时间必须晚于开始时间', 400);
             if ((tMin - fMin) < 30) return fail(res, '每一个工作时间不足半小时不允许单独记录', 400);
             const useTime = diffHours(from, to);
-            const wk = WK_TYPES.includes(row.wk_type) ? row.wk_type : '日常工作';
+            const wk = wkTypes().includes(row.wk_type) ? row.wk_type : '日常工作';
             details.push({
                 projects, from_time: from, to_time: to, use_time: useTime, wk_type: wk,
                 client_id: trimOrNull(row.client_id), items_id: trimOrNull(row.items_id)
@@ -2200,7 +2199,7 @@ router.get('/analysis/time-category', async (req, res) => {
              GROUP BY wk_type
         `, params);
         const map = Object.fromEntries(rows.map(r => [r.wk_type, Number(r.hours)]));
-        ok(res, WK_TYPES.map(k => ({ wk_type: k, hours: map[k] || 0 })));
+        ok(res, wkTypes().map(k => ({ wk_type: k, hours: map[k] || 0 })));
     } catch (err) { fail500(res, err); }
 });
 
@@ -2285,7 +2284,7 @@ router.get('/analysis/balance-wheel', async (req, res) => {
              GROUP BY wk_type
         `, params);
         const map = Object.fromEntries(rows.map(r => [r.wk_type, Number(r.hours)]));
-        const wheel = LIFE_TYPES.map(k => ({ wk_type: k, hours: map[k] || 0 }));
+        const wheel = lifeTypes().map(k => ({ wk_type: k, hours: map[k] || 0 }));
         const workHours = map['日常工作'] || 0;
         const lifeHours = Math.round(wheel.reduce((s, r) => s + r.hours, 0) * 100) / 100;
         ok(res, { wheel, work_hours: workHours, life_hours: lifeHours,
