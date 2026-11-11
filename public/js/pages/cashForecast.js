@@ -33,6 +33,7 @@ registerPage('cashForecast', async (c) => {
                         <input type="range" id="stressCost" min="0" max="50" value="0" step="5" oninput="applyStress()" style="width:100px;">
                         <span id="stressCostVal" style="min-width:32px;font-weight:600;color:#f39c12;">0%</span>
                     </label>
+                    <button class="btn btn-primary" onclick="cashAttribution()" style="padding:5px 12px;font-size:13px;white-space:nowrap;">🧠 ${t('cash.ai_attribution') || 'AI 智能归因'}</button>
                 </div>
             </div>
             <div id="cfProbContent">${t('loading')}</div>
@@ -278,6 +279,71 @@ function applyStress() {
         API.get(`/api/cash-forecast/weekly?bu_no=${bu}&weeks=13`).then(r => {
             renderMCChart(_mcData, Number(rev.value), Number(cost.value), r.data?.safe_level || 3000000);
         });
+    }
+}
+
+// ===== AI 智能归因（现金流预测） =====
+async function cashAttribution() {
+    if (!_mcData) { alert(t('cash.need_mc') || '請先切換到 Monte Carlo 概率帶模式'); return; }
+    const bu = document.getElementById('cfBu').value;
+    const rev = document.getElementById('stressRev')?.value || 0;
+    const cost = document.getElementById('stressCost')?.value || 0;
+    const safeLevel = _mcData.weekly?.[0]?.safe_level || 3000000;
+
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    mask.innerHTML = `<div style="background:#fff;border-radius:10px;width:720px;max-height:86vh;overflow:auto;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <h3 style="margin:0;font-size:16px;">🧠 ${t('cash.ai_attribution') || 'AI 智能归因'} <span style="font-size:12px;color:#7f8c8d;font-weight:normal;">${bu} · 压力 收入-${rev}% / 支出+${cost}%</span></h3>
+            <button onclick="this.closest('.modal-mask').remove()" style="border:none;background:transparent;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div id="cfAttrBody" style="color:#7f8c8d;font-size:13px;">⏳ ${t('loading')}</div>
+    </div>`;
+    document.body.appendChild(mask);
+    mask.addEventListener('click', (e) => { if (e.target === mask) mask.remove(); });
+
+    try {
+        const point = await API.get(`/api/cash-forecast/weekly?bu_no=${bu}&weeks=13`).then(r => r.data).catch(() => null);
+        const res = await API.post('/api/diagnosis/cash-attribution', {
+            bu_no: bu,
+            lang: I18N._lang,
+            mc: _mcData,
+            stressRev: Number(rev),
+            stressCost: Number(cost),
+            safe_level: safeLevel,
+            point_summary: point
+        });
+        const d = res.data;
+        const body = document.getElementById('cfAttrBody');
+
+        // 规则引擎 Top3
+        const topHtml = (d.top_reasons || []).map(r => `
+            <div style="margin-bottom:10px;padding:10px;border-left:3px solid #2563eb;background:#f0f7ff;border-radius:4px;">
+                <b>#${r.rank} [${r.dim}]</b> ${r.dim !== r.desc ? r.desc : ''}<br>
+                <span style="color:#e67e22;font-size:12px;">${r.impact}</span> ·
+                <span style="color:#27ae60;font-size:12px;">💡 ${r.suggestion}</span>
+            </div>
+        `).join('');
+
+        // LLM 建议（前 3 条匹配，无就切分 explanation）
+        const suggestions = d.suggestions && d.suggestions.length ? d.suggestions : [];
+        const suggHtml = suggestions.length
+            ? suggestions.map((s, i) => `<div style="margin:4px 0;padding:8px;background:#f0fff4;border-left:3px solid #27ae60;border-radius:4px;">
+                <b style="color:#27ae60;">${i + 1}.</b> ${s}</div>`).join('')
+            : '';
+
+        body.innerHTML = `
+            <div style="margin-bottom:14px;"><b style="color:#2c3e50;">📋 Top3 拖累原因（規則引擎）</b></div>
+            ${topHtml}
+            <div style="margin:18px 0 10px;"><b style="color:#2c3e50;">🤖 AI 根因解釋（${d.provider} · ${d.model}）</b></div>
+            <div style="color:#2c3e50;line-height:1.75;white-space:pre-wrap;font-size:14px;background:#fafafa;padding:12px;border-radius:6px;">${d.explanation || ''}</div>
+            ${suggHtml ? `<div style="margin:16px 0 8px;"><b style="color:#2c3e50;">💡 改進建議</b></div>${suggHtml}` : ''}
+        `;
+    } catch (e) {
+        const body = document.getElementById('cfAttrBody');
+        if (body) body.innerHTML = `<div style="color:#e74c3c;padding:10px;">❌ ${e.message || t('error')}</div>
+            <div style="color:#7f8c8d;font-size:12px;margin-top:8px;">${t('cash.ai_setup_hint') || '請確認「系統設定 → API Key 管理」已設定 LLM 服務商（DeepSeek/Kimi）的 API Key'}</div>`;
     }
 }
 

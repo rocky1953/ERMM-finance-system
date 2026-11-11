@@ -176,6 +176,159 @@ router.post('/ai-attribution', async (req, res) => {
     }
 });
 
+// 现金流預測 AI 智能歸因：接收 Monte Carlo 結果，規則引擎給 Top3 拖累原因，LLM 出自然語言解釋
+router.post('/cash-attribution', async (req, res) => {
+    try {
+        const { bu_no, lang, mc, stressRev = 0, stressCost = 0, safe_level = 0, point_summary } = req.body;
+        if (!bu_no || !mc) return fail(res, '需要 bu_no 與 mc');
+
+        const cfg = await getDefaultProvider(pool);
+        if (!cfg) return fail(res, '尚未設定任何 LLM 服務商的 API Key，請至「系統設定 → API Key 管理」設定');
+
+        // 規則引擎：Top3 拖累原因
+        const reasons = cashTopReasons(mc, safe_level, stressRev, stressCost, point_summary, lang);
+
+        const langMap = {
+            'zh-TW': { name: '繁體中文', root: '根因解釋（200~300 字）', sug: '改進建議（以「建議1：」「建議2：」「建議3：」開頭，每條 1~2 句）' },
+            'zh-CN': { name: '简体中文', root: '根因解释（200~300 字）', sug: '改进建议（以「建议1：」「建议2：」「建议3：」开头，每条 1~2 句）' },
+            'en':    { name: 'English', root: 'Root cause (200~300 words)', sug: 'Suggestions (each starts with "Suggestion 1:", "Suggestion 2:", "Suggestion 3:")' }
+        };
+        const lm = langMap[lang] || langMap['zh-TW'];
+
+        const ctx = {
+            公司別: bu_no,
+            is_anomaly: (mc.prob_all || 0) > 5,
+            '整体风险概率_13周': `${(mc.prob_all || 0).toFixed(1)}%`,
+            '4周内缺口概率': `${(mc.prob_4w || 0).toFixed(1)}%`,
+            '8周内缺口概率': `${(mc.prob_8w || 0).toFixed(1)}%`,
+            最高风险周: `W${mc.max_gap_week || '-'}（${(mc.max_gap_prob || 0).toFixed(1)}%）`,
+            安全水位: `${Number(safe_level || 0).toFixed(0)}`,
+            当前余额: point_summary ? Number(point_summary.current_balance || 0).toFixed(0) : '-',
+            '13周最低余额_点估计': point_summary ? Number(point_summary.min_balance || 0).toFixed(0) : '-',
+            AR周期_天: mc.ar_days,
+            AP周期_天: mc.ap_days,
+            压力测试: `收入下降 ${stressRev}% / 支出上升 ${stressCost}%`,
+            'Top3拖累原因': reasons.map(r => `${r.rank}. [${r.dim}] ${r.desc}（影響：${r.impact}；建議：${r.suggestion}）`)
+        };
+
+        const messages = [
+            { role: 'system', content: `你是資深財務分析顧問，專精現金流風險管理。請依據提供的 Monte Carlo 現金流預測結果與規則引擎的 Top3 拖累原因，用${lm.name}輸出：1) ${lm.root}，2) ${lm.sug}。結構清晰，避免空泛。` },
+            { role: 'user', content: `現金流風險資料與診斷結果：\n${JSON.stringify(ctx, null, 2)}` }
+        ];
+        const content = await chatCompletion(
+            { base_url: cfg.base_url, api_key: cfg.api_key, model: cfg.model },
+            messages,
+            { temperature: 0.3, max_tokens: 2048, timeout: 60000 }
+        );
+
+        const suggestionMatches = content.match(/(?:建議|建议|Suggestion)\s*[1-3][：:]\s*.+/g);
+        const suggestions = suggestionMatches
+            ? suggestionMatches.map(s => s.replace(/^(?:建議|建议|Suggestion)\s*[1-3][：:]\s*/, '').trim())
+            : [];
+
+        ok(res, { explanation: content, suggestions, top_reasons: reasons, provider: cfg.provider_name, model: cfg.model });
+    } catch (err) {
+        if (err.message && err.message.includes('API Key')) return fail(res, err.message);
+        fail500(res, err);
+    }
+});
+
+// 現金流風險 Top3 拖累原因（規則引擎）
+function cashTopReasons(mc, safe_level, stressRev, stressCost, point, lang = 'zh-TW') {
+    const reasons = [];
+    const w13 = mc.weekly && mc.weekly[12] ? mc.weekly[12] : {};
+    const inflow = (mc.ar_avg_weekly || 0);
+    const outflow = (mc.ap_avg_weekly || 0);
+    const netWeekly = inflow - outflow;
+
+    // 1) 周均淨流入（流入-流出）若為負，直接拉高 13 周概率
+    if (netWeekly < 0) {
+        reasons.push({
+            rank: 1, dim: tr(lang, '週均淨現金流', '周均净现金流', 'Weekly Net Cash Flow'),
+            desc: tr(lang,
+                `週均流入 ${inflow.toFixed(0)} < 週均流出 ${outflow.toFixed(0)}，淨流出 ${(-netWeekly).toFixed(0)}`,
+                `周均流入 ${inflow.toFixed(0)} < 周均流出 ${outflow.toFixed(0)}，净流出 ${(-netWeekly).toFixed(0)}`,
+                `weekly inflow ${inflow.toFixed(0)} < outflow ${outflow.toFixed(0)}, net outflow ${(-netWeekly).toFixed(0)}`),
+            impact: tr(lang, '13 週累計缺口風險', '13 周累计缺口风险', 'cumulative 13-week gap risk'),
+            suggestion: tr(lang, '檢討應收週轉與延長付款條件', '检讨应收周转与延长付款条件', 'Speed up AR and extend AP terms')
+        });
+    } else if (outflow > inflow * 0.7) {
+        reasons.push({
+            rank: 1, dim: tr(lang, 'AP 週均流出', 'AP 周均流出', 'AP Weekly Outflow'),
+            desc: tr(lang,
+                `AP 週均流出 ${outflow.toFixed(0)}，佔 AR 週均流入 ${inflow.toFixed(0)} 的 ${(outflow/inflow*100).toFixed(0)}%`,
+                `AP 周均流出 ${outflow.toFixed(0)}，占 AR 周均流入 ${inflow.toFixed(0)} 的 ${(outflow/inflow*100).toFixed(0)}%`,
+                `AP outflow ${outflow.toFixed(0)} is ${(outflow/inflow*100).toFixed(0)}% of AR inflow ${inflow.toFixed(0)}`),
+            impact: tr(lang, '現金水位上升慢', '现金水位上升慢', 'slow cash build-up'),
+            suggestion: tr(lang, '與主要供應商協商延長付款天數', '与主要供应商协商延长付款天数', 'Negotiate longer terms with major suppliers')
+        });
+    }
+
+    // 2) 安全線 vs 最低水位
+    const minBal = point ? Number(point.min_balance || 0) : Number(w13.median || 0);
+    if (minBal < Number(safe_level || 0)) {
+        reasons.push({
+            rank: 2, dim: tr(lang, '安全水位', '安全水位', 'Safe Level'),
+            desc: tr(lang,
+                `安全線 ${Number(safe_level||0).toFixed(0)} 高於預測最低水位 ${minBal.toFixed(0)}`,
+                `安全线 ${Number(safe_level||0).toFixed(0)} 高于预测最低水位 ${minBal.toFixed(0)}`,
+                `safe level ${Number(safe_level||0).toFixed(0)} above forecast min ${minBal.toFixed(0)}`),
+            impact: tr(lang, '提高跌破安全線概率', '提高跌破安全线概率', 'raises below-safe probability'),
+            suggestion: tr(lang, '檢討安全水位設定值的合理性', '检讨安全水位设定值的合理性', 'Review safe-level parameter')
+        });
+    } else if (Number(safe_level || 0) > 0 && minBal - Number(safe_level || 0) < Number(safe_level || 0) * 0.3) {
+        reasons.push({
+            rank: 2, dim: tr(lang, '安全水位邊緣', '安全水位边缘', 'Near Safe Level'),
+            desc: tr(lang,
+                `最低水位 ${minBal.toFixed(0)} 離安全線僅 ${(minBal-Number(safe_level||0)).toFixed(0)}（低於安全線 30%）`,
+                `最低水位 ${minBal.toFixed(0)} 离安全线仅 ${(minBal-Number(safe_level||0)).toFixed(0)}（低于安全线 30%）`,
+                `min bal ${minBal.toFixed(0)} is only ${(minBal-Number(safe_level||0)).toFixed(0)} above safe level`),
+            impact: tr(lang, '輕微衝擊即跌破安全線', '轻微冲击即跌破安全线', 'small shocks push below safe level'),
+            suggestion: tr(lang, '關注最高風險週 W' + (mc.max_gap_week || '-'), '关注最高风险周 W' + (mc.max_gap_week || '-'), 'Watch W' + (mc.max_gap_week || '-') + ' closely')
+        });
+    }
+
+    // 3) 應收週期偏長
+    if ((mc.ar_days || 0) > 60) {
+        reasons.push({
+            rank: 3, dim: tr(lang, '應收週轉天數', '应收周转天数', 'AR Days'),
+            desc: tr(lang,
+                `AR 平均 ${mc.ar_days} 天 > 60 天，現金回收慢`,
+                `AR 平均 ${mc.ar_days} 天 > 60 天，现金回收慢`,
+                `AR avg ${mc.ar_days}d > 60d, slow cash in`),
+            impact: tr(lang, '流入節奏拖累現金水位', '流入节奏拖累现金水位', 'drags inflow rhythm'),
+            suggestion: tr(lang, '加強逾期催收、檢討信用政策', '加强逾期催收、检讨信用政策', 'Strengthen collection and review credit policy')
+        });
+    } else if ((mc.ap_days || 0) < 45) {
+        reasons.push({
+            rank: 3, dim: tr(lang, '應付週轉天數', '应付周转天数', 'AP Days'),
+            desc: tr(lang,
+                `AP 平均 ${mc.ap_days} 天 < 45 天，付款偏快`,
+                `AP 平均 ${mc.ap_days} 天 < 45 天，付款偏快`,
+                `AP avg ${mc.ap_days}d < 45d, pays too fast`),
+            impact: tr(lang, '縮短現金支付週期', '缩短现金支付周期', 'shortens cash payment cycle'),
+            suggestion: tr(lang, '檢討付款條件', '检讨付款条件', 'Review payment terms')
+        });
+    }
+
+    // 兜底：確保至少 3 條
+    while (reasons.length < 3) {
+        const rank = reasons.length + 1;
+        const weeks = mc.max_gap_week || 13;
+        reasons.push({
+            rank,
+            dim: tr(lang, '季度波動', '季度波动', 'Seasonality'),
+            desc: tr(lang,
+                `第 ${weeks} 週是最高風險週（${(mc.max_gap_prob || 0).toFixed(1)}%）`,
+                `第 ${weeks} 周是最高风险周（${(mc.max_gap_prob || 0).toFixed(1)}%）`,
+                `W${weeks} is the peak-risk week (${(mc.max_gap_prob || 0).toFixed(1)}%)`),
+            impact: tr(lang, '集中壓力於關鍵時點', '集中压力于关键时点', 'focused risk at key timing'),
+            suggestion: tr(lang, '提前安排周度資金計畫', '提前安排周度资金计划', 'Plan weekly funding in advance')
+        });
+    }
+    return reasons.slice(0, 3);
+}
+
 // 依指標產生原因
 // 多語言輔助：依 lang 回傳對應語系字串
 function tr(lang, tw, cn, en) {
