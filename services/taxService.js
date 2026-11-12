@@ -62,6 +62,20 @@ async function getVatTaxRates() {
         small: toRate(smallPct)
     };
 }
+
+/**
+ * 企業所得稅稅率（來源：cams_system_codes，code_type='TAX_TYPE'，code_value='EIT'）
+ * 取 value_number1（百分數，預設 25）；找不到時回傳 null，由呼叫端回退。
+ */
+async function getCitTaxRate() {
+    try {
+        const list = await codeCache.list('TAX_TYPE', []);
+        const row = (list || []).find(x => String(x.code_value || '').trim().toUpperCase() === 'EIT');
+        const n = Number(row?.value_number1);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        return n > 1 ? n / 100 : n;
+    } catch (e) { return null; }
+}
 /**
  * 根據稅款所屬期 (YYYYMM) 算出 YYYY/MM，並給出「上一期」的 YYYYMM
  */
@@ -450,9 +464,11 @@ const CIT = {
         if (taxableIncome < 0) taxableIncome = 0;
 
         // ---- CIT_R02: 應納稅額 ----
-        //  稅率由人工錄入（預設 25%）；減免 / 抵免取自調整明細
-        const taxRate = (cfg.tax_rate !== undefined && cfg.tax_rate !== null)
-            ? Number(cfg.tax_rate) : 0.25;
+        //  稅率優先取碼表 TAX_TYPE/EIT 的 value_number1；無碼值時回退人工錄入，最後 25%
+        const codeCitRate = await getCitTaxRate();
+        const taxRate = codeCitRate != null
+            ? codeCitRate
+            : ((cfg.tax_rate !== undefined && cfg.tax_rate !== null) ? Number(cfg.tax_rate) : 0.25);
         const taxExemptions = round2(adjMap.TAX_EXEMPTION || 0);
         const taxCredits    = round2(adjMap.TAX_CREDIT || 0);
         const taxPayable = round2(Math.max(0, taxableIncome * taxRate - taxExemptions - taxCredits));
@@ -973,6 +989,7 @@ const Submit = {
 module.exports = {
     VAT, CIT, IIT, Submit,
     getVatTaxRates,
+    getCitTaxRate,
     // 測試 / 獨立調用所需工具
     _utils: { uuid, round2, prevPeriod, monthSeq, lookupIitBracket }
 };

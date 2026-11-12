@@ -17,7 +17,7 @@
 const express = require('express');
 const router = express.Router();
 const { ok, fail, fail500, n } = require('../utils/response');
-const { VAT, CIT, IIT, Submit, getVatTaxRates } = require('../services/taxService');
+const { VAT, CIT, IIT, Submit, getVatTaxRates, getCitTaxRate } = require('../services/taxService');
 const { pool } = require('../config/db');
 
 function resolveBuNo(reqBody, reqQuery) {
@@ -428,8 +428,9 @@ router.get('/inputs/cit', async (req, res) => {
                FROM mgm_finance_summary WHERE bu_no=? AND YYYY=?`,
             [bu_no, taxYear]
         );
+        const codeCitRate = await getCitTaxRate();
         ok(res, {
-            taxRate: cfg[0] ? Number(cfg[0].tax_rate) : 0.25,
+            taxRate: codeCitRate != null ? codeCitRate : (cfg[0] ? Number(cfg[0].tax_rate) : 0.25),
             accumPrepaidTax: cfg[0] ? Number(cfg[0].accum_prepaid_tax) : 0,
             withheldTax: cfg[0] ? Number(cfg[0].withheld_tax) : 0,
             note: cfg[0] ? cfg[0].note : null,

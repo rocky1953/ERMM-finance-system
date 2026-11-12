@@ -1,56 +1,38 @@
 const { pool } = require('../config/db');
 (async () => {
-    // 先查 BUSINESS_ID 是否有（summary.js 和 system.js 在读它）
-    const [b] = await pool.execute(`SELECT code_type, code_value, value_description, value_number3 AS VAT_rate
-        FROM cams_system_codes WHERE code_type='BUSINESS_ID' ORDER BY code_value`);
-    console.log('BUSINESS_ID_EXIST=' + JSON.stringify(b));
-
-    // 查现有所有 code_type 清单
-    const [all] = await pool.execute(`SELECT code_type, COUNT(*) n FROM cams_system_codes GROUP BY code_type ORDER BY code_type`);
-    console.log('ALL_TYPES=' + JSON.stringify(all));
-
-    // 补种子
     const seeds = [
-        // BUSINESS_ID（必须有，否则 summary.js / system.js 读不到公司）
-        { code_type: 'BUSINESS_ID', code_value: 'HM', value_description: '华明', value_number3: 13, sort_order: 1 },
-        { code_type: 'BUSINESS_ID', code_value: 'HN', value_description: '华能', value_number3: 13, sort_order: 2 },
-        { code_type: 'BUSINESS_ID', code_value: 'SZ', value_description: '深圳公司', value_number3: 13, sort_order: 3 },
-
-        // 任务状态（actions.js 前端硬编码 pending/doing/done）
-        { code_type: 'ACTION_STATUS', code_value: 'pending', value_description: '待处理', sort_order: 1 },
-        { code_type: 'ACTION_STATUS', code_value: 'doing', value_description: '进行中', sort_order: 2 },
-        { code_type: 'ACTION_STATUS', code_value: 'done', value_description: '已完成', sort_order: 3 },
-
-        // 任务优先级（actions.js 硬编码 low/medium/high）
-        { code_type: 'ACTION_PRIORITY', code_value: 'low', value_description: '低', sort_order: 1 },
-        { code_type: 'ACTION_PRIORITY', code_value: 'medium', value_description: '中', sort_order: 2 },
-        { code_type: 'ACTION_PRIORITY', code_value: 'high', value_description: '高', sort_order: 3 },
-
-        // 贷款类型（bank.js 硬编码 Short-term / Long-term / FX Loan）
-        { code_type: 'LOAN_TYPE', code_value: 'Short-term', value_description: '短期贷款', sort_order: 1 },
-        { code_type: 'LOAN_TYPE', code_value: 'Long-term', value_description: '长期贷款', sort_order: 2 },
-        { code_type: 'LOAN_TYPE', code_value: 'FX Loan', value_description: '外汇贷款', sort_order: 3 },
-
-        // 往来对象状态（relation.js 的 USE/NOUSE）
-        { code_type: 'FLAG', code_value: 'USE', value_description: '启用', sort_order: 1 },
-        { code_type: 'FLAG', code_value: 'NOUSE', value_description: '停用', sort_order: 2 },
-
-        // 管理员角色（dailyReport / alert / drAlertScanner 硬编码 MANAGER_TYPES）
-        { code_type: 'USER_ROLE', code_value: '部門主管', value_description: '繁体-部门主管', sort_order: 1 },
-        { code_type: 'USER_ROLE', code_value: '部门主管', value_description: '简体-部门主管', sort_order: 2 },
-        { code_type: 'USER_ROLE', code_value: '高階主管', value_description: '繁体-高阶主管', sort_order: 3 },
-        { code_type: 'USER_ROLE', code_value: '高阶主管', value_description: '简体-高阶主管', sort_order: 4 },
-        { code_type: 'USER_ROLE', code_value: '部門經理', value_description: '繁体-部门经理', sort_order: 5 },
-        { code_type: 'USER_ROLE', code_value: '部门经理', value_description: '简体-部门经理', sort_order: 6 },
-
-        // CIT 调整项类型（tax.js 硬编码 5 项）
-        { code_type: 'CIT_ADJ_TYPE', code_value: 'TAX_FREE_INCOME', value_description: '免税收入', sort_order: 1 },
-        { code_type: 'CIT_ADJ_TYPE', code_value: 'ADJ_INCREASE', value_description: '纳税调增', sort_order: 2 },
-        { code_type: 'CIT_ADJ_TYPE', code_value: 'ADJ_DECREASE', value_description: '纳税调减', sort_order: 3 },
-        { code_type: 'CIT_ADJ_TYPE', code_value: 'TAX_EXEMPTION', value_description: '税额减免', sort_order: 4 },
-        { code_type: 'CIT_ADJ_TYPE', code_value: 'TAX_CREDIT', value_description: '税额抵免', sort_order: 5 },
+        // relation 类型
+        { code_type: 'RELATION_TYPE', code_value: '客户', value_description: '往来对象-客户', sort_order: 1 },
+        { code_type: 'RELATION_TYPE', code_value: '供应商', value_description: '往来对象-供应商', sort_order: 2 },
+        { code_type: 'RELATION_TYPE', code_value: '关系人', value_description: '往来对象-其他关系人', sort_order: 3 },
+        // 日报工作类型
+        { code_type: 'WK_TYPE', code_value: '日常工作', value_description: '日常工作任务', sort_order: 1 },
+        { code_type: 'WK_TYPE', code_value: '职业发展', value_description: '职业成长/培训', sort_order: 2 },
+        { code_type: 'WK_TYPE', code_value: '财务状况', value_description: '财务相关工作', sort_order: 3 },
+        { code_type: 'WK_TYPE', code_value: '健康', value_description: '健康/运动', sort_order: 4 },
+        { code_type: 'WK_TYPE', code_value: '娱乐休闲', value_description: '娱乐活动', sort_order: 5 },
+        { code_type: 'WK_TYPE', code_value: '家庭', value_description: '家庭事务', sort_order: 6 },
+        { code_type: 'WK_TYPE', code_value: '朋友圈', value_description: '社交', sort_order: 7 },
+        { code_type: 'WK_TYPE', code_value: '个人成长', value_description: '自我学习', sort_order: 8 },
+        { code_type: 'WK_TYPE', code_value: '自我实现', value_description: '理想/愿景', sort_order: 9 },
+        // 银行贷款状态
+        { code_type: 'LOAN_STATUS', code_value: '使用中', value_description: '贷款进行中', sort_order: 1 },
+        { code_type: 'LOAN_STATUS', code_value: 'Active', value_description: '贷款进行中（英文别名）', sort_order: 2 },
+        { code_type: 'LOAN_STATUS', code_value: '已结清', value_description: '贷款已还清', sort_order: 3 },
+        { code_type: 'LOAN_STATUS', code_value: 'Closed', value_description: '贷款已还清（英文别名）', sort_order: 4 },
+        // 税类型 / 税率（value_number1 为百分数，报税算税直接读取）
+        { code_type: 'TAX_TYPE', code_value: 'VAT', value_description: '增值税', value_number1: 0 },
+        { code_type: 'TAX_TYPE', code_value: 'CIT', value_description: '一般纳税人', value_number1: 13 },
+        { code_type: 'TAX_TYPE', code_value: 'IIT', value_description: '小型纳税人', value_number1: 3 },
+        { code_type: 'TAX_TYPE', code_value: 'EIT', value_description: '企业所得税', value_number1: 25 },
+        { code_type: 'TAX_TYPE', code_value: 'ST', value_description: '印花税', value_number1: 0 },
+        // 增值税申报状态
+        { code_type: 'FILE_STATUS', code_value: 'DRAFT', value_description: '草稿' },
+        { code_type: 'FILE_STATUS', code_value: 'SUBMITTED', value_description: '已提交' },
+        { code_type: 'FILE_STATUS', code_value: 'FILED', value_description: '已申报/已入账' },
+        { code_type: 'FILE_STATUS', code_value: 'PENDING', value_description: '待审批' },
+        { code_type: 'FILE_STATUS', code_value: 'REJECTED', value_description: '已退回' },
     ];
-
     let n = 0;
     for (const s of seeds) {
         const [dup] = await pool.execute(
@@ -58,9 +40,9 @@ const { pool } = require('../config/db');
         if (dup.length) continue;
         await pool.execute(`
             INSERT INTO cams_system_codes
-                (code_type, code_value, value_description, value_number3, sort_order, inuse_flag, create_time, update_time)
+                (code_type, code_value, value_description, value_number1, sort_order, inuse_flag, create_time, update_time)
             VALUES (?, ?, ?, ?, COALESCE(?,99), 'USE', NOW(), NOW())
-        `, [s.code_type, s.code_value, s.value_description, s.value_number3 ?? null, s.sort_order ?? 99]);
+        `, [s.code_type, s.code_value, s.value_description, s.value_number1 ?? null, s.sort_order ?? 99]);
         n++;
     }
     console.log(`SEED_INSERTED=${n}`);
