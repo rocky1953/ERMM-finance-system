@@ -378,7 +378,7 @@ window.LLMForm = {
             return;
         }
         if (!confirm(`${t('sys.llm_confirm_del') || '確定刪除「'}${p.provider_name}${t('sys.llm_confirm_del2') || '」？此動作無法復原。'}`)) return;
-        const r = await API.delete(`/api/llm/${provider}`);
+        const r = await API.del(`/api/llm/${provider}`);
         if (r.success) { UI.toast('✅ ' + (t('deleted') || '已刪除'), 'success'); loadLLMProviders(); }
         else UI.toast('❌ ' + r.message, 'error');
     },

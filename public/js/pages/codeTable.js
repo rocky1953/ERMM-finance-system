@@ -226,6 +226,6 @@ const CodeTable = {
 
     async del(id, label) {
         if (!confirm(`${t('codeTable.confirm_delete')}「${label}」?`)) return;
-        try { await API.delete(`/api/codes/${id}`); this.loadCodes(); } catch (e) { alert(e.message); }
+        try { await API.del(`/api/codes/${id}`); this.loadCodes(); } catch (e) { alert(e.message); }
     }
 };
