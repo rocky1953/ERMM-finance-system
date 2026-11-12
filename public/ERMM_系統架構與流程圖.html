@@ -77,7 +77,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-13">十、模块间依赖关系总图</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-07 04:05<br>
+    產生時間：2026-11-12 03:11<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/executive">切換另一份文件</a>
   </div>
@@ -90,7 +90,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   <article class="doc">
 <blockquote>
 <p>基于代码事实抽取（app.js / routes/<em>.js / services/</em>.js / scheduler/<em>.js / public/js/pages/</em>.js）
-生成日期：2026-10-20 ｜ 更新日期：2026-11-05 ｜ 适用版本：v3.2（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层）</p>
+生成日期：2026-10-20 ｜ 更新日期：2026-11-12 ｜ 适用版本：v3.3（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 码表驱动/三语 i18n）</p>
 </blockquote>
 <hr>
 <h2 id="sec-2">一、整体系统架构图</h2><p><img src="/diagrams/01-architecture-layers.svg" alt="ERMM 分层架构图"></p>
@@ -108,7 +108,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     end
 
     subgraph GATEWAY["🚪 接入层"]
-        EXPRESS["Express 5 路由&lt;br/&gt;48 个路由模块"]
+        EXPRESS["Express 5 路由&lt;br/&gt;50 个路由模块"]
         AUTH["JWT 认证中间件&lt;br/&gt;authRequired"]
         PERM["权限分级&lt;br/&gt;员工/部门主管/高阶主管/管理员"]
     end
@@ -327,6 +327,14 @@ API 共 17 个端点：<code>/api/tax/vat/*</code>(4)、<code>/api/tax/cit/*</co
 
     style PIPE fill:#e3f2fd,stroke:#1976d2</div></div><hr>
 <h2 id="sec-7">六、第三方资料整合流程图</h2><div class="diagram"><div class="mermaid">flowchart TB
+    subgraph UI["前端 5 Tab 操作台（简/繁/英）"]
+        T1["📊 Excel 导入&lt;br/&gt;模板下载 / 上传 / 映射"]
+        T2["🔌 SQL 线上整合&lt;br/&gt;SELECT 预览 / 立即执行"]
+        T3["⏰ 批次作业&lt;br/&gt;启停 / 编辑 / 执行 / 重试"]
+        T4["🗄️ 数据源&lt;br/&gt;CRUD / 连线测试"]
+        T5["📜 执行日志&lt;br/&gt;状态/通道筛选 / CSV 导出"]
+    end
+
     subgraph SRC["数据来源（双通道）"]
         CH1["📊 Excel 通道&lt;br/&gt;前端上传 xlsx → base64&lt;br/&gt;后端 ExcelJS 解析"]
         CH2["🔌 SQL 通道&lt;br/&gt;直连第三方 MySQL&lt;br/&gt;只读 SELECT + LIMIT"]
@@ -351,8 +359,18 @@ API 共 17 个端点：<code>/api/tax/vat/*</code>(4)、<code>/api/tax/cit/*</co
 
     POOL["连接池缓存&lt;br/&gt;sourcePools Map (按sourceId)"] -.-&gt; CH2
 
+    T1 --&gt; CH1
+    T2 --&gt; CH2
+    T3 --&gt; JOB
+    T4 -.-&gt; POOL
+    T5 -.-&gt; LOG
+
+    style UI fill:#e8f5e9,stroke:#388e3c
     style SRC fill:#e3f2fd,stroke:#1976d2
-    style BATCH fill:#fff3e0,stroke:#f57c00</div></div><hr>
+    style BATCH fill:#fff3e0,stroke:#f57c00</div></div><blockquote>
+<p>前端 5 Tab 对应接口：Excel 模板 <code>GET /api/integration/templates</code>、<code>GET /api/integration/templates/:table</code>（按目标表动态生成）；唯一键 <code>GET /api/integration/tables/:name/keys</code>；执行日志 <code>GET /api/integration/logs</code>（支持 <code>status</code> / <code>channel</code> / <code>job_id</code> / <code>limit</code> 筛选）；失败作业重试复用 <code>POST /api/integration/jobs/:id/run</code>。</p>
+</blockquote>
+<hr>
 <h2 id="sec-8">七、现金预测流程图</h2><div class="diagram"><div class="mermaid">flowchart LR
     JNL["mgm_casher_details&lt;br/&gt;现金日记账(借=收/贷=支)"] --&gt; AGG["按周聚合&lt;br/&gt;历史流入/流出"]
     AGG --&gt; F13["13周滚动预测&lt;br/&gt;预计现金余额曲线"]
@@ -417,7 +435,7 @@ API 共 17 个端点：<code>/api/tax/vat/*</code>(4)、<code>/api/tax/cit/*</co
 <h2 id="sec-12">九、部署架构</h2><div class="diagram"><div class="mermaid">flowchart LR
     USER["👥 用户浏览器"] --&gt;|HTTP :3008| NODE["Node.js&lt;br/&gt;node app.js"]
     subgraph NODE_PROC["同一进程内"]
-        NODE --&gt; EXP["Express 路由 ×48"]
+        NODE --&gt; EXP["Express 路由 ×50"]
         NODE --&gt; SCH1["日报告警排程&lt;br/&gt;09:30/16:30/月末16:00"]
         NODE --&gt; SCH2["整合批次排程&lt;br/&gt;每分钟 tick"]
     end
@@ -454,6 +472,7 @@ API 共 17 个端点：<code>/api/tax/vat/*</code>(4)、<code>/api/tax/cit/*</co
 <blockquote>
 <p><strong>更新日志</strong></p>
 <ul>
+<li>2026-11-12（v3.3）：① 路由模块数 48→<strong>50</strong>（新增 <code>/api/preorders</code>、<code>/api/codes</code>，<code>/api/cash-forecast</code> 双挂载）；② 第六章第三方整合新增「前端 5 Tab 操作台」子图（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志），补充 Excel 模板动态生成、日志筛选/CSV 导出、失败作业重试链路；③ 补充码表驱动（<code>cams_system_codes</code>，缓存 TTL 1 小时）与三语 i18n（默认简体）说明；④ 架构图与部署图同步路由数。</li>
 <li>2026-11-05（v3.2）：① 新增第八章「智能化（AI）流程图」：AI 问答 RAG 检索链路 + 摘要/催收/质检/概率预测四链路；② 架构图服务层新增 AI 子域（S19~S23）、数据层新增 DB_AI（ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config）、外部新增 LLM API；③ 路由数 42→48、资料表 74→83、前端入口 41→50（8 个菜单分组）；④ 部署图补充 LLM API 出向调用；⑤ 新增系统文件菜单（<code>/docs/architecture</code>、<code>/docs/data-model</code>，仅管理员）。</li>
 <li>2026-10-24：① 新增第三章「电子化报税流程图」（VAT/CIT/IIT 算税 → 落库 → 本地模拟提交）；② 架构图服务层新增 TAX 子域、数据层新增 DB_TAX（10 张税务表）；③ 路由数 41→42、资料表 68+→74、前端页面 40→41；④ 模块依赖图新增电子化报税节点。</li>
 <li>2026-10-20：初版（v3.0，8 张流程图）。</li>

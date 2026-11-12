@@ -119,7 +119,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <a class="toc-item d1" href="#sec-41">结尾：系统定位</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-07 04:05<br>
+    產生時間：2026-11-12 03:11<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -133,7 +133,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <div class="slide-count" style="display:none">40</div>
 <blockquote>
 <p>用法：本文档为 PPT 大纲格式（<code>#</code> = 一页幻灯片），可直接粘贴导入 Gamma、Kimi PPT、WPS AI、ChatPPT、MindShow 等工具自动生成简报；或经 Word 大纲视图导入 PowerPoint。
-版本：v3.2 ｜ 2026-11-05 ｜ 系统事实：48 个 API 路由 · 83 张资料表 · 50 个前端入口（8 个菜单分组）· 3 账套 × 36 个月数据 · AI 智能层（RAG 问答 / 每日摘要 / AR 催收评分 / 数据质量扫描 / 现金流概率预测）</p>
+版本：v3.3 ｜ 2026-11-12 ｜ 系统事实：50 个 API 路由 · 85 张资料表 · 50 个前端入口（8 个菜单分组）· 3 账套 × 36 个月数据 · AI 智能层（RAG 问答 / 每日摘要 / AR 催收评分 / 数据质量扫描 / 现金流概率预测）· 三语 i18n（简/繁/英，默认简体）· 码表驱动（<code>cams_system_codes</code>）</p>
 </blockquote>
 <hr>
 <div class="slide" data-slide="1">
@@ -154,9 +154,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div>
 <ul>
 <li><strong>50 个前端入口 / 8 个菜单分组</strong>：仪表板、经营决策、ERP 原始单据、日常作业、财务分析·税务申报、财务预警·KPI、系统·主档管理、<strong>系统文件（管理员）</strong></li>
-<li><strong>48 个 API 路由 · 83 张资料表</strong>：统一 MySQL 数据底座，单一口径</li>
+<li><strong>50 个 API 路由 · 85 张资料表</strong>：统一 MySQL 数据底座，单一口径</li>
 <li><strong>三账套（HM / SZ / HN）× 36 个月</strong>：数据连续、资产负债表 108/108 全部平衡</li>
 <li><strong>两大自动化引擎</strong>：告警排程（工作日 09:30/16:30）+ 整合排程（分钟级）</li>
+<li><strong>三语 i18n + 码表驱动</strong>：46 个已注册页面支持简/繁/英切换（默认简体）；公司、下拉选项、VAT/CIT 税率统一读取 <code>cams_system_codes</code>，改配置不改代码</li>
 <li><strong>AI 智能层 5 大能力</strong>：RAG 自然语言问答（41 条知识库 / 6 分类）、每日 AI 执行摘要、AR 催收智能排序、数据质量一键扫描、现金流 Monte Carlo 概率预测（5000 次模拟）</li>
 </ul>
 <hr>
@@ -248,6 +249,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div>
 <ul>
 <li><strong>三税种全覆盖</strong>：VAT（13% 按月 / 3% 按季）、CIT（25% 年度汇算）、IIT（累计预扣 7 级累进）</li>
+<li><strong>税率配置化</strong>：VAT 一般/小规模税率、CIT 税率均从码表 <code>TAX_TYPE</code> 读取（码值 <code>CIT</code> / <code>IIT</code> / <code>EIT</code>），政策调整只需维护码值，无需改程序</li>
 <li><strong>年终奖双通道计税</strong>：单独计税 vs 并入综合所得自动比选最优</li>
 <li><strong>人工覆盖机制</strong>：财报取数与实务差异可手工调整留痕</li>
 <li><strong>管理收益</strong>：算税规则固化在系统，申报有据可查，降低税务稽查风险</li>
@@ -411,10 +413,12 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
   <h2 class="slide-title">COO 价值 2：第三方数据整合，告别人工抄数</h2>
 </div>
 <ul>
-<li><strong>双通道接入</strong>：Excel 上传（前端拖拽）+ SQL 直连第三方 MySQL（只读安全）</li>
+<li><strong>5 个子页一站式</strong>：Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志，全流程三语界面</li>
+<li><strong>Excel 模板动态生成</strong>：按目标资料表一键下载表头模板（全表模板或单表模板），业务人员照模板填写即可导入</li>
 <li><strong>栏位映射 + 白名单校验 + 类型清洗 + 批次 UPSERT</strong>，全程日志可审计</li>
-<li><strong>排程自动化</strong>：每日定时 / 每 N 分钟自动同步，无人值守</li>
-<li><strong>管理收益</strong>：外部数据源接入从「专人每天 1 小时」变为「零人工」</li>
+<li><strong>排程自动化</strong>：每日定时 / 每 N 分钟自动同步，无人值守；失败作业可一键重试</li>
+<li><strong>日志可运营</strong>：按状态 / 通道筛选，一键导出 CSV 交办排查</li>
+<li><strong>管理收益</strong>：外部数据源接入从「专人每天 1 小时」变为「零人工」，异常有日志、失败可重跑</li>
 </ul>
 <hr>
 </div><div class="slide" data-slide="26">
@@ -454,7 +458,8 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div>
 <ul>
 <li><strong>技术栈主流且克制</strong>：Node.js + Express 5 + MySQL 8 连接池，前端原生 SPA（无重型框架依赖）</li>
-<li><strong>48 个路由模块化</strong>（按业务域分 7 组：智能化 Top5 / 核心财务 / 税务 / 操作 / 预警 / 系统 / 日报），服务层与数据层分离，新增功能按「路由 + 页面 + 资料表」三板斧落地</li>
+<li><strong>50 个路由模块化</strong>（按业务域分 7 组：智能化 Top5 / 核心财务 / 税务 / 操作 / 预警 / 系统 / 日报），服务层与数据层分离，新增功能按「路由 + 页面 + 资料表」三板斧落地</li>
+<li><strong>配置外置</strong>：下拉、公司、税率等统一由 <code>cams_system_codes</code> 码表提供（服务端缓存 TTL 1 小时），业务调整无需改代码、无需发版</li>
 <li><strong>管理收益</strong>：普通全栈工程师即可接手维护，无框架锁定、无 Vendor 绑定</li>
 </ul>
 <hr>
@@ -476,9 +481,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
   <h2 class="slide-title">CTO 价值 3：开放整合能力，打破数据孤岛</h2>
 </div>
 <ul>
-<li><strong>双通道接入</strong>：Excel（ExcelJS 解析）+ SQL 直连第三方 MySQL（连接池缓存、只读 LIMIT 防护）</li>
+<li><strong>双通道接入</strong>：Excel（ExcelJS 解析 + 按表动态生成模板）+ SQL 直连第三方 MySQL（连接池缓存、只读 LIMIT 防护）</li>
 <li><strong>栏位白名单校验</strong>（information_schema 实时校验）防注入，类型自动清洗</li>
-<li><strong>分钟级排程</strong>：每日定时 / 每 N 分钟，防重入设计（ticking + runningJobs + firedKeys）</li>
+<li><strong>分钟级排程</strong>：每日定时 / 每 N 分钟，防重入设计（ticking + runningJobs + firedKeys）；失败作业支持一键重试</li>
+<li><strong>5 Tab 操作台</strong>：Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志，日志可筛选并导出 CSV</li>
 <li><strong>管理收益</strong>：未来接 HR、供应链、银行系统沿用同一整合框架，无需另起烟囱</li>
 </ul>
 <hr>
@@ -616,6 +622,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <li><strong>数据可信度</strong>：108 个月资产负债表 100% 平衡，全链路 RUID 可追溯</li>
 <li><strong>AI 赋能</strong>：5 大智能功能已上线——41 条知识库覆盖税务/政策/年报；AR 催收评分毫秒级；数据质量扫描 39ms；现金流风险概率量化</li>
 <li><strong>催收提效</strong>：应收款从「人工扫一遍」→「评分排序 + 四档处理」，催款精力精准投放</li>
+<li><strong>配置效率</strong>：税率/下拉/公司等由码表统一维护，改码值即生效（缓存 TTL 1 小时），无需改程序、无需发版</li>
 </ul>
 <hr>
 </div><div class="slide" data-slide="40">

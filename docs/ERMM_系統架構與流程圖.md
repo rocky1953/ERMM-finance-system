@@ -1,7 +1,7 @@
 # ERMM 系统架构图与相关联流程图
 
 > 基于代码事实抽取（app.js / routes/*.js / services/*.js / scheduler/*.js / public/js/pages/*.js）
-> 生成日期：2026-10-20 ｜ 更新日期：2026-11-05 ｜ 适用版本：v3.2（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层）
+> 生成日期：2026-10-20 ｜ 更新日期：2026-11-12 ｜ 适用版本：v3.3（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 码表驱动/三语 i18n）
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TB
     end
 
     subgraph GATEWAY["🚪 接入层"]
-        EXPRESS["Express 5 路由<br/>48 个路由模块"]
+        EXPRESS["Express 5 路由<br/>50 个路由模块"]
         AUTH["JWT 认证中间件<br/>authRequired"]
         PERM["权限分级<br/>员工/部门主管/高阶主管/管理员"]
     end
@@ -276,6 +276,14 @@ flowchart LR
 
 ```mermaid
 flowchart TB
+    subgraph UI["前端 5 Tab 操作台（简/繁/英）"]
+        T1["📊 Excel 导入<br/>模板下载 / 上传 / 映射"]
+        T2["🔌 SQL 线上整合<br/>SELECT 预览 / 立即执行"]
+        T3["⏰ 批次作业<br/>启停 / 编辑 / 执行 / 重试"]
+        T4["🗄️ 数据源<br/>CRUD / 连线测试"]
+        T5["📜 执行日志<br/>状态/通道筛选 / CSV 导出"]
+    end
+
     subgraph SRC["数据来源（双通道）"]
         CH1["📊 Excel 通道<br/>前端上传 xlsx → base64<br/>后端 ExcelJS 解析"]
         CH2["🔌 SQL 通道<br/>直连第三方 MySQL<br/>只读 SELECT + LIMIT"]
@@ -300,9 +308,18 @@ flowchart TB
 
     POOL["连接池缓存<br/>sourcePools Map (按sourceId)"] -.-> CH2
 
+    T1 --> CH1
+    T2 --> CH2
+    T3 --> JOB
+    T4 -.-> POOL
+    T5 -.-> LOG
+
+    style UI fill:#e8f5e9,stroke:#388e3c
     style SRC fill:#e3f2fd,stroke:#1976d2
     style BATCH fill:#fff3e0,stroke:#f57c00
 ```
+
+> 前端 5 Tab 对应接口：Excel 模板 `GET /api/integration/templates`、`GET /api/integration/templates/:table`（按目标表动态生成）；唯一键 `GET /api/integration/tables/:name/keys`；执行日志 `GET /api/integration/logs`（支持 `status` / `channel` / `job_id` / `limit` 筛选）；失败作业重试复用 `POST /api/integration/jobs/:id/run`。
 
 ---
 
@@ -393,7 +410,7 @@ flowchart TB
 flowchart LR
     USER["👥 用户浏览器"] -->|HTTP :3008| NODE["Node.js<br/>node app.js"]
     subgraph NODE_PROC["同一进程内"]
-        NODE --> EXP["Express 路由 ×48"]
+        NODE --> EXP["Express 路由 ×50"]
         NODE --> SCH1["日报告警排程<br/>09:30/16:30/月末16:00"]
         NODE --> SCH2["整合批次排程<br/>每分钟 tick"]
     end
@@ -439,6 +456,7 @@ flowchart TB
 ---
 
 > **更新日志**
+> - 2026-11-12（v3.3）：① 路由模块数 48→**50**（新增 `/api/preorders`、`/api/codes`，`/api/cash-forecast` 双挂载）；② 第六章第三方整合新增「前端 5 Tab 操作台」子图（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志），补充 Excel 模板动态生成、日志筛选/CSV 导出、失败作业重试链路；③ 补充码表驱动（`cams_system_codes`，缓存 TTL 1 小时）与三语 i18n（默认简体）说明；④ 架构图与部署图同步路由数。
 > - 2026-11-05（v3.2）：① 新增第八章「智能化（AI）流程图」：AI 问答 RAG 检索链路 + 摘要/催收/质检/概率预测四链路；② 架构图服务层新增 AI 子域（S19~S23）、数据层新增 DB_AI（ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config）、外部新增 LLM API；③ 路由数 42→48、资料表 74→83、前端入口 41→50（8 个菜单分组）；④ 部署图补充 LLM API 出向调用；⑤ 新增系统文件菜单（`/docs/architecture`、`/docs/data-model`，仅管理员）。
 > - 2026-10-24：① 新增第三章「电子化报税流程图」（VAT/CIT/IIT 算税 → 落库 → 本地模拟提交）；② 架构图服务层新增 TAX 子域、数据层新增 DB_TAX（10 张税务表）；③ 路由数 41→42、资料表 68+→74、前端页面 40→41；④ 模块依赖图新增电子化报税节点。
 > - 2026-10-20：初版（v3.0，8 张流程图）。

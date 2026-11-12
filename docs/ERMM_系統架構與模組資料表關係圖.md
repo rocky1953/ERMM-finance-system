@@ -1,7 +1,7 @@
 # ERMM 财务模组 · 系统架构图与模块-资料表关系图
 
 > 基于代码事实抽取（routes/*.js、database/add_*.js、public/index.html 菜单、public/js/pages/*.js）
-> 生成日期：2026-10-06｜更新日期：2026-11-05（智能化 AI 层上线后更新）
+> 生成日期：2026-10-06｜更新日期：2026-11-12（第三方整合 5 Tab、码表驱动与三语 i18n 更新）
 
 ---
 
@@ -31,7 +31,7 @@ flowchart TB
         Static["静态资源服务<br/>public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 48 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 50 个路由)"]
         direction LR
         S1["📊 绩效闭环<br/>dailyReport"]
         S2["🔔 预警引擎<br/>alert"]
@@ -104,7 +104,7 @@ flowchart TB
 | # | 功能模块 | API 路由 | 前端页面 | 主要资料表 | 说明 |
 |---|---|---|---|---|---|
 | 1 | **认证授权** | `/api/auth` | login | `cams_xuser` `login_user_record` `leader_user` | JWT 签发、登录日志 |
-| 2 | **系统管理** | `/api/system` | system | `cams_system_codes` `schema_migrations` | 系统码、迁移版本 |
+| 2 | **系统管理** | `/api/system` `/api/codes` | system / codeTable | `cams_system_codes` `schema_migrations` | 系统码维护（下拉/公司/税率/汇率）、迁移版本；缓存 TTL 1 小时 |
 | 3 | **用户管理** | `/api/user` | user | `cams_xuser` | 用户/部门/角色维护 |
 | 4 | **工作日报表** | `/api/daily-report` | dailyReport | `daily_report` `daily_report_detail` `daily_report_lock` `daily_report_audit_log` `daily_report_target` `daily_report_okr` `daily_report_okr_kr` `daily_report_erp_xref` `daily_report_mgmt_report` `daily_report_annual_review` `cams_xuser` | **核心模块**：日报主表+10 张支撑表 |
 | 5 | **未完成分析** | `/api/daily-report` | dailyReportUnfinished | `daily_report` `daily_report_detail` | 基于日报明细统计延误/未解 |
@@ -132,10 +132,10 @@ flowchart TB
 | 26 | **月度报表** | `/api/monthly` | monthly | `monthly_items` | 月度项目 |
 | 27 | **损益平衡** | `/api/bep` | bep | `mgm_bep_threshold` | BEP 阈值 |
 | 28 | **AI 问答** | `/api/aiqa` | aiqa | `ermm_ai_records` `ermm_knowledge` `ermm_kb_miss_log` `llm_config` `mgm_finance_summary` `budget_detail` `mgmt_dept_pl` | **RAG**：n-gram 检索知识库 + LLM 作答；未命中写日志 |
-| 29 | **情景模拟** | `/api/scenario` | scenario | `budget_detail` `mgm_finance_summary` | 多情景测算 |
+| 29 | **情景模拟** | `/api/scenario` | scenario | `budget_detail` `mgm_finance_summary` `ermm_scenario_saved` | 多情景测算；方案可命名保存/回看 |
 | 30 | **异常诊断** | `/api/diagnosis` | (内嵌) | `mgm_finance_summary` `mgm_kpi_desc` | KPI 异常自动诊断 |
 | 31 | **采购单 PO** | `/api/po` | po | `ermm_erp_po` | 采购订单 |
-| 32 | **销售订单 SO** | `/api/so` | so | `ermm_erp_so` | 销售订单 |
+| 32 | **销售订单 SO / 预估订单** | `/api/so` `/api/preorders` | so / preorder | `ermm_erp_so` `mgm_preorder_lists` `mgm_customer_projects` | 销售订单 + 销售预估订单；客户/项目下拉取自 `mgm_customer_projects` |
 | 33 | **送货单 DN** | `/api/dn` | dn | `ERMM_erp_so_DN` `ermm_erp_so` | 送货通知 |
 | 34 | **PO 暂存** | `/api/temp-po` | tempPo | `ermm_temp_po` | PO 暂存草稿 |
 | 35 | **分公司** | `/api/branch` | branch | `branch_detail` | 分公司资料 |
@@ -145,8 +145,8 @@ flowchart TB
 | 39 | **多维下钻** | `/api/kpi-query` | drilldown | `mgm_finance_summary` `ermm_erp_so` `mgm_invoice_details` | 多维度数据下钻 |
 | 40 | **存货管理** | `/api/xitems` | xitems | `e2_xitems_daily_status` `e2_xitems_daily_status_chart` | 存货日状态 |
 | 41 | **仪表板** | `/api/summary` `/api/invoice` `/api/risk` | dashboard | `mgm_finance_summary` `mgm_invoice_details` `ermm_arap_detail` | **下钻钻取**：点击销售成本/收入柱体 → 弹窗显示当月 AR/AP 发票明细 |
-| 42 | **第三方资料整合** | `/api/integration` | integration | `intg_source` `intg_job` `intg_log` + 任意本地目标表 | **双通道**：Excel 导入 / SQL 直连第三方库；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单 |
-| **43** | **电子化报税** | `/api/tax` | tax | `vat_declarations` `cit_annual_settlements` `iit_withholding_batches` `iit_withholding_details` `tax_submit_receipts` `tax_vat_adjustments` `tax_cit_inputs` `tax_cit_adjustments` `payroll_details` `bonus_details` `mgm_invoice_details` `mgm_finance_summary` | **VAT/CIT/IIT 三税种**：算税→核对→提交→落库；支持按月/按季申报、年终奖单独计税、CIT 收入成本人工覆盖 |
+| 42 | **第三方资料整合** | `/api/integration` | integration | `intg_source` `intg_job` `intg_log` `intg_demo_src` `intg_demo_tgt` + 任意本地目标表 | **5 Tab 操作台**：Excel 导入（模板动态生成）/ SQL 线上整合 / 批次作业（失败重试）/ 数据源 / 执行日志（筛选 + CSV 导出）；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单 |
+| **43** | **电子化报税** | `/api/tax` | tax | `vat_declarations` `cit_annual_settlements` `iit_withholding_batches` `iit_withholding_details` `tax_submit_receipts` `tax_vat_adjustments` `tax_cit_inputs` `tax_cit_adjustments` `payroll_details` `bonus_details` `mgm_invoice_details` `mgm_finance_summary` `cams_system_codes` | **VAT/CIT/IIT 三税种**：算税→核对→提交→落库；支持按月/按季申报、年终奖单独计税、CIT 收入成本人工覆盖；VAT/CIT 税率读取码表 `TAX_TYPE` |
 | 44 | **AR 智能催收** | `/api/ar-smart` | arSmart | `mgm_invoice_details` `ermm_arap_detail` `mgm_finance_summary` | **只读评分**：账龄40+逾期30+金额15+风险10+占比5 → 四级灯号排序 |
 | 45 | **数据质量扫描** | `/api/data-quality` | dataQuality | 全库只读（7 大类 20+ 项检核） | 一键体检；**只扫描不自动修复** |
 | 46 | **每日 AI 执行摘要** | `/api/daily-summary` | dashboard（摘要卡片） | `daily_ai_summary` `mgm_finance_summary` `alert_log` `mgm_casher_details` | LLM 生成自然语言摘要并落库，支持历史回看 |
@@ -644,7 +644,7 @@ flowchart LR
 
 ### 3.9 第三方资料整合模块（Excel 导入 / SQL 直连 · Online + Batch）
 
-> **模块性质**：支持从 Excel 文件导入或 SQL 直连第三方数据库，将资料写入本地任意目标表；支持 Online 即时执行与 Batch 排程自动执行。引擎统一走 `services/dataIntegrator.js`，核心包含栏位白名单、类型转换、UPSERT（先查存在键→拆分 INSERT/UPDATE）。
+> **模块性质**：支持从 Excel 文件导入或 SQL 直连第三方数据库，将资料写入本地任意目标表；支持 Online 即时执行与 Batch 排程自动执行。前端为 **5 Tab 操作台**（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志，三语），支持按目标表动态生成 Excel 模板、日志筛选与 CSV 导出、失败作业一键重试。引擎统一走 `services/dataIntegrator.js`，核心包含栏位白名单、类型转换、UPSERT（先查存在键→拆分 INSERT/UPDATE）。
 
 #### 3.9.1 资料表 ER 图
 
@@ -755,6 +755,9 @@ flowchart TB
 |---|---|---|---|
 | 本地表结构 | GET | `/api/integration/tables` | 列出本地所有表 |
 | 本地表结构 | GET | `/api/integration/tables/:name/columns` | 查询指定表的栏位定义 |
+| 本地表结构 | GET | `/api/integration/tables/:name/keys` | 查询唯一键（UPSERT 预设匹配键） |
+| 模板 | GET | `/api/integration/templates` | 下载全表 Excel 导入模板 |
+| 模板 | GET | `/api/integration/templates/:table` | 按目标表下载模板（优先总模板对应 Sheet，否则按栏位动态生成） |
 | 数据源 | GET | `/api/integration/sources` | 列出所有第三方数据源 |
 | 数据源 | POST | `/api/integration/sources` | 新建数据源连线 |
 | 数据源 | PUT | `/api/integration/sources/:id` | 更新数据源 |
@@ -766,25 +769,26 @@ flowchart TB
 | 作业 | POST | `/api/integration/jobs` | 新建作业 |
 | 作业 | PUT | `/api/integration/jobs/:id` | 更新作业 |
 | 作业 | DELETE | `/api/integration/jobs/:id` | 删除作业 |
-| 作业 | POST | `/api/integration/jobs/:id/run` | 立即执行作业（Online） |
+| 作业 | POST | `/api/integration/jobs/:id/run` | 立即执行作业（Online；失败作业一键重试复用此端点） |
 | Excel | POST | `/api/integration/excel/parse` | Excel base64 解析（预览前 5 行 + total_rows） |
 | Excel | POST | `/api/integration/excel/import` | Excel 导入写入本地表 |
-| 日志 | GET | `/api/integration/logs` | 查询执行日志 |
+| 日志 | GET | `/api/integration/logs` | 查询执行日志（`status` / `channel` / `job_id` / `limit` 筛选；前端支持导出 CSV） |
 
 #### 3.9.4 前端 5 Tab 页面结构
 
 | Tab | 标题 | 功能 |
 |---|---|---|
-| 1 | 📊 Excel 导入 | 选目标表 → 上传 .xlsx → 解析 Sheet → 栏位映射（同名自动映射）→ 预览 → 写入 |
-| 2 | 🔌 SQL 线上整合 | 选数据源 → 输入 SQL → 测试读取 → 栏位映射 → 立即执行 / 存为批次作业 |
-| 3 | ⏰ 批次作业 | 作业列表 → 启用/停用 → 编辑 → 立即执行 |
-| 4 | 🗄️ 数据源 | 数据源 CRUD → 连线测试 |
-| 5 | 📜 执行日志 | 日志查询（含 SQL + Excel 两通道记录） |
+| 1 | 📊 Excel 导入 | 选目标表 → 下载表头模板（全表 / 本表动态生成）→ 上传 .xlsx（≤20MB）→ 解析 Sheet → 栏位映射（同名自动匹配）→ 预览 → INSERT / UPSERT 写入 |
+| 2 | 🔌 SQL 线上整合 | 选数据源 → 输入单条 SELECT → 测试读取（强制 LIMIT，前端默认 50 行）→ 栏位映射 → 立即执行 / 存为批次作业 |
+| 3 | ⏰ 批次作业 | 作业列表 → 启用/停用 → 编辑 → 立即执行 → 失败作业一键重试 |
+| 4 | 🗄️ 数据源 | 数据源 CRUD → 连线测试 → 删除时释放连接池 |
+| 5 | 📜 执行日志 | 最近 100 条 → 按状态 / 通道筛选 → 导出 CSV（UTF-8 BOM） |
 
 #### 3.9.5 关键技术要点
 
 | 要点 | 说明 |
 |---|---|
+| **Excel 模板** | `/templates/:table` 优先从总模板抽出对应 Sheet；无对应 Sheet 时按 `information_schema` 栏位动态生成 xlsx 表头 |
 | **栏位白名单** | 从 `information_schema.COLUMNS` 读取目标表全部栏位，只允许映射到存在的栏（防注入） |
 | **类型转换** | Excel serial 日期 → JS Date → 日期字串；千分位数字 → Number；空字串 → NULL；JSON 字串 → 对象 |
 | **UPSERT 策略** | 统一走「先 SELECT 已存在键 → 拆分 INSERT / UPDATE」，避免 MySQL `ON DUPLICATE KEY` 的 affectedRows 在「值未变」时为 0 导致统计偏差 |
@@ -1140,6 +1144,7 @@ flowchart LR
 | `budget_detail` | 预算编制、情景模拟、AI 问答 |
 | `mgmt_dept_pl` | 管理会计、合并报表、AI 问答 |
 | `mgmt_dept` | 管理会计、合并报表、日报部门维度 |
+| `cams_system_codes` | **码表驱动**：公司切换（BUSINESS_ID）、下拉选项（WK_TYPE/USER_ROLE 等）、VAT/CIT 税率（TAX_TYPE）、汇率（CURRENCY）；服务端 `codeCache` 缓存 TTL 1 小时 |
 | **任意本地表** | 第三方资料整合模块可通过栏位映射写入 `ermm_db` 内的任意目标表（按栏位白名单约束） |
 
 ---
@@ -1161,23 +1166,27 @@ flowchart LR
 
 ---
 
-## 七、资料表清单（共 83 张 · 2026-11-05 实测 `information_schema`）
+## 七、资料表清单（共 85 张 · 2026-11-12 实测 `information_schema`）
+
+> 85 张含 2 张第三方整合演示表 `intg_demo_src` / `intg_demo_tgt`，业务有效表 83 张。
 
 | 模块域 | 表名 |
 |---|---|
-| **系统/基础** | cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config |
+| **系统/基础** | cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config, ermm_users（遗留） |
 | **日报绩效** | daily_report, daily_report_detail, daily_report_lock, daily_report_audit_log, daily_report_target, daily_report_okr, daily_report_okr_kr, daily_report_erp_xref, daily_report_mgmt_report, daily_report_annual_review |
 | **预警预测** | alert_rule, alert_log, daily_report_forecast_log |
 | **财务核心** | fin_ruid_ledger, fin_account_subject, fin_voucher, fin_voucher_entry, fin_tax_return, fin_tax_return_item, fin_reconciliation |
 | **现金流** | mgm_casher_details, mgm_cash_safe_level |
-| **财务核算** | mgm_account_details, MGM_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, MGM_production_details, BH_MGM_TX_detail |
+| **财务核算** | mgm_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, mgm_production_details, bh_mgm_tx_detail |
 | **预算管会** | budget, budget_detail, mgmt_dept, mgmt_dept_pl |
-| **业务单据** | ermm_erp_so, ermm_erp_po, ermm_temp_po, ERMM_erp_so_DN, ermm_arap_detail, ermm_erp_documents, transit_price |
-| **分析预测** | forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc |
-| **第三方整合** | intg_source, intg_job, intg_log |
+| **业务单据** | ermm_erp_so, ermm_erp_po, ermm_temp_po, ermm_erp_so_dn, ermm_arap_detail, ermm_erp_documents, transit_price, mgm_preorder_lists, mgm_customer_projects, ermm_erp_mo, ermm_erp_mo_component, ermm_erp_routing, ermm_erp_work_report |
+| **分析预测** | forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc, ermm_scenario_saved |
+| **第三方整合** | intg_source, intg_job, intg_log, intg_demo_src（演示）, intg_demo_tgt（演示） |
 | **电子化报税** | vat_declarations, cit_annual_settlements, iit_withholding_batches, iit_withholding_details, tax_submit_receipts, tax_vat_adjustments, tax_cit_inputs, tax_cit_adjustments, payroll_details, bonus_details |
 | **AI 智能层** | ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆） |
 | **其他** | e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task |
+
+> 备注：`ermm_erp_mo` / `ermm_erp_mo_component` / `ermm_erp_routing` / `ermm_erp_work_report` 为 ERP 工单/BOM/工艺/报工预留表，当前无业务数据；`ermm_users` 为旧表，登录与权限实际使用 `cams_xuser`。
 
 ---
 
@@ -1210,6 +1219,7 @@ flowchart LR
 ---
 
 > 本文件所有关系均来自代码事实（routes/*.js 的 SQL 语句、database/add_*.js 的 DDL、index.html 菜单），未作臆造。Mermaid 图可在 VS Code / GitHub 直接渲染。
+> 2026-11-12 更新：① 路由模块数 48→**50**（新增 `/api/preorders`、`/api/codes`）；② 第三方整合补全 5 Tab（Excel 模板动态生成、唯一键查询、日志筛选/CSV 导出、失败重试）与 20 个 API 端点；③ 资料表清单 83→**85 张**（2026-11-12 实测，含 2 张整合演示表；补录 `mgm_preorder_lists` / `mgm_customer_projects` / `ermm_scenario_saved` / `ermm_erp_mo*` / `ermm_erp_routing` / `ermm_erp_work_report` / `ermm_users`）；④ 跨模块共用表新增 `cams_system_codes`（码表驱动下拉/公司/税率，缓存 TTL 1 小时）；⑤ 模块总表新增销售预估订单，情景模拟补充保存表。
 > 2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44~#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→**83 张**（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
 > 2026-10-24 更新：① 新增电子化报税模块（3.10 节，含 VAT/CIT/IIT 三税种 + 10 张资料表 ER 图）；② 更新模块总表（42 个模块，新增 #43 电子化报税）；③ 更新资料表清单（80+ 张，新增税务申报表域）；④ 新增第八章「数据覆盖状态」（HN 2023 补齐后三账套 36 个月全对齐）；⑤ 更新架构图（服务层 42 个路由，数据层新增税务申报表与税务录入表）。
 > 2026-10-15 更新：① 新增 3.8 批次管线模块（7 步 ERP 加工管线）含数据流 ER 图 + API + 前端增强说明；② 月份格式统一 YYYY/MM → YYYY-MM（SQL 示例 + 字段字典 + 页面映射表）；③ 修正章节编号重复（原两个 3.5）；④ 日记账收入/支出兼容中文「借/贷」判断（routes/cash.js）；⑤ 批次管线前端增强（逐步进行自动推进 + 操作说明弹窗）。

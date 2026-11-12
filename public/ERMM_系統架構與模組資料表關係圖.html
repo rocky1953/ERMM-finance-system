@@ -80,14 +80,14 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-40">四、RUID 全链路追溯图（财务核心）</a>
 <a class="toc-item d2" href="#sec-41">五、跨模块共用资料表</a>
 <a class="toc-item d2" href="#sec-42">六、技术栈汇总</a>
-<a class="toc-item d2" href="#sec-43">七、资料表清单（共 83 张 · 2026-11-05 实测 &lt;code&gt;information_schema&lt;/code&gt;）</a>
+<a class="toc-item d2" href="#sec-43">七、资料表清单（共 85 张 · 2026-11-12 实测 &lt;code&gt;information_schema&lt;/code&gt;）</a>
 <a class="toc-item d2" href="#sec-44">八、数据覆盖状态（2026-10-24 更新）</a>
 <a class="toc-item d3" href="#sec-45">8.1 账套 × 年份 覆盖矩阵</a>
 <a class="toc-item d3" href="#sec-46">8.2 2023 年销售成本明细对齐状态</a>
 <a class="toc-item d3" href="#sec-47">8.3 HN 2023 补齐摘要</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-07 04:05<br>
+    產生時間：2026-11-12 03:11<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/executive">切換另一份文件</a>
   </div>
@@ -100,7 +100,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   <article class="doc">
 <blockquote>
 <p>基于代码事实抽取（routes/<em>.js、database/add_</em>.js、public/index.html 菜单、public/js/pages/*.js）
-生成日期：2026-10-06｜更新日期：2026-11-05（智能化 AI 层上线后更新）</p>
+生成日期：2026-10-06｜更新日期：2026-11-12（第三方整合 5 Tab、码表驱动与三语 i18n 更新）</p>
 </blockquote>
 <hr>
 <h2 id="sec-2">一、系统整体架构图（分层架构）</h2><p><img src="/diagrams/01-architecture-layers.svg" alt="ERMM 分层架构图"></p>
@@ -126,7 +126,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         Static["静态资源服务&lt;br/&gt;public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 48 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 50 个路由)"]
         direction LR
         S1["📊 绩效闭环&lt;br/&gt;dailyReport"]
         S2["🔔 预警引擎&lt;br/&gt;alert"]
@@ -213,10 +213,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <tr>
 <td>2</td>
 <td><strong>系统管理</strong></td>
-<td><code>/api/system</code></td>
-<td>system</td>
+<td><code>/api/system</code> <code>/api/codes</code></td>
+<td>system / codeTable</td>
 <td><code>cams_system_codes</code> <code>schema_migrations</code></td>
-<td>系统码、迁移版本</td>
+<td>系统码维护（下拉/公司/税率/汇率）、迁移版本；缓存 TTL 1 小时</td>
 </tr>
 <tr>
 <td>3</td>
@@ -439,8 +439,8 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td><strong>情景模拟</strong></td>
 <td><code>/api/scenario</code></td>
 <td>scenario</td>
-<td><code>budget_detail</code> <code>mgm_finance_summary</code></td>
-<td>多情景测算</td>
+<td><code>budget_detail</code> <code>mgm_finance_summary</code> <code>ermm_scenario_saved</code></td>
+<td>多情景测算；方案可命名保存/回看</td>
 </tr>
 <tr>
 <td>30</td>
@@ -460,11 +460,11 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </tr>
 <tr>
 <td>32</td>
-<td><strong>销售订单 SO</strong></td>
-<td><code>/api/so</code></td>
-<td>so</td>
-<td><code>ermm_erp_so</code></td>
-<td>销售订单</td>
+<td><strong>销售订单 SO / 预估订单</strong></td>
+<td><code>/api/so</code> <code>/api/preorders</code></td>
+<td>so / preorder</td>
+<td><code>ermm_erp_so</code> <code>mgm_preorder_lists</code> <code>mgm_customer_projects</code></td>
+<td>销售订单 + 销售预估订单；客户/项目下拉取自 <code>mgm_customer_projects</code></td>
 </tr>
 <tr>
 <td>33</td>
@@ -543,16 +543,16 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td><strong>第三方资料整合</strong></td>
 <td><code>/api/integration</code></td>
 <td>integration</td>
-<td><code>intg_source</code> <code>intg_job</code> <code>intg_log</code> + 任意本地目标表</td>
-<td><strong>双通道</strong>：Excel 导入 / SQL 直连第三方库；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单</td>
+<td><code>intg_source</code> <code>intg_job</code> <code>intg_log</code> <code>intg_demo_src</code> <code>intg_demo_tgt</code> + 任意本地目标表</td>
+<td><strong>5 Tab 操作台</strong>：Excel 导入（模板动态生成）/ SQL 线上整合 / 批次作业（失败重试）/ 数据源 / 执行日志（筛选 + CSV 导出）；Online 即时 / Batch 排程；栏位映射 + UPSERT + 栏位白名单</td>
 </tr>
 <tr>
 <td><strong>43</strong></td>
 <td><strong>电子化报税</strong></td>
 <td><code>/api/tax</code></td>
 <td>tax</td>
-<td><code>vat_declarations</code> <code>cit_annual_settlements</code> <code>iit_withholding_batches</code> <code>iit_withholding_details</code> <code>tax_submit_receipts</code> <code>tax_vat_adjustments</code> <code>tax_cit_inputs</code> <code>tax_cit_adjustments</code> <code>payroll_details</code> <code>bonus_details</code> <code>mgm_invoice_details</code> <code>mgm_finance_summary</code></td>
-<td><strong>VAT/CIT/IIT 三税种</strong>：算税→核对→提交→落库；支持按月/按季申报、年终奖单独计税、CIT 收入成本人工覆盖</td>
+<td><code>vat_declarations</code> <code>cit_annual_settlements</code> <code>iit_withholding_batches</code> <code>iit_withholding_details</code> <code>tax_submit_receipts</code> <code>tax_vat_adjustments</code> <code>tax_cit_inputs</code> <code>tax_cit_adjustments</code> <code>payroll_details</code> <code>bonus_details</code> <code>mgm_invoice_details</code> <code>mgm_finance_summary</code> <code>cams_system_codes</code></td>
+<td><strong>VAT/CIT/IIT 三税种</strong>：算税→核对→提交→落库；支持按月/按季申报、年终奖单独计税、CIT 收入成本人工覆盖；VAT/CIT 税率读取码表 <code>TAX_TYPE</code></td>
 </tr>
 <tr>
 <td>44</td>
@@ -1354,7 +1354,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tbody></table>
 <hr>
 <h3 id="sec-23">3.9 第三方资料整合模块（Excel 导入 / SQL 直连 · Online + Batch）</h3><blockquote>
-<p><strong>模块性质</strong>：支持从 Excel 文件导入或 SQL 直连第三方数据库，将资料写入本地任意目标表；支持 Online 即时执行与 Batch 排程自动执行。引擎统一走 <code>services/dataIntegrator.js</code>，核心包含栏位白名单、类型转换、UPSERT（先查存在键→拆分 INSERT/UPDATE）。</p>
+<p><strong>模块性质</strong>：支持从 Excel 文件导入或 SQL 直连第三方数据库，将资料写入本地任意目标表；支持 Online 即时执行与 Batch 排程自动执行。前端为 <strong>5 Tab 操作台</strong>（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志，三语），支持按目标表动态生成 Excel 模板、日志筛选与 CSV 导出、失败作业一键重试。引擎统一走 <code>services/dataIntegrator.js</code>，核心包含栏位白名单、类型转换、UPSERT（先查存在键→拆分 INSERT/UPDATE）。</p>
 </blockquote>
 <h4 id="sec-24">3.9.1 资料表 ER 图</h4><div class="diagram"><div class="mermaid">erDiagram
     intg_source ||--o{ intg_job : "1:N 整合作业"
@@ -1469,6 +1469,24 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>查询指定表的栏位定义</td>
 </tr>
 <tr>
+<td>本地表结构</td>
+<td>GET</td>
+<td><code>/api/integration/tables/:name/keys</code></td>
+<td>查询唯一键（UPSERT 预设匹配键）</td>
+</tr>
+<tr>
+<td>模板</td>
+<td>GET</td>
+<td><code>/api/integration/templates</code></td>
+<td>下载全表 Excel 导入模板</td>
+</tr>
+<tr>
+<td>模板</td>
+<td>GET</td>
+<td><code>/api/integration/templates/:table</code></td>
+<td>按目标表下载模板（优先总模板对应 Sheet，否则按栏位动态生成）</td>
+</tr>
+<tr>
 <td>数据源</td>
 <td>GET</td>
 <td><code>/api/integration/sources</code></td>
@@ -1538,7 +1556,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>作业</td>
 <td>POST</td>
 <td><code>/api/integration/jobs/:id/run</code></td>
-<td>立即执行作业（Online）</td>
+<td>立即执行作业（Online；失败作业一键重试复用此端点）</td>
 </tr>
 <tr>
 <td>Excel</td>
@@ -1556,7 +1574,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>日志</td>
 <td>GET</td>
 <td><code>/api/integration/logs</code></td>
-<td>查询执行日志</td>
+<td>查询执行日志（<code>status</code> / <code>channel</code> / <code>job_id</code> / <code>limit</code> 筛选；前端支持导出 CSV）</td>
 </tr>
 </tbody></table>
 <h4 id="sec-27">3.9.4 前端 5 Tab 页面结构</h4><table>
@@ -1570,27 +1588,27 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <tbody><tr>
 <td>1</td>
 <td>📊 Excel 导入</td>
-<td>选目标表 → 上传 .xlsx → 解析 Sheet → 栏位映射（同名自动映射）→ 预览 → 写入</td>
+<td>选目标表 → 下载表头模板（全表 / 本表动态生成）→ 上传 .xlsx（≤20MB）→ 解析 Sheet → 栏位映射（同名自动匹配）→ 预览 → INSERT / UPSERT 写入</td>
 </tr>
 <tr>
 <td>2</td>
 <td>🔌 SQL 线上整合</td>
-<td>选数据源 → 输入 SQL → 测试读取 → 栏位映射 → 立即执行 / 存为批次作业</td>
+<td>选数据源 → 输入单条 SELECT → 测试读取（强制 LIMIT，前端默认 50 行）→ 栏位映射 → 立即执行 / 存为批次作业</td>
 </tr>
 <tr>
 <td>3</td>
 <td>⏰ 批次作业</td>
-<td>作业列表 → 启用/停用 → 编辑 → 立即执行</td>
+<td>作业列表 → 启用/停用 → 编辑 → 立即执行 → 失败作业一键重试</td>
 </tr>
 <tr>
 <td>4</td>
 <td>🗄️ 数据源</td>
-<td>数据源 CRUD → 连线测试</td>
+<td>数据源 CRUD → 连线测试 → 删除时释放连接池</td>
 </tr>
 <tr>
 <td>5</td>
 <td>📜 执行日志</td>
-<td>日志查询（含 SQL + Excel 两通道记录）</td>
+<td>最近 100 条 → 按状态 / 通道筛选 → 导出 CSV（UTF-8 BOM）</td>
 </tr>
 </tbody></table>
 <h4 id="sec-28">3.9.5 关键技术要点</h4><table>
@@ -1601,6 +1619,10 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </thead>
 <tbody><tr>
+<td><strong>Excel 模板</strong></td>
+<td><code>/templates/:table</code> 优先从总模板抽出对应 Sheet；无对应 Sheet 时按 <code>information_schema</code> 栏位动态生成 xlsx 表头</td>
+</tr>
+<tr>
 <td><strong>栏位白名单</strong></td>
 <td>从 <code>information_schema.COLUMNS</code> 读取目标表全部栏位，只允许映射到存在的栏（防注入）</td>
 </tr>
@@ -2251,6 +2273,10 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>管理会计、合并报表、日报部门维度</td>
 </tr>
 <tr>
+<td><code>cams_system_codes</code></td>
+<td><strong>码表驱动</strong>：公司切换（BUSINESS_ID）、下拉选项（WK_TYPE/USER_ROLE 等）、VAT/CIT 税率（TAX_TYPE）、汇率（CURRENCY）；服务端 <code>codeCache</code> 缓存 TTL 1 小时</td>
+</tr>
+<tr>
 <td><strong>任意本地表</strong></td>
 <td>第三方资料整合模块可通过栏位映射写入 <code>ermm_db</code> 内的任意目标表（按栏位白名单约束）</td>
 </tr>
@@ -2305,7 +2331,10 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-43">七、资料表清单（共 83 张 · 2026-11-05 实测 &lt;code&gt;information_schema&lt;/code&gt;）</h2><table>
+<h2 id="sec-43">七、资料表清单（共 85 张 · 2026-11-12 实测 &lt;code&gt;information_schema&lt;/code&gt;）</h2><blockquote>
+<p>85 张含 2 张第三方整合演示表 <code>intg_demo_src</code> / <code>intg_demo_tgt</code>，业务有效表 83 张。</p>
+</blockquote>
+<table>
 <thead>
 <tr>
 <th>模块域</th>
@@ -2314,7 +2343,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </thead>
 <tbody><tr>
 <td><strong>系统/基础</strong></td>
-<td>cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config</td>
+<td>cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config, ermm_users（遗留）</td>
 </tr>
 <tr>
 <td><strong>日报绩效</strong></td>
@@ -2334,7 +2363,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><strong>财务核算</strong></td>
-<td>mgm_account_details, MGM_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, MGM_production_details, BH_MGM_TX_detail</td>
+<td>mgm_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, mgm_production_details, bh_mgm_tx_detail</td>
 </tr>
 <tr>
 <td><strong>预算管会</strong></td>
@@ -2342,15 +2371,15 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><strong>业务单据</strong></td>
-<td>ermm_erp_so, ermm_erp_po, ermm_temp_po, ERMM_erp_so_DN, ermm_arap_detail, ermm_erp_documents, transit_price</td>
+<td>ermm_erp_so, ermm_erp_po, ermm_temp_po, ermm_erp_so_dn, ermm_arap_detail, ermm_erp_documents, transit_price, mgm_preorder_lists, mgm_customer_projects, ermm_erp_mo, ermm_erp_mo_component, ermm_erp_routing, ermm_erp_work_report</td>
 </tr>
 <tr>
 <td><strong>分析预测</strong></td>
-<td>forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc</td>
+<td>forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc, ermm_scenario_saved</td>
 </tr>
 <tr>
 <td><strong>第三方整合</strong></td>
-<td>intg_source, intg_job, intg_log</td>
+<td>intg_source, intg_job, intg_log, intg_demo_src（演示）, intg_demo_tgt（演示）</td>
 </tr>
 <tr>
 <td><strong>电子化报税</strong></td>
@@ -2365,6 +2394,9 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task</td>
 </tr>
 </tbody></table>
+<blockquote>
+<p>备注：<code>ermm_erp_mo</code> / <code>ermm_erp_mo_component</code> / <code>ermm_erp_routing</code> / <code>ermm_erp_work_report</code> 为 ERP 工单/BOM/工艺/报工预留表，当前无业务数据；<code>ermm_users</code> 为旧表，登录与权限实际使用 <code>cams_xuser</code>。</p>
+</blockquote>
 <hr>
 <h2 id="sec-44">八、数据覆盖状态（2026-10-24 更新）</h2><h3 id="sec-45">8.1 账套 × 年份 覆盖矩阵</h3><table>
 <thead>
@@ -2446,6 +2478,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <hr>
 <blockquote>
 <p>本文件所有关系均来自代码事实（routes/<em>.js 的 SQL 语句、database/add_</em>.js 的 DDL、index.html 菜单），未作臆造。Mermaid 图可在 VS Code / GitHub 直接渲染。
+2026-11-12 更新：① 路由模块数 48→<strong>50</strong>（新增 <code>/api/preorders</code>、<code>/api/codes</code>）；② 第三方整合补全 5 Tab（Excel 模板动态生成、唯一键查询、日志筛选/CSV 导出、失败重试）与 20 个 API 端点；③ 资料表清单 83→<strong>85 张</strong>（2026-11-12 实测，含 2 张整合演示表；补录 <code>mgm_preorder_lists</code> / <code>mgm_customer_projects</code> / <code>ermm_scenario_saved</code> / <code>ermm_erp_mo*</code> / <code>ermm_erp_routing</code> / <code>ermm_erp_work_report</code> / <code>ermm_users</code>）；④ 跨模块共用表新增 <code>cams_system_codes</code>（码表驱动下拉/公司/税率，缓存 TTL 1 小时）；⑤ 模块总表新增销售预估订单，情景模拟补充保存表。
 2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44~#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→<strong>83 张</strong>（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
 2026-10-24 更新：① 新增电子化报税模块（3.10 节，含 VAT/CIT/IIT 三税种 + 10 张资料表 ER 图）；② 更新模块总表（42 个模块，新增 #43 电子化报税）；③ 更新资料表清单（80+ 张，新增税务申报表域）；④ 新增第八章「数据覆盖状态」（HN 2023 补齐后三账套 36 个月全对齐）；⑤ 更新架构图（服务层 42 个路由，数据层新增税务申报表与税务录入表）。
 2026-10-15 更新：① 新增 3.8 批次管线模块（7 步 ERP 加工管线）含数据流 ER 图 + API + 前端增强说明；② 月份格式统一 YYYY/MM → YYYY-MM（SQL 示例 + 字段字典 + 页面映射表）；③ 修正章节编号重复（原两个 3.5）；④ 日记账收入/支出兼容中文「借/贷」判断（routes/cash.js）；⑤ 批次管线前端增强（逐步进行自动推进 + 操作说明弹窗）。
