@@ -59,24 +59,57 @@ router.get('/templates', (req, res) => {
     res.download(file, 'ERMM_ERP_Import_Template.xlsx');
 });
 
-// 單一資料表模板（從總模板抽出對應 Sheet）
+// 單一資料表模板（優先從總模板抽出對應 Sheet，沒有則依資料表欄位動態生成）
 router.get('/templates/:table', async (req, res) => {
     try {
+        const table = req.params.table;
         const file = findTemplateFile();
-        if (!file) return fail(res, '模板不存在，请先执行 node database/gen_erp_import_template.js', 404);
-        const wb = new ExcelJS.Workbook();
-        await wb.xlsx.readFile(file);
-        const target = wb.getWorksheet(req.params.table);
-        if (!target) return fail(res, `模板中无此资料表：${req.params.table}`, 404);
-        for (const ws of [...wb.worksheets]) {
-            if (ws.id !== target.id) wb.removeWorksheet(ws.id);
+        if (file) {
+            const wb = new ExcelJS.Workbook();
+            await wb.xlsx.readFile(file);
+            const target = wb.getWorksheet(table);
+            if (target) {
+                for (const ws of [...wb.worksheets]) {
+                    if (ws.id !== target.id) wb.removeWorksheet(ws.id);
+                }
+                const buf = await wb.xlsx.writeBuffer();
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                res.setHeader('Content-Disposition', `attachment; filename="${table}_template.xlsx"`);
+                return res.send(Buffer.from(buf));
+            }
         }
-        const buf = await wb.xlsx.writeBuffer();
+        const buf = await buildTableTemplate(table);
+        if (!buf) return fail(res, `資料表不存在或無欄位：${table}`, 404);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename="${req.params.table}_template.xlsx"`);
-        res.send(Buffer.from(buf));
+        res.setHeader('Content-Disposition', `attachment; filename="${table}_template.xlsx"`);
+        res.send(buf);
     } catch (e) { fail500(res, e); }
 });
+
+// 依資料表欄位動態生成模板（表頭：中文名 * 英文欄位名，與 gen_erp_import_template.js 一致）
+async function buildTableTemplate(table) {
+    const cols = await integ.getTableColumns(table);
+    if (!cols.length) return null;
+    const need = c => c.nullable === 'NO'
+        && !String(c.extra || '').includes('auto_increment')
+        && (c.dflt === null || c.dflt === undefined);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet(table);
+    ws.addRow(cols.map(c => `${c.comment || ''}${need(c) ? ' *' : ''} ${c.name}`.trim()));
+    cols.forEach((c, i) => {
+        const cell = ws.getCell(1, i + 1);
+        cell.note = [
+            `栏位：${c.name}`,
+            `中文：${c.comment || ''}`,
+            `类型：${c.columnType}`,
+            `必填：${need(c) ? '是' : '否'}`,
+        ].join('\n');
+        ws.getColumn(i + 1).width = Math.min(34, Math.max(12, (c.comment || '').length * 2 + 2, c.name.length + 4));
+    });
+    ws.getRow(1).font = { bold: true };
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+    return Buffer.from(await wb.xlsx.writeBuffer());
+}
 
 // ============ 資料源 ============
 router.get('/sources', async (req, res) => {

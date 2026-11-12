@@ -4,7 +4,7 @@
  *  Tab2 🔌 SQL 線上整合：第三方資料源 → SELECT 預覽 → 映射 → 立即執行 / 存為批次作業
  *  Tab3 ⏰ 批次作業：作業清單 / 啟用停用 / 立即執行 / 編輯
  *  Tab4 🗄️ 資料源：第三方連線 CRUD + 連線測試
- *  Tab5 📜 執行日誌
+ *  Tab5 📜 執行日誌：篩選 / 匯出
  */
 const Integration = {
     tab: 'excel',
@@ -14,11 +14,12 @@ const Integration = {
     sources: [],
     jobs: [],
     logs: [],
+    logFilter: { status: '', channel: '' },
 
     // Excel 嚮導狀態
     xl: { fileName: '', base64: '', parsed: null, sheetName: '', targetTable: '', cols: [], mapping: {}, keys: [], writeMode: 'INSERT' },
     // SQL 主控台狀態
-    sq: { sourceId: '', sql: '', result: null, targetTable: '', cols: [], mapping: {}, keys: [], writeMode: 'INSERT', editJobId: null },
+    sq: { sourceId: '', sql: '', limit: 50, result: null, targetTable: '', cols: [], mapping: {}, keys: [], writeMode: 'INSERT', editJobId: null },
 
     async render(el) {
         el.innerHTML = `
@@ -34,11 +35,11 @@ const Integration = {
 
     tabBtns() {
         const tabs = [
-            ['excel', '📊 Excel 导入'],
-            ['sql', '🔌 SQL 线上整合'],
-            ['batch', '⏰ 批次作业'],
-            ['sources', '🗄️ 数据源'],
-            ['logs', '📜 执行日志'],
+            ['excel', t('integration.tab.excel')],
+            ['sql', t('integration.tab.sql')],
+            ['batch', t('integration.tab.batch')],
+            ['sources', t('integration.tab.sources')],
+            ['logs', t('integration.tab.logs')],
         ];
         return tabs.map(([k, label]) => `
             <button onclick="Integration.switchTab('${k}')"
@@ -88,42 +89,42 @@ const Integration = {
     },
 
     tableOptions(sel) {
-        return ['<option value="">— 请选择目标表 —</option>']
-            .concat(this.tables.map(t => `<option value="${esc(t.name)}" ${t.name === sel ? 'selected' : ''}>${esc(t.name)}${t.comment ? '（' + esc(t.comment) + '）' : ''}</option>`)).join('');
+        return [`<option value="">${t('integration.selectTargetTable')}</option>`]
+            .concat(this.tables.map(tb => `<option value="${esc(tb.name)}" ${tb.name === sel ? 'selected' : ''}>${esc(tb.name)}${tb.comment ? '（' + esc(tb.comment) + '）' : ''}</option>`)).join('');
     },
 
     renderTab() {
         const body = document.getElementById('intgBody');
         if (this.tab === 'excel') body.innerHTML = this.viewExcel();
         else if (this.tab === 'sql') { body.innerHTML = this.viewSql(); this.loadSources(); }
-        else if (this.tab === 'batch') { body.innerHTML = '<div style="padding:30px;color:#94a3b8;">载入中…</div>'; this.loadJobs(); }
-        else if (this.tab === 'sources') { body.innerHTML = '<div style="padding:30px;color:#94a3b8;">载入中…</div>'; this.loadSources(true); }
-        else if (this.tab === 'logs') { body.innerHTML = '<div style="padding:30px;color:#94a3b8;">载入中…</div>'; this.loadLogs(); }
+        else if (this.tab === 'batch') { body.innerHTML = `<div style="padding:30px;color:#94a3b8;">${t('integration.loading')}</div>`; this.loadJobs(); }
+        else if (this.tab === 'sources') { body.innerHTML = `<div style="padding:30px;color:#94a3b8;">${t('integration.loading')}</div>`; this.loadSources(true); }
+        else if (this.tab === 'logs') { body.innerHTML = `<div style="padding:30px;color:#94a3b8;">${t('integration.loading')}</div>`; this.loadLogs(); }
     },
 
     // ================= Tab1：Excel 匯入 =================
     viewExcel() {
         const x = this.xl;
         const sheetOpts = x.parsed ? x.parsed.sheets.map(s =>
-            `<option value="${esc(s.name)}" ${s.name === x.sheetName ? 'selected' : ''}>${esc(s.name)}（${s.total_rows} 列）</option>`).join('') : '';
+            `<option value="${esc(s.name)}" ${s.name === x.sheetName ? 'selected' : ''}>${esc(t('integration.excel.sheetOpt', { name: s.name, rows: s.total_rows }))}</option>`).join('') : '';
         return `
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:18px;">
             <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;">
-                <div><label style="font-size:12px;color:#64748b;">① 目标资料表</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.excel.step1')}</label>
                     <select id="xlTable" onchange="Integration.xlPickTable(this.value)" style="display:block;margin-top:4px;min-width:280px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(x.targetTable)}</select>
                 </div>
                 <div style="display:flex;gap:8px;">
-                    <button class="btn btn-outline" onclick="Integration.downloadTemplate()">⬇️ 全部模板</button>
-                    <button class="btn btn-outline" onclick="Integration.downloadTemplate(Integration.xl.targetTable)" ${x.targetTable ? '' : 'disabled'}>⬇️ 本表模板</button>
+                    <button class="btn btn-outline" onclick="Integration.downloadTemplate()">${t('integration.excel.allTemplates')}</button>
+                    <button class="btn btn-outline" onclick="Integration.downloadTemplate(Integration.xl.targetTable)" ${x.targetTable ? '' : 'disabled'}>${t('integration.excel.tableTemplate')}</button>
                 </div>
-                <div><label style="font-size:12px;color:#64748b;">② 第三方 Excel 档（.xlsx，表头在第 1 行）</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.excel.step2')}</label>
                     <input type="file" id="xlFile" accept=".xlsx" onchange="Integration.xlPickFile(this)" style="display:block;margin-top:4px;font-size:13px;">
                 </div>
-                <div id="xlSheetWrap" style="${x.parsed ? '' : 'display:none;'}"><label style="font-size:12px;color:#64748b;">③ 工作表</label>
+                <div id="xlSheetWrap" style="${x.parsed ? '' : 'display:none;'}"><label style="font-size:12px;color:#64748b;">${t('integration.excel.step3')}</label>
                     <select id="xlSheet" onchange="Integration.xlPickSheet(this.value)" style="display:block;margin-top:4px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;min-width:200px;">${sheetOpts}</select>
                 </div>
             </div>
-            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">提示：可直接下载模板填写；模板第 2~3 行为灰色示例，正式导入前请删除；采购订单请写入 ermm_temp_po，勿直写 ermm_erp_po。</div>
+            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">${t('integration.excel.tip')}</div>
             <div id="xlMapping">${this.mappingPanel('xl')}</div>
         </div>`;
     },
@@ -143,20 +144,20 @@ const Integration = {
     xlPickFile(input) {
         const f = input.files[0];
         if (!f) return;
-        if (f.size > 20 * 1024 * 1024) { UI.toast('档案超过 20MB', 'error'); return; }
+        if (f.size > 20 * 1024 * 1024) { UI.toast(t('integration.excel.fileTooLarge'), 'error'); return; }
         const reader = new FileReader();
         reader.onload = async () => {
             const b64 = reader.result.split(',')[1];
             this.xl.fileName = f.name;
             this.xl.base64 = b64;
             try {
-                UI.toast('解析中…', 'info');
+                UI.toast(t('integration.excel.parsing'), 'info');
                 const res = (await API.post('/api/integration/excel/parse', { file_base64: b64, file_name: f.name })).data;
                 this.xl.parsed = res;
                 this.xl.sheetName = res.sheets[0]?.name || '';
                 this.autoMap('xl');
                 this.renderTab();
-                UI.toast(`解析成功：${res.sheets.length} 个工作表`, 'success');
+                UI.toast(t('integration.excel.parseOk', { n: res.sheets.length }), 'success');
             } catch (e) { UI.toast(e.message, 'error'); }
         };
         reader.readAsDataURL(f);
@@ -205,7 +206,7 @@ const Integration = {
                 <td style="color:#64748b;font-size:12px;">${esc(c.columnType)}${c.nullable === 'NO' ? ' NOT NULL' : ''}</td>
                 <td>
                     <select onchange="Integration.setMap('${kind}','${esc(c.name)}',this.value)" style="padding:4px 8px;border:1px solid #cbd5e1;border-radius:5px;min-width:180px;">
-                        <option value="">— 不导入 —</option>
+                        <option value="">${t('integration.map.noImport')}</option>
                         ${srcHeaders.map(h => `<option value="${esc(h)}" ${h === sel ? 'selected' : ''}>${esc(h)}</option>`).join('')}
                     </select>
                 </td>
@@ -218,41 +219,41 @@ const Integration = {
         const miss = missingRequired(st);
         const missHtml = miss.length
             ? `<div style="margin-top:12px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:8px 12px;font-size:12px;">
-                   ⚠️ 必填栏位尚未映射：${miss.map(m => esc(m.name)).join('、')}（写入时会失败）
+                   ${esc(t('integration.map.requiredMissing', { cols: miss.map(m => m.name).join('、') }))}
                </div>`
             : '';
 
         const previewHtml = previewRows.length ? `
             <div style="margin-top:14px;">
-                <div style="font-weight:600;font-size:13px;margin-bottom:6px;">🔍 资料预览（前 ${previewRows.length} 列）</div>
+                <div style="font-weight:600;font-size:13px;margin-bottom:6px;">${t('integration.map.preview', { n: previewRows.length })}</div>
                 <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;">
                 <table class="data-table" style="width:100%;font-size:12px;">
                     <thead style="position:sticky;top:0;"><tr>${srcHeaders.slice(0, 12).map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
                     <tbody>${previewRows.map(r => `<tr>${srcHeaders.slice(0, 12).map(h => `<td>${esc(r[h])}</td>`).join('')}</tr>`).join('')}</tbody>
                 </table></div>
-                ${srcHeaders.length > 12 ? '<div style="font-size:11px;color:#94a3b8;margin-top:4px;">仅预览前 12 个栏位</div>' : ''}
+                ${srcHeaders.length > 12 ? `<div style="font-size:11px;color:#94a3b8;margin-top:4px;">${t('integration.map.previewLimit')}</div>` : ''}
             </div>` : '';
 
         return `
         <div style="margin-top:18px;border-top:2px dashed #e2e8f0;padding-top:16px;">
             <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
-                <label style="font-size:12px;color:#64748b;">④ 写入模式
+                <label style="font-size:12px;color:#64748b;">${t('integration.map.writeMode')}
                     <select id="${kind}WriteMode" onchange="Integration.setMode('${kind}',this.value)" style="margin-left:6px;padding:6px;border:1px solid #cbd5e1;border-radius:6px;">
-                        <option value="INSERT" ${st.writeMode === 'INSERT' ? 'selected' : ''}>仅新增（INSERT）</option>
-                        <option value="UPSERT" ${st.writeMode === 'UPSERT' ? 'selected' : ''}>新增或更新（UPSERT）</option>
+                        <option value="INSERT" ${st.writeMode === 'INSERT' ? 'selected' : ''}>${t('integration.map.modeInsert')}</option>
+                        <option value="UPSERT" ${st.writeMode === 'UPSERT' ? 'selected' : ''}>${t('integration.map.modeUpsert')}</option>
                     </select>
                 </label>
-                <div style="font-size:12px;color:#94a3b8;">勾选「匹配键」用于判断新增/更新；已按资料表唯一键自动预选（复合唯一键会整组勾选）</div>
+                <div style="font-size:12px;color:#94a3b8;">${t('integration.map.keyHint')}</div>
             </div>
             <div style="max-height:300px;overflow:auto;border:1px solid #e2e8f0;border-radius:8px;">
             <table class="data-table" style="width:100%;font-size:13px;">
-                <thead style="position:sticky;top:0;"><tr><th>目标栏位</th><th>中文名称</th><th>类型</th><th>← 来源栏位（Excel/SQL）</th><th style="text-align:center;">匹配键</th></tr></thead>
+                <thead style="position:sticky;top:0;"><tr><th>${t('integration.map.targetColumn')}</th><th>${t('integration.map.columnComment')}</th><th>${t('integration.map.columnType')}</th><th>${t('integration.map.sourceColumn')}</th><th style="text-align:center;">${t('integration.map.matchKey')}</th></tr></thead>
                 <tbody>${rowsHtml}</tbody>
             </table></div>
             ${missHtml}
             ${previewHtml}
             <div style="margin-top:16px;text-align:right;">
-                <button class="btn btn-primary" onclick="Integration.doImport()" ${kind === 'xl' ? '' : 'style="display:none;"'}>🚀 开始导入（${this.currentSheet()?.total_rows || 0} 列）</button>
+                <button class="btn btn-primary" onclick="Integration.doImport()" ${kind === 'xl' ? '' : 'style="display:none;"'}>${t('integration.excel.startImport', { n: this.currentSheet()?.total_rows || 0 })}</button>
             </div>
         </div>`;
     },
@@ -273,15 +274,15 @@ const Integration = {
 
     async doImport() {
         const x = this.xl;
-        if (!x.targetTable) return UI.toast('请先选择目标表', 'error');
-        if (!x.sheetName) return UI.toast('请先选择工作表', 'error');
-        if (!Object.keys(x.mapping).length) return UI.toast('请至少映射一个栏位', 'error');
+        if (!x.targetTable) return UI.toast(t('integration.msg.selectTargetFirst'), 'error');
+        if (!x.sheetName) return UI.toast(t('integration.msg.selectSheetFirst'), 'error');
+        if (!Object.keys(x.mapping).length) return UI.toast(t('integration.msg.mapAtLeastOne'), 'error');
         const miss = missingRequired(x);
-        if (miss.length) return UI.toast(`必填栏位未映射：${miss.map(m => m.name).join('、')}`, 'error');
-        if (x.writeMode === 'UPSERT' && !x.keys.length) return UI.toast('UPSERT 模式需勾选匹配键', 'error');
-        if (!confirm(`确认将「${x.fileName} / ${x.sheetName}」写入 ${x.targetTable}？`)) return;
+        if (miss.length) return UI.toast(t('integration.msg.missingRequired', { cols: miss.map(m => m.name).join('、') }), 'error');
+        if (x.writeMode === 'UPSERT' && !x.keys.length) return UI.toast(t('integration.msg.upsertKeyRequired'), 'error');
+        if (!confirm(t('integration.msg.confirmImport', { file: x.fileName, sheet: x.sheetName, table: x.targetTable }))) return;
         try {
-            UI.toast('导入中，档案越大请稍候…', 'info');
+            UI.toast(t('integration.excel.importing'), 'info');
             const res = (await API.post('/api/integration/excel/import', {
                 target_table: x.targetTable,
                 file_base64: x.base64,
@@ -291,52 +292,57 @@ const Integration = {
                 key_columns: x.keys,
                 write_mode: x.writeMode,
             })).data;
-            UI.modal('✅ 导入完成', `
+            UI.modal(t('integration.excel.done'), `
                 <div style="display:flex;gap:14px;flex-wrap:wrap;">
                     <div style="flex:1;min-width:120px;background:#f1f5f9;border-radius:8px;padding:14px;text-align:center;">
-                        <div style="font-size:24px;font-weight:800;color:#1e3a5f;">${res.total_rows}</div><div style="font-size:12px;color:#64748b;">读取总列数</div></div>
+                        <div style="font-size:24px;font-weight:800;color:#1e3a5f;">${res.total_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.excel.resultTotal')}</div></div>
                     <div style="flex:1;min-width:120px;background:#dcfce7;border-radius:8px;padding:14px;text-align:center;">
-                        <div style="font-size:24px;font-weight:800;color:#166534;">${res.insert_rows}</div><div style="font-size:12px;color:#64748b;">新增</div></div>
+                        <div style="font-size:24px;font-weight:800;color:#166534;">${res.insert_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.insert')}</div></div>
                     <div style="flex:1;min-width:120px;background:#dbeafe;border-radius:8px;padding:14px;text-align:center;">
-                        <div style="font-size:24px;font-weight:800;color:#1e40af;">${res.update_rows}</div><div style="font-size:12px;color:#64748b;">更新</div></div>
+                        <div style="font-size:24px;font-weight:800;color:#1e40af;">${res.update_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.update')}</div></div>
                     <div style="flex:1;min-width:120px;background:#fee2e2;border-radius:8px;padding:14px;text-align:center;">
-                        <div style="font-size:24px;font-weight:800;color:#991b1b;">${res.error_rows}</div><div style="font-size:12px;color:#64748b;">失败</div></div>
+                        <div style="font-size:24px;font-weight:800;color:#991b1b;">${res.error_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.fail')}</div></div>
                 </div>
                 ${(res.errors || []).length ? `<pre style="margin-top:12px;max-height:160px;overflow:auto;font-size:11px;">${esc(res.errors.join('\n'))}</pre>` : ''}
-            `, `<button class="btn btn-outline" onclick="UI.closeModal()">关闭</button>
-                <button class="btn btn-success" onclick="UI.closeModal();Integration.switchTab('logs')">查看日志</button>`);
+            `, `<button class="btn btn-outline" onclick="UI.closeModal()">${t('integration.btn.close')}</button>
+                <button class="btn btn-success" onclick="UI.closeModal();Integration.switchTab('logs')">${t('integration.btn.viewLogs')}</button>`);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     // ================= Tab2：SQL 線上整合 =================
     viewSql() {
         const s = this.sq;
-        const srcOpts = ['<option value="">— 选择数据源 —</option>']
+        const srcOpts = [`<option value="">${t('integration.sql.selectSource')}</option>`]
             .concat(this.sources.map(x => `<option value="${x.id}" ${String(x.id) === String(s.sourceId) ? 'selected' : ''}>${esc(x.name)}（${esc(x.host)}/${esc(x.db_name)}）</option>`)).join('');
         return `
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:18px;">
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-                <div style="flex:1;min-width:280px;"><label style="font-size:12px;color:#64748b;">① 第三方数据源</label>
+                <div style="flex:1;min-width:280px;"><label style="font-size:12px;color:#64748b;">${t('integration.sql.step1')}</label>
                     <select id="sqSource" onchange="Integration.sq.sourceId=this.value" style="display:block;margin-top:4px;width:100%;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${srcOpts}</select>
                 </div>
-                <button class="btn btn-outline" onclick="Integration.openSourceForm()">🗄️ 管理数据源</button>
-                <button class="btn btn-success" onclick="Integration.sqPreview()">🔍 测试读取（前 50 行）</button>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.sql.rowLimit')}</label>
+                    <select id="sqLimit" onchange="Integration.sq.limit=Number(this.value)" style="display:block;margin-top:4px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">
+                        ${[50, 100, 200, 500].map(n => `<option value="${n}" ${s.limit === n ? 'selected' : ''}>${n}</option>`).join('')}
+                    </select>
+                </div>
+                <button class="btn btn-outline" onclick="Integration.openSourceForm()">${t('integration.sql.manageSources')}</button>
+                <button class="btn btn-success" onclick="Integration.sqPreview()">${t('integration.sql.testRead', { n: s.limit })}</button>
             </div>
-            <div style="margin-top:12px;"><label style="font-size:12px;color:#64748b;">② 第三方查询 SQL（仅允许 SELECT）</label>
+            <div style="margin-top:12px;"><label style="font-size:12px;color:#64748b;">${t('integration.sql.step2')}</label>
                 <textarea id="sqSql" style="width:100%;margin-top:4px;height:110px;font-family:Consolas,monospace;font-size:13px;padding:10px;border:1px solid #cbd5e1;border-radius:6px;"
                     placeholder="SELECT so_nbr, client_id, client_name, xitems, so_date, so_qty, unit_price FROM erp.sales_order WHERE ...">${esc(s.sql)}</textarea>
             </div>
             <div style="margin-top:12px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-                <div><label style="font-size:12px;color:#64748b;">③ 写入本地目标表</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.sql.step3')}</label>
                     <select id="sqTable" onchange="Integration.sqPickTable(this.value)" style="display:block;margin-top:4px;min-width:320px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(s.targetTable)}</select>
                 </div>
-                <button class="btn btn-outline" onclick="Integration.copyColumns()">📋 复制栏位清单</button>
+                <button class="btn btn-outline" onclick="Integration.copyColumns()">${t('integration.sql.copyColumns')}</button>
             </div>
-            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">提示：SELECT 的别名请直接使用目标栏位英文名（如 so_nbr、so_qty），系统会自动映射；日期用 YYYY-MM-DD，金额不带千分位。采购订单请写 ermm_temp_po，勿直写 ermm_erp_po。</div>
+            <div style="margin-top:6px;font-size:12px;color:#94a3b8;">${t('integration.sql.tip')}</div>
             <div id="sqMapping"></div>
             <div id="sqActions" style="margin-top:16px;text-align:right;display:none;gap:8px;justify-content:flex-end;">
-                <button class="btn btn-outline" onclick="Integration.openSaveBatch()">💾 存为批次作业</button>
-                <button class="btn btn-primary" onclick="Integration.sqRun()">▶ 立即执行（Online）</button>
+                <button class="btn btn-outline" onclick="Integration.openSaveBatch()">${t('integration.sql.saveBatch')}</button>
+                <button class="btn btn-primary" onclick="Integration.sqRun()">${t('integration.sql.runNow')}</button>
             </div>
         </div>`;
     },
@@ -347,13 +353,13 @@ const Integration = {
 
     copyColumns() {
         const s = this.sq;
-        if (!s.targetTable || !s.cols.length) return UI.toast('请先选择目标表', 'error');
+        if (!s.targetTable || !s.cols.length) return UI.toast(t('integration.msg.selectTargetFirst'), 'error');
         const text = s.cols
-            .map(c => `${c.name}\t${c.comment || ''}\t${c.columnType}${isRequired(c) ? '\t必填' : ''}`)
+            .map(c => `${c.name}\t${c.comment || ''}\t${c.columnType}${isRequired(c) ? '\t' + t('integration.map.required') : ''}`)
             .join('\n');
         navigator.clipboard.writeText(text)
-            .then(() => UI.toast(`已复制 ${s.cols.length} 个栏位`, 'success'))
-            .catch(() => UI.toast('复制失败，请手动选取', 'error'));
+            .then(() => UI.toast(t('integration.msg.copyOk', { n: s.cols.length }), 'success'))
+            .catch(() => UI.toast(t('integration.msg.copyFail'), 'error'));
     },
 
     refreshSqLower() {
@@ -367,26 +373,30 @@ const Integration = {
         const s = this.sq;
         s.sql = document.getElementById('sqSql').value;
         s.sourceId = document.getElementById('sqSource').value;
-        if (!s.sourceId || !s.sql.trim()) return UI.toast('请选择数据源并输入 SQL', 'error');
+        s.limit = Number(document.getElementById('sqLimit')?.value) || 50;
+        if (!s.sourceId || !s.sql.trim()) return UI.toast(t('integration.msg.selectSourceSql'), 'error');
         try {
-            UI.toast('读取中…', 'info');
-            const res = (await API.post('/api/integration/sources/query', { source_id: s.sourceId, sql: s.sql, limit: 50 })).data;
-            if (!res.row_count) { UI.toast('查询无资料', 'info'); s.result = res; this.refreshSqLower(); return; }
+            UI.toast(t('integration.msg.reading'), 'info');
+            const res = (await API.post('/api/integration/sources/query', { source_id: s.sourceId, sql: s.sql, limit: s.limit })).data;
+            if (!res.row_count) { UI.toast(t('integration.msg.noData'), 'info'); s.result = res; this.refreshSqLower(); return; }
             s.result = res;
             if (s.cols.length) this.autoMap('sq');
             this.refreshSqLower();
-            UI.toast(`读取成功：${res.row_count} 行`, 'success');
+            UI.toast(t('integration.msg.readOk', { n: res.row_count }), 'success');
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async sqRun() {
         const s = this.sq;
-        if (!s.targetTable || !Object.keys(s.mapping).length) return UI.toast('请完成目标表与栏位映射', 'error');
+        if (!s.targetTable || !Object.keys(s.mapping).length) return UI.toast(t('integration.msg.mappingRequired'), 'error');
+        const srcCols = new Set(s.result?.columns || []);
+        const missingSrc = Object.keys(s.mapping).filter(k => !srcCols.has(k));
+        if (missingSrc.length) return UI.toast(t('integration.msg.sourceMissing', { cols: missingSrc.join('、') }), 'error');
         const miss = missingRequired(s);
-        if (miss.length) return UI.toast(`必填栏位未映射：${miss.map(m => m.name).join('、')}`, 'error');
-        if (s.writeMode === 'UPSERT' && !s.keys.length) return UI.toast('UPSERT 模式需勾选匹配键', 'error');
+        if (miss.length) return UI.toast(t('integration.msg.missingRequired', { cols: miss.map(m => m.name).join('、') }), 'error');
+        if (s.writeMode === 'UPSERT' && !s.keys.length) return UI.toast(t('integration.msg.upsertKeyRequired'), 'error');
         // 先存草稿作業（Online 也留作業設定，id 用於復用），再立即執行
-        if (!confirm('确认立即执行资料整合写入？')) return;
+        if (!confirm(t('integration.msg.confirmRun'))) return;
         try {
             let jobId = s.editJobId;
             const payload = {
@@ -399,27 +409,27 @@ const Integration = {
                 ? (await API.put(`/api/integration/jobs/${jobId}`, payload)).data
                 : (await API.post('/api/integration/jobs', payload)).data;
             jobId = r.id;
-            UI.toast('执行中…', 'info');
+            UI.toast(t('integration.msg.running'), 'info');
             const res = (await API.post(`/api/integration/jobs/${jobId}/run`)).data;
             this.showRunResult(res);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     showRunResult(res) {
-        UI.modal('✅ 执行完成', `
+        UI.modal(t('integration.run.done'), `
             <div style="display:flex;gap:14px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:120px;background:#f1f5f9;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;font-weight:800;color:#1e3a5f;">${res.total_rows}</div><div style="font-size:12px;color:#64748b;">读取</div></div>
+                    <div style="font-size:24px;font-weight:800;color:#1e3a5f;">${res.total_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.read')}</div></div>
                 <div style="flex:1;min-width:120px;background:#dcfce7;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;font-weight:800;color:#166534;">${res.insert_rows}</div><div style="font-size:12px;color:#64748b;">新增</div></div>
+                    <div style="font-size:24px;font-weight:800;color:#166534;">${res.insert_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.insert')}</div></div>
                 <div style="flex:1;min-width:120px;background:#dbeafe;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;font-weight:800;color:#1e40af;">${res.update_rows}</div><div style="font-size:12px;color:#64748b;">更新</div></div>
+                    <div style="font-size:24px;font-weight:800;color:#1e40af;">${res.update_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.update')}</div></div>
                 <div style="flex:1;min-width:120px;background:#fee2e2;border-radius:8px;padding:14px;text-align:center;">
-                    <div style="font-size:24px;font-weight:800;color:#991b1b;">${res.error_rows}</div><div style="font-size:12px;color:#64748b;">失败</div></div>
+                    <div style="font-size:24px;font-weight:800;color:#991b1b;">${res.error_rows}</div><div style="font-size:12px;color:#64748b;">${t('integration.result.fail')}</div></div>
             </div>
             ${(res.errors || []).length ? `<pre style="margin-top:12px;max-height:160px;overflow:auto;font-size:11px;">${esc(res.errors.join('\n'))}</pre>` : ''}
-        `, `<button class="btn btn-outline" onclick="UI.closeModal()">关闭</button>
-            <button class="btn btn-success" onclick="UI.closeModal();Integration.switchTab('logs')">查看日志</button>`);
+        `, `<button class="btn btn-outline" onclick="UI.closeModal()">${t('integration.btn.close')}</button>
+            <button class="btn btn-success" onclick="UI.closeModal();Integration.switchTab('logs')">${t('integration.btn.viewLogs')}</button>`);
     },
 
     // ================= Tab3：批次作業 =================
@@ -434,12 +444,12 @@ const Integration = {
         body.innerHTML = `
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <div style="font-weight:700;">整合作业（Online 手动 / Batch 排程）</div>
-                <div><button class="btn btn-outline" onclick="Integration.loadJobs()">🔄</button></div>
+                <div style="font-weight:700;">${t('integration.batch.title')}</div>
+                <div><button class="btn btn-outline" onclick="Integration.loadJobs()">${t('integration.btn.refresh')}</button></div>
             </div>
             <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%;font-size:13px;">
-                <thead><tr><th>ID</th><th>作业名称</th><th>通道</th><th>数据源</th><th>目标表</th><th>模式</th><th>排程</th><th>启用</th><th>最后执行</th><th>最后状态</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>${t('integration.batch.jobName')}</th><th>${t('integration.batch.channel')}</th><th>${t('integration.batch.source')}</th><th>${t('integration.batch.targetTable')}</th><th>${t('integration.batch.mode')}</th><th>${t('integration.batch.schedule')}</th><th>${t('integration.batch.enabled')}</th><th>${t('integration.batch.lastRun')}</th><th>${t('integration.batch.lastStatus')}</th><th>${t('integration.batch.action')}</th></tr></thead>
                 <tbody>${this.jobs.map(j => `<tr>
                     <td>${j.id}</td>
                     <td><b>${esc(j.name)}</b></td>
@@ -452,18 +462,19 @@ const Integration = {
                     <td style="font-size:11px;">${j.last_run_at ? esc(String(j.last_run_at).slice(0, 19)) : '—'}</td>
                     <td>${j.last_status ? badge(j.last_status, stColor[j.last_status] || '#999') : '—'}</td>
                     <td style="white-space:nowrap;">
-                        ${j.channel === 'SQL' ? `<button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobRun(${j.id})">▶ 执行</button>` : ''}
-                        ${j.channel === 'SQL' ? `<button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobEdit(${j.id})">✏️ 编辑</button>` : ''}
-                        <button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobToggle(${j.id},${j.enabled ? 0 : 1})">${j.enabled ? '停用' : '启用'}</button>
-                        <button class="btn btn-sm" style="padding:3px 9px;color:#e74c3c;" onclick="Integration.jobDel(${j.id})">删除</button>
+                        ${j.channel === 'SQL' ? `<button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobRun(${j.id})">${t('integration.btn.run')}</button>` : ''}
+                        ${j.channel === 'SQL' && j.last_status === 'FAIL' ? `<button class="btn btn-sm" style="padding:3px 9px;color:#b45309;" onclick="Integration.jobRun(${j.id})">${t('integration.btn.retry')}</button>` : ''}
+                        ${j.channel === 'SQL' ? `<button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobEdit(${j.id})">${t('integration.btn.edit')}</button>` : ''}
+                        <button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.jobToggle(${j.id},${j.enabled ? 0 : 1})">${j.enabled ? t('integration.btn.disable') : t('integration.btn.enable')}</button>
+                        <button class="btn btn-sm" style="padding:3px 9px;color:#e74c3c;" onclick="Integration.jobDel(${j.id})">${t('delete')}</button>
                     </td>
-                </tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">尚无作业，可至「SQL 线上整合」设定后「存为批次作业」</td></tr>`}</tbody>
+                </tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">${t('integration.batch.empty')}</td></tr>`}</tbody>
             </table></div>
         </div>`;
     },
 
     async jobRun(id) {
-        if (!confirm('立即执行此作业？')) return;
+        if (!confirm(t('integration.msg.confirmRunJob'))) return;
         try {
             const res = (await API.post(`/api/integration/jobs/${id}/run`)).data;
             this.showRunResult(res);
@@ -477,7 +488,7 @@ const Integration = {
         await this.switchTab('sql');
         await this.loadSources(false);
         this.sq = {
-            sourceId: String(j.source_id || ''), sql: j.source_sql || '', result: null,
+            sourceId: String(j.source_id || ''), sql: j.source_sql || '', limit: 50, result: null,
             targetTable: j.target_table, cols: [],
             mapping: {}, keys: (j.key_columns || '').split(',').filter(Boolean),
             writeMode: j.write_mode || 'INSERT', editJobId: j.id, editJobName: j.name,
@@ -494,46 +505,48 @@ const Integration = {
         const srcCols = [...new Set(Object.keys(this.sq.mapping))];
         this.sq.result = { columns: srcCols, rows: [], row_count: 0 };
         this.refreshSqLower();
-        UI.toast(`已载入作业 #${id}，可「测试读取」后再保存/执行`, 'info');
+        UI.toast(t('integration.msg.jobLoaded', { id }), 'info');
     },
 
     async jobToggle(id, enabled) {
         const j = this.jobs.find(x => x.id === id);
         try {
             await API.put(`/api/integration/jobs/${id}`, { ...j, column_mapping: j.column_mapping, key_columns: (j.key_columns || '').split(',').filter(Boolean), enabled: !!enabled });
-            UI.toast(enabled ? '已启用' : '已停用', 'success');
+            UI.toast(enabled ? t('integration.msg.enabled') : t('integration.msg.disabled'), 'success');
             this.loadJobs();
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async jobDel(id) {
-        if (!confirm('确认删除此作业？')) return;
-        await API.del(`/api/integration/jobs/${id}`);
-        UI.toast('已删除', 'success');
-        this.loadJobs();
+        if (!confirm(t('integration.msg.confirmDeleteJob'))) return;
+        try {
+            await API.del(`/api/integration/jobs/${id}`);
+            UI.toast(t('integration.msg.deleted'), 'success');
+            this.loadJobs();
+        } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     openSaveBatch() {
         const s = this.sq;
-        if (!s.sourceId || !s.targetTable) return UI.toast('请先完成数据源/SQL/目标表', 'error');
-        UI.modal('💾 存为批次作业', `
+        if (!s.sourceId || !s.targetTable) return UI.toast(t('integration.msg.sourceTargetRequired'), 'error');
+        UI.modal(t('integration.batch.saveTitle'), `
             <div style="display:flex;flex-direction:column;gap:12px;">
-                <div><label style="font-size:12px;color:#64748b;">作业名称</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.batch.jobName')}</label>
                     <input id="batchName" class="input" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s.editJobName || ('Batch_' + s.targetTable))}"></div>
-                <div><label style="font-size:12px;color:#64748b;">排程（daily HH:MM 每日定时；every Nm 每 N 分钟）</label>
-                    <input id="batchSchedule" class="input" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" placeholder="例如：daily 02:30 或 every 30m" value="${esc(s.editSchedule || 'daily 02:30')}"></div>
-                <div style="font-size:12px;color:#94a3b8;">保存后于「批次作业」页启用即生效（排程器每分钟检查）。</div>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.batch.scheduleLabel')}</label>
+                    <input id="batchSchedule" class="input" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" placeholder="daily 02:30 / every 30m" value="${esc(s.editSchedule || 'daily 02:30')}"></div>
+                <div style="font-size:12px;color:#94a3b8;">${t('integration.batch.scheduleHint')}</div>
             </div>`,
-            `<button class="btn btn-outline" onclick="UI.closeModal()">取消</button>
-             <button class="btn btn-primary" onclick="Integration.saveBatch()">保存</button>`);
+            `<button class="btn btn-outline" onclick="UI.closeModal()">${t('integration.btn.cancel')}</button>
+             <button class="btn btn-primary" onclick="Integration.saveBatch()">${t('integration.btn.save')}</button>`);
     },
 
     async saveBatch() {
         const s = this.sq;
         const name = document.getElementById('batchName').value.trim();
         const schedule = document.getElementById('batchSchedule').value.trim();
-        if (!name || !schedule) return UI.toast('名称与排程必填', 'error');
-        if (!/^(daily\s+\d{1,2}:\d{2}|every\s+\d+m)$/i.test(schedule)) return UI.toast('排程格式错误（daily HH:MM / every Nm）', 'error');
+        if (!name || !schedule) return UI.toast(t('integration.msg.nameScheduleRequired'), 'error');
+        if (!/^(daily\s+\d{1,2}:\d{2}|every\s+\d+m)$/i.test(schedule)) return UI.toast(t('integration.msg.scheduleInvalid'), 'error');
         const payload = {
             name, channel: 'SQL', source_id: Number(s.sourceId), source_sql: s.sql,
             target_table: s.targetTable, column_mapping: s.mapping, key_columns: s.keys,
@@ -544,7 +557,7 @@ const Integration = {
             else { const r = (await API.post('/api/integration/jobs', payload)).data; s.editJobId = r.id; }
             s.editJobName = name; s.editMode = 'BATCH'; s.editSchedule = schedule;
             UI.closeModal();
-            UI.toast('批次作业已保存', 'success');
+            UI.toast(t('integration.msg.batchSaved'), 'success');
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
@@ -553,7 +566,7 @@ const Integration = {
         this.sources = (await API.get('/api/integration/sources')).data;
         if (this.tab === 'sql') {
             const sel = document.getElementById('sqSource');
-            if (sel) sel.innerHTML = ['<option value="">— 选择数据源 —</option>']
+            if (sel) sel.innerHTML = [`<option value="">${t('integration.sql.selectSource')}</option>`]
                 .concat(this.sources.map(x => `<option value="${x.id}">${esc(x.name)}（${esc(x.host)}/${esc(x.db_name)}）</option>`)).join('');
             if (this.sq.sourceId) sel.value = this.sq.sourceId;
         }
@@ -565,53 +578,53 @@ const Integration = {
         body.innerHTML = `
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <div style="font-weight:700;">第三方数据源连线设定</div>
-                <div><button class="btn btn-primary" onclick="Integration.openSourceForm()">➕ 新增数据源</button>
-                     <button class="btn btn-outline" onclick="Integration.loadSources(true)">🔄</button></div>
+                <div style="font-weight:700;">${t('integration.src.title')}</div>
+                <div><button class="btn btn-primary" onclick="Integration.openSourceForm()">${t('integration.src.add')}</button>
+                     <button class="btn btn-outline" onclick="Integration.loadSources(true)">${t('integration.btn.refresh')}</button></div>
             </div>
             <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%;font-size:13px;">
-                <thead><tr><th>ID</th><th>名称</th><th>类型</th><th>主机</th><th>Port</th><th>数据库</th><th>账号</th><th>密码</th><th>启用</th><th>备注</th><th>操作</th></tr></thead>
+                <thead><tr><th>ID</th><th>${t('integration.src.colName')}</th><th>${t('integration.src.colType')}</th><th>${t('integration.src.colHost')}</th><th>Port</th><th>${t('integration.src.colDb')}</th><th>${t('integration.src.colUser')}</th><th>${t('integration.src.colPwd')}</th><th>${t('integration.src.colEnabled')}</th><th>${t('integration.src.colRemark')}</th><th>${t('integration.src.colAction')}</th></tr></thead>
                 <tbody>${this.sources.map(s => `<tr>
                     <td>${s.id}</td><td><b>${esc(s.name)}</b></td><td>${esc(s.db_type)}</td>
                     <td>${esc(s.host)}</td><td>${s.port}</td><td>${esc(s.db_name)}</td><td>${esc(s.db_user)}</td>
                     <td>${s.has_password ? '●●●●' : '—'}</td>
                     <td>${s.enabled ? '✅' : '⛔'}</td><td style="font-size:12px;color:#64748b;">${esc(s.remark || '')}</td>
                     <td style="white-space:nowrap;">
-                        <button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.sourceTest(${s.id})">🔌 测试</button>
+                        <button class="btn btn-sm" style="padding:3px 9px;" onclick="Integration.sourceTest(${s.id})">${t('integration.src.test')}</button>
                         <button class="btn btn-sm" style="padding:3px 9px;" onclick='Integration.openSourceForm(${s.id})'>✏️</button>
-                        <button class="btn btn-sm" style="padding:3px 9px;color:#e74c3c;" onclick="Integration.sourceDel(${s.id})">删除</button>
-                    </td></tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">尚无数据源</td></tr>`}</tbody>
+                        <button class="btn btn-sm" style="padding:3px 9px;color:#e74c3c;" onclick="Integration.sourceDel(${s.id})">${t('delete')}</button>
+                    </td></tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:24px;">${t('integration.src.empty')}</td></tr>`}</tbody>
             </table></div>
         </div>`;
     },
 
     openSourceForm(id) {
         const s = id ? this.sources.find(x => x.id === id) : null;
-        UI.modal(s ? '✏️ 编辑数据源' : '➕ 新增数据源', `
+        UI.modal(s ? t('integration.src.editTitle') : t('integration.src.newTitle'), `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                <div><label style="font-size:12px;color:#64748b;">名称*</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.name')}</label>
                     <input id="srcName" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.name || '')}"></div>
-                <div><label style="font-size:12px;color:#64748b;">数据库类型</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.dbType')}</label>
                     <select id="srcType" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;"><option value="mysql">MySQL</option></select></div>
-                <div><label style="font-size:12px;color:#64748b;">主机*</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.host')}</label>
                     <input id="srcHost" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.host || '')}" placeholder="192.168.1.100"></div>
-                <div><label style="font-size:12px;color:#64748b;">Port</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.port')}</label>
                     <input id="srcPort" type="number" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${s?.port || 3306}"></div>
-                <div><label style="font-size:12px;color:#64748b;">数据库名*</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.dbName')}</label>
                     <input id="srcDb" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.db_name || '')}"></div>
-                <div><label style="font-size:12px;color:#64748b;">字符集</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.charset')}</label>
                     <input id="srcCharset" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.charset || 'utf8mb4')}"></div>
-                <div><label style="font-size:12px;color:#64748b;">账号*</label>
+                <div><label style="font-size:12px;color:#64748b;">${t('integration.src.user')}</label>
                     <input id="srcUser" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.db_user || '')}"></div>
-                <div><label style="font-size:12px;color:#64748b;">密码${s ? '（留空表示不修改）' : ''}</label>
+                <div><label style="font-size:12px;color:#64748b;">${s ? t('integration.src.passwordKeep') : t('integration.src.password')}</label>
                     <input id="srcPwd" type="password" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value=""></div>
-                <div style="grid-column:1/3;"><label style="font-size:12px;color:#64748b;">备注</label>
+                <div style="grid-column:1/3;"><label style="font-size:12px;color:#64748b;">${t('integration.src.remark')}</label>
                     <input id="srcRemark" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;" value="${esc(s?.remark || '')}"></div>
             </div>`,
-            `<button class="btn btn-outline" onclick="UI.closeModal()">取消</button>
-             <button class="btn btn-warning" onclick="Integration.sourceTestForm()">🔌 测试连线</button>
-             <button class="btn btn-primary" onclick="Integration.sourceSave(${id || 0})">保存</button>`);
+            `<button class="btn btn-outline" onclick="UI.closeModal()">${t('integration.btn.cancel')}</button>
+             <button class="btn btn-warning" onclick="Integration.sourceTestForm()">${t('integration.src.testConn')}</button>
+             <button class="btn btn-primary" onclick="Integration.sourceSave(${id || 0})">${t('integration.btn.save')}</button>`);
     },
 
     readSourceForm() {
@@ -632,62 +645,107 @@ const Integration = {
         const b = this.readSourceForm();
         try {
             const r = (await API.post('/api/integration/sources-test', b)).data;
-            UI.toast(`连线成功 ✅ MySQL ${r.version}`, 'success');
+            UI.toast(t('integration.msg.connOk', { v: r.version }), 'success');
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async sourceTest(id) {
         try {
             const r = (await API.post(`/api/integration/sources/${id}/test`)).data;
-            UI.toast(`连线成功 ✅ MySQL ${r.version}`, 'success');
+            UI.toast(t('integration.msg.connOk', { v: r.version }), 'success');
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async sourceSave(id) {
         const b = this.readSourceForm();
-        if (!b.name || !b.host || !b.db_name || !b.db_user) return UI.toast('名称/主机/数据库/账号必填', 'error');
+        if (!b.name || !b.host || !b.db_name || !b.db_user) return UI.toast(t('integration.msg.srcRequired'), 'error');
         try {
             if (id) await API.put(`/api/integration/sources/${id}`, b);
             else await API.post('/api/integration/sources', b);
             UI.closeModal();
-            UI.toast('已保存', 'success');
+            UI.toast(t('integration.msg.saved'), 'success');
             this.loadSources(true);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async sourceDel(id) {
-        if (!confirm('确认删除此数据源？')) return;
+        if (!confirm(t('integration.msg.confirmDeleteSource'))) return;
         try {
             await API.del(`/api/integration/sources/${id}`);
-            UI.toast('已删除', 'success');
+            UI.toast(t('integration.msg.deleted'), 'success');
             this.loadSources(true);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     // ================= Tab5：日誌 =================
     async loadLogs() {
-        this.logs = (await API.get('/api/integration/logs?limit=100')).data;
+        const q = new URLSearchParams({ limit: '100' });
+        if (this.logFilter.status) q.set('status', this.logFilter.status);
+        if (this.logFilter.channel) q.set('channel', this.logFilter.channel);
+        this.logs = (await API.get('/api/integration/logs?' + q.toString())).data;
         this.renderLogs();
+    },
+    setLogFilter(key, value) {
+        this.logFilter[key] = value;
+        this.loadLogs();
+    },
+    exportLogs() {
+        if (!this.logs.length) return UI.toast(t('integration.msg.noData'), 'info');
+        const cols = [
+            ['ID', l => l.id],
+            [t('integration.logs.time'), l => l.started_at ? String(l.started_at).slice(0, 19) : ''],
+            [t('integration.logs.job'), l => l.job_name],
+            [t('integration.logs.channel'), l => l.channel],
+            [t('integration.logs.trigger'), l => l.run_type],
+            [t('integration.batch.targetTable'), l => l.target_table],
+            [t('integration.logs.total'), l => l.total_rows],
+            [t('integration.logs.insert'), l => l.insert_rows],
+            [t('integration.logs.update'), l => l.update_rows],
+            [t('integration.logs.fail'), l => l.error_rows],
+            [t('integration.logs.duration'), l => l.duration_ms],
+            [t('integration.logs.status'), l => l.status],
+            [t('integration.logs.errorFile'), l => l.error_msg || l.file_name || ''],
+        ];
+        const lines = [cols.map(c => csvCell(c[0])).join(',')]
+            .concat(this.logs.map(l => cols.map(c => csvCell(c[1](l))).join(',')));
+        const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `integration_logs_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
     },
     renderLogs() {
         const body = document.getElementById('intgBody');
         const c = { SUCCESS: '#27ae60', FAIL: '#e74c3c', RUNNING: '#3498db' };
         const ch = { SQL: '🔌 SQL', EXCEL: '📊 Excel' };
+        const statusOpts = ['', 'SUCCESS', 'FAIL', 'RUNNING'].map(v =>
+            `<option value="${v}" ${this.logFilter.status === v ? 'selected' : ''}>${v ? v : t('integration.logs.all')}</option>`).join('');
+        const channelOpts = ['', 'SQL', 'EXCEL'].map(v =>
+            `<option value="${v}" ${this.logFilter.channel === v ? 'selected' : ''}>${v ? v : t('integration.logs.all')}</option>`).join('');
         body.innerHTML = `
         <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <div style="font-weight:700;">最近 100 笔整合执行日志</div>
-                <button class="btn btn-outline" onclick="Integration.loadLogs()">🔄</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                <div style="font-weight:700;">${t('integration.logs.title', { n: 100 })}</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <select onchange="Integration.setLogFilter('status', this.value)" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px;" title="${t('integration.logs.filterStatus')}">${statusOpts}</select>
+                    <select onchange="Integration.setLogFilter('channel', this.value)" style="padding:6px;border:1px solid #cbd5e1;border-radius:6px;" title="${t('integration.logs.filterChannel')}">${channelOpts}</select>
+                    <button class="btn btn-outline" onclick="Integration.exportLogs()">${t('integration.logs.export')}</button>
+                    <button class="btn btn-outline" onclick="Integration.loadLogs()">${t('integration.btn.refresh')}</button>
+                </div>
             </div>
             <div style="overflow-x:auto;">
             <table class="data-table" style="width:100%;font-size:12px;">
-                <thead><tr><th>ID</th><th>时间</th><th>作业</th><th>通道</th><th>触发</th><th>目标表</th><th>总数</th><th>新增</th><th>更新</th><th>失败</th><th>耗时</th><th>状态</th><th>错误/档案</th></tr></thead>
+                <thead><tr><th>ID</th><th>${t('integration.logs.time')}</th><th>${t('integration.logs.job')}</th><th>${t('integration.logs.channel')}</th><th>${t('integration.logs.trigger')}</th><th>${t('integration.batch.targetTable')}</th><th>${t('integration.logs.total')}</th><th>${t('integration.logs.insert')}</th><th>${t('integration.logs.update')}</th><th>${t('integration.logs.fail')}</th><th>${t('integration.logs.duration')}</th><th>${t('integration.logs.status')}</th><th>${t('integration.logs.errorFile')}</th></tr></thead>
                 <tbody>${this.logs.map(l => `<tr>
                     <td>${l.id}</td>
                     <td style="white-space:nowrap;">${esc(String(l.started_at).slice(0, 19))}</td>
                     <td>${esc(l.job_name)}</td>
                     <td>${ch[l.channel] || l.channel}</td>
-                    <td>${l.run_type === 'SCHEDULED' ? '⏰ 排程' : l.run_type === 'MANUAL' ? '🖱️ 手动' : '📊 Excel'}</td>
+                    <td>${l.run_type === 'SCHEDULED' ? t('integration.logs.runScheduled') : l.run_type === 'MANUAL' ? t('integration.logs.runManual') : t('integration.logs.runExcel')}</td>
                     <td><code>${esc(l.target_table)}</code></td>
                     <td>${l.total_rows}</td><td style="color:#166534;">${l.insert_rows}</td>
                     <td style="color:#1e40af;">${l.update_rows}</td>
@@ -695,7 +753,7 @@ const Integration = {
                     <td>${l.duration_ms != null ? (l.duration_ms / 1000).toFixed(1) + 's' : '—'}</td>
                     <td><span style="background:${c[l.status] || '#999'};color:#fff;padding:2px 9px;border-radius:10px;font-size:11px;">${l.status}</span></td>
                     <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:${l.error_msg ? '#991b1b' : '#94a3b8'};" title="${esc(l.error_msg || '')}">${esc(l.error_msg || l.file_name || '')}</td>
-                </tr>`).join('') || `<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:24px;">尚无日志</td></tr>`}</tbody>
+                </tr>`).join('') || `<tr><td colspan="13" style="text-align:center;color:#94a3b8;padding:24px;">${t('integration.logs.empty')}</td></tr>`}</tbody>
             </table></div>
         </div>`;
     },
@@ -747,6 +805,11 @@ function normalizeMappingFE(mapping, cols) {
         return out;
     }
     return { ...mapping };
+}
+
+function csvCell(v) {
+    const s = v === null || v === undefined ? '' : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
 }
 
 function esc(s) {
