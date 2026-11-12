@@ -2,18 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
-const { invalidate, ensureCode } = require('../services/codeCache');
-
-// 管理端操作后刷新服务端内存缓存（码表管理页增删改后调）
-router.post('/refresh', async (req, res) => {
-    try {
-        const { code_type } = req.body || {};
-        invalidate(code_type || null);
-        if (code_type) await ensureCode(code_type);
-        else await ensureCode();
-        ok(res, { ok: true });
-    } catch (err) { fail500(res, err); }
-});
 
 // 列出所有 code_type（去重）
 router.get('/types', async (req, res) => {
