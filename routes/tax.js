@@ -17,7 +17,7 @@
 const express = require('express');
 const router = express.Router();
 const { ok, fail, fail500, n } = require('../utils/response');
-const { VAT, CIT, IIT, Submit } = require('../services/taxService');
+const { VAT, CIT, IIT, Submit, getVatTaxRates } = require('../services/taxService');
 const { pool } = require('../config/db');
 
 function resolveBuNo(reqBody, reqQuery) {
@@ -126,19 +126,19 @@ router.get('/vat/reconcile', async (req, res) => {
         );
 
         const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
-        const summarize = (list, smallLevy) => ({
-            count: list.length,
-            amount: r2(list.reduce((s, x) => s + Number(x.sub_amt || 0), 0)),
-            // 小規模按簡易計稅（3%），與申報口徑一致；一般納稅人按發票稅率
-            outputTax: smallLevy
-                ? r2(r2(list.reduce((s, x) => s + Number(x.sub_amt || 0), 0)) * 0.03)
-                : r2(list.reduce((s, x) => {
-                    let rate = Number(x.tax_rate || 0);
-                    if (rate > 1) rate = rate / 100;
-                    return s + Number(x.sub_amt || 0) * rate;
-                }, 0)),
-            invoiceTax: r2(list.reduce((s, x) => s + Number(x.VAT_amt || 0), 0))
-        });
+        // 稅率來源：cams_system_codes.TAX_TYPE（CIT=一般納稅人、IIT=小型納稅人，取 value_number1）
+        const vatRates = await getVatTaxRates();
+        const summarize = (list, smallLevy) => {
+            const total = r2(list.reduce((s, x) => s + Number(x.sub_amt || 0), 0));
+            const rate = smallLevy ? vatRates.small : vatRates.general;
+            return {
+                count: list.length,
+                amount: total,
+                taxRate: smallLevy ? vatRates.smallPct : vatRates.generalPct,
+                outputTax: r2(total * rate),
+                invoiceTax: r2(list.reduce((s, x) => s + Number(x.VAT_amt || 0), 0))
+            };
+        };
 
         const ar = rows.filter(r => r.TX_type === 'AR');
         const ap = rows.filter(r => r.TX_type === 'AP');

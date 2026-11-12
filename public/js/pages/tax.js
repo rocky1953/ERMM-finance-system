@@ -437,15 +437,16 @@ const TaxUI = {
 
             const isSales = kind === 'sales';
             const rows = all.filter(r => (r.TX_type === 'AR') === isSales);
-            const smallScale = String(p.taxpayerType) === '2';   // 小規模納稅人：3% 徵收率、進項不可抵扣
-            // 小規模：銷項按徵收率 3% 重算展示（與算稅引擎同口徑）；進項稅額不可抵扣，展示 0
+            const smallScale = String(p.taxpayerType) === '2';   // 小規模納稅人：按徵收率計稅、進項不可抵扣
+            // 小規模：銷項按徵收率重算展示（與算稅引擎同口徑，稅率源自 TAX_TYPE/IIT 碼表）
             const levyRate = smallScale
                 ? (Number(this.draft.totalSalesAmt) > 0
                     ? Number(this.draft.totalOutputTax) / Number(this.draft.totalSalesAmt) : 0.03)
                 : 0;
+            const levyPct = (levyRate * 100).toFixed(levyRate * 100 % 1 === 0 ? 0 : 2);
             const dispTax = (r) => {
                 if (!isSales && smallScale) return 0;                       // 進項不可抵扣
-                if (smallScale) return Number(r.sub_amt || 0) * levyRate;   // 銷項按 3% 徵收率
+                if (smallScale) return Number(r.sub_amt || 0) * levyRate;   // 銷項按徵收率
                 return Number(r.VAT_amt || 0);
             };
             const sumAmt = round2(rows.reduce((s, r) => s + Number(r.sub_amt || 0), 0));
@@ -456,7 +457,7 @@ const TaxUI = {
             const title = isSales ? '銷項發票明細（銷售額 / 銷項稅額）' : '進項發票明細（可抵扣進項稅額）';
             const note = smallScale
                 ? (isSales
-                    ? `<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:6px;padding:8px 10px;margin-bottom:8px;">⚠ 小規模納稅人：銷項按 <b>3% 徵收率</b>計稅（不適用發票票面 13% 稅率），下表稅額欄為按徵收率試算值，合計以算稅結果為準。</div>`
+                    ? `<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:6px;padding:8px 10px;margin-bottom:8px;">⚠ 小規模納稅人：銷項按 <b>${levyPct}% 徵收率</b>計稅（不適用一般納稅人稅率），下表稅額欄為按徵收率試算值，合計以算稅結果為準。</div>`
                     : `<div style="font-size:12px;color:#b45309;background:#fef3c7;border-radius:6px;padding:8px 10px;margin-bottom:8px;">⚠ 小規模納稅人：<b>進項稅額不可抵扣</b>，下表稅額欄以 0 展示。</div>`)
                 : '';
             const body = rows.length ? `
@@ -472,7 +473,7 @@ const TaxUI = {
                             <td>${esc(String(r.invoice_date || r.YMD || '-').substring(0, 10))}</td>
                             <td>${esc(r.cust_name || r.supplier_name || r.counterparty || '-')}</td>
                             <td class="num">${money(r.sub_amt)}</td>
-                            <td class="num">${smallScale ? (isSales ? '3%（徵收率）' : '不可抵扣') : esc(r.tax_rate)}</td>
+                            <td class="num">${smallScale ? (isSales ? `${levyPct}%（徵收率）` : '不可抵扣') : esc(r.tax_rate)}</td>
                             <td class="num">${money(dispTax(r))}</td>
                         </tr>`).join('')}</tbody>
                         <tfoot><tr style="font-weight:700;background:#eaf2f8;">

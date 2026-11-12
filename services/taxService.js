@@ -20,6 +20,7 @@
 
 const crypto = require('crypto');
 const { pool } = require('../config/db');
+const codeCache = require('./codeCache');
 
 // ============ 工具函式 ============
 function uuid() {
@@ -27,6 +28,39 @@ function uuid() {
 }
 function round2(v) {
     return Math.round(Number(v || 0) * 100) / 100;
+}
+
+/**
+ * 增值稅稅率（來源：cams_system_codes，code_type='TAX_TYPE'，value_number1 為百分數）
+ *   code_value=CIT → 一般納稅人稅率（預設 13）
+ *   code_value=IIT → 小型納稅人稅率（預設 3）
+ * 回傳同時提供百分數（generalPct/smallPct）與小數（general/small）
+ */
+async function getVatTaxRates() {
+    const DEFAULT = { generalPct: 13, smallPct: 3 };
+    let list = [];
+    try {
+        list = await codeCache.list('TAX_TYPE', [
+            { code_value: 'CIT', value_number1: DEFAULT.generalPct },
+            { code_value: 'IIT', value_number1: DEFAULT.smallPct }
+        ]);
+    } catch (e) { list = []; }
+
+    const pick = (codeValue, dft) => {
+        const row = (list || []).find(x => String(x.code_value || '').trim().toUpperCase() === codeValue);
+        const n = Number(row?.value_number1);
+        return Number.isFinite(n) && n > 0 ? n : dft;
+    };
+    // 兼容資料庫存 13 或 0.13 兩種寫法
+    const toRate = pct => pct > 1 ? pct / 100 : pct;
+
+    const generalPct = pick('CIT', DEFAULT.generalPct);
+    const smallPct = pick('IIT', DEFAULT.smallPct);
+    return {
+        generalPct, smallPct,
+        general: toRate(generalPct),
+        small: toRate(smallPct)
+    };
 }
 /**
  * 根據稅款所屬期 (YYYYMM) 算出 YYYY/MM，並給出「上一期」的 YYYYMM
@@ -176,16 +210,16 @@ const VAT = {
         );
 
         // ---- VAT_R01: 銷項稅額 ----
-        //  一般納稅人 = SUM(sub_amt * tax_rate)；小規模 = SUM(sub_amt * 0.03)
-        //  註：DB 內 tax_rate 以百分數儲存（13 代表 13%），大於 1 時需除以 100
+        //  稅率來源：cams_system_codes.TAX_TYPE
+        //    一般納稅人 → code_value='CIT' 的 value_number1
+        //    小型納稅人 → code_value='IIT' 的 value_number1
         const isSmall = taxpayerType === 2;
+        const vatRates = await getVatTaxRates();
+        const applicableRate = isSmall ? vatRates.small : vatRates.general;
         let totalSales = 0, outputTax = 0;
         for (const r of salesRows) {
-            let rate = Number(r.tax_rate || 0);
-            if (rate > 1) rate = rate / 100;
-            if (isSmall) rate = 0.03;
             totalSales += Number(r.sub_amt || 0);
-            outputTax += Number(r.sub_amt || 0) * rate;
+            outputTax += Number(r.sub_amt || 0) * applicableRate;
         }
         let inputTax = 0;
         for (const r of inputRows) {
@@ -938,6 +972,7 @@ const Submit = {
 
 module.exports = {
     VAT, CIT, IIT, Submit,
+    getVatTaxRates,
     // 測試 / 獨立調用所需工具
     _utils: { uuid, round2, prevPeriod, monthSeq, lookupIitBracket }
 };
