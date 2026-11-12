@@ -82,7 +82,11 @@ async function loadUsers() {
             <tbody>${rows.map(r => `
                 <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${r.xuser_dept||'-'}</td>
                     <td>${r.xuser_type||t('user.type.staff')}</td>
-                    <td>${r.admin==='Yes' ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>' : '<span style="color:#95a5a6">'+t('user.admin.normal')+'</span>'}</td>
+                    <td>${r.admin==='Yes'
+                        ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>'
+                        : r.admin==='Operator'
+                            ? '<span style="color:#8e44ad;font-weight:600">🔧 '+t('user.admin.operator')+'</span>'
+                            : '<span style="color:#95a5a6">'+t('user.admin.normal')+'</span>'}</td>
                     <td>${r.inuse_flag==='USE' ? '<span style="color:#27ae60">● '+t('system.status.active')+'</span>' : '<span style="color:#95a5a6">○ '+t('system.status.inactive')+'</span>'}</td>
                     <td>${r.create_time||'-'}</td>
                     <td>
@@ -132,7 +136,7 @@ const UserForm = {
                 <div class="form-group"><label>${t('system.col.status')}</label>
                     <select id="uf_stat"><option value="USE">${t('system.status.active')}</option><option value="NOUSE">${t('system.status.inactive')}</option></select></div>
                 <div class="form-group"><label>${t('user.col.admin')}</label>
-                    <select id="uf_admin"><option value="Yes">${t('user.admin.manager')}</option><option value="No">${t('user.admin.normal')}</option></select></div>
+                    <select id="uf_admin"><option value="Yes">${t('user.admin.manager')}</option><option value="Operator">${t('user.admin.operator')}</option><option value="No">${t('user.admin.normal')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group"><label>${t('user.col.name')}</label><input id="uf_name" value="${u.xuser_name||''}"></div>
@@ -147,7 +151,7 @@ const UserForm = {
             </div>
         `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button><button class="btn btn-primary" onclick="UserForm.save(${u.id||0})">${t('save')}</button>`);
         if (u.inuse_flag) document.getElementById('uf_stat').value = u.inuse_flag;
-        document.getElementById('uf_admin').value = (u.admin === 'Yes') ? 'Yes' : 'No';
+        document.getElementById('uf_admin').value = ['Yes', 'Operator'].includes(u.admin) ? u.admin : 'No';
         // 類別回填：繁簡/歷史值归一后再比对，避免繁体值被误判而覆盖成「一般员工」
         const normType = (v) => String(v || '')
             .replace(/部門|部门/g, '部门').replace(/經理|经理/g, '经理').replace(/高階|高阶|高价/g, '高阶');

@@ -337,6 +337,7 @@ const Integration = {
                     <select id="sqTable" onchange="Integration.sqPickTable(this.value)" style="display:block;margin-top:4px;min-width:320px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;">${this.tableOptions(s.targetTable)}</select>
                 </div>
                 <button class="btn btn-outline" onclick="Integration.copyColumns()">${t('integration.sql.copyColumns')}</button>
+                <button class="btn btn-outline" onclick="Integration.genSql()">${t('integration.sql.genSql')}</button>
             </div>
             <div style="margin-top:6px;font-size:12px;color:#94a3b8;">${t('integration.sql.tip')}</div>
             <div id="sqMapping"></div>
@@ -360,6 +361,25 @@ const Integration = {
         navigator.clipboard.writeText(text)
             .then(() => UI.toast(t('integration.msg.copyOk', { n: s.cols.length }), 'success'))
             .catch(() => UI.toast(t('integration.msg.copyFail'), 'error'));
+    },
+
+    // 依目標表欄位生成完整 SELECT；沿用現有 FROM/WHERE，否則以目標表名作為來源表
+    genSql() {
+        const s = this.sq;
+        if (!s.targetTable || !s.cols.length) return UI.toast(t('integration.msg.selectTargetFirst'), 'error');
+        const ta = document.getElementById('sqSql');
+        if (ta) s.sql = ta.value;
+        const cols = s.cols
+            .filter(c => !String(c.extra || '').includes('auto_increment'))
+            .map(c => `    \`${c.name}\` AS \`${c.name}\``)
+            .join(',\n');
+        if (!cols) return UI.toast(t('integration.msg.selectTargetFirst'), 'error');
+        const fromMatch = (s.sql || '').match(/\bFROM\b[\s\S]*$/i);
+        const tail = fromMatch ? fromMatch[0].trim() : `FROM \`${s.targetTable}\`\nWHERE 1 = 1`;
+        const sql = `SELECT\n${cols}\n${tail}`;
+        s.sql = sql;
+        if (ta) ta.value = sql;
+        UI.toast(t('integration.msg.sqlGenerated'), 'success');
     },
 
     refreshSqLower() {

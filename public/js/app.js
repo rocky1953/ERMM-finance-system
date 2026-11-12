@@ -53,11 +53,22 @@ const Auth = {
 
     renderUser() {
         const el = document.getElementById('currentUser');
-        if (!el) return;
-        try {
-            const u = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
-            el.textContent = u ? (u.user_name || u.user_id || '') : '';
-        } catch (e) { el.textContent = ''; }
+        if (el) {
+            try {
+                const u = JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+                el.textContent = u ? (u.user_name || u.user_id || '') : '';
+            } catch (e) { el.textContent = ''; }
+        }
+        this.applyNavPermissions();
+    },
+
+    // 「使用者管理」与「系统文件」整组菜单仅管理员可见
+    applyNavPermissions() {
+        const admin = this.isAdmin();
+        const show = (el, visible) => { if (el) el.style.display = visible ? '' : 'none'; };
+        show(document.querySelector('#sidebar .nav-item[data-page="user"]'), admin);
+        const docsItem = document.querySelector('#sidebar .nav-item[data-page="docArchitecture"]');
+        if (docsItem) show(docsItem.parentElement, admin);
     },
 
     async login(user_id, password) {
@@ -199,6 +210,26 @@ const CodeHelper = {
     invalidate(codeType) {
         if (codeType) delete this._cache[codeType];
         else this._cache = {};
+    },
+
+    /**
+     * 统一生成公司下拉 <option> HTML（BUSINESS_ID 码表）
+     * options: { includeAll, allValue, allLabel, selected, fallback }
+     *   includeAll=true → 首项追加「全部」（value=""）
+     *   selected → 预先选中的值
+     *   fallback → 码表加载失败时的硬编码兜底（默认 ['HM','HN','SZ']）
+     * 返回 HTML 字符串，可直接放进模板字面量里 ${CodeHelper.buSel(...)}
+     */
+    async buSel({ includeAll = false, allValue = '', allLabel, selected = '', fallback = ['HM','HN','SZ'] } = {}) {
+        const buList = await this.values('BUSINESS_ID', fallback);
+        let html = buList.map(v =>
+            `<option value="${v}" ${selected && v === selected ? 'selected' : ''}>${v}</option>`
+        ).join('');
+        if (includeAll) {
+            const label = allLabel || (typeof t !== 'undefined' ? t('sys.all') : '全部');
+            html = `<option value="${allValue}" ${selected === allValue ? 'selected' : ''}>${label}</option>` + html;
+        }
+        return html;
     }
 };
 
