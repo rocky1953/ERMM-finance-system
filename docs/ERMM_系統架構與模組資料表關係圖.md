@@ -152,7 +152,7 @@ flowchart TB
 | 46 | **每日 AI 执行摘要** | `/api/daily-summary` | dashboard（摘要卡片） | `daily_ai_summary` `mgm_finance_summary` `alert_log` `mgm_casher_details` | LLM 生成自然语言摘要并落库，支持历史回看 |
 | 47 | **现金流概率预测** | `/api/cash-forecast/monte-carlo` | cashForecast（概率模式） | `mgm_casher_details` `mgm_cash_safe_level` | **Monte Carlo** 5000 次模拟 → P10/P50/P90 与负现金概率 |
 | 48 | **战情看板** | `/api/war-room` | warRoom | `mgm_finance_summary` `mgm_invoice_details` `ermm_arap_detail` | 高管实时经营看板 |
-| 49 | **系统文件** | 静态 `/docs/architecture` `/docs/data-model` | 新标签页 HTML | 无（纯文档，不落库） | **仅 admin='Yes'** 可打开，非管理员前端拦截提示 |
+| 49 | **系统文件** | 静态 `/docs/architecture` `/docs/executive` `/docs/data-model` `/docs/manual-ceo` `/docs/manual-cfo` `/docs/manual-cto` `/docs/manual-coo` | 新标签页 HTML | 无（纯文档，不落库） | 共 7 份文档；**仅 admin='Yes'** 可见左侧菜单，非管理员菜单隐藏，手动访问由 `openDocPage()` 拦截提示 |
 
 ---
 
@@ -1104,7 +1104,9 @@ erDiagram
 |---|---|
 | 接口鉴权 | 全部 `/api/*` 经 `authRequired` 中间件校验 JWT |
 | 只读性 | 智能层不 INSERT/UPDATE 账务表，仅写自己的知识库、摘要与日志表 |
-| 系统文件菜单 | `/docs/architecture`、`/docs/data-model` 由前端 `openDocPage()` 校验 `admin='Yes'`，非管理员提示「你的权限不能使用这个模块功能」；静态文件本身未做服务端鉴权 |
+| 菜单可见性 | 「使用者管理」与「系统文件」整组菜单由前端 `Auth.applyNavPermissions()` 控制，仅 `cams_xuser.admin='Yes'` 可见；非管理员登录后菜单直接隐藏 |
+| 系统文件访问 | 7 份文档由前端 `openDocPage()` 校验 `admin='Yes'`，非管理员提示「你的权限不能使用这个模块功能」；静态文件本身未做服务端鉴权 |
+| 身份模型 | `cams_xuser.admin` 取值：`Yes`=管理员、`Operator`=操作员、`No`=普通用户；仅 `Yes` 具备管理员菜单与 `/api/user/*` 权限，`Operator` 不能调用管理员接口 |
 
 ---
 

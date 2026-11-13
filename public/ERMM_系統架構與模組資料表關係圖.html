@@ -87,7 +87,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d3" href="#sec-47">8.3 HN 2023 补齐摘要</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-12 03:11<br>
+    產生時間：2026-11-13 05:11<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/executive">切換另一份文件</a>
   </div>
@@ -597,10 +597,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <tr>
 <td>49</td>
 <td><strong>系统文件</strong></td>
-<td>静态 <code>/docs/architecture</code> <code>/docs/data-model</code></td>
+<td>静态 <code>/docs/architecture</code> <code>/docs/executive</code> <code>/docs/data-model</code> <code>/docs/manual-ceo</code> <code>/docs/manual-cfo</code> <code>/docs/manual-cto</code> <code>/docs/manual-coo</code></td>
 <td>新标签页 HTML</td>
 <td>无（纯文档，不落库）</td>
-<td><strong>仅 admin=&#39;Yes&#39;</strong> 可打开，非管理员前端拦截提示</td>
+<td>共 7 份文档；<strong>仅 admin=&#39;Yes&#39;</strong> 可见左侧菜单，非管理员菜单隐藏，手动访问由 <code>openDocPage()</code> 拦截提示</td>
 </tr>
 </tbody></table>
 <hr>
@@ -2207,8 +2207,16 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>智能层不 INSERT/UPDATE 账务表，仅写自己的知识库、摘要与日志表</td>
 </tr>
 <tr>
-<td>系统文件菜单</td>
-<td><code>/docs/architecture</code>、<code>/docs/data-model</code> 由前端 <code>openDocPage()</code> 校验 <code>admin=&#39;Yes&#39;</code>，非管理员提示「你的权限不能使用这个模块功能」；静态文件本身未做服务端鉴权</td>
+<td>菜单可见性</td>
+<td>「使用者管理」与「系统文件」整组菜单由前端 <code>Auth.applyNavPermissions()</code> 控制，仅 <code>cams_xuser.admin=&#39;Yes&#39;</code> 可见；非管理员登录后菜单直接隐藏</td>
+</tr>
+<tr>
+<td>系统文件访问</td>
+<td>7 份文档由前端 <code>openDocPage()</code> 校验 <code>admin=&#39;Yes&#39;</code>，非管理员提示「你的权限不能使用这个模块功能」；静态文件本身未做服务端鉴权</td>
+</tr>
+<tr>
+<td>身份模型</td>
+<td><code>cams_xuser.admin</code> 取值：<code>Yes</code>=管理员、<code>Operator</code>=操作员、<code>No</code>=普通用户；仅 <code>Yes</code> 具备管理员菜单与 <code>/api/user/*</code> 权限，<code>Operator</code> 不能调用管理员接口</td>
 </tr>
 </tbody></table>
 <hr>
