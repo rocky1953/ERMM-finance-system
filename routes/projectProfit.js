@@ -97,7 +97,7 @@ router.post('/costs/sync', async (req, res) => {
     try {
         const body = req.body || {};
         const r = await svc.syncCost({ bu_no: body.bu_no || '', YYYY_MM: body.YYYY_MM });
-        ok(res, r, r.inserted ? `已自动引入 ${r.inserted} 个项目成本` : '当月无可引入的出货成本');
+        ok(res, r, r.inserted ? `已自动引入 ${r.inserted} 个项目成本（${r.YYYY_MM}）` : `${r.YYYY_MM} 无可引入的出货成本`);
     } catch (e) { fail500(res, e); }
 });
 
@@ -139,7 +139,7 @@ router.post('/revenues/sync', async (req, res) => {
     try {
         const body = req.body || {};
         const r = await svc.syncRevenue({ bu_no: body.bu_no || '', YYYY_MM: body.YYYY_MM });
-        ok(res, r, r.inserted ? `已自动引入 ${r.inserted} 个项目收入` : '当月无可引入的出货收入');
+        ok(res, r, r.inserted ? `已自动引入 ${r.inserted} 个项目收入（${r.YYYY_MM}）` : `${r.YYYY_MM} 无可引入的出货收入`);
     } catch (e) { fail500(res, e); }
 });
 

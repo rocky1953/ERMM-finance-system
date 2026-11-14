@@ -73,6 +73,34 @@ async function sumByProject(table, field, bu_no, ym, year) {
     return map;
 }
 
+/** 年度数据覆盖：哪些月份有收入/成本记录，用于提示 YTD 是否覆盖全年 */
+async function monthCoverage(year, bu_no) {
+    const y = Number(year);
+    const buCond = (bu_no && bu_no !== 'GROUP') ? ' AND bu_no=?' : '';
+    const p1 = [`${y}%`];
+    const p2 = [`${y}%`];
+    if (buCond) { p1.push(bu_no); p2.push(bu_no); }
+    const [revRows] = await pool.execute(
+        `SELECT DISTINCT YYYY_MM FROM project_revenue WHERE YYYY_MM LIKE ?${buCond}`, p1);
+    const [costRows] = await pool.execute(
+        `SELECT DISTINCT YYYY_MM FROM project_cost WHERE YYYY_MM LIKE ?${buCond}`, p2);
+    const revenueMonths = revRows.map(r => r.YYYY_MM).sort();
+    const costMonths = costRows.map(r => r.YYYY_MM).sort();
+    const months = Array.from(new Set([...revenueMonths, ...costMonths])).sort();
+    const now = new Date();
+    let expected = 12;
+    if (y === now.getFullYear()) expected = now.getMonth() + 1;
+    else if (y > now.getFullYear()) expected = 0;
+    return {
+        revenue_months: revenueMonths,
+        cost_months: costMonths,
+        months,
+        revenue_without_cost: revenueMonths.filter(m => !costMonths.includes(m)),
+        expected_months: expected,
+        incomplete: months.length < expected
+    };
+}
+
 /**
  * 项目组合概览
  * 仅展示「本年有预算 / 年初至今有收入或成本」的项目，避免 100+ 空项目干扰
@@ -81,10 +109,20 @@ async function overview({ bu_no = '', YYYY_MM } = {}) {
     const ym = YYYY_MM ? String(YYYY_MM).slice(0, 7) : await latestMonth();
     const year = Number(ym.slice(0, 4));
 
+    const bcond = ['year=?'];
+    const bparams = [year];
+    if (bu_no && bu_no !== 'GROUP') { bcond.push('bu_no=?'); bparams.push(bu_no); }
     const [budgets] = await pool.execute(
-        `SELECT project_id, project_name, revenue_budget, cost_budget FROM project_budget WHERE year=?`, [year]);
+        `SELECT bu_no, project_id, project_name, revenue_budget, cost_budget
+         FROM project_budget WHERE ${bcond.join(' AND ')}`, bparams);
     const budgetMap = {};
-    budgets.forEach(b => { budgetMap[b.project_id] = b; });
+    budgets.forEach(b => {
+        if (!budgetMap[b.project_id]) {
+            budgetMap[b.project_id] = { project_id: b.project_id, project_name: b.project_name, revenue_budget: 0, cost_budget: 0 };
+        }
+        budgetMap[b.project_id].revenue_budget = r2(Number(budgetMap[b.project_id].revenue_budget) + Number(b.revenue_budget));
+        budgetMap[b.project_id].cost_budget = r2(Number(budgetMap[b.project_id].cost_budget) + Number(b.cost_budget));
+    });
 
     const [revMap, costMap, names] = await Promise.all([
         sumByProject('project_revenue', 'revenue_amt', bu_no, ym, year),
@@ -102,10 +140,13 @@ async function overview({ bu_no = '', YYYY_MM } = {}) {
         const revBudget = r2(b.revenue_budget);
         const costBudget = r2(b.cost_budget);
         const costUsage = costBudget > 0 ? r2(cost.ytd / costBudget * 100) : null;
+        // 有收入但无成本视为「成本未归集」，毛利率不可用，避免显示 100% 误导
+        const costMissing = rev.ytd > 0 && cost.ytd === 0;
         let status = 'idle';
         if (rev.ytd || cost.ytd) status = 'active';
-        if (costBudget > 0 && cost.ytd > costBudget) status = 'over';
         if (revBudget > 0 && rev.ytd >= revBudget) status = 'done';
+        // 成本超支优先展示，避免被「收入已达标」掩盖
+        if (costBudget > 0 && cost.ytd > costBudget) status = 'over';
         return {
             project_id: pid,
             project_name: (names[pid] && names[pid].project_name) || b.project_name || pid,
@@ -118,9 +159,10 @@ async function overview({ bu_no = '', YYYY_MM } = {}) {
             cost_ytd: cost.ytd,
             profit_month: profitMonth,
             profit_ytd: profitYtd,
-            margin_ytd: rev.ytd > 0 ? r2(profitYtd / rev.ytd * 100) : null,
+            margin_ytd: rev.ytd > 0 && !costMissing ? r2(profitYtd / rev.ytd * 100) : null,
             rev_usage: revBudget > 0 ? r2(rev.ytd / revBudget * 100) : null,
             cost_usage: costUsage,
+            cost_missing: costMissing,
             status
         };
     }).sort((a, b) => b.revenue_ytd - a.revenue_ytd || b.cost_ytd - a.cost_ytd);
@@ -137,7 +179,9 @@ async function overview({ bu_no = '', YYYY_MM } = {}) {
     }, { revenue_budget: 0, cost_budget: 0, revenue_month: 0, revenue_ytd: 0, cost_month: 0, cost_ytd: 0, profit_ytd: 0 });
     Object.keys(totals).forEach(k => { totals[k] = r2(totals[k]); });
     totals.profit_month = r2(totals.revenue_month - totals.cost_month);
-    totals.margin_ytd = totals.revenue_ytd > 0 ? r2(totals.profit_ytd / totals.revenue_ytd * 100) : null;
+    totals.cost_missing = totals.revenue_ytd > 0 && totals.cost_ytd === 0;
+    totals.margin_ytd = totals.revenue_ytd > 0 && !totals.cost_missing
+        ? r2(totals.profit_ytd / totals.revenue_ytd * 100) : null;
     totals.rev_usage = totals.revenue_budget > 0 ? r2(totals.revenue_ytd / totals.revenue_budget * 100) : null;
     totals.cost_usage = totals.cost_budget > 0 ? r2(totals.cost_ytd / totals.cost_budget * 100) : null;
 
@@ -150,7 +194,8 @@ async function overview({ bu_no = '', YYYY_MM } = {}) {
             over_budget: rows.filter(r => r.status === 'over').length,
             no_budget: rows.filter(r => !r.revenue_budget && !r.cost_budget).length
         },
-        rows
+        rows,
+        coverage: await monthCoverage(year, bu_no)
     };
 }
 
@@ -165,8 +210,13 @@ async function detail({ project_id, year, bu_no = '' } = {}) {
         `SELECT YYYY_MM, SUM(revenue_amt) amt FROM project_revenue WHERE ${cond.join(' AND ')} GROUP BY YYYY_MM`, params);
     const [costRows] = await pool.execute(
         `SELECT YYYY_MM, SUM(amount) amt FROM project_cost WHERE ${cond.join(' AND ')} GROUP BY YYYY_MM`, params);
+    const bcond = ['project_id=?', 'year=?'];
+    const bparams = [project_id, y];
+    if (bu_no && bu_no !== 'GROUP') { bcond.push('bu_no=?'); bparams.push(bu_no); }
+    // GROUP 视图按项目汇总各公司别预算
     const [budRows] = await pool.execute(
-        `SELECT revenue_budget, cost_budget FROM project_budget WHERE project_id=? AND year=? LIMIT 1`, [project_id, y]);
+        `SELECT SUM(revenue_budget) AS revenue_budget, SUM(cost_budget) AS cost_budget
+         FROM project_budget WHERE ${bcond.join(' AND ')}`, bparams);
     const names = await projectNameMap();
 
     const rev = {}, cost = {};
@@ -174,6 +224,8 @@ async function detail({ project_id, year, bu_no = '' } = {}) {
     costRows.forEach(r => { cost[r.YYYY_MM] = r2(r.amt); });
 
     let cumRev = 0, cumCost = 0;
+    const now = new Date();
+    const curYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const months = Array.from({ length: 12 }, (_, i) => {
         const ym = `${y}-${String(i + 1).padStart(2, '0')}`;
         const rv = rev[ym] || 0, ct = cost[ym] || 0;
@@ -181,11 +233,14 @@ async function detail({ project_id, year, bu_no = '' } = {}) {
         return {
             YYYY_MM: ym, revenue: rv, cost: ct,
             profit: r2(rv - ct),
-            margin: rv > 0 ? r2((rv - ct) / rv * 100) : null,
+            margin: rv > 0 && ct > 0 ? r2((rv - ct) / rv * 100) : null,
+            cost_missing: rv > 0 && ct === 0,
+            future: ym > curYm,
             cum_revenue: cumRev, cum_cost: cumCost, cum_profit: r2(cumRev - cumCost)
         };
     });
-    const budget = budRows[0]
+    const hasBud = budRows[0] && budRows[0].revenue_budget !== null;
+    const budget = hasBud
         ? { revenue_budget: r2(budRows[0].revenue_budget), cost_budget: r2(budRows[0].cost_budget) }
         : { revenue_budget: 0, cost_budget: 0 };
     const totalRev = r2(cumRev), totalCost = r2(cumCost);
@@ -197,7 +252,8 @@ async function detail({ project_id, year, bu_no = '' } = {}) {
         budget,
         totals: {
             revenue: totalRev, cost: totalCost, profit: r2(totalRev - totalCost),
-            margin: totalRev > 0 ? r2((totalRev - totalCost) / totalRev * 100) : null,
+            margin: totalRev > 0 && totalCost > 0 ? r2((totalRev - totalCost) / totalRev * 100) : null,
+            cost_missing: totalRev > 0 && totalCost === 0,
             rev_usage: budget.revenue_budget > 0 ? r2(totalRev / budget.revenue_budget * 100) : null,
             cost_usage: budget.cost_budget > 0 ? r2(totalCost / budget.cost_budget * 100) : null
         },
@@ -208,9 +264,12 @@ async function detail({ project_id, year, bu_no = '' } = {}) {
 // ===== 预算 =====
 async function listBudgets({ year, bu_no = '' } = {}) {
     const y = Number(year) || new Date().getFullYear();
+    const cond = ['year=?'];
+    const params = [y];
+    if (bu_no && bu_no !== 'GROUP') { cond.push('bu_no=?'); params.push(bu_no); }
     const [rows] = await pool.execute(
-        `SELECT uid, project_id, project_name, year, revenue_budget, cost_budget, update_by, update_time
-         FROM project_budget WHERE year=? ORDER BY project_id`, [y]);
+        `SELECT uid, bu_no, project_id, project_name, year, revenue_budget, cost_budget, update_by, update_time
+         FROM project_budget WHERE ${cond.join(' AND ')} ORDER BY bu_no, project_id`, params);
     const names = await projectNameMap();
     return rows.map(r => Object.assign({}, r, {
         customer_name: (names[r.project_id] && names[r.project_id].customer_name) || '',
@@ -218,18 +277,19 @@ async function listBudgets({ year, bu_no = '' } = {}) {
     }));
 }
 
-async function saveBudget({ project_id, project_name, year, revenue_budget, cost_budget, update_by } = {}) {
+async function saveBudget({ bu_no, project_id, project_name, year, revenue_budget, cost_budget, update_by } = {}) {
     if (!project_id) throw new Error('需要 project_id');
+    const bu = requireBu(bu_no);
     const y = Number(year) || new Date().getFullYear();
     const names = await projectNameMap();
     const pname = project_name || (names[project_id] && names[project_id].project_name) || project_id;
     await pool.execute(`
-        INSERT INTO project_budget (project_id, project_name, year, revenue_budget, cost_budget, update_by)
-        VALUES (?,?,?,?,?,?)
+        INSERT INTO project_budget (bu_no, project_id, project_name, year, revenue_budget, cost_budget, update_by)
+        VALUES (?,?,?,?,?,?,?)
         ON DUPLICATE KEY UPDATE project_name=VALUES(project_name),
             revenue_budget=VALUES(revenue_budget), cost_budget=VALUES(cost_budget), update_by=VALUES(update_by)`,
-        [project_id, pname, y, r2(revenue_budget), r2(cost_budget), update_by || null]);
-    return { project_id, year: y, project_name: pname };
+        [bu, project_id, pname, y, r2(revenue_budget), r2(cost_budget), update_by || null]);
+    return { bu_no: bu, project_id, year: y, project_name: pname };
 }
 
 async function deleteBudget(uid) {
@@ -256,24 +316,32 @@ async function listCosts({ bu_no = '', project_id = '', from = '', to = '', limi
     }));
 }
 
+/** 手工录入必须归属到具体公司别，不允许挂到「全部公司」 */
+function requireBu(bu_no) {
+    if (!bu_no || bu_no === 'GROUP') throw new Error('请选择公司别');
+    return bu_no;
+}
+
 async function createCost(d) {
     if (!d || !d.project_id) throw new Error('需要 project_id');
     if (!d.YYYY_MM) throw new Error('需要 YYYY_MM');
+    const bu = requireBu(d.bu_no);
     if (!(Number(d.amount) > 0)) throw new Error('金额必须大于 0');
     const [r] = await pool.execute(`
         INSERT INTO project_cost (bu_no, project_id, YYYY_MM, cost_type, amount, ref_no, remark, created_by)
         VALUES (?,?,?,?,?,?,?,?)`,
-        [d.bu_no || 'HM', d.project_id, String(d.YYYY_MM).slice(0, 7),
+        [bu, d.project_id, String(d.YYYY_MM).slice(0, 7),
             COST_TYPES[d.cost_type] ? d.cost_type : 'OTHER', r2(d.amount),
             d.ref_no || null, d.remark || null, d.created_by || null]);
     return { uid: r.insertId };
 }
 
 async function updateCost(uid, d) {
+    const bu = requireBu(d.bu_no);
     const [r] = await pool.execute(`
         UPDATE project_cost SET bu_no=?, project_id=?, YYYY_MM=?, cost_type=?, amount=?, ref_no=?, remark=?
         WHERE uid=?`,
-        [d.bu_no || 'HM', d.project_id, String(d.YYYY_MM).slice(0, 7),
+        [bu, d.project_id, String(d.YYYY_MM).slice(0, 7),
             COST_TYPES[d.cost_type] ? d.cost_type : 'OTHER', r2(d.amount),
             d.ref_no || null, d.remark || null, uid]);
     if (!r.affectedRows) throw new Error('成本记录不存在');
@@ -305,20 +373,22 @@ async function listRevenues({ bu_no = '', project_id = '', from = '', to = '', l
 async function createRevenue(d) {
     if (!d || !d.project_id) throw new Error('需要 project_id');
     if (!d.YYYY_MM) throw new Error('需要 YYYY_MM');
+    const bu = requireBu(d.bu_no);
     if (!(Number(d.revenue_amt) > 0)) throw new Error('金额必须大于 0');
     const [r] = await pool.execute(`
         INSERT INTO project_revenue (bu_no, project_id, YYYY_MM, revenue_amt, confirm_type, ref_no, remark, created_by)
         VALUES (?,?,?,?,'manual',?,?,?)`,
-        [d.bu_no || 'HM', d.project_id, String(d.YYYY_MM).slice(0, 7), r2(d.revenue_amt),
+        [bu, d.project_id, String(d.YYYY_MM).slice(0, 7), r2(d.revenue_amt),
             d.ref_no || null, d.remark || null, d.created_by || null]);
     return { uid: r.insertId };
 }
 
 async function updateRevenue(uid, d) {
+    const bu = requireBu(d.bu_no);
     const [r] = await pool.execute(`
         UPDATE project_revenue SET bu_no=?, project_id=?, YYYY_MM=?, revenue_amt=?, ref_no=?, remark=?
         WHERE uid=?`,
-        [d.bu_no || 'HM', d.project_id, String(d.YYYY_MM).slice(0, 7), r2(d.revenue_amt),
+        [bu, d.project_id, String(d.YYYY_MM).slice(0, 7), r2(d.revenue_amt),
             d.ref_no || null, d.remark || null, uid]);
     if (!r.affectedRows) throw new Error('收入记录不存在');
 }
