@@ -12,6 +12,23 @@
 | 004 | [004_system_tables.sql](./004_system_tables.sql) | 6 | 系統配置 6 表 |
 | 005 | [005_erp_detail_tables.sql](./005_erp_detail_tables.sql) | 3 | ERP 明細 3 表 |
 | 011 | [011_erp_manufacturing_tables.sql](./011_erp_manufacturing_tables.sql) | 4 | ERP 製造 4 表（工單/用料/工藝/報工） |
+| 021 | [021_workflow_expense.sql](./021_workflow_expense.sql) | 6 | 通用審批流 4 表 + 費用報銷 2 表 |
+| 022 | [022_workflow_payment.sql](./022_workflow_payment.sql) | 2 | 付款申請審批流 2 表 |
+| 023 | [023_consolidation_closing.sql](./023_consolidation_closing.sql) | 5 | 合併報表與關帳 5 表 |
+| 024 | [024_pr_workflow.sql](./024_pr_workflow.sql) | 2 | 採購申請審批流 2 表 |
+| 025 | [025_po_match.sql](./025_po_match.sql) | 2 | PO 三單匹配 2 表 |
+| 026 | [026_receipt_match.sql](./026_receipt_match.sql) | 2 | 收貨匹配 2 表 |
+| 027 | [027_module_permission.sql](./027_module_permission.sql) | 1 | 模組權限矩陣 1 表 |
+| 028 | [028_po_match_enhance.sql](./028_po_match_enhance.sql) | 改 1 | PO 匹配增強（擴充欄位） |
+| 029 | [029_sales_credit_return.sql](./029_sales_credit_return.sql) | 2 | 銷售信用與退貨 2 表 |
+| 030 | [030_profit_dimension.sql](./030_profit_dimension.sql) | 2 | 多維盈利分析 2 表 |
+| 031 | [031_rolling_budget.sql](./031_rolling_budget.sql) | 1 | 滾動預算 1 表 |
+| 032 | [032_inventory_turnover.sql](./032_inventory_turnover.sql) | 1 | 庫存周轉 1 表 |
+| 033 | [033_group_cockpit.sql](./033_group_cockpit.sql) | 1 | 集團經營目標 1 表 |
+| 034 | [034_board_pack.sql](./034_board_pack.sql) | 1 | 董事會報告包 1 表 |
+| 035 | [035_project_profit.sql](./035_project_profit.sql) | 3 | 專案損益 3 表 |
+| 036 | [036_project_customer_map.sql](./036_project_customer_map.sql) | 1 | 客戶專案映射 1 表 |
+| 037 | [037_project_budget_bu.sql](./037_project_budget_bu.sql) | 改 3 | 專案預算按公司別（擴充） |
 
 ## 快速執行
 
