@@ -2740,6 +2740,13 @@
 
     registerPage('dailyReport', async (c) => {
         DRApp.c = c;
+        // 跟随顶部全局「月份」选择：进入页面或切换全局月份时，年度/月份筛选同步更新
+        const globalYm = String(State.YYYY_MM || '');
+        if (/^\d{4}-\d{2}$/.test(globalYm)) {
+            DRApp.filters.year = globalYm.slice(0, 4);
+            DRApp.filters.month = globalYm.slice(5, 7);
+            DRApp.filters.page = 1;
+        }
         try {
             await DRApp.loadMeta();
         } catch (e) {

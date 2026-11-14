@@ -27,7 +27,7 @@ function resetConvId() {
     return cid;
 }
 
-registerPage('aiqa', async (c) => {
+registerPage('aiqa', async (c, params = {}) => {
     const convId = getConvId(); // 本次页面会话的 conversation_id
     const _bu = await CodeHelper.buSel();
     c.innerHTML = `
@@ -82,7 +82,24 @@ registerPage('aiqa', async (c) => {
     const defMonth = State.YYYY_MM || '2025-12';
     document.getElementById('aiMonth').value = defMonth;
     loadSuggestions();
-    LLMKeyMgr.refreshStatus();
+    await LLMKeyMgr.refreshStatus();
+    // 由其他页面带入问题（如风险预警的 AI 智能因子分析）
+    if (params.question) {
+        const inp = document.getElementById('aiInput');
+        if (inp) inp.value = params.question;
+        if (params.autoAsk) {
+            const cfgs = Array.isArray(LLMKeyMgr.configs) ? LLMKeyMgr.configs : [];
+            if (cfgs.some(x => x.configured)) {
+                const sel = document.getElementById('aiProvider');
+                if (sel && !sel.options.length) {
+                    sel.innerHTML = cfgs.map(x => `<option value="${x.provider}">${x.provider_name}${x.configured ? ' ✅' : ''}</option>`).join('');
+                }
+                const cb = document.getElementById('aiUseLLM');
+                if (cb) { cb.checked = true; AIQA.toggleLLM(); }
+            }
+            setTimeout(() => AIQA.ask(), 100);
+        }
+    }
 });
 
 async function loadSuggestions() {
@@ -280,7 +297,7 @@ const LLMKeyMgr = {
     async refreshStatus() {
         try {
             const res = await API.get('/api/llm/providers');
-            this.configs = res.data || [];
+            this.configs = (res.data && res.data.list) || [];
             AIQA.renderStatus();
         } catch (e) { /* ignore */ }
     },

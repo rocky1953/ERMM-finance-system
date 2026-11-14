@@ -58,10 +58,22 @@
         wkLabel(v) { return WK_KEYS[v] ? t(WK_KEYS[v]) : (v || '-'); },
         destroyCharts() { this.charts.forEach(ch => { try { ch.destroy(); } catch (e) { } }); this.charts = []; },
 
+        // 本页查询/下钻时同步顶部全局月份，避免页面日期与右上角不一致
+        syncGlobalMonth(year, month) {
+            const ym = `${year}-${String(month || '').padStart(2, '0')}`;
+            if (!/^\d{4}-\d{2}$/.test(ym)) return;
+            State.YYYY_MM = ym;
+            const el = document.getElementById('globalMonth');
+            if (el) el.value = ym;
+        },
+
         yearOptions(sel) {
             const y = new Date().getFullYear();
+            const s = Number(sel) || y;
+            const max = Math.max(y + 1, s);
+            const min = Math.min(y - 6, s);
             let html = '';
-            for (let yy = y + 1; yy >= y - 6; yy--) {
+            for (let yy = max; yy >= min; yy--) {
                 html += `<option value="${yy}" ${String(sel) === String(yy) ? 'selected' : ''}>${yy}</option>`;
             }
             return html;
@@ -122,6 +134,7 @@
             this.chartFilters.year = y;
             this.chartFilters.month = m;
             this.chartFilters.depart_id = de ? de.value : '';
+            this.syncGlobalMonth(y, m);
             const qs = new URLSearchParams({ bu_no: State.bu_no, year: y, month: m });
             if (de && de.value) qs.set('depart_id', de.value);
             try {
@@ -230,6 +243,7 @@
 
         async loadDetail() {
             const d = this.detail;
+            this.syncGlobalMonth(d.year, d.month);
             const qs = new URLSearchParams({
                 bu_no: State.bu_no, year: d.year, month: d.month,
                 user_id: d.user_id, page: d.page, pageSize: d.pageSize
@@ -489,6 +503,12 @@
 
     registerPage('dailyReportUnfinished', async (c, params = {}) => {
         DRUnfin.c = c;
+        // 跟随顶部全局「月份」选择：进入页面或切换全局月份时，图表筛选同步更新
+        const globalYm = String(State.YYYY_MM || '');
+        if (/^\d{4}-\d{2}$/.test(globalYm)) {
+            DRUnfin.chartFilters.year = globalYm.slice(0, 4);
+            DRUnfin.chartFilters.month = globalYm.slice(5, 7);
+        }
         try {
             await DRUnfin.loadMeta();
         } catch (e) {
