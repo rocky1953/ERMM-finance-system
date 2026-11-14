@@ -66,21 +66,22 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d1" href="#sec-2">二、技术栈与部署（事实）</a>
 <a class="toc-item d2" href="#sec-3">2.1 启动 / 停止 / 健康检查</a>
 <a class="toc-item d2" href="#sec-4">2.2 依赖与目录结构</a>
-<a class="toc-item d1" href="#sec-5">三、账号与权限管理（👤 使用者管理）</a>
-<a class="toc-item d1" href="#sec-6">四、系统设定与主档（🔧）</a>
-<a class="toc-item d1" href="#sec-7">五、批次管线与第三方整合（⚙️ / 🔌）</a>
-<a class="toc-item d2" href="#sec-8">5.1 批次管线</a>
-<a class="toc-item d2" href="#sec-9">5.2 第三方资料整合</a>
-<a class="toc-item d2" href="#sec-10">5.3 排程器</a>
-<a class="toc-item d1" href="#sec-11">六、数据质量管理（🛠️）</a>
-<a class="toc-item d1" href="#sec-12">七、AI 智能层（运维视角）</a>
-<a class="toc-item d1" href="#sec-13">八、文档维护（系统文件）</a>
-<a class="toc-item d1" href="#sec-14">九、安全与合规</a>
-<a class="toc-item d1" href="#sec-15">十、常见故障排查表</a>
-<a class="toc-item d1" href="#sec-16">十一、变更管理清单（上线前自检）</a>
+<a class="toc-item d2" href="#sec-5">2.3 经营分析模块（2026-11 新增）</a>
+<a class="toc-item d1" href="#sec-6">三、账号与权限管理（👤 使用者管理）</a>
+<a class="toc-item d1" href="#sec-7">四、系统设定与主档（🔧）</a>
+<a class="toc-item d1" href="#sec-8">五、批次管线与第三方整合（⚙️ / 🔌）</a>
+<a class="toc-item d2" href="#sec-9">5.1 批次管线</a>
+<a class="toc-item d2" href="#sec-10">5.2 第三方资料整合</a>
+<a class="toc-item d2" href="#sec-11">5.3 排程器</a>
+<a class="toc-item d1" href="#sec-12">六、数据质量管理（🛠️）</a>
+<a class="toc-item d1" href="#sec-13">七、AI 智能层（运维视角）</a>
+<a class="toc-item d1" href="#sec-14">八、文档维护（系统文件）</a>
+<a class="toc-item d1" href="#sec-15">九、安全与合规</a>
+<a class="toc-item d1" href="#sec-16">十、常见故障排查表</a>
+<a class="toc-item d1" href="#sec-17">十一、变更管理清单（上线前自检）</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="ERMM_系統架構與流程圖.html">切換另一份文件</a>
   </div>
@@ -168,15 +169,53 @@ Stop-Process -Id &lt;PID&gt; -Force</code></pre><ul>
 <li>生产部署建议 PM2 守护：<code>pm2 start app.js --name ermm</code>，<code>pm2 logs ermm</code> 看日志。</li>
 </ul>
 <h2 id="sec-4">2.2 依赖与目录结构</h2><pre class="code-block"><code>app.js            # 入口：中间件、路由挂载、文档路由、排程启动
-routes/*.js       # 48 个路由模块（按业务域）
-services/*.js     # 业务服务（财务计算、税务算税、整合）
+routes/*.js       # 64 个路由模块（按业务域，app.js 挂载 64 个 /api 前缀）
+services/*.js     # 13 个业务服务（财务计算、税务算税、整合、滚动预算、库存周转）
 utils/llmClient.js# LLM 服务商选择（必须统一走这里）
 scheduler/*.js    # 告警与整合排程
-migrations/*.sql  # 19 个迁移脚本（001~019）+ run_all.sql
-public/           # 前端页面与静态资源
+migrations/*.sql  # 45 个迁移脚本（001~032，含子版本）+ run_all.sql
+public/           # 前端页面（60 个页面脚本）与静态资源
 docs/             # 架构、数据表、手册（md + 生成后的 html）
-scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
-<h1 id="sec-5">三、账号与权限管理（👤 使用者管理）</h1><ul>
+scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="sec-5">2.3 经营分析模块（2026-11 新增）</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>前端页面</th>
+<th>API</th>
+<th>迁移</th>
+<th>关键表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>多维盈利</td>
+<td><code>public/js/pages/profitAnalysis.js</code></td>
+<td><code>/api/profit</code></td>
+<td>030</td>
+<td>读 <code>mgm_finance_summary</code>、<code>ermm_erp_so</code>、<code>ermm_erp_po</code></td>
+</tr>
+<tr>
+<td>滚动预算</td>
+<td><code>public/js/pages/rollingBudget.js</code></td>
+<td><code>/api/rolling-budget</code></td>
+<td>031</td>
+<td><code>rolling_budget_assumption</code>（假设）</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td><code>public/js/pages/inventoryTurnover.js</code></td>
+<td><code>/api/inventory-turnover</code></td>
+<td>032</td>
+<td><code>inv_slow_moving_action</code>（处理单）、<code>e2_xitems_daily_status</code>（库龄快照）</td>
+</tr>
+</tbody></table>
+<ul>
+<li>三个模块均在 <code>app.js</code> 以 <code>app.use(&#39;/api/xxx&#39;, routes)</code> 挂载，需登录（<code>authRequired</code>）后访问。</li>
+<li>库存周转新增码表 <code>INV_DISPOSAL_TYPE</code>（6 种处置方式），权限行 <code>inventoryTurnover</code>（经营决策组，一般员工不可用）。</li>
+<li>库存周转接口清单：<code>GET /overview|/aging|/slow-moving|/replenishment|/snapshots|/actions</code>，<code>POST/PUT/DELETE /actions</code>。</li>
+<li>数据口径：周转率取 <code>mgm_finance_summary</code> 近 12 个月销售成本 ÷ 平均存货价值；库龄取 <code>e2_xitems_daily_status</code> 快照，默认选料件行数最多的最近日期；需求取 SO 交货量，缺失时以 PO 采购量近似。</li>
+</ul>
+<hr>
+<h1 id="sec-6">三、账号与权限管理（👤 使用者管理）</h1><ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>使用者管理</strong>。</li>
 <li><strong>用户类型</strong>：一般员工 / 部门主管 / 高阶主管 / 管理员。</li>
 <li><strong>管理员判定</strong>：<code>cams_xuser.admin = &#39;Yes&#39;</code>（系统内统一 Yes/No，migration 012 起）。</li>
@@ -192,7 +231,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 <p><strong>权限设计原则</strong>：前端只做<strong>体验层拦截</strong>（如「系统文件」菜单），真正的数据安全依赖后端 <code>authRequired</code> 的 JWT 校验。敏感接口必须在路由层再校验角色。</p>
 </blockquote>
 <hr>
-<h1 id="sec-6">四、系统设定与主档（🔧）</h1><table>
+<h1 id="sec-7">四、系统设定与主档（🔧）</h1><table>
 <thead>
 <tr>
 <th>模块</th>
@@ -228,13 +267,13 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 </tbody></table>
 <p><strong>变更注意</strong>：KPI 门槛与公司别信息属于<strong>全局参数</strong>，一次修改影响所有用户与所有页面，变更前请备份并在测试账号验证。</p>
 <hr>
-<h1 id="sec-7">五、批次管线与第三方整合（⚙️ / 🔌）</h1><h2 id="sec-8">5.1 批次管线</h2><ul>
+<h1 id="sec-8">五、批次管线与第三方整合（⚙️ / 🔌）</h1><h2 id="sec-9">5.1 批次管线</h2><ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>批次管线</strong>。</li>
 <li><strong>内容</strong>：7 个步骤的数据加工（取数 → 校验 → 汇总 → 指标计算 → 落库）。</li>
 <li><strong>操作</strong>：选择公司与月份 → 执行 → 查看每步状态与耗时 → 失败步骤可重跑。</li>
 <li><strong>排障</strong>：若仪表板某月无数据，优先确认该月批次是否跑完；单步失败看日志定位。</li>
 </ul>
-<h2 id="sec-9">5.2 第三方资料整合</h2><ul>
+<h2 id="sec-10">5.2 第三方资料整合</h2><ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>第三方资料整合</strong>（5 个页签）。</li>
 <li><strong>内容</strong>：数据源配置（<code>intg_source</code>）、作业定义（<code>intg_job</code>）、执行日志（<code>intg_log</code>）。</li>
 <li><strong>操作</strong>：<ol>
@@ -246,7 +285,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 </li>
 <li><strong>安全</strong>：第三方库使用<strong>只读账号</strong>；写入仅限本系统 <code>ermm_db</code>。</li>
 </ul>
-<h2 id="sec-10">5.3 排程器</h2><table>
+<h2 id="sec-11">5.3 排程器</h2><table>
 <thead>
 <tr>
 <th>排程</th>
@@ -271,7 +310,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 </tr>
 </tbody></table>
 <hr>
-<h1 id="sec-11">六、数据质量管理（🛠️）</h1><ul>
+<h1 id="sec-12">六、数据质量管理（🛠️）</h1><ul>
 <li><strong>入口</strong>：日常作业 → <strong>数据质量扫描</strong>。</li>
 <li><strong>用途</strong>：不是你日常要看，而是<strong>排障与上线前体检</strong>：7 大类 20+ 项，39ms 返回。</li>
 <li><strong>典型场景</strong>：<ul>
@@ -282,7 +321,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 </li>
 </ul>
 <hr>
-<h1 id="sec-12">七、AI 智能层（运维视角）</h1><table>
+<h1 id="sec-13">七、AI 智能层（运维视角）</h1><table>
 <thead>
 <tr>
 <th>功能</th>
@@ -327,7 +366,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 <li><strong>安全边界</strong>：AI 层<strong>只读</strong>，不写账务表；写入仅限 <code>ermm_knowledge</code>、<code>ermm_kb_miss_log</code>、<code>daily_ai_summary</code>。</li>
 </ul>
 <hr>
-<h1 id="sec-13">八、文档维护（系统文件）</h1><ul>
+<h1 id="sec-14">八、文档维护（系统文件）</h1><ul>
 <li><strong>入口</strong>：侧边栏最下方「系统文件」（仅管理员可见可用）：<ul>
 <li>🗺️ 系统架构与流程图 → <code>/docs/architecture</code></li>
 <li>📊 高管价值简报 → <code>/docs/executive</code></li>
@@ -344,7 +383,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 <li><strong>非管理员点击</strong>会弹出「你的权限不能使用这个模块功能」——这是前端 <code>openDocPage()</code> 的权限拦截。</li>
 </ul>
 <hr>
-<h1 id="sec-14">九、安全与合规</h1><ul>
+<h1 id="sec-15">九、安全与合规</h1><ul>
 <li><strong>认证</strong>：所有 <code>/api/*</code> 经 <code>authRequired</code>；令牌失效返回 401，前端统一跳登录页并清除 <code>ermm_token</code>。</li>
 <li><strong>密码策略</strong>：用户密码入库前加密；管理员账号单独管理，不共用。</li>
 <li><strong>审计</strong>：凭证、报税提交、批次执行、整合日志均留痕，可追溯。</li>
@@ -352,7 +391,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 <li><strong>敏感配置</strong>：<code>llm_config.api_key</code>、第三方库连接信息不要写入前端或提交仓库。</li>
 </ul>
 <hr>
-<h1 id="sec-15">十、常见故障排查表</h1><table>
+<h1 id="sec-16">十、常见故障排查表</h1><table>
 <thead>
 <tr>
 <th>现象</th>
@@ -391,11 +430,24 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><hr>
 <td>数据库连接失败</td>
 <td>MySQL 服务 → 账号密码 → 连接数上限（pool limit 20）</td>
 </tr>
+<tr>
+<td>库存周转无库龄数据</td>
+<td>该 BU 是否在 <code>e2_xitems_daily_status</code> 有快照 → 检查 <code>bu_no</code> 与 <code>stock_date</code> → 切换快照日期</td>
+</tr>
+<tr>
+<td>呆滞处理单下发 400</td>
+<td>必传 <code>bu_no</code>、<code>xitems</code>；检查 <code>INV_DISPOSAL_TYPE</code> 码表是否已执行迁移 032</td>
+</tr>
+<tr>
+<td>库存周转页无权限/菜单不显示</td>
+<td><code>cams_module_permission</code> 是否有 <code>inventoryTurnover</code> 行 → 用户角色是否允许</td>
+</tr>
 </tbody></table>
 <hr>
-<h1 id="sec-16">十一、变更管理清单（上线前自检）</h1><ul>
-<li><input disabled="" type="checkbox"> 迁移脚本按序执行（001~019），<code>run_all.sql</code> 可一键建置</li>
+<h1 id="sec-17">十一、变更管理清单（上线前自检）</h1><ul>
+<li><input disabled="" type="checkbox"> 迁移脚本按序执行（001~032），<code>run_all.sql</code> 可一键建置</li>
 <li><input disabled="" type="checkbox"> 新增路由在 <code>app.js</code> 挂载 <code>/api/xxx</code></li>
+<li><input disabled="" type="checkbox"> 新增页面在 <code>cams_module_permission</code> 登记 <code>module_code</code>，且与 <code>index.html</code> 的 <code>data-page</code> 一致</li>
 <li><input disabled="" type="checkbox"> 前端新页面使用 <code>registerPage()</code>，并在 <code>index.html</code> 加 <code>?v=</code> 缓存戳</li>
 <li><input disabled="" type="checkbox"> 新增页面文案补齐三语 i18n</li>
 <li><input disabled="" type="checkbox"> 敏感接口在路由层校验角色</li>

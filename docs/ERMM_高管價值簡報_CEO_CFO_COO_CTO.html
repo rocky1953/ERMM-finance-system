@@ -86,7 +86,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <a class="toc-item d1" href="#sec-8">CEO 价值 4：AI 辅助决策与趋势预判（RAG 知识问答 + Monte Carlo 概率预测）</a>
 <a class="toc-item d1" href="#sec-9">CFO 视角：核算自动化与合规风控</a>
 <a class="toc-item d1" href="#sec-10">CFO 价值 1：RUID 全链路追溯，账证表税一体</a>
-<a class="toc-item d1" href="#sec-11">CFO 价值 2：三大报表实时生成，且恒平衡</a>
+<a class="toc-item d1" href="#sec-11">CFO 价值 2：三大报表实时生成，预算与盈利同源联动</a>
 <a class="toc-item d1" href="#sec-12">CFO 价值 3：电子化报税，税务合规零遗漏</a>
 <a class="toc-item d1" href="#sec-13">CFO 税务合规 · 具体案例 1：小规模纳税人 VAT 免征判定</a>
 <a class="toc-item d1" href="#sec-14">CFO 税务合规 · 具体案例 2：年终奖计税方式比选</a>
@@ -103,7 +103,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <a class="toc-item d1" href="#sec-25">COO 价值 1：7 步批次管线，ERP 数据一键加工</a>
 <a class="toc-item d1" href="#sec-26">COO 价值 2：第三方数据整合，告别人工抄数</a>
 <a class="toc-item d1" href="#sec-27">COO 价值 3：人效与工时透明化</a>
-<a class="toc-item d1" href="#sec-28">COO 价值 4：运营异常分级预警，介入时机前置</a>
+<a class="toc-item d1" href="#sec-28">COO 价值 4：运营异常分级预警 + 库存呆滞闭环</a>
 <a class="toc-item d1" href="#sec-29">CTO 视角：架构现代化与安全可控</a>
 <a class="toc-item d1" href="#sec-30">CTO 价值 1：轻量现代化架构，低门槛可维护</a>
 <a class="toc-item d1" href="#sec-31">CTO 价值 2：安全与权限体系内建</a>
@@ -119,7 +119,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <a class="toc-item d1" href="#sec-41">结尾：系统定位</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="ERMM_系統架構與流程圖.html">切換另一份文件</a>
   </div>
@@ -133,7 +133,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <div class="slide-count" style="display:none">40</div>
 <blockquote>
 <p>用法：本文档为 PPT 大纲格式（<code>#</code> = 一页幻灯片），可直接粘贴导入 Gamma、Kimi PPT、WPS AI、ChatPPT、MindShow 等工具自动生成简报；或经 Word 大纲视图导入 PowerPoint。
-版本：v3.3 ｜ 2026-11-12 ｜ 系统事实：50 个 API 路由 · 85 张资料表 · 50 个前端入口（8 个菜单分组）· 3 账套 × 36 个月数据 · AI 智能层（RAG 问答 / 每日摘要 / AR 催收评分 / 数据质量扫描 / 现金流概率预测）· 三语 i18n（简/繁/英，默认简体）· 码表驱动（<code>cams_system_codes</code>）</p>
+版本：v3.4 ｜ 2026-11-13 ｜ 系统事实：64 个 API 路由 · 89 张资料表 · 60 个前端入口（8 个菜单分组）· 3 账套 × 36 个月数据 · AI 智能层（RAG 问答 / 每日摘要 / AR 催收评分 / 数据质量扫描 / 现金流概率预测）· 经营分析（多维盈利 / 滚动预算 / 库存周转）· 三语 i18n（简/繁/英，默认简体）· 码表驱动（<code>cams_system_codes</code>）</p>
 </blockquote>
 <hr>
 <div class="slide" data-slide="1">
@@ -153,8 +153,8 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
   <h2 class="slide-title">系统总览（数字事实）</h2>
 </div>
 <ul>
-<li><strong>50 个前端入口 / 8 个菜单分组</strong>：仪表板、经营决策、ERP 原始单据、日常作业、财务分析·税务申报、财务预警·KPI、系统·主档管理、<strong>系统文件（管理员）</strong></li>
-<li><strong>50 个 API 路由 · 85 张资料表</strong>：统一 MySQL 数据底座，单一口径</li>
+<li><strong>60 个前端入口 / 8 个菜单分组</strong>：仪表板、经营决策、ERP 原始单据、日常作业、财务分析·税务申报、财务预警·KPI、系统·主档管理、<strong>系统文件（管理员）</strong></li>
+<li><strong>64 个 API 路由 · 89 张资料表</strong>：统一 MySQL 数据底座，单一口径</li>
 <li><strong>三账套（HM / SZ / HN）× 36 个月</strong>：数据连续、资产负债表 108/108 全部平衡</li>
 <li><strong>两大自动化引擎</strong>：告警排程（工作日 09:30/16:30）+ 整合排程（分钟级）</li>
 <li><strong>三语 i18n + 码表驱动</strong>：46 个已注册页面支持简/繁/英切换（默认简体）；公司、下拉选项、VAT/CIT 税率统一读取 <code>cams_system_codes</code>，改配置不改代码</li>
@@ -176,6 +176,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <ul>
 <li><strong>KPI 仪表板</strong>：营收、毛利、现金流、风险灯号一屏呈现，点击红灯自动诊断 Top3 原因</li>
 <li><strong>多账套切换</strong>：HM / SZ / HN 三家公司同一口径对比，告别各报各的 Excel</li>
+<li><strong>经营三看板</strong>：滚动预算看未来 12 个月三表与 13 周现金；多维盈利看客户 / 产品 / 渠道真实毛利贡献；库存周转看周转天数（DSI）与呆滞金额占比</li>
 <li><strong>管理收益</strong>：晨会前 5 分钟掌握全局，问题定位到「哪个公司、哪个月、哪个科目」</li>
 </ul>
 <hr>
@@ -234,12 +235,14 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div><div class="slide" data-slide="10">
 <div class="slide-head">
   <span class="slide-num">SLIDE 10</span>
-  <h2 class="slide-title">CFO 价值 2：三大报表实时生成，且恒平衡</h2>
+  <h2 class="slide-title">CFO 价值 2：三大报表实时生成，预算与盈利同源联动</h2>
 </div>
 <ul>
 <li><strong>资产负债表 / 损益表 / 现金流量表</strong>：任意公司、任意月份秒级出表，一键导出 Excel</li>
+<li><strong>滚动预算联动</strong>：以最新实际月为基准，调整增长率 / 成本率 / 周转天数 / 税率等假设，损益 → 资产负债 → 现金流三表自动重算并校验平衡差，预算不再是静态 Excel</li>
+<li><strong>多维盈利</strong>：客户 / 产品 / 渠道 / 项目四维拆解毛利与净利，识别「高收入低毛利」组合，定价与资源投放有据</li>
 <li><strong>数据质量保障</strong>：108 个月数据资产负债表 100% 平衡，销售成本可下钻到发票明细</li>
-<li><strong>管理收益</strong>：月结周期从数天缩短到分钟级，报表即查即有</li>
+<li><strong>管理收益</strong>：月结周期从数天缩短到分钟级，报表即查即有；从「出报表」延伸到「看未来」与「看结构」</li>
 </ul>
 <hr>
 </div><div class="slide" data-slide="11">
@@ -435,13 +438,14 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div><div class="slide" data-slide="27">
 <div class="slide-head">
   <span class="slide-num">SLIDE 27</span>
-  <h2 class="slide-title">COO 价值 4：运营异常分级预警，介入时机前置</h2>
+  <h2 class="slide-title">COO 价值 4：运营异常分级预警 + 库存呆滞闭环</h2>
 </div>
 <ul>
 <li><strong>KPI 红黄绿灯</strong>：与目标自动对比（达标 / 关注 / 介入）</li>
 <li><strong>趋势预测联动</strong>：风险等级高时提前干预，而非月底复盘</li>
+<li><strong>库存周转与呆滞闭环</strong>：库龄 A/B/C/D 结构 + 周转率 / DSI 一屏掌握；库龄 &gt; 90 天自动进入呆滞清单，可一键下发处理单（降价 / 退货 / 报废 / 转用 / 暂停采购 / 调拨），责任人 + 时限跟踪到完成；补货建议明确「该补多少 / 该暂缓」</li>
 <li><strong>数据质量扫描</strong>上线后：批次管线跑完自动扫描，脏数据在加工环节就被拦截，不流入财务报表</li>
-<li><strong>管理收益</strong>：运营节奏从「月度复盘」提速到「每日纠偏 + 加工环节自动质检」</li>
+<li><strong>管理收益</strong>：运营节奏从「月度复盘」提速到「每日纠偏」，库存从「只知道金额」升级为「知道压了多久、该谁处理」</li>
 </ul>
 <hr>
 </div><div class="slide" data-slide="28">
@@ -458,7 +462,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </div>
 <ul>
 <li><strong>技术栈主流且克制</strong>：Node.js + Express 5 + MySQL 8 连接池，前端原生 SPA（无重型框架依赖）</li>
-<li><strong>50 个路由模块化</strong>（按业务域分 7 组：智能化 Top5 / 核心财务 / 税务 / 操作 / 预警 / 系统 / 日报），服务层与数据层分离，新增功能按「路由 + 页面 + 资料表」三板斧落地</li>
+<li><strong>64 个路由模块化</strong>（按业务域分 7 组：智能化 Top5 / 核心财务 / 税务 / 操作 / 预警 / 系统 / 日报），服务层与数据层分离，新增功能按「路由 + 页面 + 资料表」三板斧落地</li>
 <li><strong>配置外置</strong>：下拉、公司、税率等统一由 <code>cams_system_codes</code> 码表提供（服务端缓存 TTL 1 小时），业务调整无需改代码、无需发版</li>
 <li><strong>管理收益</strong>：普通全栈工程师即可接手维护，无框架锁定、无 Vendor 绑定</li>
 </ul>
@@ -588,23 +592,23 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 </tr>
 <tr>
 <td>关键功能</td>
-<td>仪表板 / AI 摘要 / RAG 问答 / Monte Carlo 预测</td>
-<td>RUID / 三大报表 / 电子报税 / AR 催收排序 / 数据质量扫描</td>
-<td>批次管线 / 数据整合 / 日报</td>
+<td>仪表板 / AI 摘要 / RAG 问答 / Monte Carlo 预测 / 滚动预算 / 多维盈利 / 库存周转</td>
+<td>RUID / 三大报表 / 滚动预算三表联动 / 多维盈利 / 电子报税 / AR 催收排序 / 数据质量扫描</td>
+<td>批次管线 / 数据整合 / 日报 / 库存周转与呆滞处理</td>
 <td>JWT权限 / 审计 / 整合框架 / AI 智能层（5 大能力）</td>
 </tr>
 <tr>
 <td>效率提升</td>
-<td>决策 5 分钟取数 + 每日 AI 摘要</td>
-<td>月结 数天→分钟；催收从拍顺序→评分排序</td>
-<td>数据加工 2-3天→数分钟</td>
+<td>决策 5 分钟取数 + 每日 AI 摘要 + 预算/盈利/库存一屏</td>
+<td>月结 数天→分钟；预算改假设即重算；催收从拍顺序→评分排序</td>
+<td>数据加工 2-3天→数分钟；呆滞派单可跟踪到完成</td>
 <td>新功能 三板斧快速落地；AI 层只读分析不改账务</td>
 </tr>
 <tr>
 <td>风险控制</td>
-<td>事前预警 + 概率量化（断档概率）</td>
-<td>账税勾稽 + 申报留痕 + 质量一键体检</td>
-<td>异常分级 + 提前介入</td>
+<td>事前预警 + 概率量化（断档概率）+ 呆滞占比预警</td>
+<td>账税勾稽 + 申报留痕 + 质量一键体检 + 预算平衡差校验</td>
+<td>异常分级 + 提前介入 + 库龄超期自动清单</td>
 <td>全链路认证 + 操作可追溯 + LLM 服务商可切换</td>
 </tr>
 </tbody></table>
@@ -623,6 +627,8 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <li><strong>AI 赋能</strong>：5 大智能功能已上线——41 条知识库覆盖税务/政策/年报；AR 催收评分毫秒级；数据质量扫描 39ms；现金流风险概率量化</li>
 <li><strong>催收提效</strong>：应收款从「人工扫一遍」→「评分排序 + 四档处理」，催款精力精准投放</li>
 <li><strong>配置效率</strong>：税率/下拉/公司等由码表统一维护，改码值即生效（缓存 TTL 1 小时），无需改程序、无需发版</li>
+<li><strong>经营分析</strong>：滚动预算 12 个月三表联动、四维盈利拆解、库存 DSI 与呆滞清单同源出数，月结后分析从「多张 Excel」变为「一套看板」</li>
+<li><strong>库存治理</strong>：库龄 &gt; 90 天自动进呆滞清单并下发处理单，责任人与时限可跟踪，呆滞金额占比从「月末才知道」变为「随时可看」</li>
 </ul>
 <hr>
 </div><div class="slide" data-slide="40">
@@ -634,7 +640,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1120px;}
 <li>ERMM 不只是记账工具，而是 <strong>经营数据中枢 + AI 智能层</strong></li>
 <li>让 CEO 看得见方向（概率量化风险）、CFO 守得住底线（合规+质量双保险）、COO 抓得住效率（流程自动化）、CTO 控得住架构（轻量可读）</li>
 <li><strong>AI 层设计原则</strong>：只读分析、不回写账务，安全可控</li>
-<li><strong>下一步</strong>：真实税局对接、银行流水直连、知识库自动扩充（基于未命中日志）、预算滚动预测深化、T-3 一键修复功能</li>
+<li><strong>下一步</strong>：真实税局对接、银行流水直连、知识库自动扩充（基于未命中日志）、库存呆滞处置与减值联动、预算多版本对比、T-3 一键修复功能</li>
 </ul>
 </div>
   </article>

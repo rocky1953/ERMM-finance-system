@@ -77,17 +77,18 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d3" href="#sec-23">3.9 第三方资料整合模块（Excel 导入 / SQL 直连 · Online + Batch）</a>
 <a class="toc-item d3" href="#sec-29">3.10 电子化报税模块（VAT / CIT / IIT）</a>
 <a class="toc-item d3" href="#sec-34">3.11 智能化模块（AI 层 · RAG / 摘要 / 催收 / 质检 / 概率预测）</a>
-<a class="toc-item d2" href="#sec-40">四、RUID 全链路追溯图（财务核心）</a>
-<a class="toc-item d2" href="#sec-41">五、跨模块共用资料表</a>
-<a class="toc-item d2" href="#sec-42">六、技术栈汇总</a>
-<a class="toc-item d2" href="#sec-43">七、资料表清单（共 85 张 · 2026-11-12 实测 &lt;code&gt;information_schema&lt;/code&gt;）</a>
-<a class="toc-item d2" href="#sec-44">八、数据覆盖状态（2026-10-24 更新）</a>
-<a class="toc-item d3" href="#sec-45">8.1 账套 × 年份 覆盖矩阵</a>
-<a class="toc-item d3" href="#sec-46">8.2 2023 年销售成本明细对齐状态</a>
-<a class="toc-item d3" href="#sec-47">8.3 HN 2023 补齐摘要</a>
+<a class="toc-item d3" href="#sec-40">3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转）</a>
+<a class="toc-item d2" href="#sec-45">四、RUID 全链路追溯图（财务核心）</a>
+<a class="toc-item d2" href="#sec-46">五、跨模块共用资料表</a>
+<a class="toc-item d2" href="#sec-47">六、技术栈汇总</a>
+<a class="toc-item d2" href="#sec-48">七、资料表清单（共 89 张 · 2026-11-13）</a>
+<a class="toc-item d2" href="#sec-49">八、数据覆盖状态（2026-10-24 更新）</a>
+<a class="toc-item d3" href="#sec-50">8.1 账套 × 年份 覆盖矩阵</a>
+<a class="toc-item d3" href="#sec-51">8.2 2023 年销售成本明细对齐状态</a>
+<a class="toc-item d3" href="#sec-52">8.3 HN 2023 补齐摘要</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/executive">切換另一份文件</a>
   </div>
@@ -100,7 +101,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   <article class="doc">
 <blockquote>
 <p>基于代码事实抽取（routes/<em>.js、database/add_</em>.js、public/index.html 菜单、public/js/pages/*.js）
-生成日期：2026-10-06｜更新日期：2026-11-12（第三方整合 5 Tab、码表驱动与三语 i18n 更新）</p>
+生成日期：2026-10-06｜更新日期：2026-11-13（新增经营分析三模块：多维盈利 / 滚动预算 / 库存周转）</p>
 </blockquote>
 <hr>
 <h2 id="sec-2">一、系统整体架构图（分层架构）</h2><p><img src="/diagrams/01-architecture-layers.svg" alt="ERMM 分层架构图"></p>
@@ -113,10 +114,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     end
 
     subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口&lt;br/&gt;+ 侧边栏菜单 (50 个入口 / 8 个分组)"]
+        Index["index.html 入口&lt;br/&gt;+ 侧边栏菜单 (60 个入口 / 8 个分组)"]
         App["app.js&lt;br/&gt;路由/导航/弹窗/通用 UI"]
         I18n["i18n.js&lt;br/&gt;简/繁/英 三语"]
-        Pages["pages/*.js (50 个功能入口)&lt;br/&gt;dashboard / dailyReport / finance / tax / integration&lt;br/&gt;aiqa / arSmart / dataQuality / cashForecast / ..."]
+        Pages["pages/*.js (60 个功能入口)&lt;br/&gt;dashboard / dailyReport / finance / tax / integration&lt;br/&gt;profitAnalysis / rollingBudget / inventoryTurnover / ..."]
         Chart["Chart.js 图表引擎"]
     end
 
@@ -126,7 +127,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         Static["静态资源服务&lt;br/&gt;public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 50 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 64 个路由)"]
         direction LR
         S1["📊 绩效闭环&lt;br/&gt;dailyReport"]
         S2["🔔 预警引擎&lt;br/&gt;alert"]
@@ -140,6 +141,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         S10["⚙️ 系统支撑&lt;br/&gt;system/user/batch/kpi/action"]
         S11["🔌 第三方资料整合&lt;br/&gt;integration"]
         S12["🧮 电子化报税&lt;br/&gt;tax"]
+        S13["📈 经营分析&lt;br/&gt;profit/rollingBudget/inventoryTurnover"]
     end
 
     subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
@@ -152,6 +154,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         TaxT["税务申报表&lt;br/&gt;vat_declarations / cit_annual_settlements / iit_withholding_*"]
         TaxIn["税务录入表&lt;br/&gt;tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
         AiT["AI 知识库与摘要表&lt;br/&gt;ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / ermm_ai_records"]
+        AnalysisT["经营分析表&lt;br/&gt;sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action"]
     end
 
     subgraph EXTERNAL["⑥ 外部/支撑"]
@@ -180,6 +183,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     S11 --&gt; IntgT &amp; CoreT
     S11 --&gt; ThirdPartyDB &amp; ExcelFile &amp; IntgSched
     S12 --&gt; TaxT &amp; TaxIn &amp; CoreT
+    S13 --&gt; CoreT &amp; AnalysisT
     Ledger --&gt; CoreT
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
@@ -601,6 +605,30 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>新标签页 HTML</td>
 <td>无（纯文档，不落库）</td>
 <td>共 7 份文档；<strong>仅 admin=&#39;Yes&#39;</strong> 可见左侧菜单，非管理员菜单隐藏，手动访问由 <code>openDocPage()</code> 拦截提示</td>
+</tr>
+<tr>
+<td>50</td>
+<td><strong>多维盈利</strong></td>
+<td><code>/api/profit</code></td>
+<td>profitAnalysis</td>
+<td><code>sales_channel_map</code> <code>profit_cost_rate</code> <code>ermm_erp_so</code> <code>ermm_erp_po</code> <code>e2_xitems_daily_status</code></td>
+<td>客户/产品/渠道/项目四维毛利与净利；渠道映射、料件成本率可覆盖；只读分析</td>
+</tr>
+<tr>
+<td>51</td>
+<td><strong>滚动预算</strong></td>
+<td><code>/api/rolling-budget</code></td>
+<td>rollingBudget</td>
+<td><code>rolling_budget_assumption</code> <code>mgm_finance_summary</code></td>
+<td>12 个月滚动预测，损益/资产负债/现金流三表联动 + 13 周现金</td>
+</tr>
+<tr>
+<td>52</td>
+<td><strong>库存周转</strong></td>
+<td><code>/api/inventory-turnover</code></td>
+<td>inventoryTurnover</td>
+<td><code>inv_slow_moving_action</code> <code>e2_xitems_daily_status</code> <code>mgm_finance_summary</code> <code>ermm_erp_so</code> <code>ermm_erp_po</code></td>
+<td>库龄结构、周转率/DSI、呆滞清单下发处理、补货建议；详见 3.12</td>
 </tr>
 </tbody></table>
 <hr>
@@ -2220,7 +2248,207 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-40">四、RUID 全链路追溯图（财务核心）</h2><div class="diagram"><div class="mermaid">flowchart LR
+<h3 id="sec-40">3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转）</h3><blockquote>
+<p><strong>模块性质</strong>：经营决策层分析模块，路由组 <code>/api/profit</code>、<code>/api/rolling-budget</code>、<code>/api/inventory-turnover</code>，左侧菜单「经营决策」组。仅新增 4 张分析配置/处理表，其余数据全部从业务表<strong>只读</strong>取数，不回写账务。
+迁移脚本：<code>030_profit_dimension.sql</code>、<code>031_rolling_budget.sql</code>、<code>032_inventory_turnover.sql</code>。</p>
+</blockquote>
+<h4 id="sec-41">3.12.1 资料表 ER 图</h4><div class="diagram"><div class="mermaid">erDiagram
+    ermm_erp_so ||--o{ sales_channel_map : "client_id 渠道覆盖"
+    ermm_erp_po ||--o{ profit_cost_rate : "料件成本参考"
+    e2_xitems_daily_status ||--o{ inv_slow_moving_action : "库龄快照下发处理"
+    mgm_finance_summary ||--o{ rolling_budget_assumption : "基准月与期初余额推导"
+
+    sales_channel_map {
+        int uid PK
+        varchar bu_no
+        varchar client_id
+        varchar channel_code "DIRECT/DEALER/EXPORT/GROUP/OTHER"
+        varchar update_by
+        datetime update_time
+    }
+    profit_cost_rate {
+        int uid PK
+        varchar bu_no
+        varchar xitems
+        decimal cost_rate "0~1"
+        varchar update_by
+        datetime update_time
+    }
+    rolling_budget_assumption {
+        int uid PK
+        varchar bu_no UK
+        varchar base_month "YYYY-MM"
+        int months
+        decimal revenue_growth
+        decimal cost_ratio
+        decimal tax_rate
+        int ar_days
+        int ap_days
+        int inv_days
+        decimal capex_monthly
+        decimal loan_repay_monthly
+    }
+    inv_slow_moving_action {
+        int uid PK
+        varchar bu_no
+        varchar xitems
+        varchar item_name
+        date stock_date
+        int ageing_days
+        decimal stock_value
+        varchar action_type
+        decimal action_qty
+        decimal expect_recover_amt
+        varchar priority "low/medium/high"
+        varchar owner
+        date due_date
+        varchar status "pending/doing/done"
+    }</div></div><h4 id="sec-42">3.12.2 计算口径</h4><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>口径</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>多维盈利</strong></td>
+<td>收入/成本按 SO 明细归集；成本优先 PO 加权采购均价，缺失时按 <code>profit_cost_rate</code> 料件成本率或公司销售成本率估算；渠道默认按客户规则，<code>sales_channel_map</code> 可逐客户覆盖；支持客户 / 产品 / 渠道 / 项目四维</td>
+</tr>
+<tr>
+<td><strong>滚动预算</strong></td>
+<td>基准月取 <code>mgm_finance_summary</code> 最新实际月，收入与费用结构取最近 3 个月平均；假设保存于 <code>rolling_budget_assumption</code>；按月生成 N 期损益 → 资产负债 → 现金流量表，并校验「资产 = 负债 + 权益」；13 周现金由月度预测摊分，带安全水位</td>
+</tr>
+<tr>
+<td><strong>库存周转</strong></td>
+<td>周转率 = 近 12 个月销售成本 ÷ 平均存货价值；DSI = 365 ÷ 周转率；库龄取 <code>e2_xitems_daily_status</code> 快照（默认选料件行数最多的最近日期），分 0-30 / 31-90 / 91-180 / &gt;180 天；呆滞 = 库龄 &gt; 90 天；补货点 = 交期 + 安全天数，需求优先 SO 交货量、缺失时以 PO 采购量近似</td>
+</tr>
+</tbody></table>
+<h4 id="sec-43">3.12.3 API 端点清单</h4><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>多维盈利</td>
+<td>GET</td>
+<td><code>/api/profit/summary</code></td>
+<td>期间汇总（收入/成本/毛利/净利）</td>
+</tr>
+<tr>
+<td>多维盈利</td>
+<td>GET</td>
+<td><code>/api/profit/dimension</code></td>
+<td>按 <code>dim=customer/product/channel/project</code> 汇总</td>
+</tr>
+<tr>
+<td>多维盈利</td>
+<td>GET</td>
+<td><code>/api/profit/details</code></td>
+<td>指定维度键的明细下钻</td>
+</tr>
+<tr>
+<td>多维盈利</td>
+<td>PUT/DELETE</td>
+<td><code>/api/profit/channel</code> <code>/api/profit/channel/:client_id</code></td>
+<td>客户渠道映射覆盖 / 恢复默认</td>
+</tr>
+<tr>
+<td>多维盈利</td>
+<td>GET/PUT/DELETE</td>
+<td><code>/api/profit/cost-rates</code> <code>/api/profit/cost-rate</code> <code>/api/profit/cost-rate/:xitems</code></td>
+<td>料件成本率维护</td>
+</tr>
+<tr>
+<td>滚动预算</td>
+<td>GET/PUT</td>
+<td><code>/api/rolling-budget/assumption</code></td>
+<td>读取 / 保存滚动预算假设</td>
+</tr>
+<tr>
+<td>滚动预算</td>
+<td>GET</td>
+<td><code>/api/rolling-budget/projection</code></td>
+<td>12 个月三表联动预测</td>
+</tr>
+<tr>
+<td>滚动预算</td>
+<td>GET</td>
+<td><code>/api/rolling-budget/13w</code></td>
+<td>13 周滚动现金预测</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET</td>
+<td><code>/api/inventory-turnover/snapshots</code></td>
+<td>可用库龄快照日期</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET</td>
+<td><code>/api/inventory-turnover/overview</code></td>
+<td>周转概览（库龄结构 + 周转率/DSI + 呆滞汇总）</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET</td>
+<td><code>/api/inventory-turnover/aging</code></td>
+<td>库龄分档与料件明细</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET</td>
+<td><code>/api/inventory-turnover/slow-moving</code></td>
+<td>呆滞清单</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET</td>
+<td><code>/api/inventory-turnover/replenishment</code></td>
+<td>补货建议</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>GET/POST</td>
+<td><code>/api/inventory-turnover/actions</code></td>
+<td>处理单列表 / 下发处理</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>PUT/DELETE</td>
+<td><code>/api/inventory-turnover/actions/:uid</code></td>
+<td>更新状态 / 删除处理单</td>
+</tr>
+</tbody></table>
+<h4 id="sec-44">3.12.4 前端页面结构</h4><table>
+<thead>
+<tr>
+<th>页面</th>
+<th>文件</th>
+<th>主要区块</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>多维盈利</td>
+<td><code>public/js/pages/profitAnalysis.js</code></td>
+<td>公司/期间选择 → 维度切换（客户/产品/渠道/项目）→ 贡献排名 → 明细下钻 → 渠道映射与成本率维护</td>
+</tr>
+<tr>
+<td>滚动预算</td>
+<td><code>public/js/pages/rollingBudget.js</code></td>
+<td>损益表 / 资产负债表 / 现金流量表 / 13 周现金 / 假设参数 五个页签</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td><code>public/js/pages/inventoryTurnover.js</code></td>
+<td>周转概览 / 库龄结构 / 呆滞清单 / 补货建议 / 处理记录 五个页签</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="sec-45">四、RUID 全链路追溯图（财务核心）</h2><div class="diagram"><div class="mermaid">flowchart LR
     A["📒 会计凭证&lt;br/&gt;fin_voucher"] --&gt;|产生 RUID| R["🗂️ fin_ruid_ledger&lt;br/&gt;RUID 主台账"]
     A --&gt;|分录| AE["fin_voucher_entry"]
     B["🧾 纳税申报&lt;br/&gt;fin_tax_return"] --&gt;|产生 RUID| R
@@ -2237,7 +2465,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <li>已知报税回执号 <code>RXHM20250101</code> → 查 <code>fin_tax_return</code> 得 RUID → 查 <code>fin_ruid_ledger</code> 确认 → 查 <code>fin_reconciliation</code> 找到匹配的入账凭证 RUID → 查 <code>fin_voucher</code> + <code>fin_voucher_entry</code> 看到完整分录。</li>
 </ul>
 <hr>
-<h2 id="sec-41">五、跨模块共用资料表</h2><table>
+<h2 id="sec-46">五、跨模块共用资料表</h2><table>
 <thead>
 <tr>
 <th>资料表</th>
@@ -2250,7 +2478,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><code>mgm_finance_summary</code></td>
-<td>摘要、三大报表、风险、年度趋势、AI 问答、异常诊断、多维下钻、<strong>电子化报税（CIT/IIT 取数）</strong></td>
+<td>摘要、三大报表、风险、年度趋势、AI 问答、异常诊断、多维下钻、<strong>电子化报税（CIT/IIT 取数）</strong>、<strong>滚动预算（基准与期初）</strong>、<strong>库存周转（销售成本/存货均值）</strong></td>
 </tr>
 <tr>
 <td><code>mgm_casher_details</code></td>
@@ -2258,7 +2486,11 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><code>ermm_erp_so</code></td>
-<td>销售订单、应收应付、送货单、多维下钻、日报经营数据</td>
+<td>销售订单、应收应付、送货单、多维下钻、日报经营数据、<strong>多维盈利（收入归集）</strong>、<strong>库存周转（补货需求）</strong></td>
+</tr>
+<tr>
+<td><code>e2_xitems_daily_status</code></td>
+<td>存货管理、批次管线 Step 5（减值）、<strong>库存周转（库龄/呆滞/补货）</strong>、<strong>多维盈利（料件成本参考）</strong></td>
 </tr>
 <tr>
 <td><code>ermm_erp_po</code></td>
@@ -2290,7 +2522,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-42">六、技术栈汇总</h2><table>
+<h2 id="sec-47">六、技术栈汇总</h2><table>
 <thead>
 <tr>
 <th>层</th>
@@ -2339,8 +2571,8 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-43">七、资料表清单（共 85 张 · 2026-11-12 实测 &lt;code&gt;information_schema&lt;/code&gt;）</h2><blockquote>
-<p>85 张含 2 张第三方整合演示表 <code>intg_demo_src</code> / <code>intg_demo_tgt</code>，业务有效表 83 张。</p>
+<h2 id="sec-48">七、资料表清单（共 89 张 · 2026-11-13）</h2><blockquote>
+<p>89 张含 2 张第三方整合演示表 <code>intg_demo_src</code> / <code>intg_demo_tgt</code>，业务有效表 87 张（较 2026-11-12 新增 4 张经营分析表）。</p>
 </blockquote>
 <table>
 <thead>
@@ -2398,6 +2630,10 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆）</td>
 </tr>
 <tr>
+<td><strong>经营分析</strong></td>
+<td>sales_channel_map（客户渠道映射）, profit_cost_rate（料件成本率）, rolling_budget_assumption（滚动预算假设）, inv_slow_moving_action（呆滞处理单）</td>
+</tr>
+<tr>
 <td><strong>其他</strong></td>
 <td>e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task</td>
 </tr>
@@ -2406,7 +2642,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <p>备注：<code>ermm_erp_mo</code> / <code>ermm_erp_mo_component</code> / <code>ermm_erp_routing</code> / <code>ermm_erp_work_report</code> 为 ERP 工单/BOM/工艺/报工预留表，当前无业务数据；<code>ermm_users</code> 为旧表，登录与权限实际使用 <code>cams_xuser</code>。</p>
 </blockquote>
 <hr>
-<h2 id="sec-44">八、数据覆盖状态（2026-10-24 更新）</h2><h3 id="sec-45">8.1 账套 × 年份 覆盖矩阵</h3><table>
+<h2 id="sec-49">八、数据覆盖状态（2026-10-24 更新）</h2><h3 id="sec-50">8.1 账套 × 年份 覆盖矩阵</h3><table>
 <thead>
 <tr>
 <th>账套</th>
@@ -2438,7 +2674,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td><strong>36</strong></td>
 </tr>
 </tbody></table>
-<h3 id="sec-46">8.2 2023 年销售成本明细对齐状态</h3><table>
+<h3 id="sec-51">8.2 2023 年销售成本明细对齐状态</h3><table>
 <thead>
 <tr>
 <th>账套</th>
@@ -2477,7 +2713,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td><strong>36/36 PASS</strong></td>
 </tr>
 </tbody></table>
-<h3 id="sec-47">8.3 HN 2023 补齐摘要</h3><ul>
+<h3 id="sec-52">8.3 HN 2023 补齐摘要</h3><ul>
 <li><strong>补齐脚本</strong>：<a href="file:///e:/finance/scripts/seed_hn_2023.js">scripts/seed_hn_2023.js</a>（支持 <code>--dry-run</code> / <code>--apply</code> / <code>--rollback</code>）</li>
 <li><strong>验证脚本</strong>：<a href="file:///e:/finance/scripts/verify_hn_2023.js">scripts/verify_hn_2023.js</a>（12 月 × 7 项断言）</li>
 <li><strong>数据性质</strong>：以 HN 2024 年同月为模板 ×0.9，保留季节性；非真实历史账</li>
@@ -2486,8 +2722,9 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <hr>
 <blockquote>
 <p>本文件所有关系均来自代码事实（routes/<em>.js 的 SQL 语句、database/add_</em>.js 的 DDL、index.html 菜单），未作臆造。Mermaid 图可在 VS Code / GitHub 直接渲染。
+2026-11-13 更新：① 新增 3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转），含 4 张表 ER 图、计算口径、17 个 API 端点与三个前端页面结构；② 模块总表新增 #50<del>#52；③ 资料表清单 85→<strong>89 张</strong>（新增 <code>sales_channel_map</code> / <code>profit_cost_rate</code> / <code>rolling_budget_assumption</code> / <code>inv_slow_moving_action</code>）；④ 架构图路由 50→<strong>64</strong>、前端入口 50→<strong>60</strong>，服务层新增经营分析 S13、数据层新增 AnalysisT；⑤ 跨模块共用表补充 <code>e2_xitems_daily_status</code>。
 2026-11-12 更新：① 路由模块数 48→<strong>50</strong>（新增 <code>/api/preorders</code>、<code>/api/codes</code>）；② 第三方整合补全 5 Tab（Excel 模板动态生成、唯一键查询、日志筛选/CSV 导出、失败重试）与 20 个 API 端点；③ 资料表清单 83→<strong>85 张</strong>（2026-11-12 实测，含 2 张整合演示表；补录 <code>mgm_preorder_lists</code> / <code>mgm_customer_projects</code> / <code>ermm_scenario_saved</code> / <code>ermm_erp_mo*</code> / <code>ermm_erp_routing</code> / <code>ermm_erp_work_report</code> / <code>ermm_users</code>）；④ 跨模块共用表新增 <code>cams_system_codes</code>（码表驱动下拉/公司/税率，缓存 TTL 1 小时）；⑤ 模块总表新增销售预估订单，情景模拟补充保存表。
-2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44~#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→<strong>83 张</strong>（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
+2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44</del>#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→<strong>83 张</strong>（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
 2026-10-24 更新：① 新增电子化报税模块（3.10 节，含 VAT/CIT/IIT 三税种 + 10 张资料表 ER 图）；② 更新模块总表（42 个模块，新增 #43 电子化报税）；③ 更新资料表清单（80+ 张，新增税务申报表域）；④ 新增第八章「数据覆盖状态」（HN 2023 补齐后三账套 36 个月全对齐）；⑤ 更新架构图（服务层 42 个路由，数据层新增税务申报表与税务录入表）。
 2026-10-15 更新：① 新增 3.8 批次管线模块（7 步 ERP 加工管线）含数据流 ER 图 + API + 前端增强说明；② 月份格式统一 YYYY/MM → YYYY-MM（SQL 示例 + 字段字典 + 页面映射表）；③ 修正章节编号重复（原两个 3.5）；④ 日记账收入/支出兼容中文「借/贷」判断（routes/cash.js）；⑤ 批次管线前端增强（逐步进行自动推进 + 操作说明弹窗）。
 2026-10-09 更新：补充第三方资料整合模块（3.9 节 · intg_source / intg_job / intg_log）。</p>

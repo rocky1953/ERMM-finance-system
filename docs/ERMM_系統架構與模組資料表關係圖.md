@@ -1,7 +1,7 @@
 # ERMM 财务模组 · 系统架构图与模块-资料表关系图
 
 > 基于代码事实抽取（routes/*.js、database/add_*.js、public/index.html 菜单、public/js/pages/*.js）
-> 生成日期：2026-10-06｜更新日期：2026-11-12（第三方整合 5 Tab、码表驱动与三语 i18n 更新）
+> 生成日期：2026-10-06｜更新日期：2026-11-13（新增经营分析三模块：多维盈利 / 滚动预算 / 库存周转）
 
 ---
 
@@ -18,10 +18,10 @@ flowchart TB
     end
 
     subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口<br/>+ 侧边栏菜单 (50 个入口 / 8 个分组)"]
+        Index["index.html 入口<br/>+ 侧边栏菜单 (60 个入口 / 8 个分组)"]
         App["app.js<br/>路由/导航/弹窗/通用 UI"]
         I18n["i18n.js<br/>简/繁/英 三语"]
-        Pages["pages/*.js (50 个功能入口)<br/>dashboard / dailyReport / finance / tax / integration<br/>aiqa / arSmart / dataQuality / cashForecast / ..."]
+        Pages["pages/*.js (60 个功能入口)<br/>dashboard / dailyReport / finance / tax / integration<br/>profitAnalysis / rollingBudget / inventoryTurnover / ..."]
         Chart["Chart.js 图表引擎"]
     end
 
@@ -31,7 +31,7 @@ flowchart TB
         Static["静态资源服务<br/>public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 50 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 64 个路由)"]
         direction LR
         S1["📊 绩效闭环<br/>dailyReport"]
         S2["🔔 预警引擎<br/>alert"]
@@ -45,6 +45,7 @@ flowchart TB
         S10["⚙️ 系统支撑<br/>system/user/batch/kpi/action"]
         S11["🔌 第三方资料整合<br/>integration"]
         S12["🧮 电子化报税<br/>tax"]
+        S13["📈 经营分析<br/>profit/rollingBudget/inventoryTurnover"]
     end
 
     subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
@@ -57,6 +58,7 @@ flowchart TB
         TaxT["税务申报表<br/>vat_declarations / cit_annual_settlements / iit_withholding_*"]
         TaxIn["税务录入表<br/>tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
         AiT["AI 知识库与摘要表<br/>ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / ermm_ai_records"]
+        AnalysisT["经营分析表<br/>sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action"]
     end
 
     subgraph EXTERNAL["⑥ 外部/支撑"]
@@ -85,6 +87,7 @@ flowchart TB
     S11 --> IntgT & CoreT
     S11 --> ThirdPartyDB & ExcelFile & IntgSched
     S12 --> TaxT & TaxIn & CoreT
+    S13 --> CoreT & AnalysisT
     Ledger --> CoreT
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
@@ -153,6 +156,9 @@ flowchart TB
 | 47 | **现金流概率预测** | `/api/cash-forecast/monte-carlo` | cashForecast（概率模式） | `mgm_casher_details` `mgm_cash_safe_level` | **Monte Carlo** 5000 次模拟 → P10/P50/P90 与负现金概率 |
 | 48 | **战情看板** | `/api/war-room` | warRoom | `mgm_finance_summary` `mgm_invoice_details` `ermm_arap_detail` | 高管实时经营看板 |
 | 49 | **系统文件** | 静态 `/docs/architecture` `/docs/executive` `/docs/data-model` `/docs/manual-ceo` `/docs/manual-cfo` `/docs/manual-cto` `/docs/manual-coo` | 新标签页 HTML | 无（纯文档，不落库） | 共 7 份文档；**仅 admin='Yes'** 可见左侧菜单，非管理员菜单隐藏，手动访问由 `openDocPage()` 拦截提示 |
+| 50 | **多维盈利** | `/api/profit` | profitAnalysis | `sales_channel_map` `profit_cost_rate` `ermm_erp_so` `ermm_erp_po` `e2_xitems_daily_status` | 客户/产品/渠道/项目四维毛利与净利；渠道映射、料件成本率可覆盖；只读分析 |
+| 51 | **滚动预算** | `/api/rolling-budget` | rollingBudget | `rolling_budget_assumption` `mgm_finance_summary` | 12 个月滚动预测，损益/资产负债/现金流三表联动 + 13 周现金 |
+| 52 | **库存周转** | `/api/inventory-turnover` | inventoryTurnover | `inv_slow_moving_action` `e2_xitems_daily_status` `mgm_finance_summary` `ermm_erp_so` `ermm_erp_po` | 库龄结构、周转率/DSI、呆滞清单下发处理、补货建议；详见 3.12 |
 
 ---
 
@@ -1110,6 +1116,106 @@ erDiagram
 
 ---
 
+### 3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转）
+
+> **模块性质**：经营决策层分析模块，路由组 `/api/profit`、`/api/rolling-budget`、`/api/inventory-turnover`，左侧菜单「经营决策」组。仅新增 4 张分析配置/处理表，其余数据全部从业务表**只读**取数，不回写账务。
+> 迁移脚本：`030_profit_dimension.sql`、`031_rolling_budget.sql`、`032_inventory_turnover.sql`。
+
+#### 3.12.1 资料表 ER 图
+
+```mermaid
+erDiagram
+    ermm_erp_so ||--o{ sales_channel_map : "client_id 渠道覆盖"
+    ermm_erp_po ||--o{ profit_cost_rate : "料件成本参考"
+    e2_xitems_daily_status ||--o{ inv_slow_moving_action : "库龄快照下发处理"
+    mgm_finance_summary ||--o{ rolling_budget_assumption : "基准月与期初余额推导"
+
+    sales_channel_map {
+        int uid PK
+        varchar bu_no
+        varchar client_id
+        varchar channel_code "DIRECT/DEALER/EXPORT/GROUP/OTHER"
+        varchar update_by
+        datetime update_time
+    }
+    profit_cost_rate {
+        int uid PK
+        varchar bu_no
+        varchar xitems
+        decimal cost_rate "0~1"
+        varchar update_by
+        datetime update_time
+    }
+    rolling_budget_assumption {
+        int uid PK
+        varchar bu_no UK
+        varchar base_month "YYYY-MM"
+        int months
+        decimal revenue_growth
+        decimal cost_ratio
+        decimal tax_rate
+        int ar_days
+        int ap_days
+        int inv_days
+        decimal capex_monthly
+        decimal loan_repay_monthly
+    }
+    inv_slow_moving_action {
+        int uid PK
+        varchar bu_no
+        varchar xitems
+        varchar item_name
+        date stock_date
+        int ageing_days
+        decimal stock_value
+        varchar action_type
+        decimal action_qty
+        decimal expect_recover_amt
+        varchar priority "low/medium/high"
+        varchar owner
+        date due_date
+        varchar status "pending/doing/done"
+    }
+```
+
+#### 3.12.2 计算口径
+
+| 模块 | 口径 |
+|---|---|
+| **多维盈利** | 收入/成本按 SO 明细归集；成本优先 PO 加权采购均价，缺失时按 `profit_cost_rate` 料件成本率或公司销售成本率估算；渠道默认按客户规则，`sales_channel_map` 可逐客户覆盖；支持客户 / 产品 / 渠道 / 项目四维 |
+| **滚动预算** | 基准月取 `mgm_finance_summary` 最新实际月，收入与费用结构取最近 3 个月平均；假设保存于 `rolling_budget_assumption`；按月生成 N 期损益 → 资产负债 → 现金流量表，并校验「资产 = 负债 + 权益」；13 周现金由月度预测摊分，带安全水位 |
+| **库存周转** | 周转率 = 近 12 个月销售成本 ÷ 平均存货价值；DSI = 365 ÷ 周转率；库龄取 `e2_xitems_daily_status` 快照（默认选料件行数最多的最近日期），分 0-30 / 31-90 / 91-180 / >180 天；呆滞 = 库龄 > 90 天；补货点 = 交期 + 安全天数，需求优先 SO 交货量、缺失时以 PO 采购量近似 |
+
+#### 3.12.3 API 端点清单
+
+| 模块 | 方法 | 路径 | 说明 |
+|---|---|---|---|
+| 多维盈利 | GET | `/api/profit/summary` | 期间汇总（收入/成本/毛利/净利） |
+| 多维盈利 | GET | `/api/profit/dimension` | 按 `dim=customer/product/channel/project` 汇总 |
+| 多维盈利 | GET | `/api/profit/details` | 指定维度键的明细下钻 |
+| 多维盈利 | PUT/DELETE | `/api/profit/channel` `/api/profit/channel/:client_id` | 客户渠道映射覆盖 / 恢复默认 |
+| 多维盈利 | GET/PUT/DELETE | `/api/profit/cost-rates` `/api/profit/cost-rate` `/api/profit/cost-rate/:xitems` | 料件成本率维护 |
+| 滚动预算 | GET/PUT | `/api/rolling-budget/assumption` | 读取 / 保存滚动预算假设 |
+| 滚动预算 | GET | `/api/rolling-budget/projection` | 12 个月三表联动预测 |
+| 滚动预算 | GET | `/api/rolling-budget/13w` | 13 周滚动现金预测 |
+| 库存周转 | GET | `/api/inventory-turnover/snapshots` | 可用库龄快照日期 |
+| 库存周转 | GET | `/api/inventory-turnover/overview` | 周转概览（库龄结构 + 周转率/DSI + 呆滞汇总） |
+| 库存周转 | GET | `/api/inventory-turnover/aging` | 库龄分档与料件明细 |
+| 库存周转 | GET | `/api/inventory-turnover/slow-moving` | 呆滞清单 |
+| 库存周转 | GET | `/api/inventory-turnover/replenishment` | 补货建议 |
+| 库存周转 | GET/POST | `/api/inventory-turnover/actions` | 处理单列表 / 下发处理 |
+| 库存周转 | PUT/DELETE | `/api/inventory-turnover/actions/:uid` | 更新状态 / 删除处理单 |
+
+#### 3.12.4 前端页面结构
+
+| 页面 | 文件 | 主要区块 |
+|---|---|---|
+| 多维盈利 | `public/js/pages/profitAnalysis.js` | 公司/期间选择 → 维度切换（客户/产品/渠道/项目）→ 贡献排名 → 明细下钻 → 渠道映射与成本率维护 |
+| 滚动预算 | `public/js/pages/rollingBudget.js` | 损益表 / 资产负债表 / 现金流量表 / 13 周现金 / 假设参数 五个页签 |
+| 库存周转 | `public/js/pages/inventoryTurnover.js` | 周转概览 / 库龄结构 / 呆滞清单 / 补货建议 / 处理记录 五个页签 |
+
+---
+
 ## 四、RUID 全链路追溯图（财务核心）
 
 ```mermaid
@@ -1138,9 +1244,10 @@ flowchart LR
 | 资料表 | 被哪些模块共用 |
 |---|---|
 | `cams_xuser` | 认证、用户、日报、预警、预测（几乎所有涉及"人"的模块） |
-| `mgm_finance_summary` | 摘要、三大报表、风险、年度趋势、AI 问答、异常诊断、多维下钻、**电子化报税（CIT/IIT 取数）** |
+| `mgm_finance_summary` | 摘要、三大报表、风险、年度趋势、AI 问答、异常诊断、多维下钻、**电子化报税（CIT/IIT 取数）**、**滚动预算（基准与期初）**、**库存周转（销售成本/存货均值）** |
 | `mgm_casher_details` | 现金日记账、现金流量预测 |
-| `ermm_erp_so` | 销售订单、应收应付、送货单、多维下钻、日报经营数据 |
+| `ermm_erp_so` | 销售订单、应收应付、送货单、多维下钻、日报经营数据、**多维盈利（收入归集）**、**库存周转（补货需求）** |
+| `e2_xitems_daily_status` | 存货管理、批次管线 Step 5（减值）、**库存周转（库龄/呆滞/补货）**、**多维盈利（料件成本参考）** |
 | `ermm_erp_po` | 采购单、应收应付、PO 暂存、日报经营数据 |
 | `mgm_invoice_details` | 发票、财务分析、多维下钻、日报经营数据、**仪表板下钻、电子化报税（VAT 取数）** |
 | `budget_detail` | 预算编制、情景模拟、AI 问答 |
@@ -1168,9 +1275,9 @@ flowchart LR
 
 ---
 
-## 七、资料表清单（共 85 张 · 2026-11-12 实测 `information_schema`）
+## 七、资料表清单（共 89 张 · 2026-11-13）
 
-> 85 张含 2 张第三方整合演示表 `intg_demo_src` / `intg_demo_tgt`，业务有效表 83 张。
+> 89 张含 2 张第三方整合演示表 `intg_demo_src` / `intg_demo_tgt`，业务有效表 87 张（较 2026-11-12 新增 4 张经营分析表）。
 
 | 模块域 | 表名 |
 |---|---|
@@ -1186,6 +1293,7 @@ flowchart LR
 | **第三方整合** | intg_source, intg_job, intg_log, intg_demo_src（演示）, intg_demo_tgt（演示） |
 | **电子化报税** | vat_declarations, cit_annual_settlements, iit_withholding_batches, iit_withholding_details, tax_submit_receipts, tax_vat_adjustments, tax_cit_inputs, tax_cit_adjustments, payroll_details, bonus_details |
 | **AI 智能层** | ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆） |
+| **经营分析** | sales_channel_map（客户渠道映射）, profit_cost_rate（料件成本率）, rolling_budget_assumption（滚动预算假设）, inv_slow_moving_action（呆滞处理单） |
 | **其他** | e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task |
 
 > 备注：`ermm_erp_mo` / `ermm_erp_mo_component` / `ermm_erp_routing` / `ermm_erp_work_report` 为 ERP 工单/BOM/工艺/报工预留表，当前无业务数据；`ermm_users` 为旧表，登录与权限实际使用 `cams_xuser`。
@@ -1221,6 +1329,7 @@ flowchart LR
 ---
 
 > 本文件所有关系均来自代码事实（routes/*.js 的 SQL 语句、database/add_*.js 的 DDL、index.html 菜单），未作臆造。Mermaid 图可在 VS Code / GitHub 直接渲染。
+> 2026-11-13 更新：① 新增 3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转），含 4 张表 ER 图、计算口径、17 个 API 端点与三个前端页面结构；② 模块总表新增 #50~#52；③ 资料表清单 85→**89 张**（新增 `sales_channel_map` / `profit_cost_rate` / `rolling_budget_assumption` / `inv_slow_moving_action`）；④ 架构图路由 50→**64**、前端入口 50→**60**，服务层新增经营分析 S13、数据层新增 AnalysisT；⑤ 跨模块共用表补充 `e2_xitems_daily_status`。
 > 2026-11-12 更新：① 路由模块数 48→**50**（新增 `/api/preorders`、`/api/codes`）；② 第三方整合补全 5 Tab（Excel 模板动态生成、唯一键查询、日志筛选/CSV 导出、失败重试）与 20 个 API 端点；③ 资料表清单 83→**85 张**（2026-11-12 实测，含 2 张整合演示表；补录 `mgm_preorder_lists` / `mgm_customer_projects` / `ermm_scenario_saved` / `ermm_erp_mo*` / `ermm_erp_routing` / `ermm_erp_work_report` / `ermm_users`）；④ 跨模块共用表新增 `cams_system_codes`（码表驱动下拉/公司/税率，缓存 TTL 1 小时）；⑤ 模块总表新增销售预估订单，情景模拟补充保存表。
 > 2026-11-05 更新：① 新增 3.11 智能化模块（AI 层）：ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config 四表 ER 图 + 7 个迁移脚本 + 16 个 API 端点 + 核心规则（RAG 检索加权 / AR 评分 / 7 类质检 / Monte Carlo）；② 模块总表新增 #44~#49（AR 智能催收 / 数据质量扫描 / 每日 AI 摘要 / 现金流概率预测 / 战情看板 / 系统文件）；③ 资料表清单 74→**83 张**（2026-11-05 实测 information_schema），新增 AI 智能层表域；④ 架构图更新为 48 个路由、50 个前端入口（8 个菜单分组）、数据层新增 AI 知识库与摘要表；⑤ 更新 #28 AI 问答为完整 RAG 取数链路。
 > 2026-10-24 更新：① 新增电子化报税模块（3.10 节，含 VAT/CIT/IIT 三税种 + 10 张资料表 ER 图）；② 更新模块总表（42 个模块，新增 #43 电子化报税）；③ 更新资料表清单（80+ 张，新增税务申报表域）；④ 新增第八章「数据覆盖状态」（HN 2023 补齐后三账套 36 个月全对齐）；⑤ 更新架构图（服务层 42 个路由，数据层新增税务申报表与税务录入表）。

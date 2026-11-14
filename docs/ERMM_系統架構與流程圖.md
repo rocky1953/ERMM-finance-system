@@ -1,7 +1,7 @@
 # ERMM 系统架构图与相关联流程图
 
 > 基于代码事实抽取（app.js / routes/*.js / services/*.js / scheduler/*.js / public/js/pages/*.js）
-> 生成日期：2026-10-20 ｜ 更新日期：2026-11-12 ｜ 适用版本：v3.3（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 码表驱动/三语 i18n）
+> 生成日期：2026-10-20 ｜ 更新日期：2026-11-13 ｜ 适用版本：v3.4（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 经营分析：多维盈利/滚动预算/库存周转）
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TB
     end
 
     subgraph GATEWAY["🚪 接入层"]
-        EXPRESS["Express 5 路由<br/>50 个路由模块"]
+        EXPRESS["Express 5 路由<br/>64 个路由模块"]
         AUTH["JWT 认证中间件<br/>authRequired"]
         PERM["权限分级<br/>员工/部门主管/高阶主管/管理员"]
     end
@@ -67,9 +67,14 @@ flowchart TB
             S22["数据质量扫描<br/>dataQuality (7 大类)"]
             S23["现金流概率预测<br/>cashMonteCarlo (5000 次)"]
         end
+        subgraph ANALYZE["📈 经营分析"]
+            S24["多维盈利<br/>profit (客户/产品/渠道/项目)"]
+            S25["滚动预算<br/>rollingBudget (三表 + 13 周)"]
+            S26["库存周转<br/>inventoryTurnover (库龄/呆滞/补货)"]
+        end
     end
 
-    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 83 表)"]
+    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 89 表)"]
         DB_HR["daily_report*<br/>alert_* / forecast_log"]
         DB_FIN["fin_voucher / fin_tax_return<br/>fin_reconciliation<br/>fin_ruid_ledger"]
         DB_CASH["mgm_casher_details<br/>mgm_cash_safe_level"]
@@ -77,6 +82,7 @@ flowchart TB
         DB_INTG["intg_source<br/>intg_job / intg_log"]
         DB_TAX["vat_declarations<br/>cit_annual_settlements<br/>iit_withholding_*<br/>tax_submit_receipts<br/>tax_*_adjustments / tax_cit_inputs<br/>payroll_details / bonus_details"]
         DB_AI["ermm_knowledge / ermm_kb_miss_log<br/>daily_ai_summary / llm_config"]
+        DB_ANALYSIS["sales_channel_map / profit_cost_rate<br/>rolling_budget_assumption<br/>inv_slow_moving_action"]
     end
 
     subgraph EXTERNAL["🌐 外部系统"]
@@ -88,7 +94,7 @@ flowchart TB
     BROWSER -->|HTTP/JWT| EXPRESS
     EXCEL_USER -->|上传 xlsx| EXPRESS
     EXPRESS --> AUTH --> PERM
-    PERM --> HR & FIN & CASH & ERP & INTG & TAX & AI
+    PERM --> HR & FIN & CASH & ERP & INTG & TAX & AI & ANALYZE
 
     S1 & S2 & S3 & S4 & S5 --> DB_HR
     S6 & S7 & S8 & S9 --> DB_FIN
@@ -97,6 +103,11 @@ flowchart TB
     S15 & S16 --> DB_INTG
     S17 & S18 --> DB_TAX
     S19 & S20 & S21 & S22 & S23 --> DB_AI
+    S24 -->|只读取数| DB_ERP
+    S25 -->|基准/期初取数| DB_FIN
+    S26 -->|周转取数| DB_FIN
+    S26 -->|库龄/需求取数| DB_ERP
+    S24 & S25 & S26 --> DB_ANALYSIS
     S17 -->|取数| DB_FIN
     S17 -->|取数| DB_ERP
     S19 -->|RAG 检索| DB_AI
@@ -404,13 +415,62 @@ flowchart TB
 
 ---
 
-## 九、部署架构
+## 九、经营分析流程图（多维盈利 / 滚动预算 / 库存周转）
+
+```mermaid
+flowchart TB
+    subgraph SRC["原始数据（只读）"]
+        SO["ermm_erp_so<br/>销售订单/出库"]
+        PO["ermm_erp_po<br/>采购订单/到货"]
+        INV["e2_xitems_daily_status<br/>库存日快照"]
+        FIN["mgm_finance_summary<br/>月度财务汇总"]
+    end
+
+    subgraph SVC["经营分析服务层"]
+        P["services/profit.js<br/>多维盈利<br/>客户/产品/渠道/项目"]
+        R["services/rollingBudget.js<br/>滚动预算<br/>12 月三表 + 13 周现金"]
+        I["services/inventoryTurnover.js<br/>库存周转<br/>库龄/DSI/呆滞/补货"]
+    end
+
+    subgraph OUT["输出与动作"]
+        O1["毛利贡献排名<br/>料件成本率 / 渠道映射覆盖"]
+        O2["损益表 → 资产负债表 → 现金流量表<br/>平衡差校验 + 安全水位"]
+        O3["呆滞清单<br/>下发处理单 → 处理记录"]
+    end
+
+    SO -->|收入/数量| P
+    PO -->|采购均价| P
+    INV -->|料件成本参考| P
+    SO -->|补货需求| I
+    PO -->|到货/退供| I
+    INV -->|库龄/库存金额| I
+    FIN -->|销售成本/存货均值| I
+    FIN -->|基准月/期初余额| R
+
+    P --> O1
+    R --> O2
+    I --> O3
+    O3 -->|inv_slow_moving_action| AUDIT[("呆滞处理单<br/>pending → doing → done")]
+
+    style SRC fill:#e3f2fd,stroke:#1976d2
+    style SVC fill:#e8f5e9,stroke:#388e3c
+    style OUT fill:#fff3e0,stroke:#f57c00
+```
+
+- **多维盈利**：`/api/profit`，客户 / 产品 / 渠道 / 项目四维；成本优先级为 PO 加权均价 → 料件成本率 → 公司成本率。
+- **滚动预算**：`/api/rolling-budget`，假设表 `rolling_budget_assumption` 驱动，改假设即三表联动重算。
+- **库存周转**：`/api/inventory-turnover`，库龄取快照，默认选料件行数最多的最近日期；库龄 > 90 天进入呆滞清单，可下发处理单。
+- 三者均为**只读分析**，不回写账务；仅库存周转会写 `inv_slow_moving_action`。
+
+---
+
+## 十、部署架构
 
 ```mermaid
 flowchart LR
     USER["👥 用户浏览器"] -->|HTTP :3008| NODE["Node.js<br/>node app.js"]
     subgraph NODE_PROC["同一进程内"]
-        NODE --> EXP["Express 路由 ×50"]
+        NODE --> EXP["Express 路由 ×64"]
         NODE --> SCH1["日报告警排程<br/>09:30/16:30/月末16:00"]
         NODE --> SCH2["整合批次排程<br/>每分钟 tick"]
     end
@@ -423,11 +483,11 @@ flowchart LR
 
 ---
 
-## 十、模块间依赖关系总图
+## 十一、模块间依赖关系总图
 
 ```mermaid
 flowchart TB
-    subgraph MOD["50 个前端入口 / 8 个菜单分组"]
+    subgraph MOD["60 个前端入口 / 8 个菜单分组"]
         P_DR["日报/绩效/签核/审计/告警/预测"]
         P_FIN["财务入账/报税/勾稽/报税明细"]
         P_CASH["日记账/现金预测/安全水位/概率预测"]
@@ -435,6 +495,7 @@ flowchart TB
         P_INTG["第三方整合(5 Tab)"]
         P_TAX["电子化报税(4 Tab)<br/>VAT/CIT/IIT/录入维护"]
         P_AI["AI 问答 / 每日摘要 / AR 智能催收<br/>数据质量扫描 / 情景模拟 / 战情看板"]
+        P_ANALYZE["多维盈利 / 滚动预算 / 库存周转"]
         P_SYS["系统管理/用户/系统码/系统文件(管理员)"]
     end
 
@@ -442,20 +503,23 @@ flowchart TB
     P_ERP -->|"ermm_erp_po 供数"| P_FIN
     P_FIN -->|"发票/财报取数"| P_TAX
     P_INTG -->|"UPSERT 写入"| P_DR & P_FIN & P_CASH & P_ERP
-    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX & P_AI
+    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX & P_AI & P_ANALYZE
     P_AI -->|"只读取数"| P_FIN & P_CASH & P_ERP
+    P_ANALYZE -->|"只读取数"| P_FIN & P_ERP
+    P_ANALYZE -->|"呆滞处理单回写"| P_ANALYZE
 
     style MOD fill:#e3f2fd,stroke:#1976d2
 ```
 
 ---
 
-> **说明**：以上 11 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
+> **说明**：以上 12 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
 > 与 [ERMM_系統架構與模組資料表關係圖.md](ERMM_系統架構與模組資料表關係圖.md) 互补：本文侧重**运行时流程**，该文档侧重**资料表结构关系**。
 
 ---
 
 > **更新日志**
+> - 2026-11-13（v3.4）：① 新增第九章「经营分析流程图」（多维盈利 / 滚动预算 / 库存周转），原部署、依赖章节顺延为第十、十一章；② 架构图服务层新增 ANALYZE 子域（S24~S26）、数据层新增 DB_ANALYSIS（sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action）；③ 路由数 50→**64**、前端入口 50→**60**、资料表 83→**89**；④ 依赖图新增经营分析节点与只读取数关系。
 > - 2026-11-12（v3.3）：① 路由模块数 48→**50**（新增 `/api/preorders`、`/api/codes`，`/api/cash-forecast` 双挂载）；② 第六章第三方整合新增「前端 5 Tab 操作台」子图（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志），补充 Excel 模板动态生成、日志筛选/CSV 导出、失败作业重试链路；③ 补充码表驱动（`cams_system_codes`，缓存 TTL 1 小时）与三语 i18n（默认简体）说明；④ 架构图与部署图同步路由数。
 > - 2026-11-05（v3.2）：① 新增第八章「智能化（AI）流程图」：AI 问答 RAG 检索链路 + 摘要/催收/质检/概率预测四链路；② 架构图服务层新增 AI 子域（S19~S23）、数据层新增 DB_AI（ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config）、外部新增 LLM API；③ 路由数 42→48、资料表 74→83、前端入口 41→50（8 个菜单分组）；④ 部署图补充 LLM API 出向调用；⑤ 新增系统文件菜单（`/docs/architecture`、`/docs/data-model`，仅管理员）。
 > - 2026-10-24：① 新增第三章「电子化报税流程图」（VAT/CIT/IIT 算税 → 落库 → 本地模拟提交）；② 架构图服务层新增 TAX 子域、数据层新增 DB_TAX（10 张税务表）；③ 路由数 41→42、资料表 68+→74、前端页面 40→41；④ 模块依赖图新增电子化报税节点。

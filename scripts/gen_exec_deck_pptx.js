@@ -1,14 +1,14 @@
 /**
- * 由 ERMM_高管價值簡報_CEO_CFO_COO.md 大纲生成 PPTX
+ * 由 ERMM_高管價值簡報_CEO_CFO_COO_CTO.md 大纲生成 PPTX
  * 规则：`---` 分页；`#` 标题；`- ` 要点（`  - ` 子要点）；`|` 表格；`>` 引言忽略
- * 输出：docs/ERMM_高管價值簡報_CEO_CFO_COO.pptx
+ * 输出：docs/ERMM_高管價值簡報_CEO_CFO_COO_CTO.pptx
  */
 const fs = require('fs');
 const path = require('path');
 const PptxGenJS = require('pptxgenjs');
 
-const MD = path.join(__dirname, '..', 'docs', 'ERMM_高管價值簡報_CEO_CFO_COO.md');
-const OUT = path.join(__dirname, '..', 'docs', 'ERMM_高管價值簡報_CEO_CFO_COO.pptx');
+const MD = path.join(__dirname, '..', 'docs', 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.md');
+const OUT = path.join(__dirname, '..', 'docs', 'ERMM_高管價值簡報_CEO_CFO_COO_CTO.pptx');
 
 const raw = fs.readFileSync(MD, 'utf8');
 // 分页：按 --- 切，第一段（封面元信息 + 封面页）需再处理

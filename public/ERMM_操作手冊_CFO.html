@@ -76,12 +76,15 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-12">4.1 现金预测（13 周 + 概率）</a>
 <a class="toc-item d2" href="#sec-13">4.2 AR 智能催收（🎯）</a>
 <a class="toc-item d1" href="#sec-14">五、预算与分析</a>
-<a class="toc-item d1" href="#sec-15">六、每周 / 每月 / 每季动作</a>
-<a class="toc-item d1" href="#sec-16">七、权限与边界</a>
-<a class="toc-item d1" href="#sec-17">八、常见问题</a>
+<a class="toc-item d2" href="#sec-15">5.1 滚动预算与三表联动（🔄）</a>
+<a class="toc-item d2" href="#sec-16">5.2 多维盈利（💹）</a>
+<a class="toc-item d2" href="#sec-17">5.3 库存周转与呆滞（📦）</a>
+<a class="toc-item d1" href="#sec-18">六、每周 / 每月 / 每季动作</a>
+<a class="toc-item d1" href="#sec-19">七、权限与边界</a>
+<a class="toc-item d1" href="#sec-20">八、常见问题</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -197,6 +200,24 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>选期间 → 填/导入预算 → 查看月度执行进度</td>
 </tr>
 <tr>
+<td>滚动预算</td>
+<td>经营决策 → 滚动预算</td>
+<td>12 个月滚动预测 + 三表联动 + 13 周现金</td>
+<td>选公司 → 调假设 → 保存 → 看损益/资产负债/现金流</td>
+</tr>
+<tr>
+<td>多维盈利</td>
+<td>经营决策 → 多维盈利</td>
+<td>按客户/产品/区域/渠道拆解毛利与净利</td>
+<td>选维度与期间 → 看贡献排名与毛利率分布</td>
+</tr>
+<tr>
+<td>库存周转</td>
+<td>经营决策 → 库存周转</td>
+<td>库龄结构、周转率/DSI、呆滞清单与补货建议</td>
+<td>选公司与库龄快照 → 审呆滞清单 → 下发处理单</td>
+</tr>
+<tr>
 <td>损益平衡分析</td>
 <td>财务分析 → 损益平衡分析</td>
 <td>算保本点</td>
@@ -233,15 +254,40 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>月度结账后跑一次</td>
 </tr>
 </tbody></table>
+<h2 id="sec-15">5.1 滚动预算与三表联动（🔄）</h2><ul>
+<li><strong>入口</strong>：经营决策 → 滚动预算。</li>
+<li><strong>默认口径</strong>：以财务汇总最新实际月为基准，取最近 3 个月平均推导收入与费用结构；无保存假设时按实际数自动推导。</li>
+<li><strong>操作</strong>：<ol>
+<li>选择公司，确认「假设参数」：收入增长率、销售成本率、所得税率、应收/应付/存货天数、资本支出、每月还本。</li>
+<li>保存后，损益表 → 资产负债表 → 现金流量表按同一套假设联动重算，并做「资产 = 负债 + 权益」勾稽。</li>
+<li>切换到「13 周现金」查看滚动现金预测与安全水位。</li>
+</ol>
+</li>
+<li><strong>关注点</strong>：最低现金余额出现的月份、期末现金、三表平衡差（应接近 0）。预算属于<strong>假设驱动</strong>，改任一假设都会联动影响三张表，评审前先固定假设版本。</li>
+</ul>
+<h2 id="sec-16">5.2 多维盈利（💹）</h2><ul>
+<li><strong>入口</strong>：经营决策 → 多维盈利。</li>
+<li><strong>用途</strong>：按客户、产品、区域、渠道等维度拆解收入、毛利与净利，识别「高收入低毛利」的客户/产品。</li>
+<li><strong>操作</strong>：选公司与期间 → 切换分析维度 → 看贡献排名与毛利率分布；导出结论用于定价与资源调整。</li>
+<li><strong>注意</strong>：维度归集依赖原始单据字段完整性；若某维度出现大量「未分类」，先让 COO/业务侧补主档。</li>
+</ul>
+<h2 id="sec-17">5.3 库存周转与呆滞（📦）</h2><ul>
+<li><strong>入口</strong>：经营决策 → 库存周转。</li>
+<li><strong>核心指标</strong>：存货周转率 = 近 12 个月销售成本 ÷ 平均存货价值；周转天数 DSI = 365 ÷ 周转率。</li>
+<li><strong>库龄</strong>：取自库存日快照，默认选择料件最完整的最近日期，可在页头切换快照；分 0-30 / 31-90 / 91-180 / &gt;180 天四档。</li>
+<li><strong>呆滞</strong>：库龄 &gt; 90 天即进入呆滞清单，按金额与严重度排序；可「下发处理」（降价促销/退货/报废/转用/暂停采购/调拨），由 COO/仓库执行。</li>
+<li><strong>补货建议</strong>：目标覆盖天数可调，补货点 = 交期 + 安全天数；无销售数据的料件以采购量近似需求。</li>
+<li><strong>财务用法</strong>：每月审「呆滞金额占比 + 减值准备」，与库存减值模块交叉核对；对超储料件推动暂缓采购。</li>
+</ul>
 <hr>
-<h1 id="sec-15">六、每周 / 每月 / 每季动作</h1><ul>
+<h1 id="sec-18">六、每周 / 每月 / 每季动作</h1><ul>
 <li><strong>每日</strong>：看仪表板 AI 摘要 → AR 智能催收清单（🔴 当天处理）。</li>
 <li><strong>每周</strong>：现金预测看 13 周缺口 → 更新收付款计划 → 预警处理。</li>
-<li><strong>每月</strong>：按第三章 ①~⑦ 顺序完成结账；报税前跑一次数据质量扫描。</li>
+<li><strong>每月</strong>：按第三章 ①~⑦ 顺序完成结账；报税前跑一次数据质量扫描；看一次滚动预算与库存周转（呆滞占比、DSI）。</li>
 <li><strong>每季</strong>：预算执行复盘 + 风险模型复核 + 同业标杆对比。</li>
 </ul>
 <hr>
-<h1 id="sec-16">七、权限与边界</h1><table>
+<h1 id="sec-19">七、权限与边界</h1><table>
 <thead>
 <tr>
 <th>你的权限</th>
@@ -264,12 +310,16 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>预算编制、风险预警处理</td>
 <td>系统文件（需 admin=&#39;Yes&#39;）</td>
 </tr>
+<tr>
+<td>滚动预算假设维护、呆滞处理单下发</td>
+<td>使用者管理、系统设定</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p>财务入账、报税提交等敏感操作受角色权限控制；若按钮不可用，说明当前账号角色不足，请联系管理员。</p>
 </blockquote>
 <hr>
-<h1 id="sec-17">八、常见问题</h1><table>
+<h1 id="sec-20">八、常见问题</h1><table>
 <thead>
 <tr>
 <th>现象</th>

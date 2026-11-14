@@ -52,15 +52,28 @@ Stop-Process -Id <PID> -Force
 
 ```
 app.js            # 入口：中间件、路由挂载、文档路由、排程启动
-routes/*.js       # 48 个路由模块（按业务域）
-services/*.js     # 业务服务（财务计算、税务算税、整合）
+routes/*.js       # 64 个路由模块（按业务域，app.js 挂载 64 个 /api 前缀）
+services/*.js     # 13 个业务服务（财务计算、税务算税、整合、滚动预算、库存周转）
 utils/llmClient.js# LLM 服务商选择（必须统一走这里）
 scheduler/*.js    # 告警与整合排程
-migrations/*.sql  # 19 个迁移脚本（001~019）+ run_all.sql
-public/           # 前端页面与静态资源
+migrations/*.sql  # 45 个迁移脚本（001~032，含子版本）+ run_all.sql
+public/           # 前端页面（60 个页面脚本）与静态资源
 docs/             # 架构、数据表、手册（md + 生成后的 html）
 scripts/          # generate_docs_html.js 文档生成器
 ```
+
+## 2.3 经营分析模块（2026-11 新增）
+
+| 模块 | 前端页面 | API | 迁移 | 关键表 |
+|---|---|---|---|---|
+| 多维盈利 | `public/js/pages/profitAnalysis.js` | `/api/profit` | 030 | 读 `mgm_finance_summary`、`ermm_erp_so`、`ermm_erp_po` |
+| 滚动预算 | `public/js/pages/rollingBudget.js` | `/api/rolling-budget` | 031 | `rolling_budget_assumption`（假设） |
+| 库存周转 | `public/js/pages/inventoryTurnover.js` | `/api/inventory-turnover` | 032 | `inv_slow_moving_action`（处理单）、`e2_xitems_daily_status`（库龄快照） |
+
+- 三个模块均在 `app.js` 以 `app.use('/api/xxx', routes)` 挂载，需登录（`authRequired`）后访问。
+- 库存周转新增码表 `INV_DISPOSAL_TYPE`（6 种处置方式），权限行 `inventoryTurnover`（经营决策组，一般员工不可用）。
+- 库存周转接口清单：`GET /overview|/aging|/slow-moving|/replenishment|/snapshots|/actions`，`POST/PUT/DELETE /actions`。
+- 数据口径：周转率取 `mgm_finance_summary` 近 12 个月销售成本 ÷ 平均存货价值；库龄取 `e2_xitems_daily_status` 快照，默认选料件行数最多的最近日期；需求取 SO 交货量，缺失时以 PO 采购量近似。
 
 ---
 
@@ -186,13 +199,17 @@ scripts/          # generate_docs_html.js 文档生成器
 | AI 摘要/问答失败 | `llm_config` 预设 → 网络出向 → 日志 |
 | 文档页面图表不显示 | `/vendor/mermaid.min.js` 是否 200 → 页面是否被缓存（文档路由已 no-store） |
 | 数据库连接失败 | MySQL 服务 → 账号密码 → 连接数上限（pool limit 20） |
+| 库存周转无库龄数据 | 该 BU 是否在 `e2_xitems_daily_status` 有快照 → 检查 `bu_no` 与 `stock_date` → 切换快照日期 |
+| 呆滞处理单下发 400 | 必传 `bu_no`、`xitems`；检查 `INV_DISPOSAL_TYPE` 码表是否已执行迁移 032 |
+| 库存周转页无权限/菜单不显示 | `cams_module_permission` 是否有 `inventoryTurnover` 行 → 用户角色是否允许 |
 
 ---
 
 # 十一、变更管理清单（上线前自检）
 
-- [ ] 迁移脚本按序执行（001~019），`run_all.sql` 可一键建置
+- [ ] 迁移脚本按序执行（001~032），`run_all.sql` 可一键建置
 - [ ] 新增路由在 `app.js` 挂载 `/api/xxx`
+- [ ] 新增页面在 `cams_module_permission` 登记 `module_code`，且与 `index.html` 的 `data-page` 一致
 - [ ] 前端新页面使用 `registerPage()`，并在 `index.html` 加 `?v=` 缓存戳
 - [ ] 新增页面文案补齐三语 i18n
 - [ ] 敏感接口在路由层校验角色

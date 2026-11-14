@@ -77,15 +77,16 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-13">5.2 付款与票据（💳 / 📝 / 🏦）</a>
 <a class="toc-item d2" href="#sec-14">5.3 现金预测（💧 经营决策组）—— 你只需要看结论</a>
 <a class="toc-item d2" href="#sec-15">5.4 应收应付（📐）</a>
-<a class="toc-item d1" href="#sec-16">六、批次与数据（作业侧配合）</a>
-<a class="toc-item d2" href="#sec-17">6.1 批次管线（⚙️ 系统组）</a>
-<a class="toc-item d2" href="#sec-18">6.2 数据质量扫描（🛠️ 日常作业组）</a>
-<a class="toc-item d1" href="#sec-19">七、每周 / 每月固定动作</a>
-<a class="toc-item d1" href="#sec-20">八、你的权限范围</a>
-<a class="toc-item d1" href="#sec-21">九、常见问题</a>
+<a class="toc-item d2" href="#sec-16">5.5 库存周转与呆滞（📦 经营决策组）</a>
+<a class="toc-item d1" href="#sec-17">六、批次与数据（作业侧配合）</a>
+<a class="toc-item d2" href="#sec-18">6.1 批次管线（⚙️ 系统组）</a>
+<a class="toc-item d2" href="#sec-19">6.2 数据质量扫描（🛠️ 日常作业组）</a>
+<a class="toc-item d1" href="#sec-20">七、每周 / 每月固定动作</a>
+<a class="toc-item d1" href="#sec-21">八、你的权限范围</a>
+<a class="toc-item d1" href="#sec-22">九、常见问题</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="ERMM_系統架構與流程圖.html">切換另一份文件</a>
   </div>
@@ -229,26 +230,79 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <h2 id="sec-15">5.4 应收应付（📐）</h2><ul>
 <li><strong>操作</strong>：进入「应收应付」→ 按客户/供应商查看余额与账龄 → 与 AR 智能催收清单配合使用（催收由 CFO 主导，你负责业务侧配合）。</li>
 </ul>
+<h2 id="sec-16">5.5 库存周转与呆滞（📦 经营决策组）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>库存周转</strong>；页头选择公司与库龄快照日期。</li>
+<li><strong>五个页签</strong>：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>页签</th>
+<th>用途</th>
+<th>你要做的事</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>周转概览</td>
+<td>库存金额、周转率/DSI、呆滞占比、库龄结构</td>
+<td>先看呆滞金额占比与趋势是否恶化</td>
+</tr>
+<tr>
+<td>库龄结构</td>
+<td>按 0-30 / 31-90 / 91-180 / &gt;180 天分档，可看料件明细</td>
+<td>找出高金额、长库龄料件</td>
+</tr>
+<tr>
+<td>呆滞清单</td>
+<td>库龄 &gt; 90 天的料件，含判定原因与建议处置</td>
+<td>逐项「下发处理」派单</td>
+</tr>
+<tr>
+<td>补货建议</td>
+<td>目标覆盖天数、补货点、建议补货量 / 暂缓采购</td>
+<td>补货量 &gt; 0 才安排采购；超储项先消化</td>
+</tr>
+<tr>
+<td>处理记录</td>
+<td>所有呆滞处理单及状态</td>
+<td>跟踪责任人按时完成并更新状态</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>下发处理流程</strong>：<ol>
+<li>在「呆滞清单」点「下发处理」。</li>
+<li>选择处置方式（降价促销 / 退货供应商 / 报废核销 / 转用在制品 / 暂停采购 / 调拨其他公司），填处置数量、预计回收金额、责任人、完成时限。</li>
+<li>确认下发后，到「处理记录」把状态从「待处理」推进到「进行中 / 已完成」。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：<ul>
+<li>库龄来自库存日快照，系统默认选料件最完整的最近日期，避免个别补录日期导致结构失真。</li>
+<li>周转率/DSI 来自财务汇总近 12 个月，与库龄快照口径不同，两者结合看。</li>
+<li>补货需求优先取销售交货量，无销售数据的原料以采购量近似，仅作参考。</li>
+<li>呆滞处置涉及报废/降价时，先与 CFO 确认减值与审批口径。</li>
+</ul>
+</li>
+</ul>
 <hr>
-<h1 id="sec-16">六、批次与数据（作业侧配合）</h1><h2 id="sec-17">6.1 批次管线（⚙️ 系统组）</h2><ul>
+<h1 id="sec-17">六、批次与数据（作业侧配合）</h1><h2 id="sec-18">6.1 批次管线（⚙️ 系统组）</h2><ul>
 <li><strong>用途</strong>：把当期原始数据加工成可分析的数据。</li>
 <li><strong>你的角色</strong>：通常由 IT/财务执行；若你被授权，操作是「选公司与月份 → 执行 → 看每步状态」。</li>
 <li><strong>重要</strong>：批次没跑完，仪表板、报表、预警都没有当期数据 —— 发现数据缺失先问这一项。</li>
 </ul>
-<h2 id="sec-18">6.2 数据质量扫描（🛠️ 日常作业组）</h2><ul>
+<h2 id="sec-19">6.2 数据质量扫描（🛠️ 日常作业组）</h2><ul>
 <li><strong>用途</strong>：检查数据是否脏、缺、重、矛盾。</li>
 <li><strong>你的用法</strong>：周报/月报数据异常时跑一次，把结果转给财务或 IT 修复。</li>
 <li><strong>注意</strong>：只扫描不修复，修复需责任人确认。</li>
 </ul>
 <hr>
-<h1 id="sec-19">七、每周 / 每月固定动作</h1><ul>
+<h1 id="sec-20">七、每周 / 每月固定动作</h1><ul>
 <li><strong>每日下班前</strong>：确认本部门日报已全部提交（未交的当日提醒）。</li>
-<li><strong>每周五</strong>：工作未完成分析 → 筛高频卡点 → 转行动追踪 → 周会同步。</li>
+<li><strong>每周五</strong>：工作未完成分析 → 筛高频卡点 → 转行动追踪 → 周会同步；库存周转看一次呆滞清单，未下发项当天派单。</li>
 <li><strong>每周一</strong>：看战情看板对比三家公司，确认本周重点。</li>
 <li><strong>每月初</strong>：审上月日报汇总，确认工时与产出；配合财务完成数据补录。</li>
 </ul>
 <hr>
-<h1 id="sec-20">八、你的权限范围</h1><table>
+<h1 id="sec-21">八、你的权限范围</h1><table>
 <thead>
 <tr>
 <th>能做</th>
@@ -272,12 +326,16 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>批次管线执行（除非被授权）</td>
 </tr>
 <tr>
+<td>查看库存周转、下发/更新呆滞处理单</td>
+<td>系统文件（仅管理员）</td>
+</tr>
+<tr>
 <td>数据质量扫描</td>
 <td>系统文件（仅管理员）</td>
 </tr>
 </tbody></table>
 <hr>
-<h1 id="sec-21">九、常见问题</h1><table>
+<h1 id="sec-22">九、常见问题</h1><table>
 <thead>
 <tr>
 <th>现象</th>
@@ -299,6 +357,22 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <tr>
 <td>预警太多不知从何下手</td>
 <td>先处理红色（当日），黄色统一在周五批量处理</td>
+</tr>
+<tr>
+<td>库存周转页没有库龄数据</td>
+<td>该公司无库存日快照，联系财务/IT 确认 <code>e2_xitems_daily_status</code> 是否已同步</td>
+</tr>
+<tr>
+<td>呆滞清单为空</td>
+<td>当前快照无库龄 &gt; 90 天的料件；可切换其他快照日期复核</td>
+</tr>
+<tr>
+<td>补货建议为空</td>
+<td>当期无近 12 个月出库/采购需求数据，或库存已覆盖补货点</td>
+</tr>
+<tr>
+<td>下发处理单报错</td>
+<td>确认已选公司与料件；处置方式与数量为必填</td>
 </tr>
 <tr>
 <td>付款后现金紧张</td>

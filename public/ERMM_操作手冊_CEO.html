@@ -76,12 +76,15 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-12">4.8 现金预测（💧）</a>
 <a class="toc-item d2" href="#sec-13">4.9 预警通知（🔔）与行动追踪（✅）</a>
 <a class="toc-item d2" href="#sec-14">4.10 系统文件（🗺️ / 📊 / 🗄️）</a>
-<a class="toc-item d1" href="#sec-15">五、你的权限范围</a>
-<a class="toc-item d1" href="#sec-16">六、每周 / 每月固定动作</a>
-<a class="toc-item d1" href="#sec-17">七、常见问题</a>
+<a class="toc-item d2" href="#sec-15">4.11 滚动预算（🔄）</a>
+<a class="toc-item d2" href="#sec-16">4.12 多维盈利（💹）</a>
+<a class="toc-item d2" href="#sec-17">4.13 库存周转（📦）</a>
+<a class="toc-item d1" href="#sec-18">五、你的权限范围</a>
+<a class="toc-item d1" href="#sec-19">六、每周 / 每月固定动作</a>
+<a class="toc-item d1" href="#sec-20">七、常见问题</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 05:11<br>
+    產生時間：2026-11-13 11:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -225,8 +228,36 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <li><strong>仅管理员账号可见可用</strong>。内含：系统架构与流程图、高管价值简报、模块数据表关系图。</li>
 <li>非管理员点击会提示「你的权限不能使用这个模块功能」。</li>
 </ul>
+<h2 id="sec-15">4.11 滚动预算（🔄）</h2><ul>
+<li><strong>目的</strong>：看未来 12 个月的损益、资产负债、现金流预测，以及 13 周现金是否够用。</li>
+<li><strong>操作</strong>：进入「滚动预算」→ 选择公司 → 切换损益表 / 资产负债表 / 现金流量表 / 13 周现金 / 假设参数。</li>
+<li><strong>你要看的</strong>：<ol>
+<li>预测期收入与累计净利，是否支撑年度目标。</li>
+<li>期末现金与<strong>最低现金余额</strong>出现的月份。</li>
+<li>报表平衡差是否接近 0（资产 = 负债 + 权益）。</li>
+</ol>
+</li>
+<li><strong>决策用法</strong>：目标与预测有缺口时，让 CFO 调整增长/成本/周转假设，现场对比乐观与保守两版。</li>
+</ul>
+<h2 id="sec-16">4.12 多维盈利（💹）</h2><ul>
+<li><strong>目的</strong>：不只看赚多少，还要看「谁在赚、什么在赚」。</li>
+<li><strong>操作</strong>：进入「多维盈利」→ 选择公司与期间 → 切换客户 / 产品 / 区域 / 渠道维度。</li>
+<li><strong>你要看的</strong>：贡献排名前 20% 的客户与产品、毛利率异常偏低的组合，以及「高收入低毛利」的隐性亏损项。</li>
+<li><strong>决策用法</strong>：定价、返利、资源投放前先看该客户/产品的真实毛利贡献。</li>
+</ul>
+<h2 id="sec-17">4.13 库存周转（📦）</h2><ul>
+<li><strong>目的</strong>：判断库存是否压了过多资金，是否出现呆滞。</li>
+<li><strong>操作</strong>：进入「库存周转」→ 选择公司与库龄快照 → 看周转概览、库龄结构、呆滞清单、补货建议。</li>
+<li><strong>你要看的</strong>：<ol>
+<li>存货周转率（次/年）与周转天数 DSI，趋势是否恶化。</li>
+<li>呆滞金额及占库存比例（库龄 &gt; 90 天）。</li>
+<li>补货建议中的「暂缓采购」项，避免一边压货一边继续买。</li>
+</ol>
+</li>
+<li><strong>决策用法</strong>：DSI 上升 + 呆滞占比上升，就是压降库存的信号；让 COO 对呆滞清单逐项下发处理，CFO 跟踪减值。</li>
+</ul>
 <hr>
-<h1 id="sec-15">五、你的权限范围</h1><table>
+<h1 id="sec-18">五、你的权限范围</h1><table>
 <thead>
 <tr>
 <th>能做</th>
@@ -250,19 +281,23 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>批次管线执行、第三方整合配置</td>
 </tr>
 <tr>
+<td>查看滚动预算、多维盈利、库存周转</td>
+<td>—（只读查看）</td>
+</tr>
+<tr>
 <td>打开系统文件（仅管理员账号）</td>
 <td>直接修改业务单据</td>
 </tr>
 </tbody></table>
 <hr>
-<h1 id="sec-16">六、每周 / 每月固定动作</h1><ul>
+<h1 id="sec-19">六、每周 / 每月固定动作</h1><ul>
 <li><strong>每周一</strong>：战情看板 + 行动追踪未完成项 → 周会开场 5 分钟。</li>
-<li><strong>每月 3 日前</strong>：看上月合并报表与月度趋势，确认经营结论。</li>
-<li><strong>每季度</strong>：跑一次情景模拟（季度目标假设）+ 同业标杆对比，调整资源配置。</li>
+<li><strong>每月 3 日前</strong>：看上月合并报表与月度趋势，确认经营结论；看一次滚动预算与库存周转（DSI、呆滞占比）。</li>
+<li><strong>每季度</strong>：跑一次情景模拟（季度目标假设）+ 同业标杆对比 + 多维盈利结构复盘，调整资源配置。</li>
 <li><strong>随时</strong>：看到红色预警 → 当天指派；看到 AI 摘要提到的风险 → 追问 AI 问答。</li>
 </ul>
 <hr>
-<h1 id="sec-17">七、常见问题</h1><table>
+<h1 id="sec-20">七、常见问题</h1><table>
 <thead>
 <tr>
 <th>现象</th>

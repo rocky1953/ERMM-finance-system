@@ -1,9 +1,9 @@
 # ERMM 財務模組管理系統 — 完整技術手冊
 
-**版本**: v1.0（遷移 006–010）  
-**最後更新**: 2026-10-23  
+**版本**: v1.1（遷移 006–032）  
+**最後更新**: 2026-11-13  
 **系統地址**: http://localhost:3008  
-**技術棧**: Node.js 18 + Express 4 + MySQL 8（後端）；原生 HTML/CSS/JS + Chart.js（前端）；JWT 認證  
+**技術棧**: Node.js 18 + Express 5 + MySQL 8（後端）；原生 HTML/CSS/JS + Chart.js（前端）；JWT 認證  
 
 ---
 
@@ -38,7 +38,7 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 │              Express 伺服器 :3008                             │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
 │  │ middleware│ │  routes  │ │ services │ │  utils / i18n     │ │
-│  │  auth.js │ │  40 個   │ │  tax/... │ │  三語切換         │ │
+│  │  auth.js │ │  64 個   │ │  tax/... │ │  三語切換         │ │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘ │
 │                                                               │
 │  health: GET /api/health                                      │
@@ -68,7 +68,7 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 
 ## 第二章 七大業務域模組介紹
 
-系統按功能分為 7 大業務域，共 **31 個後端路由文件 / 41 個前端頁面腳本 / 60+ 資料表**。
+系統按功能分為 7 大業務域，共 **64 個後端路由文件 / 60 個前端頁面腳本 / 89 張資料表**。
 
 ---
 
@@ -88,8 +88,21 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 | 合併報表 | `consolidation.js` | `/api/consolidation/*` | 多子公司合併抵消分錄 |
 | AI 問答 | `aiqa.js` | `/api/aiqa/*` | 自然語言問財務數據（LLM 接駁） |
 | 情景模擬 | `scenario.js` | *(service 層)* | 假設分析：若銷量降 10% 淨利影響多少 |
+| 多維盈利 | `profitAnalysis.js` | `/api/profit/*` | 客戶 / 產品 / 渠道 / 項目四維毛利與淨利，渠道映射與料件成本率可覆蓋 |
+| 滾動預算 | `rollingBudget.js` | `/api/rolling-budget/*` | 12 個月滾動預測，損益 / 資產負債 / 現金流量三表聯動 + 13 週現金 |
+| 庫存周轉 | `inventoryTurnover.js` | `/api/inventory-turnover/*` | 庫齡結構、周轉率 / DSI、呆滯清單下發處理、補貨建議 |
 
 **關聯資料表（部分）**：`mgm_finance_summary`、`mgm_cash_flow`、`mgm_budget_execution`、`action_items`、`alert_records`
+
+#### 域 1 補充：經營分析三模組（2026-11 新增）
+
+| 模組 | 遷移 | 核心資料表 | 口徑與操作要點 |
+|------|------|-----------|---------------|
+| 多維盈利 | `030_profit_dimension.sql` | `sales_channel_map`、`profit_cost_rate`（另讀 `ermm_erp_so` / `ermm_erp_po` / `e2_xitems_daily_status`） | 收入 / 成本按 SO 明細歸集；成本優先 PO 加權均價，缺失時按料件成本率或公司成本率估算；渠道可逐客戶覆蓋；`/api/profit/dimension?dim=customer\|product\|channel\|project` |
+| 滾動預算 | `031_rolling_budget.sql` | `rolling_budget_assumption`（另讀 `mgm_finance_summary`） | 以最新實際月為基準、最近 3 個月平均推導；假設可保存；按月生成損益 → 資產負債 → 現金流量表並校驗平衡差；`/api/rolling-budget/projection`、`/13w` |
+| 庫存周轉 | `032_inventory_turnover.sql` | `inv_slow_moving_action`（另讀 `e2_xitems_daily_status` / `mgm_finance_summary` / `ermm_erp_so` / `ermm_erp_po`） | 周轉率 = 近 12 月銷售成本 ÷ 平均存貨；DSI = 365 ÷ 周轉率；庫齡取快照（預設選料件最完整的最近日期）；庫齡 > 90 天納入呆滯清單，可下發處理單 |
+
+> 三模組均為**只讀分析**，不回寫賬務；僅庫存周轉會寫 `inv_slow_moving_action`。權限於 `cams_module_permission` 登記為 `profitAnalysis` / `rollingBudget` / `inventoryTurnover`，模組組別為「經營決策」。
 
 ---
 
@@ -803,6 +816,10 @@ node scripts/purge_tax_test_data.js
 | 008 | VAT 按季申報字段（filing_cycle / period_start / period_end / tax_exempt） | ✅ 已執行 |
 | 009 | 年終獎金（bonus_details + batch bonus_mode + detail bonus_* 三欄） | ✅ 已執行 |
 | 010 | CIT 收入/成本覆蓋（revenue_override / cost_override / is_overridden） | ✅ 已執行 |
+| 011–029 | 其他模組遷移（AI 知識庫、第三方整合、分析預測、報稅擴充、權限碼表等），詳見 `migrations/` 目錄 | ✅ 已執行 |
+| 030 | 多維盈利（`sales_channel_map` / `profit_cost_rate` + SALES_CHANNEL 碼表 + `profitAnalysis` 權限） | ✅ 已執行 |
+| 031 | 滾動預算（`rolling_budget_assumption` + `rollingBudget` 權限） | ✅ 已執行 |
+| 032 | 庫存周轉與呆滯（`inv_slow_moving_action` + INV_DISPOSAL_TYPE 碼表 + `inventoryTurnover` 權限） | ✅ 已執行 |
 
 ### 6.5 常見問題排查
 
@@ -814,7 +831,11 @@ node scripts/purge_tax_test_data.js
 | CIT totalRevenue 為 NULL | mgm_finance_summary 需先執行 ERP 匯入批次 |
 | IIT totalWithheldTax 為 0 | payroll_details 無資料 → 系統用平均工資估算，但估算後扣除也為 0 |
 | CIT INSERT 報 Column count | 最近一次 migration 改過 settlements 表結構，service INSERT 需同步增加 placeholder（見 010 修正記錄） |
+| 庫存周轉頁無庫齡資料 | 該帳套在 `e2_xitems_daily_status` 無快照 → 確認 `bu_no` 與 `stock_date`，或切換其他快照日期 |
+| 呆滯清單 / 補貨建議為空 | 當前快照無庫齡 > 90 天料件；補貨建議需有近 12 月 SO 出貨或 PO 採購需求 |
+| 滾動預算無預測結果 | `mgm_finance_summary` 無該帳套實際月資料，先跑 ERP 批次 Step 7 |
+| 經營分析菜單不顯示 | 檢查 `cams_module_permission` 是否已執行 030~032 遷移，且使用者角色允許 |
 
 ---
 
-*本手冊基於 2026-10-23 代碼庫生成。Mermaid 圖表可在 VS Code（需 Mermaid 插件）或 GitHub / GitLab / Notion 直接渲染。*
+*本手冊基於 2026-11-13 代碼庫生成（v1.1，遷移 006–032）。Mermaid 圖表可在 VS Code（需 Mermaid 插件）或 GitHub / GitLab / Notion 直接渲染。*
