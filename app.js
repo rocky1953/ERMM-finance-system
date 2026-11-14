@@ -65,6 +65,13 @@ const cashMCRoutes = require('./routes/cashMonteCarlo');
 const diagnosisRoutes = require('./routes/diagnosis');
 const budgetRoutes = require('./routes/budget');
 const consolidationRoutes = require('./routes/consolidation');
+const closingRoutes = require('./routes/closing');
+const prRequestRoutes = require('./routes/prRequest');
+const poGrnRoutes = require('./routes/poGrn');
+const poMatchRoutes = require('./routes/poMatch');
+const receiptRoutes = require('./routes/receipt');
+const arMatchRoutes = require('./routes/arMatch');
+const permissionRoutes = require('./routes/permission');
 const mgmtAccountingRoutes = require('./routes/mgmtAccounting');
 const aiqaRoutes = require('./routes/aiqa');
 const dailySummaryRoutes = require('./routes/dailySummary');
@@ -78,6 +85,15 @@ const integrationRoutes = require('./routes/integration');
 const taxRoutes = require('./routes/tax');
 const warRoomRoutes = require('./routes/warRoom');
 const codesRoutes = require('./routes/codes');
+const workflowRoutes = require('./routes/workflow');
+const expenseRoutes = require('./routes/expense');
+const payRequestRoutes = require('./routes/payRequest');
+const soCreditRoutes = require('./routes/soCredit');
+const profitRoutes = require('./routes/profit');
+const rollingBudgetRoutes = require('./routes/rollingBudget');
+const inventoryTurnoverRoutes = require('./routes/inventoryTurnover');
+const boardPackRoutes = require('./routes/boardPack');
+const projectProfitRoutes = require('./routes/projectProfit');
 
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
@@ -100,6 +116,12 @@ app.use('/api/risk', riskRoutes);
 app.use('/api/forecast', forecastRoutes);
 app.use('/api/po', poRoutes);
 app.use('/api/so', soRoutes);
+app.use('/api/so-credit', soCreditRoutes);
+app.use('/api/profit', profitRoutes);
+app.use('/api/rolling-budget', rollingBudgetRoutes);
+app.use('/api/inventory-turnover', inventoryTurnoverRoutes);
+app.use('/api/board-pack', boardPackRoutes);
+app.use('/api/project-profit', projectProfitRoutes);
 app.use('/api/preorders', preorderRoutes);
 app.use('/api/kpi', kpiRoutes);
 app.use('/api/branch', branchRoutes);
@@ -122,6 +144,13 @@ app.use('/api/cash-forecast', cashMCRoutes);
 app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/consolidation', consolidationRoutes);
+app.use('/api/closing', closingRoutes);
+app.use('/api/pr-request', prRequestRoutes);
+app.use('/api/po-grn', poGrnRoutes);
+app.use('/api/po-match', poMatchRoutes);
+app.use('/api/receipt', receiptRoutes);
+app.use('/api/ar-match', arMatchRoutes);
+app.use('/api/permission', permissionRoutes);
 app.use('/api/mgmt-accounting', mgmtAccountingRoutes);
 app.use('/api/aiqa', aiqaRoutes);
 app.use('/api/daily-summary', dailySummaryRoutes);
@@ -135,6 +164,9 @@ app.use('/api/integration', integrationRoutes);
 app.use('/api/tax', taxRoutes);
 app.use('/api/war-room', warRoomRoutes);
 app.use('/api/codes', codesRoutes);
+app.use('/api/workflow', workflowRoutes);
+app.use('/api/expense', expenseRoutes);
+app.use('/api/pay-request', payRequestRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {

@@ -98,6 +98,11 @@ body.locked #loginScreen { display: flex; }
 #sidebar .nav-item:hover { background: rgba(255,255,255,0.1); }
 #sidebar .nav-item.active { background: rgba(255,255,255,0.15); border-left-color: var(--accent-light); }
 #sidebar .nav-icon { width: 20px; text-align: center; font-size: 1.1em; }
+#sidebar .nav-badge {
+    margin-left: auto; min-width: 18px; padding: 1px 6px; border-radius: 9px;
+    background: #e74c3c; color: #fff; font-size: 0.72em; font-weight: 700;
+    line-height: 16px; text-align: center;
+}
 
 /* ===== 主内容 ===== */
 #main { margin-left: var(--sidebar-w); padding: 12px 20px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }

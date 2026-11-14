@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ERMM 财务模组管理系统</title>
-<link rel="stylesheet" href="/css/style.css?v=20261107legend">
+<link rel="stylesheet" href="/css/style.css?v=20261113badge">
 <script src="/vendor/chart.umd.min.js"></script>
 </head>
 <body class="locked">
@@ -65,6 +65,9 @@
         <div class="nav-item" data-page="budget" onclick="navigate('budget')">
             <span class="nav-icon">📊</span><span data-i18n="nav.budget">预算编制</span>
         </div>
+        <div class="nav-item" data-page="rollingBudget" onclick="navigate('rollingBudget')">
+            <span class="nav-icon">📆</span><span data-i18n="nav.rollingBudget">滚动预算</span>
+        </div>
         <div class="nav-item" data-page="consolidation" onclick="navigate('consolidation')">
             <span class="nav-icon">📋</span><span data-i18n="nav.consolidation">合并报表</span>
         </div>
@@ -77,11 +80,20 @@
         <div class="nav-item" data-page="warRoom" onclick="navigate('warRoom')">
             <span class="nav-icon">⚔️</span><span data-i18n="nav.warRoom">战情看板</span>
         </div>
+        <div class="nav-item" data-page="boardPack" onclick="navigate('boardPack')">
+            <span class="nav-icon">📑</span><span data-i18n="nav.boardPack">董事会报告包</span>
+        </div>
         <div class="nav-item" data-page="projectProfit" onclick="navigate('projectProfit')">
             <span class="nav-icon">🧾</span><span data-i18n="nav.projectProfit">项目损益</span>
         </div>
         <div class="nav-item" data-page="benchmark" onclick="navigate('benchmark')">
             <span class="nav-icon">📊</span><span data-i18n="nav.benchmark">同业标杆</span>
+        </div>
+        <div class="nav-item" data-page="profitAnalysis" onclick="navigate('profitAnalysis')">
+            <span class="nav-icon">💹</span><span data-i18n="nav.profitAnalysis">多维盈利分析</span>
+        </div>
+        <div class="nav-item" data-page="inventoryTurnover" onclick="navigate('inventoryTurnover')">
+            <span class="nav-icon">📦</span><span data-i18n="nav.inventoryTurnover">库存周转</span>
         </div>
     </div>
     <div class="nav-group">
@@ -101,9 +113,31 @@
         <div class="nav-item" data-page="tempPo" onclick="navigate('tempPo')">
             <span class="nav-icon">📥</span><span data-i18n="nav.tempPo">PO 暂存</span>
         </div>
+        <div class="nav-item" data-page="salesCredit" onclick="navigate('salesCredit')">
+            <span class="nav-icon">🛡️</span><span data-i18n="nav.salesCredit">销售履约与信用</span>
+        </div>
     </div>
     <div class="nav-group">
         <div class="nav-group-title" data-i18n="nav.dailyReports">日常作业 · 工作日报</div>
+        <div class="nav-item" data-page="approvals" onclick="navigate('approvals')">
+            <span class="nav-icon">✅</span><span data-i18n="nav.approvals">审批中心</span>
+            <span class="nav-badge" id="approvalBadge" style="display:none;">0</span>
+        </div>
+        <div class="nav-item" data-page="expense" onclick="navigate('expense')">
+            <span class="nav-icon">🧾</span><span data-i18n="nav.expense">费用报销</span>
+        </div>
+        <div class="nav-item" data-page="payRequest" onclick="navigate('payRequest')">
+            <span class="nav-icon">💳</span><span data-i18n="nav.payRequest">付款申请</span>
+        </div>
+        <div class="nav-item" data-page="closing" onclick="navigate('closing')">
+            <span class="nav-icon">📅</span><span data-i18n="nav.closing">关账管理</span>
+        </div>
+        <div class="nav-item" data-page="prRequest" onclick="navigate('prRequest')">
+            <span class="nav-icon">📦</span><span data-i18n="nav.prRequest">采购申请</span>
+        </div>
+        <div class="nav-item" data-page="poMatch" onclick="navigate('poMatch')">
+            <span class="nav-icon">🔍</span><span data-i18n="nav.poMatch">PO 三单匹配</span>
+        </div>
         <div class="nav-item" data-page="cash" onclick="navigate('cash')">
             <span class="nav-icon">💵</span><span data-i18n="nav.cash">现金日记账</span>
         </div>
@@ -118,6 +152,9 @@
         </div>
         <div class="nav-item" data-page="bank" onclick="navigate('bank')">
             <span class="nav-icon">🏦</span><span data-i18n="nav.bank">银行贷款</span>
+        </div>
+        <div class="nav-item" data-page="arMatch" onclick="navigate('arMatch')">
+            <span class="nav-icon">💰</span><span data-i18n="nav.arMatch">收款核销</span>
         </div>
         <div class="nav-item" data-page="arap" onclick="navigate('arap')">
             <span class="nav-icon">📐</span><span data-i18n="nav.arap">应收应付</span>
@@ -203,6 +240,9 @@
         <div class="nav-item" data-page="user" onclick="navigate('user')">
             <span class="nav-icon">👤</span><span data-i18n="nav.user">使用者管理</span>
         </div>
+        <div class="nav-item" data-page="permission" onclick="navigate('permission')">
+            <span class="nav-icon">🔐</span><span data-i18n="nav.permission">功能权限</span>
+        </div>
         <div class="nav-item" data-page="kpi" onclick="navigate('kpi')">
             <span class="nav-icon">🎯</span><span data-i18n="nav.kpi">KPI 门槛</span>
         </div>
@@ -272,25 +312,25 @@
 <!-- Toast -->
 <div id="toast"></div>
 
-<script src="/js/i18n.js?v=20261112operator"></script>
-<script src="/js/app.js?v=20261112adminmenu"></script>
+<script src="/js/i18n.js?v=20261114nav1"></script>
+<script src="/js/app.js?v=20261114perm"></script>
 <script src="/js/pages/systemMap.js?v=20261025d"></script>
-<script src="/js/pages/dashboard.js?v=20261108alertlang"></script>
+<script src="/js/pages/dashboard.js?v=20261114diag"></script>
 <script src="/js/pages/po.js?v=20261110sup"></script>
-<script src="/js/pages/so.js?v=20261108cust2"></script>
+<script src="/js/pages/so.js?v=20261113coo3"></script>
 <script src="/js/pages/preorder.js?v=20261109range"></script>
 <script src="/js/pages/cash.js"></script>
 <script src="/js/pages/invoice.js"></script>
 <script src="/js/pages/pay.js"></script>
 <script src="/js/pages/check.js"></script>
-<script src="/js/pages/bank.js?v=20261111loan"></script>
-<script src="/js/pages/arap.js"></script>
+<script src="/js/pages/bank.js?v=20261113cfo9"></script>
+<script src="/js/pages/arap.js?v=20261113cfo7"></script>
 <script src="/js/pages/arSmart.js?v=20261105d"></script>
 <script src="/js/pages/dataQuality.js?v=20261110fix2"></script>
 <script src="/js/pages/codeTable.js?v=20261112del"></script>
 <script src="/js/pages/summary.js"></script>
 <script src="/js/pages/report.js?v=20261107bs"></script>
-<script src="/js/pages/risk.js"></script>
+<script src="/js/pages/risk.js?v=20261114diag"></script>
 <script src="/js/pages/forecast.js"></script>
 <script src="/js/pages/trend.js"></script>
 <script src="/js/pages/batch.js"></script>
@@ -302,26 +342,39 @@
 <script src="/js/pages/account.js?v=20261111bu"></script>
 <script src="/js/pages/finance.js?v=20261111bu"></script>
 <script src="/js/pages/dn.js?v=20261111bu"></script>
-<script src="/js/pages/user.js?v=20261112operator"></script>
+<script src="/js/pages/user.js?v=20261114logins2"></script>
 <script src="/js/pages/tempPo.js?v=20261111bu"></script>
 <script src="/js/pages/xitems.js?v=20261111bu"></script>
 <script src="/js/pages/kpiQuery.js?v=20261111bu"></script>
 <script src="/js/pages/benchmark.js"></script>
 <script src="/js/pages/bep.js?v=20261111bu"></script>
 <script src="/js/pages/actions.js?v=20261111act"></script>
+<script src="/js/pages/expense.js?v=20261113wf2"></script>
+<script src="/js/pages/payRequest.js?v=20261114bu"></script>
+<script src="/js/pages/closing.js?v=20261113close1"></script>
+<script src="/js/pages/prRequest.js?v=20261114bu"></script>
+<script src="/js/pages/poMatch.js?v=20261114grnbu"></script>
+<script src="/js/pages/salesCredit.js?v=20261113coo3"></script>
+<script src="/js/pages/arMatch.js?v=20261113ar1"></script>
+<script src="/js/pages/permission.js?v=20261114perm"></script>
+<script src="/js/pages/approvals.js?v=20261113wf2"></script>
 <script src="/js/pages/alerts.js"></script>
 <script src="/js/pages/drilldown.js?v=20261111bu"></script>
 <script src="/js/pages/cashForecast.js?v=20261111bu"></script>
 <script src="/js/pages/mgmtAccounting.js?v=20261111bu"></script>
+<script src="/js/pages/profitAnalysis.js?v=20261113cfo6c"></script>
 <script src="/js/pages/budget.js?v=20261111bu"></script>
+<script src="/js/pages/rollingBudget.js?v=20261113cfo5"></script>
+<script src="/js/pages/inventoryTurnover.js?v=20261113coo5"></script>
 <script src="/js/pages/consolidation.js"></script>
-<script src="/js/pages/aiqa.js?v=20261111bu"></script>
+<script src="/js/pages/aiqa.js?v=20261113ai2"></script>
 <script src="/js/pages/scenario.js?v=20261111bu"></script>
-<script src="/js/pages/dailyReport.js?v=20261111dept"></script>
-<script src="/js/pages/dailyReportUnfinished.js?v=20261111unfin2"></script>
+<script src="/js/pages/dailyReport.js?v=20261113globalym"></script>
+<script src="/js/pages/dailyReportUnfinished.js?v=20261113sync2"></script>
 <script src="/js/pages/integration.js?v=20261112sql1"></script>
 <script src="/js/pages/tax.js?v=20261112rate"></script>
-<script src="/js/pages/warRoom.js?v=20261111bu"></script>
+<script src="/js/pages/warRoom.js?v=20261114en"></script>
+<script src="/js/pages/boardPack.js?v=20261114bp"></script>
 <script src="/js/pages/projectProfit.js?v=20261114pg"></script>
 <script>
 let currentPage = 'dashboard';
