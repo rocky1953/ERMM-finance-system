@@ -11,9 +11,131 @@ registerPage('so', async (c) => {
             </div>
             <div id="soTable">${t('loading')}</div>
         </div>
+        <div class="card">
+            <div class="toolbar">
+                <button class="btn btn-primary" onclick="loadPipeline()">🔄 ${t('pipe.title')}</button>
+            </div>
+            <div id="pipePanel">${t('loading')}</div>
+        </div>
     `;
     loadSO();
+    loadPipeline();
 });
+
+// COO-02 销售闭环（SO → DN → AR → 收款）
+async function loadPipeline() {
+    const el = document.getElementById('pipePanel');
+    try {
+        const [sumRes, cliRes, excRes] = await Promise.all([
+            API.get(`/api/so/pipeline/summary?bu_no=${State.bu_no}`),
+            API.get(`/api/so/pipeline/clients?bu_no=${State.bu_no}`),
+            API.get(`/api/so/pipeline/exceptions?bu_no=${State.bu_no}&limit=10`)
+        ]);
+        const s = sumRes.data || {};
+        const stages = s.stages || [];
+        const conv = s.conversion || {};
+        const clients = cliRes.data?.clients || [];
+        const noInv = excRes.data?.delivered_no_invoice?.rows || [];
+        const noPay = excRes.data?.invoiced_no_payment?.rows || [];
+
+        const stageColors = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981'];
+
+        el.innerHTML = `
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                ${stages.map((st, i) => `
+                    <div style="flex:1;min-width:170px;border:1px solid #e2e8f0;border-left:4px solid ${stageColors[i]};border-radius:8px;padding:12px">
+                        <div style="font-size:12px;color:#64748b">${i + 1}. ${t('pipe.' + st.code.toLowerCase())}</div>
+                        <div style="font-size:20px;font-weight:700;margin:4px 0">${UI.fmt(st.amount)}</div>
+                        <div style="font-size:12px;color:#94a3b8">${st.count} ${t('mp.count')}${st.unpaid != null ? ` · ${t('aging.unpaid')} ${UI.fmt(st.unpaid)}` : ''}</div>
+                    </div>`).join('')}
+            </div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;font-size:13px">
+                <span>SO→DN ${t('pipe.rate')}: <b>${conv.so_to_dn}%</b></span>
+                <span>DN→AR ${t('pipe.rate')}: <b>${conv.dn_to_ar}%</b></span>
+                <span>AR ${t('pipe.rate')}: <b>${conv.ar_collect_rate}%</b></span>
+            </div>
+
+            <h4 style="margin:8px 0">${t('pipe.clients')}</h4>
+            <table class="data-table">
+                <thead><tr><th>${t('mp.party')}</th><th>${t('mp.count')}</th><th>${t('pipe.amount')}</th>
+                    <th>${t('pipe.unpaid')}</th><th>${t('pipe.rate')}</th><th>${t('mp.status')}</th></tr></thead>
+                <tbody>${clients.map(c => `
+                    <tr>
+                        <td><b>${c.client_id || '-'}</b>${c.client_name ? ' — ' + c.client_name : ''}</td>
+                        <td class="text-center">${c.so_cnt}</td>
+                        <td class="num">${UI.fmt(c.so_amt)}</td>
+                        <td class="num negative">${UI.fmt(c.unpaid_amt)}</td>
+                        <td class="num">${c.closed_rate}%</td>
+                        <td>${pipeStatusBadge(c.status)}</td>
+                    </tr>`).join('') || `<tr><td colspan="6">${t('no_data')}</td></tr>`}</tbody>
+            </table>
+
+            <h4 style="margin:20px 0 8px">⚠️ ${t('pipe.no_invoice')} (${excRes.data?.delivered_no_invoice?.count || 0})</h4>
+            ${noInv.length ? `<table class="data-table">
+                <thead><tr><th>SO</th><th>${t('mp.party')}</th><th>DN ${t('pipe.amount')}</th><th>${t('mp.date')}</th><th>${t('pipe.trace')}</th></tr></thead>
+                <tbody>${noInv.map(r => `
+                    <tr>
+                        <td><b>${r.so_nbr}</b></td>
+                        <td>${r.client_name || r.client_id}</td>
+                        <td class="num">${UI.fmt(r.dn_amt)}</td>
+                        <td>${r.so_date ? String(r.so_date).substring(0,10) : '-'}</td>
+                        <td><button class="btn btn-sm" onclick="traceOrder('${r.so_nbr}')">🔍</button></td>
+                    </tr>`).join('')}</tbody>
+            </table>` : `<p style="color:#64748b">${t('no_data')}</p>`}
+
+            <h4 style="margin:20px 0 8px">⚠️ ${t('pipe.no_payment')} (${excRes.data?.invoiced_no_payment?.count || 0})</h4>
+            ${noPay.length ? `<table class="data-table">
+                <thead><tr><th>${t('mp.party')}</th><th>${t('aging.detail')}</th><th>${t('pipe.unpaid')}</th><th>${t('pipe.overdue')}</th></tr></thead>
+                <tbody>${noPay.map(r => `
+                    <tr>
+                        <td>${r.client_id}</td>
+                        <td>${r.invoice_no}</td>
+                        <td class="num negative">${UI.fmt(r.unpaid)}</td>
+                        <td class="text-center" style="color:#dc2626">${r.overdue_days}</td>
+                    </tr>`).join('')}</tbody>
+            </table>` : `<p style="color:#64748b">${t('no_data')}</p>`}
+        `;
+    } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
+}
+
+function pipeStatusBadge(status) {
+    const map = {
+        '已收款': ['#dcfce7', '#166534'],
+        '部分收款': ['#fef3c7', '#92400e'],
+        '未收款': ['#fee2e2', '#991b1b'],
+        '未开票': ['#e2e8f0', '#475569']
+    };
+    const [bg, fg] = map[status] || ['#e2e8f0', '#475569'];
+    return `<span style="padding:2px 8px;border-radius:10px;background:${bg};color:${fg};font-size:12px">${status}</span>`;
+}
+
+async function traceOrder(soNbr) {
+    try {
+        const res = await API.get(`/api/so/pipeline/order/${encodeURIComponent(soNbr)}`);
+        const d = res.data || {};
+        const so = d.so || {};
+        const dnRows = (d.dn?.rows || []).map(x => `
+            <tr><td>${x.so_nbr}</td><td>${x.DN_date ? String(x.DN_date).substring(0,10) : '-'}</td>
+            <td class="num">${UI.fmt(x.DN_qty)}</td><td class="num">${UI.fmt(x.so_qty)}</td></tr>`).join('');
+        const invRows = (d.invoice?.rows || []).map(x => `
+            <tr><td>${x.invoice_no}</td><td>${UI.fmt(x.sub_amt)}</td>
+            <td class="num">${UI.fmt(x.payment)}</td></tr>`).join('');
+
+        UI.modal(`🔍 ${soNbr} — ${t('pipe.trace')}`, `
+            <p style="margin-bottom:8px">
+                ${t('mp.party')}: <b>${so.client_name || so.client_id || '-'}</b> ·
+                ${t('mp.amount')}: <b>${UI.fmt(Number(so.so_qty||0) * Number(so.unit_price||0))}</b> ·
+                ${t('mp.status')}: <b>${d.chain_status || '-'}</b>
+            </p>
+            <h4 style="margin:12px 0 6px">${t('pipe.dn')} (${d.dn?.count || 0})</h4>
+            <table class="data-table"><thead><tr><th>SO</th><th>${t('mp.date')}</th><th>DN Qty</th><th>SO Qty</th></tr></thead>
+                <tbody>${dnRows || `<tr><td colspan="4">${t('no_data')}</td></tr>`}</tbody></table>
+            <h4 style="margin:12px 0 6px">${t('pipe.ar')} (${d.invoice?.count || 0})</h4>
+            <table class="data-table"><thead><tr><th>${t('aging.detail')}</th><th>${t('aging.invoice_amt')}</th><th>${t('recon.pay_amt')}</th></tr></thead>
+                <tbody>${invRows || `<tr><td colspan="3">${t('no_data')}</td></tr>`}</tbody></table>
+        `, `<button class="btn" onclick="UI.closeModal()">${t('cancel')}</button>`);
+    } catch(e) { UI.toast(e.message, 'error'); }
+}
 
 async function loadSO() {
     const _mgr = Auth.isManager();
@@ -146,7 +268,20 @@ const SOForm = {
                 await API.put(`/api/so/${this._uid}`, body);
                 UI.toast(t('so.msg.updated'), 'success');
             } else {
-                await API.post('/api/so', body);
+                try {
+                    await API.post('/api/so', body);
+                } catch (e) {
+                    // COO-03 信用额度超限：管理员可强制放行
+                    const forceTip = {
+                        'zh-CN': '是否强制放行（管理员）？',
+                        'zh-TW': '是否強制放行（管理員）？',
+                        en: 'Force release as admin?'
+                    }[I18N.lang] || '是否强制放行（管理员）？';
+                    if (String(e.message).indexOf('信用') >= 0 && Auth.isAdmin() && confirm(`${e.message}\n\n${forceTip}`)) {
+                        body.force = true;
+                        await API.post('/api/so', body);
+                    } else { throw e; }
+                }
                 UI.toast(t('so.msg.added'), 'success');
             }
             UI.closeModal();
