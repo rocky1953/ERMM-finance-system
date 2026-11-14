@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
  * 5 套風險預警模型路由
  * Z-Score / Z2-Score / Z3-Score / BZ 破產概率 / JZ 營運能力
  * Wolf 模型 + KPI 燈號
@@ -180,11 +180,21 @@ router.post('/calc', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const { bu_no, YYYY_MM, auto_recalc } = req.query;
-        let sql = 'SELECT uid, bu_no, YYYY_MM, Z_score, Z2_score, Z3_score, BZ_model, JZ_model, wall_mode, risk_color, Z_X1, Z_X2, Z_X3, Z_X4, Z_X5, BZ_X1, BZ_X2, BZ_X3, BZ_X4, BZ_X5, JZ_ZA, JZ_ZB, JZ_ZC, JZ_ZD, current_ratio, quick_ratio, debt_ratio, ROA, ROE, gross_margin, net_margin FROM mgm_finance_summary WHERE 1=1';
+        let sql = `SELECT m.uid, m.bu_no, m.YYYY_MM, m.Z_score, m.Z2_score, m.Z3_score, m.BZ_model, m.JZ_model,
+                m.wall_mode, m.risk_color, m.Z_X1, m.Z_X2, m.Z_X3, m.Z_X4, m.Z_X5,
+                m.BZ_X1, m.BZ_X2, m.BZ_X3, m.BZ_X4, m.BZ_X5, m.JZ_ZA, m.JZ_ZB, m.JZ_ZC, m.JZ_ZD,
+                m.current_ratio, m.quick_ratio, m.debt_ratio, m.ROA, m.ROE, m.gross_margin, m.net_margin,
+                m.sale_amt, m.sale_cost_amt, m.BIZ_major_margin_amt, m.operation_profit_amt, m.finance_EXP_amt,
+                m.net_profit_amt, m.AR_amt, m.stock_value_amt, m.cash_operation_in, m.cash_operation_out,
+                (SELECT p.sale_amt FROM mgm_finance_summary p
+                  WHERE p.bu_no=m.bu_no
+                    AND p.YYYY_MM=DATE_FORMAT(DATE_SUB(STR_TO_DATE(CONCAT(m.YYYY_MM,'-01'),'%Y-%m-%d'), INTERVAL 1 YEAR),'%Y-%m')
+                  LIMIT 1) AS sale_ly
+            FROM mgm_finance_summary m WHERE 1=1`;
         const params = [];
-        if (bu_no) { sql += ' AND bu_no=?'; params.push(bu_no); }
-        if (YYYY_MM) { sql += ' AND YYYY_MM=?'; params.push(YYYY_MM); }
-        sql += ' ORDER BY YYYY_MM DESC LIMIT 60';
+        if (bu_no) { sql += ' AND m.bu_no=?'; params.push(bu_no); }
+        if (YYYY_MM) { sql += ' AND m.YYYY_MM=?'; params.push(YYYY_MM); }
+        sql += ' ORDER BY m.YYYY_MM DESC LIMIT 60';
         const [rows] = await pool.execute(sql, params);
 
         // 即時重算：Z_score 為 0/NULL 但有原始資產/銷貨資料 → lazy calc
@@ -199,12 +209,44 @@ router.get('/', async (req, res) => {
             }
             if (need.length > 0) {
                 const [fresh] = await pool.execute(sql, params);
-                return ok(res, fresh);
+                return ok(res, attachExtras(fresh));
             }
         }
-        ok(res, rows);
+        ok(res, attachExtras(rows));
     } catch (err) { fail500(res, err); }
 });
+
+// 附加 CEO / CFO 关注指标（毛利率、净利率、营收同比、利息保障、应收/存货天数、净利现金含量）
+function attachExtras(rows) {
+    return rows.map(r => {
+        const sale = Number(r.sale_amt || 0);
+        const cost = Number(r.sale_cost_amt || 0);
+        const grossAmt = Number(r.BIZ_major_margin_amt || 0) || (sale - cost);
+        const netProfit = Number(r.net_profit_amt || 0);
+        const finExp = Number(r.finance_EXP_amt || 0);
+        const ocf = Number(r.cash_operation_in || 0) - Number(r.cash_operation_out || 0);
+        return {
+            ...r,
+            ext: {
+                gross_margin_pct: sale > 0 ? grossAmt / sale * 100 : null,
+                net_margin_pct: sale > 0 ? netProfit / sale * 100 : null,
+                revenue_yoy: Number(r.sale_ly || 0) > 0 ? (sale - Number(r.sale_ly)) / Number(r.sale_ly) * 100 : null,
+                interest_cover: finExp > 0 ? Number(r.operation_profit_amt || 0) / finExp : null,
+                ar_days: sale > 0 ? Number(r.AR_amt || 0) / sale * 30 : null,
+                inv_days: cost > 0 ? Number(r.stock_value_amt || 0) / cost * 30 : null,
+                ocf,
+                cash_quality: (Number(r.cash_operation_in || 0) || Number(r.cash_operation_out || 0))
+                    ? (netProfit !== 0 ? ocf / netProfit : null) : null,
+                gross_profit_amt: grossAmt,
+                net_profit_amt: netProfit,
+                finance_exp: finExp,
+                ar_amt: Number(r.AR_amt || 0),
+                inv_amt: Number(r.stock_value_amt || 0),
+                sale_ly: Number(r.sale_ly || 0)
+            }
+        };
+    });
+}
 
 // 單筆重算（與 POST /calc 公式一致）
 async function recalcOne(uid) {

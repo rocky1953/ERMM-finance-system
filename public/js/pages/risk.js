@@ -57,50 +57,120 @@ async function loadRisk() {
         const roe = Number(r.ROE || 0);
         const roeColor = roe >= 0 ? 'green' : 'red';
         const roeMode = roe >= 0 ? t('dash.safe') : t('dash.bankrupt');
+        const hint = `<span style="font-size:.75em;font-weight:400;opacity:.75;">👆 ${t('dash.zmodal.hint')}</span>`;
+        // ===== CEO / CFO 关注指标 =====
+        const ext = r.ext || {};
+        const modeOf = (c) => c === 'green' ? t('dash.safe') : (c === 'yellow' ? t('dash.grey') : t('dash.bankrupt'));
+        const pct = (v, d = 1) => (v === null || v === undefined) ? '—' : `${UI.fmt(v, d)}%`;
+        const days = (v) => (v === null || v === undefined) ? '—' : `${UI.fmt(v, 0)} ${t('risk.days_unit')}`;
+        // 红色警示指标统一显示「诊断」，点击直接进入 AI 智能归因
+        const diagLink = (id) => `<a href="#" onclick="event.stopPropagation();Diagnosis.openWithAI('${id}')" style="color:#2563eb;">🔍 ${t('dash.diagnose')}</a>`;
+
+        const gm = ext.gross_margin_pct;
+        const gmColor = gm === null || gm === undefined ? 'yellow' : (gm >= 25 ? 'green' : (gm >= 10 ? 'yellow' : 'red'));
+        const nm = ext.net_margin_pct;
+        const nmColor = nm === null || nm === undefined ? 'yellow' : (nm >= 8 ? 'green' : (nm >= 0 ? 'yellow' : 'red'));
+        const yoy = ext.revenue_yoy;
+        const yoyColor = yoy === null || yoy === undefined ? 'yellow' : (yoy >= 5 ? 'green' : (yoy >= 0 ? 'yellow' : 'red'));
+        const icr = ext.interest_cover;
+        const icrColor = icr === null || icr === undefined ? 'green' : (icr >= 3 ? 'green' : (icr >= 1.5 ? 'yellow' : 'red'));
+        const arD = ext.ar_days;
+        const arColor = arD === null || arD === undefined ? 'yellow' : (arD <= 60 ? 'green' : (arD <= 90 ? 'yellow' : 'red'));
+        const invD = ext.inv_days;
+        const invColor = invD === null || invD === undefined ? 'yellow' : (invD <= 60 ? 'green' : (invD <= 90 ? 'yellow' : 'red'));
+        const cq = ext.cash_quality;
+        const cqColor = cq === null || cq === undefined ? 'yellow' : (cq >= 1 ? 'green' : (cq >= 0 ? 'yellow' : 'red'));
         el.innerHTML = `
             <div class="kpi-grid">
                 <div class="kpi-card ${zColor}" style="cursor:pointer" onclick="RiskHelp.open('z')">
-                    <div class="kpi-label">${t('risk.z_score')}</div>
+                    <div class="kpi-label">${t('risk.z_score')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(zVal, 4)}</div>
                     <div class="kpi-badge ${zColor}">${zWallMode}</div>
-                    <div class="kpi-sub">${t('risk.threshold')}</div>
+                    <div class="kpi-sub">${t('risk.threshold')}${zColor === 'red' ? ' · ' + diagLink('z_score') : ''}</div>
                 </div>
                 <div class="kpi-card ${z2Color}" style="cursor:pointer" onclick="RiskHelp.open('z2')">
-                    <div class="kpi-label">${t('risk.z2')}</div>
+                    <div class="kpi-label">${t('risk.z2')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.Z2_score, 4)}</div>
                     <div class="kpi-badge ${z2Color}">${z2Mode}</div>
+                    ${z2Color === 'red' ? `<div class="kpi-sub">${diagLink('z2_score')}</div>` : ''}
                 </div>
                 <div class="kpi-card ${z3Color}" style="cursor:pointer" onclick="RiskHelp.open('z3')">
-                    <div class="kpi-label">${t('risk.z3')}</div>
+                    <div class="kpi-label">${t('risk.z3')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.Z3_score, 4)}</div>
                     <div class="kpi-badge ${z3Color}">${z3Mode}</div>
+                    ${z3Color === 'red' ? `<div class="kpi-sub">${diagLink('z3_score')}</div>` : ''}
                 </div>
                 <div class="kpi-card ${bzColor}" style="cursor:pointer" onclick="RiskHelp.open('bz')">
-                    <div class="kpi-label">${t('risk.bz')}</div>
+                    <div class="kpi-label">${t('risk.bz')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.BZ_model, 4)}</div>
                     <div class="kpi-badge ${bzColor}">${bzMode}</div>
+                    ${bzColor === 'red' ? `<div class="kpi-sub">${diagLink('bz_model')}</div>` : ''}
                 </div>
                 <div class="kpi-card ${jzColor}" style="cursor:pointer" onclick="RiskHelp.open('jz')">
-                    <div class="kpi-label">${t('risk.jz')}</div>
+                    <div class="kpi-label">${t('risk.jz')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.JZ_model, 4)}</div>
                     <div class="kpi-badge ${jzColor}">${jzMode}</div>
+                    ${jzColor === 'red' ? `<div class="kpi-sub">${diagLink('jz_model')}</div>` : ''}
                 </div>
                 <div class="kpi-card ${crColor}" style="cursor:pointer" onclick="RiskHelp.open('cr')">
-                    <div class="kpi-label">${t('risk.current_ratio')}</div>
+                    <div class="kpi-label">${t('risk.current_ratio')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.current_ratio, 4)}</div>
                     <div class="kpi-badge ${crColor}">${crMode}</div>
-                    <div class="kpi-sub">${t('risk.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)}</div>
+                    <div class="kpi-sub">${t('risk.quick_ratio')} ${UI.fmt(r.quick_ratio, 4)} ${crColor === 'red' ? `· ${diagLink('current_ratio')}` : ''}</div>
                 </div>
                 <div class="kpi-card ${drColor}" style="cursor:pointer" onclick="RiskHelp.open('dr')">
-                    <div class="kpi-label">${t('risk.debt_ratio')}</div>
+                    <div class="kpi-label">${t('risk.debt_ratio')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.debt_ratio, 1)}%</div>
                     <div class="kpi-badge ${drColor}">${drMode}</div>
+                    <div class="kpi-sub">${drColor === 'red' ? diagLink('debt_ratio') : ''}</div>
                 </div>
                 <div class="kpi-card ${roeColor}" style="cursor:pointer" onclick="RiskHelp.open('roe')">
-                    <div class="kpi-label">${t('risk.roe')}</div>
+                    <div class="kpi-label">${t('risk.roe')} ${hint}</div>
                     <div class="kpi-value">${UI.fmt(r.ROE, 2)}%</div>
                     <div class="kpi-badge ${roeColor}">${roeMode}</div>
-                    <div class="kpi-sub">${t('risk.roa')} ${UI.fmt(r.ROA, 2)}%</div>
+                    <div class="kpi-sub">${t('risk.roa')} ${UI.fmt(r.ROA, 2)}% ${roeColor === 'red' ? `· ${diagLink('roe')}` : ''}</div>
+                </div>
+                <div class="kpi-card ${gmColor}" style="cursor:pointer" onclick="RiskHelp.open('gross')">
+                    <div class="kpi-label">${t('risk.gross_margin')} ${hint}</div>
+                    <div class="kpi-value">${pct(gm)}</div>
+                    <div class="kpi-badge ${gmColor}">${modeOf(gmColor)}</div>
+                    <div class="kpi-sub">${t('risk.gross_profit_amt')} ${UI.fmt(ext.gross_profit_amt || 0)}${gmColor === 'red' ? ' · ' + diagLink('gross_profit') : ''}</div>
+                </div>
+                <div class="kpi-card ${nmColor}" style="cursor:pointer" onclick="RiskHelp.open('net')">
+                    <div class="kpi-label">${t('risk.net_margin')} ${hint}</div>
+                    <div class="kpi-value">${pct(nm)}</div>
+                    <div class="kpi-badge ${nmColor}">${modeOf(nmColor)}</div>
+                    <div class="kpi-sub">${t('risk.net_profit_amt')} ${UI.fmt(ext.net_profit_amt || 0)}${nmColor === 'red' ? ' · ' + diagLink('net_profit_margin') : ''}</div>
+                </div>
+                <div class="kpi-card ${yoyColor}" style="cursor:pointer" onclick="RiskHelp.open('yoy')">
+                    <div class="kpi-label">${t('risk.revenue_yoy')} ${hint}</div>
+                    <div class="kpi-value">${pct(yoy)}</div>
+                    <div class="kpi-badge ${yoyColor}">${modeOf(yoyColor)}</div>
+                    <div class="kpi-sub">${t('risk.last_year_sale')} ${UI.fmt(ext.sale_ly || 0)}${yoyColor === 'red' ? ' · ' + diagLink('revenue_yoy') : ''}</div>
+                </div>
+                <div class="kpi-card ${icrColor}" style="cursor:pointer" onclick="RiskHelp.open('icr')">
+                    <div class="kpi-label">${t('risk.interest_cover')} ${hint}</div>
+                    <div class="kpi-value">${icr === null || icr === undefined ? '—' : UI.fmt(icr, 2)}</div>
+                    <div class="kpi-badge ${icrColor}">${icr === null || icr === undefined ? t('risk.no_fin_exp') : modeOf(icrColor)}</div>
+                    <div class="kpi-sub">${t('risk.fin_exp')} ${UI.fmt(ext.finance_exp || 0)}${icrColor === 'red' ? ' · ' + diagLink('interest_cover') : ''}</div>
+                </div>
+                <div class="kpi-card ${arColor}" style="cursor:pointer" onclick="RiskHelp.open('ar')">
+                    <div class="kpi-label">${t('risk.ar_days')} ${hint}</div>
+                    <div class="kpi-value">${days(arD)}</div>
+                    <div class="kpi-badge ${arColor}">${modeOf(arColor)}</div>
+                    <div class="kpi-sub">${t('risk.ar_amt')} ${UI.fmt(ext.ar_amt || 0)}${arColor === 'red' ? ' · ' + diagLink('ar_days') : ''}</div>
+                </div>
+                <div class="kpi-card ${invColor}" style="cursor:pointer" onclick="RiskHelp.open('inv')">
+                    <div class="kpi-label">${t('risk.inv_days')} ${hint}</div>
+                    <div class="kpi-value">${days(invD)}</div>
+                    <div class="kpi-badge ${invColor}">${modeOf(invColor)}</div>
+                    <div class="kpi-sub">${t('risk.inv_amt')} ${UI.fmt(ext.inv_amt || 0)}${invColor === 'red' ? ' · ' + diagLink('inv_days') : ''}</div>
+                </div>
+                <div class="kpi-card ${cqColor}" style="cursor:pointer" onclick="RiskHelp.open('cashq')">
+                    <div class="kpi-label">${t('risk.cash_quality')} ${hint}</div>
+                    <div class="kpi-value">${cq === null || cq === undefined ? '—' : UI.fmt(cq, 2)}</div>
+                    <div class="kpi-badge ${cqColor}">${modeOf(cqColor)}</div>
+                    <div class="kpi-sub">${t('risk.ocf')} ${UI.fmt(ext.ocf || 0)}${cqColor === 'red' ? ' · ' + diagLink('cash_quality') : ''}</div>
                 </div>
             </div>
         `;
@@ -113,6 +183,10 @@ const RiskHelp = {
         // data 为选填：由仪表板等其他页面传入风险资料；风险预警页本身用 _riskData
         const r = data || _riskData || {};
         const v = (k) => Number(r[k] || 0);
+        const ext = r.ext || {};
+        const c3 = (x, g, y) => (x === null || x === undefined) ? 'yellow' : (x >= g ? 'green' : (x >= y ? 'yellow' : 'red'));
+        const st3 = (c) => c === 'green' ? t('dash.safe') : (c === 'yellow' ? t('dash.grey') : t('dash.bankrupt'));
+        const show = (x, d = 1, unit = '%') => (x === null || x === undefined) ? '—' : UI.fmt(x, d) + unit;
         const cfg = {
             z: {
                 title: t('risk.z_score'),
@@ -250,6 +324,110 @@ const RiskHelp = {
                     { range: '< 0%', label: t('dash.bankrupt'), color: 'red' },
                 ]
             },
+            // ===== CEO / CFO 关注指标 =====
+            gross: (() => {
+                const x = ext.gross_margin_pct, c = c3(x, 25, 10);
+                return {
+                    title: t('risk.gross_margin'), color: c,
+                    value: show(x), status: st3(c),
+                    purpose: t('risk.desc.gross.purpose'), formula: t('risk.desc.gross.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.gross_profit_amt')}: <strong>${UI.fmt(ext.gross_profit_amt || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≥ 25%', label: t('dash.safe'), color: 'green' },
+                        { range: '10% ~ 25%', label: t('dash.grey'), color: 'yellow' },
+                        { range: '< 10%', label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            net: (() => {
+                const x = ext.net_margin_pct, c = c3(x, 8, 0);
+                return {
+                    title: t('risk.net_margin'), color: c,
+                    value: show(x), status: st3(c),
+                    purpose: t('risk.desc.net.purpose'), formula: t('risk.desc.net.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.net_profit_amt')}: <strong>${UI.fmt(ext.net_profit_amt || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≥ 8%', label: t('dash.safe'), color: 'green' },
+                        { range: '0% ~ 8%', label: t('dash.grey'), color: 'yellow' },
+                        { range: '< 0%', label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            yoy: (() => {
+                const x = ext.revenue_yoy, c = c3(x, 5, 0);
+                return {
+                    title: t('risk.revenue_yoy'), color: c,
+                    value: show(x), status: st3(c),
+                    purpose: t('risk.desc.yoy.purpose'), formula: t('risk.desc.yoy.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.last_year_sale')}: <strong>${UI.fmt(ext.sale_ly || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≥ 5%', label: t('dash.safe'), color: 'green' },
+                        { range: '0% ~ 5%', label: t('dash.grey'), color: 'yellow' },
+                        { range: '< 0%', label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            icr: (() => {
+                const x = ext.interest_cover;
+                const c = (x === null || x === undefined) ? 'green' : c3(x, 3, 1.5);
+                return {
+                    title: t('risk.interest_cover'), color: c,
+                    value: (x === null || x === undefined) ? '—' : UI.fmt(x, 2),
+                    status: (x === null || x === undefined) ? t('risk.no_fin_exp') : st3(c),
+                    purpose: t('risk.desc.icr.purpose'), formula: t('risk.desc.icr.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.fin_exp')}: <strong>${UI.fmt(ext.finance_exp || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≥ 3.0', label: t('dash.safe'), color: 'green' },
+                        { range: '1.5 ~ 3.0', label: t('dash.grey'), color: 'yellow' },
+                        { range: '< 1.5', label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            ar: (() => {
+                const x = ext.ar_days;
+                const c = (x === null || x === undefined) ? 'yellow' : (x <= 60 ? 'green' : (x <= 90 ? 'yellow' : 'red'));
+                return {
+                    title: t('risk.ar_days'), color: c,
+                    value: show(x, 0, ' ' + t('risk.days_unit')), status: st3(c),
+                    purpose: t('risk.desc.ar.purpose'), formula: t('risk.desc.ar.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.ar_amt')}: <strong>${UI.fmt(ext.ar_amt || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≤ 60 ' + t('risk.days_unit'), label: t('dash.safe'), color: 'green' },
+                        { range: '60 ~ 90 ' + t('risk.days_unit'), label: t('dash.grey'), color: 'yellow' },
+                        { range: '> 90 ' + t('risk.days_unit'), label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            inv: (() => {
+                const x = ext.inv_days;
+                const c = (x === null || x === undefined) ? 'yellow' : (x <= 60 ? 'green' : (x <= 90 ? 'yellow' : 'red'));
+                return {
+                    title: t('risk.inv_days'), color: c,
+                    value: show(x, 0, ' ' + t('risk.days_unit')), status: st3(c),
+                    purpose: t('risk.desc.inv.purpose'), formula: t('risk.desc.inv.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.inv_amt')}: <strong>${UI.fmt(ext.inv_amt || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≤ 60 ' + t('risk.days_unit'), label: t('dash.safe'), color: 'green' },
+                        { range: '60 ~ 90 ' + t('risk.days_unit'), label: t('dash.grey'), color: 'yellow' },
+                        { range: '> 90 ' + t('risk.days_unit'), label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
+            cashq: (() => {
+                const x = ext.cash_quality, c = c3(x, 1, 0);
+                return {
+                    title: t('risk.cash_quality'), color: c,
+                    value: (x === null || x === undefined) ? '—' : UI.fmt(x, 2),
+                    status: st3(c),
+                    purpose: t('risk.desc.cashq.purpose'), formula: t('risk.desc.cashq.formula'),
+                    extra: `<div style="margin-top:8px">${t('risk.ocf')}: <strong>${UI.fmt(ext.ocf || 0)}</strong></div>`,
+                    zones: [
+                        { range: '≥ 1.0', label: t('dash.safe'), color: 'green' },
+                        { range: '0 ~ 1.0', label: t('dash.grey'), color: 'yellow' },
+                        { range: '< 0', label: t('dash.bankrupt'), color: 'red' },
+                    ]
+                };
+            })(),
         };
         const m = cfg[key];
         if (!m) return;

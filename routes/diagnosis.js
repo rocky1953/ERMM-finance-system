@@ -13,17 +13,20 @@ const KPI_DEF = {
     gross_profit: {
         name: '銷售毛利率',
         formula: (s) => s.sale_amt > 0 ? (s.sale_amt - s.sale_cost_amt) / s.sale_amt * 100 : 0,
-        threshold: 20, unit: '%'
+        threshold: 25, unit: '%',
+        formulaText: '(銷售收入 − 銷售成本) / 銷售收入 × 100%'
     },
     net_profit_margin: {
         name: '銷售淨利率',
-        formula: (s) => s.sale_amt > 0 ? (s.sale_exp_amt || 0) / s.sale_amt * 100 : 0,
-        threshold: 5, unit: '%'
+        formula: (s) => s.sale_amt > 0 ? (s.net_profit_amt || 0) / s.sale_amt * 100 : 0,
+        threshold: 8, unit: '%',
+        formulaText: '淨利潤 / 銷售收入 × 100%'
     },
     current_ratio: {
         name: '流動比率',
         formula: (s) => (s.current_asset_amt || 0) / Math.max(1, s.current_debet_amt || s.AP_amt || 1),
-        threshold: 1.5, unit: ''
+        threshold: 1.5, unit: '',
+        formulaText: '流動資產 / 流動負債'
     },
     debt_ratio: {
         name: '負債比率',
@@ -31,12 +34,14 @@ const KPI_DEF = {
             const debt = s.ttl_debet_amt || (s.loan_amt || 0) + (s.AP_amt || 0) + (s.LT_loan_amt || 0);
             return debt * 100 / Math.max(1, s.ttl_asset_amt || 1);
         },
-        threshold: 70, unit: '%'
+        threshold: 70, unit: '%', inverse: true,
+        formulaText: '總負債 / 總資產 × 100%'
     },
     ar_turn: {
         name: '應收帳款周轉率',
         formula: (s) => (s.sale_amt || 0) / Math.max(1, s.AR_amt || 1),
-        threshold: 4, unit: ''
+        threshold: 4, unit: '',
+        formulaText: '銷售收入 / 應收帳款'
     },
     roe: {
         name: '權益報酬率 ROE',
@@ -44,7 +49,61 @@ const KPI_DEF = {
             const eq = s.stockholder_amt || (s.captial_stock || 0) + (s.captial_reserve || 0) + (s.accumulated_amt || 0);
             return (s.sale_exp_amt || 0) * 100 / Math.max(1, eq);
         },
-        threshold: 8, unit: '%'
+        threshold: 8, unit: '%',
+        formulaText: '淨利 / 股東權益 × 100%'
+    },
+    // ===== 風險預警頁其餘指標 =====
+    z_score: {
+        name: 'Z-Score (Altman)', formula: (s) => Number(s.Z_score || 0), threshold: 1.23, unit: '',
+        formulaText: '1.2X1 + 1.4X2 + 3.3X3 + 0.6X4 + 1.0X5'
+    },
+    z2_score: {
+        name: 'Z2-Score (私人公司)', formula: (s) => Number(s.Z2_score || 0), threshold: 1.23, unit: '',
+        formulaText: '0.717X1 + 0.847X2 + 3.107X3 + 0.420X4 + 0.998X5'
+    },
+    z3_score: {
+        name: 'Z3-Score (非製造業)', formula: (s) => Number(s.Z3_score || 0), threshold: 1.1, unit: '',
+        formulaText: '6.56X1 + 3.26X2 + 6.72X3 + 1.05X4'
+    },
+    bz_model: {
+        name: 'BZ 破產概率', formula: (s) => Number(s.BZ_model || 0), threshold: 0, unit: '',
+        formulaText: 'BZ 破產概率模型（負值代表高風險）'
+    },
+    jz_model: {
+        name: 'JZ 營運能力', formula: (s) => Number(s.JZ_model || 0), threshold: 0, unit: '',
+        formulaText: 'JZ 營運能力模型（負值代表高風險）'
+    },
+    revenue_yoy: {
+        name: '營收同比', formula: (s, ly) => Number(ly || 0) > 0 ? (Number(s.sale_amt || 0) - Number(ly)) / Number(ly) * 100 : 0,
+        threshold: 0, unit: '%',
+        formulaText: '(本月營收 − 去年同月營收) / 去年同月營收 × 100%'
+    },
+    interest_cover: {
+        name: '利息保障倍數',
+        formula: (s) => Number(s.finance_EXP_amt || 0) > 0 ? Number(s.operation_profit_amt || 0) / Number(s.finance_EXP_amt) : 0,
+        threshold: 1.5, unit: '',
+        formulaText: '營業利潤 / 財務費用'
+    },
+    ar_days: {
+        name: '應收週轉天數',
+        formula: (s) => Number(s.sale_amt || 0) > 0 ? Number(s.AR_amt || 0) / Number(s.sale_amt) * 30 : 0,
+        threshold: 60, unit: '天', inverse: true,
+        formulaText: '應收帳款 / 銷售收入 × 30 天'
+    },
+    inv_days: {
+        name: '存貨週轉天數',
+        formula: (s) => Number(s.sale_cost_amt || 0) > 0 ? Number(s.stock_value_amt || 0) / Number(s.sale_cost_amt) * 30 : 0,
+        threshold: 60, unit: '天', inverse: true,
+        formulaText: '存貨 / 銷售成本 × 30 天'
+    },
+    cash_quality: {
+        name: '淨利現金含量',
+        formula: (s) => {
+            const ocf = Number(s.cash_operation_in || 0) - Number(s.cash_operation_out || 0);
+            return Number(s.net_profit_amt || 0) !== 0 ? ocf / Number(s.net_profit_amt) : 0;
+        },
+        threshold: 0, unit: '', inverse: true,
+        formulaText: '經營現金流淨額 / 淨利潤'
     }
 };
 
@@ -68,7 +127,8 @@ async function runDiagnosis(bu_no, YYYY_MM, kpi_id, lang = 'zh-TW') {
     );
     if (curRows.length === 0) throw new Error('該月摘要不存在');
     const cur = curRows[0];
-    const curVal = def.formula(cur);
+    const lyCur = await getLastYearSale(bu_no, YYYY_MM);
+    const curVal = def.formula(cur, lyCur);
 
     const dt = new Date(YYYY_MM + '-01');
     dt.setMonth(dt.getMonth() - 1);
@@ -77,30 +137,38 @@ async function runDiagnosis(bu_no, YYYY_MM, kpi_id, lang = 'zh-TW') {
         'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, prevYM]
     );
     const prev = prevRows[0] || null;
-    const prevVal = prev ? def.formula(prev) : null;
+    const lyPrev = prev ? await getLastYearSale(bu_no, prevYM) : null;
+    const prevVal = prev ? def.formula(prev, lyPrev) : null;
     const change = prevVal !== null ? Math.round((curVal - prevVal) * 100) / 100 : null;
 
-    let isAnomaly = false;
-    if (kpi_id === 'gross_profit' || kpi_id === 'net_profit_margin' || kpi_id === 'current_ratio' || kpi_id === 'ar_turn' || kpi_id === 'roe') {
-        isAnomaly = curVal < def.threshold;
-    } else if (kpi_id === 'debt_ratio') {
-        isAnomaly = curVal > def.threshold;
-    }
+    const isAnomaly = def.inverse ? curVal > def.threshold : curVal < def.threshold;
 
     const reasons = generateReasons(kpi_id, cur, prev, change, lang);
     const kpiName = (KPI_NAME[kpi_id] && KPI_NAME[kpi_id][lang]) || def.name;
+    const unit = def.unit === '天' && lang === 'en' ? 'd' : def.unit;
     return {
         kpi_id, kpi_name: kpiName,
         current_value: Math.round(curVal * 100) / 100,
         threshold: def.threshold,
-        unit: def.unit,
+        unit,
         prev_value: prevVal !== null ? Math.round(prevVal * 100) / 100 : null,
         change,
         is_anomaly: isAnomaly,
         level: !isAnomaly ? 'normal' : (Math.abs(change || 0) > 5 ? 'danger' : 'warning'),
+        formula: def.formulaText || '',
         top_reasons: reasons,
         _cur: cur, _prev: prev
     };
+}
+
+// 去年同月銷售額（營收同比用）
+async function getLastYearSale(bu_no, YYYY_MM) {
+    const y = Number(String(YYYY_MM).slice(0, 4)) - 1;
+    const ym = `${y}${String(YYYY_MM).slice(4)}`;
+    const [rows] = await pool.execute(
+        'SELECT sale_amt FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, ym]
+    );
+    return rows.length ? Number(rows[0].sale_amt || 0) : null;
 }
 
 // AI 智能歸因：把規則引擎的 Top3 原因與財務上下文交給 LLM，輸出自然語言根因解釋與建議
@@ -130,6 +198,7 @@ router.post('/ai-attribution', async (req, res) => {
         const ctx = {
             公司別: bu_no, 期間: YYYY_MM,
             指標: d.kpi_name,
+            指標口徑: d.formula || '-',
             當期值: `${d.current_value}${d.unit}`,
             門檻: `${d.threshold}${d.unit}`,
             上期值: d.prev_value !== null ? `${d.prev_value}${d.unit}` : '無',
@@ -144,6 +213,8 @@ router.post('/ai-attribution', async (req, res) => {
             總資產: num(cur.ttl_asset_amt).toFixed(0),
             總負債: num(cur.ttl_debet_amt).toFixed(0),
             股東權益: num(cur.stockholder_amt).toFixed(0),
+            Z因子: `X1=${num(cur.Z_X1).toFixed(4)}, X2=${num(cur.Z_X2).toFixed(4)}, X3=${num(cur.Z_X3).toFixed(4)}, X4=${num(cur.Z_X4).toFixed(4)}, X5=${num(cur.Z_X5).toFixed(4)}`,
+            JZ因子: `ZA=${num(cur.JZ_ZA).toFixed(4)}, ZB=${num(cur.JZ_ZB).toFixed(4)}, ZC=${num(cur.JZ_ZC).toFixed(4)}, ZD=${num(cur.JZ_ZD).toFixed(4)}`,
             Top3拖累原因: d.top_reasons.map(r => `${r.rank}. [${r.dim}] ${r.desc}（影響：${r.impact}；建議：${r.suggestion}）`)
         };
 
@@ -344,7 +415,17 @@ const KPI_NAME = {
     current_ratio:  { 'zh-TW': '流動比率',     'zh-CN': '流动比率',   en: 'Current Ratio' },
     debt_ratio:     { 'zh-TW': '負債比率',     'zh-CN': '负债比率',   en: 'Debt Ratio' },
     ar_turn:        { 'zh-TW': '應收週轉率',   'zh-CN': '应收周转率', en: 'AR Turnover' },
-    roe:            { 'zh-TW': 'ROE 股東權益報酬率', 'zh-CN': 'ROE 股东权益报酬率', en: 'ROE (Return on Equity)' }
+    roe:            { 'zh-TW': 'ROE 股東權益報酬率', 'zh-CN': 'ROE 股东权益报酬率', en: 'ROE (Return on Equity)' },
+    z_score:        { 'zh-TW': 'Z-Score (Altman)', 'zh-CN': 'Z-Score (Altman)', en: 'Z-Score (Altman)' },
+    z2_score:       { 'zh-TW': 'Z2-Score (私人公司)', 'zh-CN': 'Z2-Score (私人公司)', en: 'Z2-Score (Private Firm)' },
+    z3_score:       { 'zh-TW': 'Z3-Score (非製造業)', 'zh-CN': 'Z3-Score (非制造业)', en: 'Z3-Score (Non-Manufacturing)' },
+    bz_model:       { 'zh-TW': 'BZ 破產概率', 'zh-CN': 'BZ 破产概率', en: 'BZ Bankruptcy Probability' },
+    jz_model:       { 'zh-TW': 'JZ 營運能力', 'zh-CN': 'JZ 营运能力', en: 'JZ Operating Capability' },
+    revenue_yoy:    { 'zh-TW': '營收同比', 'zh-CN': '营收同比', en: 'Revenue YoY' },
+    interest_cover: { 'zh-TW': '利息保障倍數', 'zh-CN': '利息保障倍数', en: 'Interest Coverage' },
+    ar_days:        { 'zh-TW': '應收週轉天數', 'zh-CN': '应收周转天数', en: 'AR Days' },
+    inv_days:       { 'zh-TW': '存貨週轉天數', 'zh-CN': '存货周转天数', en: 'Inventory Days' },
+    cash_quality:   { 'zh-TW': '淨利現金含量', 'zh-CN': '净利现金含量', en: 'Cash Conversion' }
 };
 
 function generateReasons(kpi_id, cur, prev, change, lang) {

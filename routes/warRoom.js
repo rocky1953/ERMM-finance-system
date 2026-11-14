@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
+const { getGroupCockpit, saveTarget } = require('../services/groupCockpit');
 
 // 工具：安全取數值
 const num = (v) => (v === null || v === undefined || isNaN(v)) ? 0 : Number(v);
@@ -121,11 +122,19 @@ router.get('/overview', async (req, res) => {
         const so = soRows[0];
 
         // ---- 3. DN（交貨單） ----
+        // 金額與「交貨出庫明細」同口徑：該訂單 AR 發票金額 × (DN_qty / so_qty) 分攤
         const [dnRows] = await pool.execute(`
-            SELECT COUNT(*) AS dn_cnt, COALESCE(SUM(DN_qty),0) AS dn_qty
-            FROM ermm_erp_so_dn
-            WHERE bu_no=?
-              ${ym ? `AND DATE_FORMAT(DN_date,'%Y-%m')=?` : ''}
+            SELECT COUNT(*) AS dn_cnt,
+                   COALESCE(SUM(d.DN_qty),0) AS dn_qty,
+                   COALESCE(SUM(d.DN_qty / NULLIF(d.so_qty,0) * COALESCE(inv.inv_amt,0)),0) AS dn_est_amt
+            FROM ermm_erp_so_dn d
+            LEFT JOIN (
+                SELECT bu_no, order_id, SUM(sub_amt) AS inv_amt
+                FROM mgm_invoice_details WHERE TX_type='AR'
+                GROUP BY bu_no, order_id
+            ) inv ON inv.bu_no = d.bu_no AND inv.order_id = d.so_nbr
+            WHERE d.bu_no=?
+              ${ym ? `AND DATE_FORMAT(d.DN_date,'%Y-%m')=?` : ''}
         `, [bu_no, ...ymParam]);
         const dn = dnRows[0];
 
@@ -205,8 +214,8 @@ router.get('/overview', async (req, res) => {
         const cashAmt = fin ? (num(fin.cash_amt) + num(fin.deposite_amt)) : 0;
 
         // 漏斗：PO 金額 → SO 金額 → DN 數量折算金額 → 回款(AR)
-        // DN 無金額欄位，用 SO 單價均攤推估：so_amt * (dn_qty / so_qty)
-        const dnEstAmt = soQty > 0 ? (soAmt * soDnQty / soQty) : 0;
+        // DN 無金額欄位，與明細同口徑：訂單 AR 發票金額 × (dn_qty / so_qty) 分攤
+        const dnEstAmt = num(dn.dn_est_amt);
 
         ok(res, {
             bu_no,
@@ -231,6 +240,28 @@ router.get('/overview', async (req, res) => {
             cross_bu: crossBU
         });
     } catch (err) { fail500(res, err); }
+});
+
+// ============ 集团驾驶舱增强（CEO-04） ============
+// 目标达成 / BU 排名 / 外部对标 / 重大事项
+router.get('/group', async (req, res) => {
+    try {
+        ok(res, await getGroupCockpit(req.query.YYYY_MM));
+    } catch (err) { fail500(res, err); }
+});
+
+// 维护年度目标
+router.put('/targets', async (req, res) => {
+    try {
+        const data = await saveTarget({
+            ...(req.body || {}),
+            user_id: req.user ? req.user.user_id : null
+        });
+        ok(res, data, '年度目标已保存');
+    } catch (err) {
+        if (err.status === 400) return fail(res, err.message, 400);
+        fail500(res, err);
+    }
 });
 
 module.exports = router;
