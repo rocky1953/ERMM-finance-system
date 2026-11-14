@@ -12,9 +12,60 @@ registerPage('bank', async (c) => {
             </div>
             <div id="bankTable">${t('loading')}</div>
         </div>
+        <div class="card">
+            <div class="toolbar">
+                <button class="btn btn-primary" onclick="loadReconcile()">🔍 ${t('recon.title')}</button>
+            </div>
+            <div id="reconPanel">${t('loading')}</div>
+        </div>
     `;
     loadBank();
+    loadReconcile();
 });
+
+// CFO-09 银行对账（贷款 / 现金流水 / 付款明细 三方核对）
+async function loadReconcile() {
+    const el = document.getElementById('reconPanel');
+    try {
+        const [res, diffRes] = await Promise.all([
+            API.get(`/api/bank/reconcile?bu_no=${State.bu_no}`),
+            API.get(`/api/bank/reconcile/diff?bu_no=${State.bu_no}&limit=20`)
+        ]);
+        const d = res.data || {};
+        const loan = d.bank_loan || {};
+        const cash = d.cash_flow || {};
+        const pay = d.pay_detail || {};
+        const v = d.variance || {};
+        const balanced = v.flag === 'OK';
+
+        const unmatched = diffRes.data?.unmatched_payments || [];
+
+        el.innerHTML = `
+            <div class="kpi-grid">
+                <div class="kpi-card"><div class="kpi-label">${t('recon.loan')}</div><div class="kpi-value">${UI.fmt(loan.outstanding)}</div></div>
+                <div class="kpi-card green"><div class="kpi-label">${t('recon.cash_in')}</div><div class="kpi-value positive">${UI.fmt(cash.in)}</div></div>
+                <div class="kpi-card red"><div class="kpi-label">${t('recon.cash_out')}</div><div class="kpi-value negative">${UI.fmt(cash.out)}</div></div>
+                <div class="kpi-card"><div class="kpi-label">${t('recon.paid')}</div><div class="kpi-value">${UI.fmt(pay.total_paid)}</div></div>
+                <div class="kpi-card ${balanced ? 'green' : 'red'}">
+                    <div class="kpi-label">${t('recon.variance')}</div>
+                    <div class="kpi-value ${balanced ? 'positive' : 'negative'}">${UI.fmt(v.paid_vs_cash_cr)}</div>
+                    <div style="font-size:12px;margin-top:4px">${balanced ? '✅ ' + t('recon.balanced') : '⚠️ ' + t('recon.difference')}</div>
+                </div>
+            </div>
+            <h4 style="margin:16px 0 8px">${t('recon.unmatched')} (${unmatched.length})</h4>
+            ${unmatched.length ? `<table class="data-table">
+                <thead><tr><th>${t('recon.supplier')}</th><th>${t('mp.date')}</th><th>${t('recon.pay_amt')}</th><th>${t('mp.status')}</th></tr></thead>
+                <tbody>${unmatched.map(u => `
+                    <tr>
+                        <td>${u.supplier_name || '-'}</td>
+                        <td>${u.pay_date ? String(u.pay_date).substring(0,10) : '-'}</td>
+                        <td class="num negative">${UI.fmt(u.amount)}</td>
+                        <td><span style="padding:2px 8px;border-radius:10px;background:#fee2e2;color:#991b1b;font-size:12px">${t('recon.difference')}</span></td>
+                    </tr>`).join('')}</tbody>
+            </table>` : UI.empty('✅', t('recon.balanced'))}
+        `;
+    } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
+}
 
 async function loadBank() {
     const _mgr = Auth.isManager();

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 銀行貸款管理路由
  * 包含匯兌損益計算、利息日期更新
  */
@@ -149,6 +149,89 @@ router.post('/recalc', async (req, res) => {
     } finally {
         conn.release();
     }
+});
+
+// ===== CFO-09 银行对账（三方核对：银行贷款 vs 现金流水 vs 付款明细）=====
+
+/**
+ * GET /reconcile
+ * 三方聚合：银行贷款余额 vs 现金流水净额 vs 已付款总额
+ * Query: bu_no, YYYY_MM
+ */
+router.get('/reconcile', async (req, res) => {
+    try {
+        const { bu_no, YYYY_MM } = req.query;
+        const cond = [], params = [];
+        if (bu_no) { cond.push('bu_no=?'); params.push(bu_no); }
+        if (YYYY_MM) { cond.push('YYYY_MM=?'); params.push(YYYY_MM); }
+        const w = cond.length ? 'WHERE ' + cond.join(' AND ') : '';
+
+        // 1) 银行贷款总余额
+        const [loan] = await pool.execute(`
+            SELECT SUM(loan_amt) total_loan, SUM(payback_amt) total_payback,
+                   SUM(loan_amt - payback_amt) outstanding
+            FROM mgm_bank_loan_details ${w}`, params);
+
+        // 2) 现金流水（casher_details）
+        const [cash] = await pool.execute(`
+            SELECT DB_CR, SUM(sub_amt) amt, COUNT(*) cnt
+            FROM mgm_casher_details ${w}
+            GROUP BY DB_CR`, params);
+        const cashIn = cash.filter(x => ['DB','DR','借'].includes(x.DB_CR)).reduce((s,x)=>s+Number(x.amt||0),0);
+        const cashOut = cash.filter(x => ['CR','贷'].includes(x.DB_CR)).reduce((s,x)=>s+Number(x.amt||0),0);
+
+        // 3) 付款明细（pay_detail）
+        const pCond = [], pParams = [];
+        if (bu_no) { pCond.push('bu_no=?'); pParams.push(bu_no); }
+        if (YYYY_MM) { pCond.push('YYYY_MM=?'); pParams.push(YYYY_MM); }
+        const [pay] = await pool.execute(`
+            SELECT SUM(amount) total_paid, COUNT(*) cnt
+            FROM pay_detail ${pCond.length ? 'WHERE ' + pCond.join(' AND ') : ''}`, pParams);
+
+        // 差异：pay_detail 已付款 vs casher_details CR 现金流出
+        // 正常应该 pay_detail.amount ≈ casher_details CR
+        const paid = Number(pay[0]?.total_paid || 0);
+        const cashCR = Number(cashOut || 0);
+        const diff = paid - cashCR;
+
+        ok(res, {
+            bank_loan: loan[0],
+            cash_flow: { in: Number(cashIn), out: Number(cashOut), net: Number(cashIn) - Number(cashOut) },
+            pay_detail: pay[0],
+            variance: {
+                paid_vs_cash_cr: diff,
+                flag: Math.abs(diff) > 1 ? 'DIFF' : 'OK'
+            }
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+/**
+ * GET /reconcile/diff
+ * 列出 pay_detail 付款明细在 casher_details 中找不到对应的记录（可能漏登）
+ */
+router.get('/reconcile/diff', async (req, res) => {
+    try {
+        const { bu_no, limit = 50 } = req.query;
+        const cond = [], params = [];
+        if (bu_no) { cond.push('p.bu_no=?'); params.push(bu_no); }
+        params.push(limit);
+
+        const [rows] = await pool.execute(`
+            SELECT p.uid, p.bu_no, p.supplier_name, p.amount, p.pay_date, p.invoice_num, p.finance_type,
+                   c.uid AS casher_uid, c.sub_amt AS casher_amt, c.wk_date
+            FROM pay_detail p
+            LEFT JOIN mgm_casher_details c
+              ON p.bu_no = c.bu_no
+             AND ABS(p.amount - c.sub_amt) < 1
+             AND c.DB_CR IN ('CR','贷')
+             AND c.wk_date BETWEEN DATE_SUB(p.pay_date, INTERVAL 3 DAY) AND DATE_ADD(p.pay_date, INTERVAL 3 DAY)
+            ${cond.length ? 'WHERE ' + cond.join(' AND ') + ' AND c.uid IS NULL' : 'WHERE c.uid IS NULL'}
+            ORDER BY p.pay_date DESC
+            LIMIT ?`, params);
+
+        ok(res, { unmatched_payments: rows, count: rows.length });
+    } catch (err) { fail500(res, err); }
 });
 
 module.exports = router;

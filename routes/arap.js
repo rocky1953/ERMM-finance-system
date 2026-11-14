@@ -152,4 +152,107 @@ router.post('/recalc', async (req, res) => {
     }
 });
 
+// ===== CFO-07 应收应付账龄对账（从发票明细实时聚合）=====
+/**
+ * GET /aging — 按 type=AR|AP + 客户/供应商分组，返回 5 个 ageing bucket
+ * Query: type, bu_no, client_id, YYYY_MM
+ */
+router.get('/aging', async (req, res) => {
+    try {
+        const { type = 'AR', bu_no, client_id, YYYY_MM } = req.query;
+        const txType = type.toUpperCase();
+        let sql = `
+            SELECT
+                i.uid AS invoice_uid, i.invoice_no, i.client_id, i.bu_no,
+                i.sub_amt AS invoice_amt,
+                COALESCE(i.payment, 0) AS paid_amt,
+                (i.sub_amt - COALESCE(i.payment, 0)) AS unpaid_amt,
+                COALESCE(i.pay_date, i.wk_date) AS invoice_date,
+                DATEDIFF(CURDATE(), COALESCE(i.pay_date, i.wk_date)) AS days_outstanding
+            FROM mgm_invoice_details i
+            WHERE i.TX_type=? AND i.sub_amt > COALESCE(i.payment, 0)`;
+        const params = [txType];
+        if (bu_no) { sql += ' AND i.bu_no=?'; params.push(bu_no); }
+        if (client_id) { sql += ' AND i.client_id LIKE ?'; params.push(`%${client_id}%`); }
+        if (YYYY_MM) { sql += ' AND i.YYYY_MM=?'; params.push(YYYY_MM); }
+        sql += ' ORDER BY i.client_id, i.sub_amt DESC';
+        const [rows] = await pool.execute(sql, params);
+
+        const groups = {};
+        let totalUnpaid = 0, totalInvoice = 0;
+        for (const r of rows) {
+            const unpaid = Number(r.unpaid_amt);
+            if (unpaid <= 0) continue;
+            const g = groups[r.client_id] = groups[r.client_id] || {
+                client_id: r.client_id, bu_no: r.bu_no, tx_type: txType,
+                count: 0, total_invoice: 0, total_unpaid: 0,
+                d0_30: 0, d31_60: 0, d61_90: 0, d91_180: 0, d180p: 0,
+                invoices: []
+            };
+            g.count++;
+            g.total_invoice += Number(r.invoice_amt);
+            g.total_unpaid += unpaid;
+            totalUnpaid += unpaid;
+            totalInvoice += Number(r.invoice_amt);
+            const d = Number(r.days_outstanding || 0);
+            if (d <= 30) g.d0_30 += unpaid;
+            else if (d <= 60) g.d31_60 += unpaid;
+            else if (d <= 90) g.d61_90 += unpaid;
+            else if (d <= 180) g.d91_180 += unpaid;
+            else g.d180p += unpaid;
+            g.invoices.push({
+                invoice_uid: r.invoice_uid, invoice_no: r.invoice_no,
+                invoice_date: r.invoice_date, invoice_amt: Number(r.invoice_amt),
+                paid_amt: Number(r.paid_amt), unpaid_amt: unpaid, days_outstanding: d
+            });
+        }
+        const list = Object.values(groups).sort((a,b) => b.total_unpaid - a.total_unpaid);
+        ok(res, {
+            type: txType,
+            total_invoice: totalInvoice,
+            total_unpaid: totalUnpaid,
+            customer_count: list.length,
+            groups: list
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+/**
+ * GET /aging/summary — 总体汇总（AR vs AP 并排）
+ */
+router.get('/aging/summary', async (req, res) => {
+    try {
+        const { bu_no } = req.query;
+        const [all] = await pool.execute(`
+            SELECT TX_type,
+                   COUNT(*) invoice_count,
+                   SUM(sub_amt) total_invoice,
+                   SUM(sub_amt - COALESCE(payment,0)) total_unpaid,
+                   SUM(CASE WHEN sub_amt > COALESCE(payment,0) THEN 1 ELSE 0 END) open_count
+            FROM mgm_invoice_details
+            WHERE TX_type IN ('AR','AP') AND sub_amt > 0
+            ${bu_no ? 'AND bu_no=?' : ''}
+            GROUP BY TX_type`, bu_no ? [bu_no] : []);
+
+        const [buckets] = await pool.execute(`
+            SELECT TX_type,
+                SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(pay_date, wk_date)) <= 30
+                    THEN sub_amt - COALESCE(payment,0) ELSE 0 END) d0_30,
+                SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(pay_date, wk_date)) BETWEEN 31 AND 60
+                    THEN sub_amt - COALESCE(payment,0) ELSE 0 END) d31_60,
+                SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(pay_date, wk_date)) BETWEEN 61 AND 90
+                    THEN sub_amt - COALESCE(payment,0) ELSE 0 END) d61_90,
+                SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(pay_date, wk_date)) BETWEEN 91 AND 180
+                    THEN sub_amt - COALESCE(payment,0) ELSE 0 END) d91_180,
+                SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(pay_date, wk_date)) > 180
+                    THEN sub_amt - COALESCE(payment,0) ELSE 0 END) d180p
+            FROM mgm_invoice_details
+            WHERE TX_type IN ('AR','AP') AND sub_amt > COALESCE(payment,0)
+            ${bu_no ? 'AND bu_no=?' : ''}
+            GROUP BY TX_type`, bu_no ? [bu_no] : []);
+
+        ok(res, { totals: all, buckets });
+    } catch (err) { fail500(res, err); }
+});
+
 module.exports = router;
