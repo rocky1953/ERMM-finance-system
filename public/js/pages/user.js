@@ -4,6 +4,7 @@
  * tab 2: leader_user 权限编辑
  * tab 3: login_user_record 登入纪录（只读 + 清除）
  */
+const USR_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
 registerPage('user', async (c) => {
     // 权限拦截：仅管理员可进入“使用者管理”
     if (!Auth.isAdmin()) {
@@ -18,9 +19,9 @@ registerPage('user', async (c) => {
     c.innerHTML = `
         <div class="card">
             <div style="border-bottom:2px solid #ecf0f1;margin-bottom:16px;display:flex;gap:0;">
-                <button class="btn" id="tabUsers" onclick="switchTab('users')" style="border-radius:6px 6px 0 0;border-bottom:none;background:#3498db;color:white;">👤 ${t('user.tab.users')}</button>
-                <button class="btn" id="tabPerms" onclick="switchTab('perms')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">🔐 ${t('user.tab.perms')}</button>
-                <button class="btn" id="tabLogins" onclick="switchTab('logins')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">📜 ${t('user.tab.logins')}</button>
+                <button class="btn" id="tabUsers" onclick="userSwitchTab('users')" style="border-radius:6px 6px 0 0;border-bottom:none;background:#3498db;color:white;">👤 ${t('user.tab.users')}</button>
+                <button class="btn" id="tabPerms" onclick="userSwitchTab('perms')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">🔐 ${t('user.tab.perms')}</button>
+                <button class="btn" id="tabLogins" onclick="userSwitchTab('logins')" style="border-radius:6px 6px 0 0;border-bottom:none;background:transparent;color:#7f8c8d;">📜 ${t('user.tab.logins')}</button>
             </div>
 
             <div id="paneUsers">
@@ -43,9 +44,12 @@ registerPage('user', async (c) => {
             </div>
 
             <div id="paneLogins" style="display:none;">
-                <div class="toolbar">
-                    <label>${t('user.user_label')}：<select id="luUser" onchange="loadLogins()"><option value="">${t('sys.all')}</option></select></label>
-                    <button class="btn btn-success" onclick="loadLogins()">🔄 ${t('refresh')}</button>
+                <div class="toolbar" style="flex-wrap:wrap;">
+                    <label>${USR_L('帐号', '帳號', 'User ID')}：<input id="luUid" class="form-input" style="width:110px;" placeholder="user_id"></label>
+                    <label>${t('user.col.name')}：<input id="luName" class="form-input" style="width:110px;" placeholder="${USR_L('姓名', '姓名', 'User Name')}"></label>
+                    <label>${USR_L('日期', '日期', 'Date')}：<input id="luFrom" type="date" class="form-input"> ~ <input id="luTo" type="date" class="form-input"></label>
+                    <button class="btn btn-primary" onclick="loadLogins()">🔍 ${USR_L('查询', '查詢', 'Search')}</button>
+                    <button class="btn btn-success" onclick="clearLoginFilter()">🧹 ${USR_L('重置', '重置', 'Reset')}</button>
                 </div>
                 <div id="loginTable">${t('loading')}</div>
             </div>
@@ -54,7 +58,7 @@ registerPage('user', async (c) => {
     loadUsers();
 });
 
-function switchTab(name) {
+function userSwitchTab(name) {
     ['users','perms','logins'].forEach(n => {
         const btn = document.getElementById('tab' + n.charAt(0).toUpperCase() + n.slice(1));
         const pane = document.getElementById('pane' + n.charAt(0).toUpperCase() + n.slice(1));
@@ -98,10 +102,6 @@ async function loadUsers() {
         const sel = document.getElementById('puUser');
         if (sel && sel.options.length <= 1) {
             sel.innerHTML = rows.map(r => `<option value="${r.xuser_id}">${r.xuser_id} — ${r.xuser_name||''}</option>`).join('');
-        }
-        const luSel = document.getElementById('luUser');
-        if (luSel && luSel.options.length <= 1) {
-            luSel.innerHTML = '<option value="">' + t('sys.all') + '</option>' + rows.map(r => `<option value="${r.xuser_id}">${r.xuser_id}</option>`).join('');
         }
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
@@ -235,19 +235,38 @@ async function savePerms() {
 }
 
 // ── Tab 3: 登入纪录 ──
+function clearLoginFilter() {
+    ['luUid', 'luName', 'luFrom', 'luTo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    loadLogins();
+}
+
 async function loadLogins() {
     const el = document.getElementById('loginTable');
-    const uid = document.getElementById('luUser')?.value;
+    const val = (id) => (document.getElementById(id)?.value || '').trim();
+    const qs = new URLSearchParams();
+    if (val('luUid')) qs.set('user_id', val('luUid'));
+    if (val('luName')) qs.set('user_name', val('luName'));
+    if (val('luFrom')) qs.set('from', val('luFrom'));
+    if (val('luTo')) qs.set('to', val('luTo'));
+    qs.set('limit', '1000');
     try {
-        const res = await API.get(`/api/user/logins?user_id=${uid}&limit=100`);
+        const res = await API.get(`/api/user/logins?${qs.toString()}`);
         const rows = res.data || [];
-        if (rows.length === 0) { el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">📜 ${t('user.no_logins')}</p>`; return; }
-        el.innerHTML = `<table class="data-table">
-            <thead><tr><th>#</th><th>${t('user.user_label')}</th><th>${t('sys.business')}</th><th>${t('user.col.login_time')}</th><th>${t('user.col.logoff')}</th><th>${t('user.col.count')}</th><th>${t('user.col.page')}</th><th>${t('system.col.action')}</th></tr></thead>
+        const hasFilter = !!(val('luUid') || val('luName') || val('luFrom') || val('luTo'));
+        if (rows.length === 0) {
+            el.innerHTML = `<p style="color:#95a5a6;text-align:center;padding:40px;">📜 ${hasFilter ? USR_L('没有符合条件的登入记录', '沒有符合條件的登入記錄', 'No matching login records') : t('user.no_logins')}</p>`;
+            return;
+        }
+        el.innerHTML = `<div style="font-size:12px;color:#7f8c8d;margin-bottom:8px;">${USR_L('共', '共', 'Total')} ${rows.length} ${USR_L('笔', '筆', 'records')}</div>
+        <table class="data-table">
+            <thead><tr><th>#</th><th>${USR_L('帐号', '帳號', 'User ID')}</th><th>${t('user.col.name')}</th><th>${t('sys.business')}</th><th>${t('user.col.login_time')}</th><th>${t('user.col.logoff')}</th><th>${t('user.col.count')}</th><th>${t('user.col.page')}</th><th>${t('system.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `
-                <tr><td>${r.id}</td><td>${r.user_id}</td><td>${r.bu_no||'-'}</td>
+                <tr><td>${r.id}</td><td>${r.user_id}</td><td>${r.user_name || '-'}</td><td>${r.bu_no||'-'}</td>
                     <td>${r.login_time||'-'}</td><td>${r.logoff_time||'-'}</td>
-                    <td class="num">${r.use_cnt}</td><td>${r.xwebpage_id||'-'}</td>
+                    <td class="num">${r.use_cnt ?? 1}</td><td>${r.xwebpage_id||'-'}</td>
                     <td><button class="btn btn-danger btn-sm" onclick="delLogin(${r.id})">🗑</button></td></tr>`).join('')}</tbody>
         </table>`;
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }

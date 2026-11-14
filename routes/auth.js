@@ -52,6 +52,23 @@ router.post('/login', async (req, res) => {
 
         const token = signToken({ user_id: user.xuser_id, admin: user.admin || 'No' });
 
+        // 登录时并行查询权限矩阵
+        const isAdmin = (user.admin === 'Yes');
+        const isOperator = /主管|經理|经理/.test(user.xuser_type || '');
+        const roleCol = isAdmin ? 'allow_admin' : (isOperator ? 'allow_operator' : 'allow_general');
+        const [[permRaw]] = await pool.execute(
+            `SELECT GROUP_CONCAT(module_code) AS codes FROM cams_module_permission WHERE ${roleCol}=1`
+        );
+        const permissions = (permRaw?.codes || '').split(',').filter(Boolean);
+
+        // 寫入登入記錄（明細查詢用；失敗不影響登入）
+        try {
+            await pool.execute(
+                'INSERT INTO login_user_record (user_id, bu_no, login_time) VALUES (?,?,NOW())',
+                [user.xuser_id, req.body.bu_no || 'HM']
+            );
+        } catch (e) { console.error('login record:', e.message); }
+
         ok(res, {
             token,
             user: {
@@ -59,7 +76,9 @@ router.post('/login', async (req, res) => {
                 user_name: user.xuser_name || user.xuser_id,
                 admin: user.admin || 'No',
                 user_type: user.xuser_type || '一般員工'
-            }
+            },
+            role: isAdmin ? 'admin' : (isOperator ? 'operator' : 'general'),
+            permissions
         }, '登入成功');
     } catch (err) {
         console.error('Login error:', err);
@@ -79,11 +98,21 @@ router.get('/me', authRequired, async (req, res) => {
         if (u.inuse_flag && u.inuse_flag !== 'USE') {
             return fail(res, '此帳號已停用', 403);
         }
+        // 依角色（一般 / 操作員 / 管理員）取得模組權限，讓每次進入系統都與權限清單同步
+        const isAdmin = u.admin === 'Yes';
+        const isOperator = /主管|經理|经理/.test(u.xuser_type || '');
+        const roleCol = isAdmin ? 'allow_admin' : (isOperator ? 'allow_operator' : 'allow_general');
+        const [permRows] = await pool.execute(
+            `SELECT module_code FROM cams_module_permission WHERE ${roleCol}=1`
+        );
+
         ok(res, {
             user_id: u.xuser_id,
             user_name: u.xuser_name || u.xuser_id,
             admin: u.admin || 'No',
-            user_type: u.xuser_type || '一般員工'
+            user_type: u.xuser_type || '一般員工',
+            role: isAdmin ? 'admin' : (isOperator ? 'operator' : 'general'),
+            permissions: permRows.map(r => r.module_code)
         });
     } catch (err) {
         res.status(500).json({ success: false, message: '服務異常' });

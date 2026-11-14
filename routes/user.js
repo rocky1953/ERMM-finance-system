@@ -106,13 +106,23 @@ router.put('/:user_id/permissions', async (req, res) => {
 // ===== login_user_record 登入紀錄（唯讀 + 清除） =====
 router.get('/logins', async (req, res) => {
     try {
-        const { user_id, from, to, limit } = req.query;
-        let sql = 'SELECT * FROM login_user_record WHERE 1=1';
+        const { user_id, user_name, keyword, date, from, to, limit } = req.query;
+        let sql = `SELECT r.*, COALESCE(u.xuser_name, r.user_id) AS user_name
+                   FROM login_user_record r
+                   LEFT JOIN cams_xuser u ON u.xuser_id = r.user_id
+                   WHERE 1=1`;
         const params = [];
-        if (user_id) { sql += ' AND user_id=?'; params.push(user_id); }
-        if (from) { sql += ' AND login_time >= ?'; params.push(from); }
-        if (to) { sql += ' AND login_time <= ?'; params.push(to); }
-        sql += ' ORDER BY login_time DESC LIMIT ' + (limit || 500);
+        if (user_id) { sql += ' AND r.user_id LIKE ?'; params.push(`%${user_id}%`); }
+        if (user_name) { sql += ' AND COALESCE(u.xuser_name, r.user_id) LIKE ?'; params.push(`%${user_name}%`); }
+        if (keyword) {
+            sql += ' AND (r.user_id LIKE ? OR COALESCE(u.xuser_name, r.user_id) LIKE ?)';
+            params.push(`%${keyword}%`, `%${keyword}%`);
+        }
+        if (date) { sql += ' AND DATE(r.login_time)=?'; params.push(date); }
+        if (from) { sql += ' AND r.login_time >= ?'; params.push(`${from} 00:00:00`); }
+        if (to) { sql += ' AND r.login_time <= ?'; params.push(`${to} 23:59:59`); }
+        const lim = Math.min(Math.max(Number(limit) || 500, 1), 5000);
+        sql += ' ORDER BY r.login_time DESC, r.id DESC LIMIT ' + lim;
         const [rows] = await pool.execute(sql, params);
         ok(res, rows);
     } catch (err) { fail500(res, err); }
