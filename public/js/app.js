@@ -5,6 +5,7 @@
 // ===== 登入验证模组 =====
 const TOKEN_KEY = 'ermm_token';
 const USER_KEY = 'ermm_user';
+const PERM_KEY = 'ermm_permissions';  // 登录时注入的模块权限列表
 const Auth = {
     getToken() { return localStorage.getItem(TOKEN_KEY) || ''; },
     isLoggedIn() { return !!this.getToken(); },
@@ -13,6 +14,24 @@ const Auth = {
     getUser() {
         try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }
         catch (e) { return null; }
+    },
+    // 权限列表（模块码数组）
+    getPermissions() {
+        try { return JSON.parse(localStorage.getItem(PERM_KEY) || '[]'); }
+        catch (e) { return []; }
+    },
+    // 当前角色 (admin / operator / general)
+    getRole() {
+        return localStorage.getItem('ermm_role') || 'general';
+    },
+    // 是否有权访问指定模块
+    canAccess(moduleCode) {
+        if (this.isAdmin()) return true;            // 管理员硬编码全权限
+        const raw = localStorage.getItem(PERM_KEY);
+        if (raw === null) return true;              // 旧 session 无权限缓存时才默认全开
+        let perms = [];
+        try { perms = JSON.parse(raw) || []; } catch (e) { perms = []; }
+        return perms.includes(moduleCode);
     },
     // 使用者類別归一化：繁/简/历史错别字统一为简体，供权限判断使用
     _normRole(s) {
@@ -47,8 +66,10 @@ const Auth = {
         if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
         document.body.classList.remove('locked');
         this.renderUser();
-        if (typeof currentPage === 'undefined' || !currentPage) currentPage = 'dashboard';
-        navigate(currentPage || 'dashboard');
+        const target = this.resolveStartPage(typeof currentPage === 'undefined' ? null : currentPage);
+        currentPage = target;
+        navigate(target);
+        refreshApprovalBadge();
     },
 
     renderUser() {
@@ -62,15 +83,55 @@ const Auth = {
         this.applyNavPermissions();
     },
 
-    // 「使用者管理」与「系统文件」整组菜单仅管理员可见
+    // 根据权限矩阵自动隐藏 nav-item，并对整组隐藏空分组标题
     applyNavPermissions() {
-        const admin = this.isAdmin();
+        const can = (code) => this.canAccess(code);
         const show = (el, visible) => { if (el) el.style.display = visible ? '' : 'none'; };
-        show(document.querySelector('#sidebar .nav-item[data-page="user"]'), admin);
-        const docsItem = document.querySelector('#sidebar .nav-item[data-page="docArchitecture"]');
-        if (docsItem) show(docsItem.parentElement, admin);
+
+        // 1. 遍历所有 nav-item[data-page] —— 自动隐藏
+        const items = document.querySelectorAll('#sidebar .nav-item[data-page]');
+        items.forEach(el => {
+            const code = el.dataset.page;
+            show(el, can(code));
+        });
+
+        // 2. 整组隐藏：nav-group-title 紧跟其后的 nav-item 全部被隐藏则标题也隐藏
+        const groups = document.querySelectorAll('#sidebar .nav-group-title');
+        groups.forEach((g, gi) => {
+            // 该分组下所有 nav-item = 下一个 group 之前的 nav-item
+            const nextGroup = groups[gi + 1];
+            const range = document.createRange();
+            range.setStartAfter(g);
+            if (nextGroup) range.setEndBefore(nextGroup);
+            else {
+                // 最后一个 group —— 到 sidebar 末尾
+                const sidebar = document.getElementById('sidebar');
+                range.setEndAfter(sidebar.lastElementChild);
+            }
+            const nodes = Array.from(range.cloneContents().querySelectorAll('.nav-item[data-page]'));
+            const visible = nodes.filter(n => n.style.display !== 'none');
+            show(g, visible.length > 0);
+        });
+
+        // 3. 当前激活页面如果无权限，强制跳 dashboard
+        const curPage = document.querySelector('#sidebar .nav-item.active[data-page]');
+        if (curPage && !can(curPage.dataset.page)) {
+            console.warn(`当前页面 ${curPage.dataset.page} 无权限，跳转到仪表板`);
+            // 不立即 navigate —— 等权限矩阵生效后自然会被隐藏
+        }
     },
 
+    // 首页选择：优先保留当前页，否则仪表板，再否则侧栏第一个有权限的模块
+    resolveStartPage(pref) {
+        const ok = (p) => !!(p && this.canAccess(p) && typeof pages !== 'undefined' && pages[p]);
+        if (ok(pref)) return pref;
+        if (ok('dashboard')) return 'dashboard';
+        const el = [...document.querySelectorAll('#sidebar .nav-item[data-page]')]
+            .find(e => this.canAccess(e.dataset.page) && typeof pages !== 'undefined' && pages[e.dataset.page]);
+        return el ? el.dataset.page : 'dashboard';
+    },
+
+    // 登录时并行查询权限矩阵
     async login(user_id, password) {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
@@ -83,6 +144,8 @@ const Auth = {
         }
         localStorage.setItem(TOKEN_KEY, data.data.token);
         localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+        localStorage.setItem('ermm_role', data.data.role || 'general');
+        localStorage.setItem(PERM_KEY, JSON.stringify(data.data.permissions || []));
         this.enterApp(data.data.user);
     },
 
@@ -99,6 +162,8 @@ const Auth = {
         } catch (e) { /* 无状态登出，失败也照样清除本地状态 */ }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        const badge = document.getElementById('approvalBadge');
+        if (badge) badge.style.display = 'none';
         this.showLogin();
     },
 
@@ -113,10 +178,15 @@ const Auth = {
             const j = await res.json();
             if (j && j.success && j.data) {
                 localStorage.setItem(USER_KEY, JSON.stringify(j.data));
+                if (j.data.role) localStorage.setItem('ermm_role', j.data.role);
+                if (Array.isArray(j.data.permissions)) {
+                    localStorage.setItem(PERM_KEY, JSON.stringify(j.data.permissions));
+                }
                 this.renderUser();
             }
             document.body.classList.remove('locked');
-            navigate(currentPage || 'dashboard');
+            navigate(this.resolveStartPage(currentPage || 'dashboard'));
+            refreshApprovalBadge();
         } catch (e) {
             this.handle401();
         }
@@ -179,6 +249,21 @@ const API = (() => {
         }
     };
 })();
+
+// ===== 审批待办角标（左侧「审批中心」） =====
+async function refreshApprovalBadge() {
+    const el = document.getElementById('approvalBadge');
+    if (!el) return;
+    if (!Auth.isLoggedIn()) { el.style.display = 'none'; return; }
+    try {
+        const res = await API.get('/api/workflow/summary');
+        const total = Number((res.data && res.data.total) || 0);
+        el.textContent = total > 99 ? '99+' : String(total);
+        el.style.display = total > 0 ? '' : 'none';
+    } catch (e) {
+        el.style.display = 'none';
+    }
+}
 
 // ===== 码表通用读取器（带内存缓存，失败时回退到 fallback） =====
 const CodeHelper = {
@@ -266,7 +351,7 @@ const UI = {
 
 // ===== 异常诊断（点击 KPI 红灯展开 Top3 原因）=====
 const Diagnosis = {
-    async open(kpi_id) {
+    async open(kpi_id, autoAI = false) {
         UI.modal(t('diag.loading_title'), `<div style="text-align:center;padding:30px;">${t('diag.analyzing')}</div>`, '');
         try {
             const res = await API.get(`/api/diagnosis/kpi?bu_no=${State.bu_no}&YYYY_MM=${State.YYYY_MM}&kpi_id=${kpi_id}&lang=${I18N.lang}`);
@@ -292,16 +377,28 @@ const Diagnosis = {
                 </div>
                 <div style="font-weight:700;margin-bottom:10px;">${t('diag.top3_reasons')}</div>
                 ${reasonsHtml}
+                ${autoAI ? `<div id="diagAiBox" style="margin-top:16px;border-top:1px dashed #ddd;padding-top:14px;text-align:center;">${t('diag.ai_analyzing')}</div>` : ''}
             `, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>
                 <button class="btn" onclick="Diagnosis.aiAttribution('${kpi_id}')" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7;">🤖 ${t('diag.ai_attribution')}</button>
                 <button class="btn btn-primary" onclick="UI.closeModal();navigate('actions')">${t('diag.create_action')}</button>`);
+            if (autoAI) this.aiAttribution(kpi_id, true);
         } catch (e) {
             UI.modal(t('diag.diag_failed'), `<p style="color:#e74c3c">${e.message}</p>`, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
         }
     },
 
-    async aiAttribution(kpi_id) {
-        UI.modal(`🤖 ${kpi_id} ${t('diag.ai_attribution')}`, `<div style="text-align:center;padding:40px;">${t('diag.ai_analyzing')}</div>`, '');
+    // 红色指标一键诊断：打开异常诊断并自动执行 AI 智能归因
+    async openWithAI(kpi_id) {
+        return this.open(kpi_id, true);
+    },
+
+    async aiAttribution(kpi_id, inline = false) {
+        const box = inline ? document.getElementById('diagAiBox') : null;
+        if (inline) {
+            if (box) box.innerHTML = `<div style="text-align:center;padding:16px;">${t('diag.ai_analyzing')}</div>`;
+        } else {
+            UI.modal(`🤖 ${kpi_id} ${t('diag.ai_attribution')}`, `<div style="text-align:center;padding:40px;">${t('diag.ai_analyzing')}</div>`, '');
+        }
         try {
             const res = await API.post('/api/diagnosis/ai-attribution', {
                 bu_no: State.bu_no, YYYY_MM: State.YYYY_MM, kpi_id, lang: I18N.lang
@@ -311,18 +408,26 @@ const Diagnosis = {
             const sugHtml = (d.suggestions && d.suggestions.length)
                 ? d.suggestions.map((s, i) => `<div style="background:#eaf2f8;padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px;"><b>${sugLabel} ${i + 1}：</b>${s}</div>`).join('')
                 : `<div style="color:#999;font-size:13px;">${t('diag.no_suggestions')}</div>`;
-            UI.modal(`🤖 ${t('diag.ai_attribution')}`, `
-                <div style="max-height:60vh;overflow-y:auto;">
+            const body = `
+                <div style="max-height:50vh;overflow-y:auto;">
                     <div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:14px;border-left:4px solid #6c5ce7;">
                         <div style="white-space:pre-wrap;font-size:14px;line-height:1.7;color:#2c3e50;">${d.explanation}</div>
                     </div>
                     <div style="font-weight:700;margin-bottom:8px;">${t('diag.suggestions')}</div>
                     ${sugHtml}
                 </div>
-            `, `<div style="font-size:11px;color:#95a5a6;margin-right:auto;text-align:left;">${t('diag.generated_by', { provider: d.provider, model: d.model })}</div>
-                <button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
+                <div style="font-size:11px;color:#95a5a6;margin-top:10px;">${t('diag.generated_by', { provider: d.provider, model: d.model })}</div>`;
+            if (inline) {
+                if (box) box.innerHTML = body;
+            } else {
+                UI.modal(`🤖 ${t('diag.ai_attribution')}`, body, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
+            }
         } catch (e) {
-            UI.modal(t('diag.ai_failed'), `<p style="color:#e74c3c">${e.message}</p>`, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
+            if (inline) {
+                if (box) box.innerHTML = `<p style="color:#e74c3c;font-size:13px;">${t('diag.ai_failed')}：${e.message}</p>`;
+            } else {
+                UI.modal(t('diag.ai_failed'), `<p style="color:#e74c3c">${e.message}</p>`, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('diag.close')}</button>`);
+            }
         }
     }
 };
@@ -334,6 +439,14 @@ function registerPage(id, fn) { pages[id] = fn; }
 async function navigate(pageId, params = {}) {
     const fn = pages[pageId];
     if (!fn) return;
+    // 权限拦截：无权限时改跳有权限的首页
+    if (typeof Auth !== 'undefined' && !Auth.canAccess(pageId)) {
+        const fallback = Auth.resolveStartPage(null);
+        UI.toast(I18N.lang === 'en' ? 'No permission to access this module'
+            : (I18N.lang === 'zh-TW' ? '無權限存取此功能模組' : '无权限访问此功能模块'), 'error');
+        if (fallback && fallback !== pageId) return navigate(fallback, params);
+        return;
+    }
     document.querySelectorAll('#sidebar .nav-item').forEach(el => el.classList.remove('active'));
     const navEl = document.querySelector(`#sidebar .nav-item[data-page="${pageId}"]`);
     if (navEl) navEl.classList.add('active');
