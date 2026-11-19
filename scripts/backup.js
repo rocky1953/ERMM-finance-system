@@ -106,6 +106,7 @@ async function doBackup({ type = 'MANUAL', remark = '', triggeredBy = null } = {
         '--user', DB.user,
         `--password=${DB.password}`,
         '--single-transaction',   // InnoDB 一致快照，不锁表
+        '--no-tablespaces',       // 避免需要 PROCESS 权限（MySQL 8 常见报错）
         '--routines',             // 存储过程
         '--triggers',
         '--events',
