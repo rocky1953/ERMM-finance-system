@@ -52,6 +52,7 @@ const I18N = {
             'nav.docManualCfo': 'CFO 操作手冊',
             'nav.docManualCto': 'CTO 操作手冊',
             'nav.docManualCoo': 'COO 操作手冊',
+            'nav.docOpsGuide': '伺服器更新手冊',
             'docs.noPermission': '你的權限不能使用這個模組功能',
             'sysmap.noPermission': '【你的權限不足！！】',
 
@@ -2171,6 +2172,7 @@ const I18N = {
             'nav.docManualCfo': 'CFO 操作手册',
             'nav.docManualCto': 'CTO 操作手册',
             'nav.docManualCoo': 'COO 操作手册',
+            'nav.docOpsGuide': '服务器更新手册',
             'docs.noPermission': '你的权限不能使用这个模块功能',
             'sysmap.noPermission': '【你的权限不足！！】',
             'nav.system': '系统',
@@ -4286,6 +4288,7 @@ const I18N = {
             'nav.docManualCfo': 'CFO Manual',
             'nav.docManualCto': 'CTO Manual',
             'nav.docManualCoo': 'COO Manual',
+            'nav.docOpsGuide': 'Server Update Runbook',
             'docs.noPermission': 'Your permission level cannot access this module',
             'sysmap.noPermission': '【Permission denied!!】',
             'nav.system': 'System',

@@ -255,7 +255,8 @@ const DOC_ROUTES = {
     '/docs/manual-ceo':   'ERMM_操作手冊_CEO.html',
     '/docs/manual-cfo':   'ERMM_操作手冊_CFO.html',
     '/docs/manual-cto':   'ERMM_操作手冊_CTO.html',
-    '/docs/manual-coo':   'ERMM_操作手冊_COO.html'
+    '/docs/manual-coo':   'ERMM_操作手冊_COO.html',
+    '/docs/ops-guide':    'ERMM_Ubuntu_Server_Update_Guide.html'
 };
 Object.entries(DOC_ROUTES).forEach(([route, file]) => {
     app.get(route, (req, res) => {
