@@ -37,29 +37,42 @@ const DB = {
 // 确保目录存在
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-/** 探测 mysqldump 可执行路径 */
+/** 探测 mysqldump 可执行路径（支持 MYSQL_BIN 为目录或完整文件路径） */
 function findMysqlBin() {
-    const candidates = [
-        process.env.MYSQL_BIN,                                  // 用户环境变量指定
-        process.env.MYSQLDUMP_PATH,                              // 同上，别名
+    const dirs = [
+        process.env.MYSQL_BIN,                                   // 目录或完整路径
+        process.env.MYSQLDUMP_PATH,                              // 目录或完整路径
         process.env.MYSQL_HOME && path.join(process.env.MYSQL_HOME, 'bin'),
+        '/usr/local/mysql/bin',                                  // Linux 常见位置
+        '/usr/bin',
+        '/usr/local/bin',
         path.join('C:', 'Program Files', 'MySQL', 'MySQL Server 8.3', 'bin'),
         path.join('C:', 'Program Files', 'MySQL', 'MySQL Server 8.0', 'bin'),
         path.join('C:', 'Program Files', 'MySQL', 'MySQL Server 5.7', 'bin'),
         path.join('C:', 'Program Files (x86)', 'MySQL', 'MySQL Server 8.3', 'bin'),
-        path.join('C:', 'Program Files (x86)', 'MySQL', 'MySQL Server 8.0', 'bin'),
-        ''                                                       // PATH 里
+        path.join('C:', 'Program Files (x86)', 'MySQL', 'MySQL Server 8.0', 'bin')
     ].filter(Boolean);
 
-    for (const dir of candidates) {
-        const dump = dir ? path.join(dir, 'mysqldump') : 'mysqldump';
-        const mysql = dir ? path.join(dir, 'mysql') : 'mysql';
+    const candidates = [];
+    for (const item of dirs) {
+        // 用户可能直接给到可执行文件
+        if (/mysqldump(\.exe)?$/i.test(item)) candidates.push(item);
+        else candidates.push(path.join(item, 'mysqldump'));
+    }
+    candidates.push('mysqldump');                                 // PATH
+
+    for (const dump of candidates) {
+        const mysql = dump === 'mysqldump'
+            ? 'mysql'
+            : path.join(path.dirname(dump), 'mysql');
         try {
             execSync(`"${dump}" --version`, { stdio: 'ignore' });
             return { dump, mysql };
         } catch (e) { /* 继续找 */ }
     }
-    throw new Error('找不到 mysqldump，请安装 MySQL Server 8.0 或设置 MYSQL_BIN 环境变量');
+    throw new Error(
+        '找不到 mysqldump，请执行 apt-get install -y mysql-client-8.0，' +
+        '或在 .env 设置 MYSQL_BIN=/usr/local/mysql/bin');
 }
 
 function nowFmt(d = new Date()) {
@@ -310,7 +323,8 @@ async function listBackups() {
         console.error('❌', e.message);
         process.exit(1);
     }
-    // 不关闭 pool —— 让进程正常退出，OS 会清理 MySQL 连接
+    // 关闭连接池，否则进程会一直挂住（会让部署脚本卡死）
+    try { await pool.end(); } catch (_) { /* 忽略关闭异常 */ }
 })();
 
 module.exports = { doBackup, restore, listBackups, prune, findMysqlBin };
