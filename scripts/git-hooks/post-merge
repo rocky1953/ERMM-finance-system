@@ -1,23 +1,37 @@
 #!/usr/bin/env bash
 # 服务器端 Git 钩子：git pull 合并完成后，自动同步数据库结构并重启服务
 #
-# 安装（在服务器项目目录执行一次）：
-#   cp scripts/git-hooks/post-merge .git/hooks/post-merge
-#   chmod +x .git/hooks/post-merge
+# 安装（推荐软链接，脚本更新后无需重新复制）：
+#   rm -f .git/hooks/post-merge
+#   ln -s ../../scripts/git-hooks/post-merge .git/hooks/post-merge
+#   chmod +x scripts/git-hooks/post-merge
 #
 # 说明：只应安装在服务器；本机开发环境不需要（会误改本机数据库）。
 set -Eeuo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+APP_DIR="$(git rev-parse --show-toplevel)"
+cd "$APP_DIR"
 
 echo "[post-merge] 代码已更新，开始同步数据库结构"
 node scripts/db_migrate.js
 
-if command -v pm2 >/dev/null 2>&1; then
-  if pm2 describe ermm-finance-system >/dev/null 2>&1; then
-    pm2 restart ermm-finance-system --update-env >/dev/null
-    echo "[post-merge] 已重启 ermm-finance-system"
-  else
-    echo "[post-merge] ⚠️ 未找到 pm2 进程 ermm-finance-system，请手动重启" >&2
-  fi
+if ! command -v pm2 >/dev/null 2>&1; then
+  echo "[post-merge] ⚠️ 未安装 pm2，跳过重启" >&2
+  exit 0
+fi
+
+# 按「可执行档位于本项目目录下且为 app.js」识别真实 PM2 进程名，
+# 避免进程名与 ermm-finance-system 不一致时漏重启（导致新路由 404）。
+APP_NAME="$(pm2 jlist 2>/dev/null | ERMM_APP_DIR="$APP_DIR" node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const root=(process.env.ERMM_APP_DIR||"").replace(/\\/g,"/");const apps=JSON.parse(s);const hit=apps.find(a=>{const p=((a.pm2_env||{}).pm_exec_path||"").replace(/\\/g,"/");return p.indexOf(root+"/")===0&&/app\.js$/i.test(p)});if(hit)console.log(hit.name);}catch(e){}})' | head -n1)"
+
+if [ -z "$APP_NAME" ] && pm2 describe ermm-finance-system >/dev/null 2>&1; then
+  APP_NAME="ermm-finance-system"
+fi
+
+if [ -n "$APP_NAME" ]; then
+  pm2 restart "$APP_NAME" --update-env >/dev/null
+  pm2 save >/dev/null 2>&1 || true
+  echo "[post-merge] 已重启 PM2 进程：$APP_NAME"
+else
+  echo "[post-merge] ⚠️ 未找到本项目的 PM2 进程，请手动执行：pm2 restart <进程名>" >&2
 fi
