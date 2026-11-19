@@ -61,8 +61,10 @@ registerPage('trend', async (c) => {
         opt.value = y; opt.textContent = y + ' ' + t('trend.year');
         yearSel.appendChild(opt);
     });
-    // 预设选最新年份
-    if (years.length > 0) yearSel.value = years[0];
+    // 預設選「畫面最上方」的全域年度（有資料時）；否則退回最新年份
+    const gy = String(State.year());
+    if (years.includes(gy)) yearSel.value = gy;
+    else if (years.length > 0) yearSel.value = years[0];
 
     // 模式切换
     document.querySelectorAll('input[name="trendMode"]').forEach(el => {

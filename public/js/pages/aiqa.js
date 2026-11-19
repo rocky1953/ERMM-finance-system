@@ -55,11 +55,7 @@ registerPage('aiqa', async (c, params = {}) => {
                 <label id="aiMemLabel" style="display:none;background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:13px;display:none;align-items:center;gap:6px;user-select:none;">
                     <input type="checkbox" id="aiUseMem" onchange="AIQA.toggleMem()"> 💬 ${t('aiqa.use_memory') || '对话记忆'}
                 </label>
-                <select id="aiProvider" style="display:none;padding:6px 10px;border-radius:6px;border:none;font-size:13px;">
-                    <option value="kimi">Kimi</option>
-                    <option value="deepseek">DeepSeek</option>
-                </select>
-                <button type="button" id="aiKeyBtn" class="btn btn-sm" style="display:none;background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.5);" onclick="LLMKeyMgr.open()">⚙️ ${t('llm.key_mgr')}</button>
+                <span id="aiProviderBadge" style="display:none;background:rgba(255,255,255,0.18);padding:6px 14px;border-radius:20px;font-size:13px;">🧠 <span id="aiProviderName">--</span></span>
                 <button type="button" id="aiNewConvBtn" class="btn btn-sm" style="display:none;background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.5);" onclick="AIQA.newConversation()">🔄 ${t('aiqa.new_conv') || '新对话'}</button>
                 <span id="aiLLMStatus" style="font-size:12px;color:rgba(255,255,255,0.9);"></span>
             </div>
@@ -90,10 +86,6 @@ registerPage('aiqa', async (c, params = {}) => {
         if (params.autoAsk) {
             const cfgs = Array.isArray(LLMKeyMgr.configs) ? LLMKeyMgr.configs : [];
             if (cfgs.some(x => x.configured)) {
-                const sel = document.getElementById('aiProvider');
-                if (sel && !sel.options.length) {
-                    sel.innerHTML = cfgs.map(x => `<option value="${x.provider}">${x.provider_name}${x.configured ? ' ✅' : ''}</option>`).join('');
-                }
                 const cb = document.getElementById('aiUseLLM');
                 if (cb) { cb.checked = true; AIQA.toggleLLM(); }
             }
@@ -125,8 +117,7 @@ const AIQA = {
 
     toggleLLM() {
         const useLLM = document.getElementById('aiUseLLM').checked;
-        document.getElementById('aiProvider').style.display = useLLM ? '' : 'none';
-        document.getElementById('aiKeyBtn').style.display = useLLM ? '' : 'none';
+        document.getElementById('aiProviderBadge').style.display = useLLM ? '' : 'none';
         // RAG 新按钮
         document.getElementById('aiKBLabel').style.display = useLLM ? '' : 'none';
         document.getElementById('aiMemLabel').style.display = useLLM ? '' : 'none';
@@ -144,14 +135,28 @@ const AIQA = {
         UI.toast('🆕 已开启新对话', 'info');
     },
 
+    // 目前使用的服務商＝LLM 服務商管理中標記「預設」的那一家（唯讀，不可在此切換）
+    defaultConfig() {
+        const cfgs = Array.isArray(LLMKeyMgr.configs) ? LLMKeyMgr.configs : [];
+        return cfgs.find(x => x.is_default && x.configured)
+            || cfgs.find(x => x.is_default)
+            || cfgs.find(x => x.configured)
+            || null;
+    },
+
     renderStatus() {
         const el = document.getElementById('aiLLMStatus');
+        const nameEl = document.getElementById('aiProviderName');
         if (!el) return;
         const useLLM = document.getElementById('aiUseLLM').checked;
-        if (!useLLM) { el.textContent = t('llm.mode_rule'); return; }
-        const pvd = document.getElementById('aiProvider').value;
-        const cfg = (LLMKeyMgr.configs || []).find(x => x.provider === pvd);
-        if (!cfg) { el.textContent = ''; return; }
+        if (!useLLM) { el.textContent = t('llm.mode_rule'); if (nameEl) nameEl.textContent = '--'; return; }
+        const cfg = this.defaultConfig();
+        if (!cfg) {
+            if (nameEl) nameEl.textContent = '--';
+            el.textContent = '⚠️ ' + (t('llm.no_provider') || '尚未設定 LLM 服務商');
+            return;
+        }
+        if (nameEl) nameEl.textContent = cfg.is_default ? `${cfg.provider_name}（${t('llm.default_tag') || '預設'}）` : cfg.provider_name;
         el.textContent = `${cfg.provider_name}：${cfg.configured ? '✅ ' + t('llm.configured') : '⚠️ ' + t('llm.not_configured')}`;
     },
 
@@ -167,7 +172,6 @@ const AIQA = {
             if (m) mm = `${m[1]}-${m[2].padStart(2, '0')}`;
         }
         const useLLM = document.getElementById('aiUseLLM').checked;
-        const provider = document.getElementById('aiProvider').value;
         const useKB = useLLM ? document.getElementById('aiUseKB').checked : false;
         const useMem = useLLM ? document.getElementById('aiUseMem').checked : false;
         State.bu_no = bu;
@@ -203,7 +207,7 @@ const AIQA = {
         // 准备请求参数
         const postBody = {
             question: q, bu_no: bu, YYYY_MM: mm,
-            useLLM: useLLM, provider: provider,
+            useLLM: useLLM,
             lang: (typeof I18N !== 'undefined' && I18N.lang) ? I18N.lang : 'zh-TW',
             xuser_name: (Auth.getUser() && Auth.getUser().user_name) || ''
         };
@@ -251,7 +255,7 @@ const AIQA = {
                     <div style="font-weight:600;color:#854d0e;margin-bottom:4px;">📚 ${t('aiqa.ref_sources') || '知识库参考来源'}：</div>
                     ${allKb.map(k => `<div style="color:#713f12;">• ${esc(k.title)} <span style="color:#a16207;">(${esc(k.category)})</span></div>`).join('')}
                 </div>`;
-            } else if (useKB && query.trim().length > 3) {
+            } else if (useKB && q.trim().length > 3) {
                 // P2: 未命中提示 — 告知用户可建议我们补充
                 kbCard = `<div style="margin-top:10px;background:#f1f5f9;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 12px;font-size:11px;color:#64748b;">
                     💭 ${t('aiqa.no_kb_hit_hint') || '此查询知识库暂无匹配，如您经常遇到可建议我们补充此知识'}

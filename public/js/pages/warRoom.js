@@ -2,7 +2,7 @@
  * 戰情聯動看板
  * PO → SO → DN → 回款 漏斗 + 跨 BU 即時卡片 + 集團駕駛艙（目標/排名/對標/重大事項）
  */
-const WRL = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const WRL = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 const WR_KPI = {
     revenue: ['营业收入', '營業收入', 'Revenue'],
@@ -175,10 +175,11 @@ const WarRoom = {
 
     valText(v, unit) {
         if (v === null || v === undefined || isNaN(v)) return '-';
-        if (unit === '元') return this.fmt(v) + ' 元';
+        const en = I18N.lang === 'en';
+        if (unit === '元') return this.fmt(v) + (en ? '' : ' 元');
         if (unit === '%') return Number(v).toFixed(1) + '%';
-        if (unit === '次/年') return Number(v).toFixed(2) + ' 次';
-        if (unit === '天') return Number(v).toFixed(1) + ' 天';
+        if (unit === '次/年') return Number(v).toFixed(2) + (en ? ' times' : ' 次');
+        if (unit === '天') return Number(v).toFixed(1) + (en ? ' days' : ' 天');
         return String(v);
     },
 
@@ -277,7 +278,7 @@ const WarRoom = {
         return `
             <div class="card" style="margin-top:16px;">
                 <div class="card-title">📊 ${WRL('外部对标', '外部對標', 'Peer Benchmark')}
-                    <small style="color:#7f8c8d;font-weight:normal;">${b.industry || ''} ${b.year || ''} ${WRL('同业分位', '同業分位', 'industry percentiles')}</small>
+                    <small style="color:#7f8c8d;font-weight:normal;">${I18N.fixAlert(b.industry || '')} ${b.year || ''} ${WRL('同业分位', '同業分位', 'industry percentiles')}</small>
                 </div>
                 ${rows ? `<div style="overflow-x:auto"><table class="data-table">
                     <thead><tr><th>${WRL('指标', '指標', 'KPI')}</th><th class="num">${WRL('本公司', '本公司', 'Company')}</th><th class="num">P25</th><th class="num">${WRL('中位', '中位', 'Median')}</th>
@@ -304,11 +305,11 @@ const WarRoom = {
             return `<div style="display:flex;gap:10px;padding:9px 0;border-bottom:1px dashed #eef2f7;">
                 <span style="width:8px;height:8px;border-radius:50%;background:${m[1]};margin-top:6px;flex:none;"></span>
                 <div style="flex:1;">
-                    <div style="font-size:13px;"><b>${this.esc(e.title)}</b>
+                    <div style="font-size:13px;"><b>${this.esc(I18N.fixAlert(e.title))}</b>
                         <span style="font-size:11px;color:${m[1]};background:${m[1]}18;padding:1px 6px;border-radius:8px;margin-left:6px;">${m[0]}</span>
                         ${e.bu_no ? `<span style="font-size:11px;color:#64748b;margin-left:6px;">${e.bu_no}</span>` : ''}
                     </div>
-                    <div style="font-size:12px;color:#7f8c8d;margin-top:2px;">${this.esc(e.message)}</div>
+                    <div style="font-size:12px;color:#7f8c8d;margin-top:2px;">${this.esc(I18N.fixAlert(e.message))}</div>
                 </div>
                 <div style="font-size:11px;color:#b0bec5;white-space:nowrap;">${e.created_at ? String(e.created_at).slice(0, 16) : ''}</div>
             </div>`;

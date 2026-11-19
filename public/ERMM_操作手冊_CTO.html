@@ -67,21 +67,29 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-3">2.1 启动 / 停止 / 健康检查</a>
 <a class="toc-item d2" href="#sec-4">2.2 依赖与目录结构</a>
 <a class="toc-item d2" href="#sec-5">2.3 经营分析模块（2026-11 新增）</a>
-<a class="toc-item d1" href="#sec-6">三、账号与权限管理（👤 使用者管理）</a>
-<a class="toc-item d1" href="#sec-7">四、系统设定与主档（🔧）</a>
-<a class="toc-item d1" href="#sec-8">五、批次管线与第三方整合（⚙️ / 🔌）</a>
-<a class="toc-item d2" href="#sec-9">5.1 批次管线</a>
-<a class="toc-item d2" href="#sec-10">5.2 第三方资料整合</a>
-<a class="toc-item d2" href="#sec-11">5.3 排程器</a>
-<a class="toc-item d1" href="#sec-12">六、数据质量管理（🛠️）</a>
-<a class="toc-item d1" href="#sec-13">七、AI 智能层（运维视角）</a>
-<a class="toc-item d1" href="#sec-14">八、文档维护（系统文件）</a>
-<a class="toc-item d1" href="#sec-15">九、安全与合规</a>
-<a class="toc-item d1" href="#sec-16">十、常见故障排查表</a>
-<a class="toc-item d1" href="#sec-17">十一、变更管理清单（上线前自检）</a>
+<a class="toc-item d2" href="#sec-6">2.4 费用 / 付款 / 审批 / 组织模块（2026-11 新增）</a>
+<a class="toc-item d2" href="#sec-7">2.5 其余业务模块（已上线，按需维护）</a>
+<a class="toc-item d2" href="#sec-8">2.6 CTO-05~CTO-09 新增模块（v4.0 交付）</a>
+<a class="toc-item d1" href="#sec-9">三、账号与权限管理（👤 使用者管理）</a>
+<a class="toc-item d2" href="#sec-10">3.1 CTO-02 细粒度按钮权限（v4.0 新增）</a>
+<a class="toc-item d1" href="#sec-11">四、系统设定与主档（🔧）</a>
+<a class="toc-item d1" href="#sec-12">五、批次管线与第三方整合（⚙️ / 🔌）</a>
+<a class="toc-item d2" href="#sec-13">5.1 批次管线（CTO-04 7 步可回放）</a>
+<a class="toc-item d2" href="#sec-14">5.2 第三方资料整合</a>
+<a class="toc-item d2" href="#sec-15">5.3 排程器</a>
+<a class="toc-item d1" href="#sec-16">六、数据质量管理（🛠️）</a>
+<a class="toc-item d1" href="#sec-17">七、AI 智能层 + AI 治理驾驶舱（运维视角）</a>
+<a class="toc-item d2" href="#sec-18">7.1 原有 5 大 AI 能力</a>
+<a class="toc-item d2" href="#sec-19">7.2 CTO-09 AI 治理驾驶舱（v4.0 新增）</a>
+<a class="toc-item d2" href="#sec-20">7.3 CTO-06 指标中心 &amp;amp; CTO-07 消息通知</a>
+<a class="toc-item d1" href="#sec-21">八、文档维护（系统文件）</a>
+<a class="toc-item d1" href="#sec-22">九、安全与合规</a>
+<a class="toc-item d2" href="#sec-23">9.1 权限三层与模块级 API 守门（middleware/moduleGuard.js）</a>
+<a class="toc-item d1" href="#sec-24">十、常见故障排查表</a>
+<a class="toc-item d1" href="#sec-25">十一、变更管理清单（上线前自检）</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 11:59<br>
+    產生時間：2026-11-17 04:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -93,9 +101,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   </div>
   <article class="doc">
 <blockquote>
-<p>适用角色：CTO / IT 负责人 / 系统管理员｜适用版本：v3.2（2026-11-05）
+<p>适用角色：CTO / IT 负责人 / 系统管理员｜适用版本：v4.0（2026-11-16）
 系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜部署形态：单机 Node.js + MySQL 8
-本手册聚焦「系统在你手上怎么跑、怎么管、怎么排障」，业务口径请参考 CFO 手册。</p>
+本手册聚焦「系统在你手上怎么跑、怎么管、怎么排障」，业务口径请参考 CFO 手册。
+本版新增：<strong>CTO-02 细粒度按钮权限（55 按钮三角色 allow 矩阵 + middleware/perms.js readScope + requireButton）、CTO-03 全量操作审计（routes/audit.js + AI 自动串接）、CTO-04 备份灾备（7 步批次管线 + MySQL 72 迁移可回放）、CTO-05 合同主档（Migration 057 ermm_contract 28 栏 + routes/contracts.js 9 端点 + 前端页面）、CTO-06 指标中心（Migration 056 cams_metric_def 23 指标 7 类别 + services/metricCenter.js）、CTO-07 消息通知（services/notifier.js Email/Lark/企微 webhook 三通道）、CTO-08 CI/CD（.github/workflows/ci.yml MySQL 8 service + Jest 17 测试 52+ 点 + .env.example）、CTO-09 AI 治理（Migration 058 ermm_ai_audit + cams_ai_model_pricing 10 模型计价 + cams_ai_rate_limit + services/llmAudit.js + routes/llmAudit.js 10 端点 + 前端 6 页签 Dashboard）</strong>。本次补充：<strong>模块级 API 守门（<code>middleware/moduleGuard.js</code>，69 条 API 前缀映射 + 60 秒缓存 + 403 <code>MODULE_DENIED</code>）</strong> 与 <strong>Migration 059（补登合同主档 / 功能权限 / 操作审计 / AI 治理 4 个遗漏模块，模块总数 81）</strong>。</p>
 </blockquote>
 <p>CTO 在系统中的职责是<strong>保可用、保安全、保可维护</strong>：</p>
 <ol>
@@ -121,7 +130,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </tr>
 <tr>
 <td>数据库</td>
-<td>MySQL 8，库名 <code>ermm_db</code>，83 张表</td>
+<td>MySQL 8，库名 <code>ermm_db</code>，<strong>152 张表</strong></td>
 </tr>
 <tr>
 <td>端口</td>
@@ -133,15 +142,19 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </tr>
 <tr>
 <td>前端</td>
-<td>原生 HTML/CSS/JS + <code>registerPage()</code> 页面注册，无框架</td>
+<td>原生 HTML/CSS/JS + <code>registerPage()</code> 页面注册，无框架（<strong>68 个已注册页面</strong>）</td>
 </tr>
 <tr>
 <td>LLM</td>
-<td>DeepSeek（预设），配置表 <code>llm_config</code>，统一走 <code>utils/llmClient.js → getDefaultProvider(pool)</code></td>
+<td>DeepSeek（预设），配置表 <code>llm_config</code>，统一走 <code>utils/llmClient.js → getDefaultProvider(pool)</code>（<strong>returnMeta 模式</strong>统一 token/成本追踪）</td>
 </tr>
 <tr>
 <td>路由</td>
-<td>48 个路由模块，挂载于 <code>/api/*</code></td>
+<td><strong>74 个路由模块</strong>（75 条 <code>app.use</code> 挂载），新增合同主档 / 指标中心 / 审计 / AI 治理</td>
+</tr>
+<tr>
+<td>审批流</td>
+<td><code>services/workflow.js</code>（<code>submitWorkflow()</code>），表 <code>wf_process / wf_instance / wf_task / wf_log</code></td>
 </tr>
 <tr>
 <td>静态资源</td>
@@ -149,7 +162,23 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </tr>
 <tr>
 <td>文档路由</td>
-<td><code>/docs/architecture</code>、<code>/docs/executive</code>、<code>/docs/data-model</code>（<code>Cache-Control: no-store</code>）</td>
+<td><code>/docs/architecture</code>、<code>/docs/executive</code>、<code>/docs/data-model</code>、`/docs/manual-ceo</td>
+</tr>
+<tr>
+<td>迁移</td>
+<td><strong>72 个</strong>（001~059 + 回滚脚本），全部幂等、支持 <code>--dry-run / --rollback</code></td>
+</tr>
+<tr>
+<td>测试</td>
+<td>Jest <strong>17 个测试文件</strong>，52+ 测试点，<code>.github/workflows/ci.yml</code> push 即自动回归</td>
+</tr>
+<tr>
+<td>按钮权限</td>
+<td><code>cams_permission_button</code> <strong>55 按钮三角色 allow 矩阵</strong>，<code>middleware/perms.js</code> <code>readScope</code> + <code>requireButton</code> 双重拦截</td>
+</tr>
+<tr>
+<td>模块守门</td>
+<td><code>middleware/moduleGuard.js</code> 挂在 <code>authRequired</code> 之后，69 条 API 前缀映射 <code>cams_module_permission</code>，无权限返回 403 <code>MODULE_DENIED</code>；缓存 60 秒</td>
 </tr>
 </tbody></table>
 <h2 id="sec-3">2.1 启动 / 停止 / 健康检查</h2><pre class="code-block"><code class="language-powershell"># 启动（项目根目录）
@@ -169,14 +198,19 @@ Stop-Process -Id &lt;PID&gt; -Force</code></pre><ul>
 <li>生产部署建议 PM2 守护：<code>pm2 start app.js --name ermm</code>，<code>pm2 logs ermm</code> 看日志。</li>
 </ul>
 <h2 id="sec-4">2.2 依赖与目录结构</h2><pre class="code-block"><code>app.js            # 入口：中间件、路由挂载、文档路由、排程启动
-routes/*.js       # 64 个路由模块（按业务域，app.js 挂载 64 个 /api 前缀）
-services/*.js     # 13 个业务服务（财务计算、税务算税、整合、滚动预算、库存周转）
-utils/llmClient.js# LLM 服务商选择（必须统一走这里）
+middleware/perms.js# CTO-02 细粒度按钮权限：readScope + requireButton
+middleware/moduleGuard.js# 模块级 API 守门：/api 前缀表 + cams_module_permission + 60 秒缓存
+routes/*.js       # 74 个路由模块（按业务域，新增 audit / contracts / llmAudit 等）
+services/*.js     # 32 个业务服务（新增 metricCenter.js / notifier.js / llmAudit.js）
+utils/llmClient.js# LLM 服务商选择（必须统一走这里，returnMeta 模式）
 scheduler/*.js    # 告警与整合排程
-migrations/*.sql  # 45 个迁移脚本（001~032，含子版本）+ run_all.sql
-public/           # 前端页面（60 个页面脚本）与静态资源
+migrations/*.sql  # 72 个迁移（001~059 + 回滚脚本）+ run_all.sql
+public/           # 前端页面（68 个注册页面，新增合同主档 / AI 治理 Dashboard）与静态资源
 docs/             # 架构、数据表、手册（md + 生成后的 html）
-scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="sec-5">2.3 经营分析模块（2026-11 新增）</h2><table>
+scripts/          # generate_docs_html.js 文档生成器
+test/             # Jest 回归测试（17 个测试文件，52+ 测试点）
+.github/workflows/ci.yml # CTO-08 CI/CD：MySQL 8 service + npm test
+.env.example      # CTO-08 统一环境变量模板</code></pre><h2 id="sec-5">2.3 经营分析模块（2026-11 新增）</h2><table>
 <thead>
 <tr>
 <th>模块</th>
@@ -214,8 +248,283 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 <li>库存周转接口清单：<code>GET /overview|/aging|/slow-moving|/replenishment|/snapshots|/actions</code>，<code>POST/PUT/DELETE /actions</code>。</li>
 <li>数据口径：周转率取 <code>mgm_finance_summary</code> 近 12 个月销售成本 ÷ 平均存货价值；库龄取 <code>e2_xitems_daily_status</code> 快照，默认选料件行数最多的最近日期；需求取 SO 交货量，缺失时以 PO 采购量近似。</li>
 </ul>
+<h2 id="sec-6">2.4 费用 / 付款 / 审批 / 组织模块（2026-11 新增）</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>前端页面</th>
+<th>API 前缀</th>
+<th>服务 / 迁移</th>
+<th>关键表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>费用报销</td>
+<td><code>pages/expense.js</code></td>
+<td><code>/api/expense</code></td>
+<td>021 / 047</td>
+<td><code>exp_report</code> / <code>exp_report_item</code></td>
+</tr>
+<tr>
+<td>借支与核销</td>
+<td><code>pages/expense.js</code>（借支页签）</td>
+<td><code>/api/expense/advances/*</code></td>
+<td>047</td>
+<td><code>exp_advance</code> / <code>exp_advance_settle</code></td>
+</tr>
+<tr>
+<td>付款申请 / 排程 / 回单 / 核销</td>
+<td><code>pages/payRequest.js</code></td>
+<td><code>/api/pay-request</code></td>
+<td>022 / 026</td>
+<td><code>pay_request</code> / <code>pay_request_item</code> / <code>pay_writeoff</code></td>
+</tr>
+<tr>
+<td>审批中心</td>
+<td><code>pages/approvals.js</code></td>
+<td><code>/api/workflow</code></td>
+<td><code>services/workflow.js</code></td>
+<td><code>wf_process</code> / <code>wf_instance</code> / <code>wf_task</code> / <code>wf_log</code></td>
+</tr>
+<tr>
+<td>组织人效</td>
+<td><code>pages/hrEfficiency.js</code></td>
+<td><code>/api/hr-efficiency</code></td>
+<td><code>services/hrEfficiency.js</code></td>
+<td><code>hr_headcount_plan</code></td>
+</tr>
+<tr>
+<td>战略 BSC</td>
+<td><code>pages/strategy.js</code></td>
+<td><code>/api/strategy</code></td>
+<td><code>services/bsc.js</code></td>
+<td><code>bsc_objective</code> / <code>bsc_progress</code></td>
+</tr>
+<tr>
+<td>董事会报告包</td>
+<td><code>pages/boardPack.js</code></td>
+<td><code>/api/board-pack</code></td>
+<td><code>services/boardPack.js</code></td>
+<td><code>board_pack</code></td>
+</tr>
+<tr>
+<td>项目损益</td>
+<td><code>pages/projectProfit.js</code></td>
+<td><code>/api/project-profit</code></td>
+<td><code>services/projectProfit.js</code></td>
+<td><code>project_budget</code> / <code>project_cost</code> / <code>project_revenue</code> / <code>project_customer_map</code></td>
+</tr>
+<tr>
+<td>销售信用</td>
+<td><code>pages/soCredit.js</code></td>
+<td><code>/api/so-credit</code></td>
+<td><code>services/soCredit.js</code></td>
+<td><code>sales_credit_limit</code> / <code>sales_return</code></td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>审批流为通用引擎</strong>：新业务接入只需在提交处调用 <code>submitWorkflow(conn, { businessType, businessId, title, amount, applicantId, dept, buNo })</code>，并在 <code>wf_process</code> 建一条对应 <code>business_type</code> 的流程定义；无需新增流程表或改引擎代码。</li>
+<li><strong>权限登记</strong>：以上模块均在 <code>cams_module_permission</code> 建行（<code>module_code</code> 与 <code>index.html</code> 的 <code>data-page</code> 一致），后端以 <code>Auth.canAccess(page)</code> 二次校验。</li>
+<li><strong>只读边界</strong>：人效 / 战略 / 董事会 / 项目损益 / 销售信用以汇总与配置为主，不回写账务；费用与付款写各自业务表 + <code>wf_*</code>。</li>
+</ul>
+<h2 id="sec-7">2.5 其余业务模块（已上线，按需维护）</h2><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>页面</th>
+<th>API 前缀</th>
+<th>关键表</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>集团驾驶舱 / 战情室</td>
+<td><code>warRoom.js</code></td>
+<td><code>/api/war-room</code></td>
+<td>复用各域表</td>
+<td>三账套汇总驾驶舱，只读</td>
+</tr>
+<tr>
+<td>月结关账</td>
+<td><code>closing.js</code></td>
+<td><code>/api/closing</code></td>
+<td><code>closing_calendar</code> / <code>closing_task</code> / <code>closing_task_instance</code></td>
+<td>关账任务清单 + 关账 / 反关账</td>
+</tr>
+<tr>
+<td>外汇曝险</td>
+<td><code>fxExposure.js</code></td>
+<td><code>/api/fx</code></td>
+<td><code>fx_exposure_item</code> / <code>fx_hedge</code></td>
+<td>敞口与避险覆盖率，管理口径</td>
+</tr>
+<tr>
+<td>资金流动性</td>
+<td><code>cashLiquidity.js</code></td>
+<td><code>/api/cash-liquidity</code></td>
+<td><code>cash_plan_item</code></td>
+<td>周 / 月现金计划与实际</td>
+</tr>
+<tr>
+<td>投资管理</td>
+<td><code>investment.js</code></td>
+<td><code>/api/investment</code></td>
+<td><code>investment_project</code> / <code>investment_budget</code> / <code>investment_cashflow</code></td>
+<td>投资现金流与回收测算</td>
+</tr>
+<tr>
+<td>税务筹划</td>
+<td><code>taxPlanning.js</code></td>
+<td><code>/api/tax-planning</code></td>
+<td><code>tax_preference</code> / <code>vat_deductions</code></td>
+<td>优惠适用与可抵扣项</td>
+</tr>
+<tr>
+<td>税务合规</td>
+<td><code>taxCompliance.js</code></td>
+<td><code>/api/tax-compliance</code></td>
+<td><code>tax_regulation</code> / <code>tax_compliance_item</code> / <code>tax_filing_task</code></td>
+<td>法规 → 事项 → 任务</td>
+</tr>
+<tr>
+<td>请购单</td>
+<td><code>prRequest.js</code></td>
+<td><code>/api/pr-request</code></td>
+<td><code>pr_request</code> / <code>pr_request_item</code></td>
+<td>部门请购与审批</td>
+</tr>
+<tr>
+<td>到货单</td>
+<td><code>poGrn.js</code></td>
+<td><code>/api/po-grn</code></td>
+<td><code>po_grn</code></td>
+<td>收货登记（含批次）</td>
+</tr>
+<tr>
+<td>三单匹配</td>
+<td><code>poMatch.js</code></td>
+<td><code>/api/po-match</code></td>
+<td><code>po_match_result</code></td>
+<td>PO / 到货 / 发票比对</td>
+</tr>
+<tr>
+<td>收款与应收核销</td>
+<td>由 <code>receipt</code> + <code>arMatch</code> 路由支撑（无独立页面）</td>
+<td><code>/api/receipt</code>、<code>/api/ar-match</code></td>
+<td><code>receipt_detail</code> / <code>ar_match_result</code></td>
+<td>收款登记与发票核销</td>
+</tr>
+<tr>
+<td>模块权限</td>
+<td><code>permission.js</code></td>
+<td><code>/api/permission</code></td>
+<td><code>cams_module_permission</code></td>
+<td>页面级授权，前后端双校验</td>
+</tr>
+<tr>
+<td>预算审批留痕</td>
+<td><code>budget.js</code></td>
+<td><code>/api/budget</code></td>
+<td><code>budget_approval_log</code></td>
+<td>预算版本提交 / 审批记录</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>维护提示：新增或调整模块时，同步更新本表与 <code>docs/ERMM_系統架構與模組資料表關係圖.md</code>，再跑 <code>node scripts/generate_docs_html.js</code>，避免文档与代码漂移。</p>
+</blockquote>
+<h2 id="sec-8">2.6 CTO-05~CTO-09 新增模块（v4.0 交付）</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>迁移</th>
+<th>前端页面</th>
+<th>路由</th>
+<th>服务 / 中间件</th>
+<th>关键表 / 文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>CTO-02 细粒度按钮权限</strong></td>
+<td>051</td>
+<td>—</td>
+<td>—</td>
+<td><code>middleware/perms.js</code>（<code>readScope</code> / <code>requireButton</code>）</td>
+<td><code>cams_permission_button</code>（55 按钮三角色 allow 矩阵）</td>
+<td>每个敏感按钮都有角色 + 范围双重拦截，前端隐藏 + 后端硬拦</td>
+</tr>
+<tr>
+<td><strong>CTO-03 全量操作审计</strong></td>
+<td>051</td>
+<td>—</td>
+<td><code>routes/audit.js</code></td>
+<td>—</td>
+<td><code>ermm_ai_audit</code></td>
+<td>覆盖所有 CRUD + AI 智能操作，<code>GET /api/audit</code> 列表 / <code>/api/audit/stats</code> 统计 / <code>/api/audit/anomaly</code> AI 自动异常检测</td>
+</tr>
+<tr>
+<td><strong>CTO-04 备份灾备</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>MySQL 72 迁移幂等可回放</td>
+<td>7 步批次管线（已在 2.5 列）；所有迁移脚本支持 <code>--dry-run</code> / <code>--rollback</code> / 事务包裹</td>
+</tr>
+<tr>
+<td><strong>CTO-05 合同主档</strong></td>
+<td>057</td>
+<td><code>pages/contracts.js</code></td>
+<td><code>routes/contracts.js</code> 9 端点</td>
+<td>—</td>
+<td><code>ermm_contract</code>（28 栏：合同编号 / 甲方 / 乙方 / 金额 / 币种 / 签约日 / 到期日 / 状态 / 关联 PO 等）</td>
+<td>从 <code>ermm_erp_po</code> 自动种 10 笔示范；合同 → 采购 → 到货 → 发票 → 付款全链路可追溯</td>
+</tr>
+<tr>
+<td><strong>CTO-06 指标中心</strong></td>
+<td>056</td>
+<td>—</td>
+<td>—</td>
+<td><code>services/metricCenter.js</code></td>
+<td><code>cams_metric_def</code>（23 指标 7 类别）</td>
+<td>统一指标引擎，ROE、毛利率、DSI、DSO、DPO 等从此有了唯一口径；被仪表板 / 滚动预算 / 多维盈利统一调用</td>
+</tr>
+<tr>
+<td><strong>CTO-07 消息通知</strong></td>
+<td>055</td>
+<td>—</td>
+<td>—</td>
+<td><code>services/notifier.js</code></td>
+<td><code>cams_notif_channel</code> + <code>cams_notif_subscription</code></td>
+<td>Email / Lark / 企微 webhook 三通道统一入口；告警、审批、日报自动推送；用户可订阅 / 取消订阅通知类型</td>
+</tr>
+<tr>
+<td><strong>CTO-08 CI/CD</strong></td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>Jest 测试套件</td>
+<td><code>.github/workflows/ci.yml</code> + <code>.env.example</code> + <code>test/</code> 17 文件</td>
+<td>MySQL 8 service 容器 → npm ci → npm test（52+ 点）；<code>.env.example</code> 统一环境变量模板</td>
+</tr>
+<tr>
+<td><strong>CTO-09 AI 治理</strong></td>
+<td>058</td>
+<td><code>pages/llmAudit.js</code>（6 页签 Dashboard）</td>
+<td><code>routes/llmAudit.js</code> 10 端点</td>
+<td><code>services/llmAudit.js</code> + <code>utils/llmClient.js</code> returnMeta 模式</td>
+<td><code>ermm_ai_audit</code> + <code>cams_ai_model_pricing</code>（10 模型计价）+ <code>cams_ai_rate_limit</code></td>
+<td>全链路 AI 调用审计 + 成本追踪 + 模型限流 + 6 页签 Dashboard（概览 / 调用明细 / 成本统计 / 限流日志 / 模型计价 / 异常检测）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>CTO-03 审计 API 与 CTO-09 AI 审计的区别</strong>：CTO-03 审计是操作审计（谁对什么业务数据做了什么变更），CTO-09 AI 审计是 AI 调用审计（谁调用了哪个模型、花了多少 token、多少钱、限流了没）。两者写入同一张 <code>ermm_ai_audit</code> 表，由 <code>audit_type</code> 字段区分。</p>
+</blockquote>
 <hr>
-<h1 id="sec-6">三、账号与权限管理（👤 使用者管理）</h1><ul>
+<h1 id="sec-9">三、账号与权限管理（👤 使用者管理）</h1><blockquote>
+<p>权限分三层：① <strong>导航可见性</strong>（<code>cams_module_permission</code>，页面「功能权限」，按一般 / 操作员 / 管理员 × <strong>81 个模块</strong>勾选；前端 <code>canAccess()</code> 为 <strong>fail-closed</strong>，无权限缓存即拒绝并隐藏菜单）② <strong>模块级 API 守门</strong>（<code>middleware/moduleGuard.js</code> 按 <code>/api</code> 第一段路径映射模块，无权限返回 403 <code>MODULE_DENIED</code>，见 9.1）③ <strong>按钮级细粒度权限</strong>（<code>cams_permission_button</code> <strong>55 按钮</strong>三角色 allow 矩阵，<code>middleware/perms.js</code>，见 3.1）。用户落到矩阵哪一列由<strong>动作角色</strong>（<code>cams_xuser.admin</code> / <code>xuser_type</code>）决定。模块矩阵说明见《使用者操作手册》附录 A。</p>
+</blockquote>
+<ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>使用者管理</strong>。</li>
 <li><strong>用户类型</strong>：一般员工 / 部门主管 / 高阶主管 / 管理员。</li>
 <li><strong>管理员判定</strong>：<code>cams_xuser.admin = &#39;Yes&#39;</code>（系统内统一 Yes/No，migration 012 起）。</li>
@@ -227,11 +536,28 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </li>
 <li><strong>测试账号</strong>：<code>rocky / 68315711</code>（管理员）、<code>S10049 / 68315711</code>（一般员工，用于验证权限拦截）。</li>
 </ul>
+<h2 id="sec-10">3.1 CTO-02 细粒度按钮权限（v4.0 新增）</h2><p>除了模块级可见性，v4.0 引入 <strong>55 个按钮级权限</strong>，覆盖所有敏感操作（审批、过账、删除、付款、导出、批量处理）：</p>
+<ul>
+<li><strong>权限表</strong>：<code>cams_permission_button</code>（三列：<code>button_code</code> / <code>role</code> / <code>allow</code>），每行是「某角色能不能按某个按钮」。</li>
+<li><strong>中间件</strong>：<code>middleware/perms.js</code> 提供两个检查函数：<ul>
+<li><code>readScope(conn, user)</code> — 检查用户是否有该模块的读取权限</li>
+<li><code>requireButton(buttonCode)</code> — 检查用户是否有该按钮的操作权限</li>
+</ul>
+</li>
+<li><strong>拦截点</strong>：在每个敏感路由挂载，例如付款接口 <code>router.post(&#39;/execute&#39;, perms.requireButton(&#39;pay_execute&#39;), ...)</code>。</li>
+<li><strong>前端联动</strong>：按钮按角色显示 / 隐藏（<code>data-btn=&quot;pay_execute&quot;</code> + JS 检查）；后端二次校验硬防绕过。</li>
+<li><strong>排障</strong>：<ul>
+<li>用户说「按钮看不见」→ 查前端 JS 是否正确读了权限矩阵。</li>
+<li>用户说「按钮能点但报错 403」→ 查 <code>middleware/perms.js</code> 是否正确挂载在对应路由上。</li>
+<li>新增按钮 → 先在 <code>cams_permission_button</code> 建行，再在路由挂 <code>requireButton(&#39;new_code&#39;)</code>，最后前端加 <code>data-btn</code>。</li>
+</ul>
+</li>
+</ul>
 <blockquote>
-<p><strong>权限设计原则</strong>：前端只做<strong>体验层拦截</strong>（如「系统文件」菜单），真正的数据安全依赖后端 <code>authRequired</code> 的 JWT 校验。敏感接口必须在路由层再校验角色。</p>
+<p><strong>权限设计原则</strong>：前端只做<strong>体验层拦截</strong>（菜单隐藏、按钮显隐），真正的数据安全依赖后端 <code>authRequired</code> 的 JWT 校验 + <code>middleware/moduleGuard.js</code> 的<strong>模块级守门</strong>（直接调用 API 同样 403）+ <code>middleware/perms.js</code> 的按钮硬拦。敏感接口必须在路由层校验模块权限 + 按钮权限双重约束。</p>
 </blockquote>
 <hr>
-<h1 id="sec-7">四、系统设定与主档（🔧）</h1><table>
+<h1 id="sec-11">四、系统设定与主档（🔧）</h1><table>
 <thead>
 <tr>
 <th>模块</th>
@@ -267,13 +593,24 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </tbody></table>
 <p><strong>变更注意</strong>：KPI 门槛与公司别信息属于<strong>全局参数</strong>，一次修改影响所有用户与所有页面，变更前请备份并在测试账号验证。</p>
 <hr>
-<h1 id="sec-8">五、批次管线与第三方整合（⚙️ / 🔌）</h1><h2 id="sec-9">5.1 批次管线</h2><ul>
+<h1 id="sec-12">五、批次管线与第三方整合（⚙️ / 🔌）</h1><h2 id="sec-13">5.1 批次管线（CTO-04 7 步可回放）</h2><ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>批次管线</strong>。</li>
-<li><strong>内容</strong>：7 个步骤的数据加工（取数 → 校验 → 汇总 → 指标计算 → 落库）。</li>
-<li><strong>操作</strong>：选择公司与月份 → 执行 → 查看每步状态与耗时 → 失败步骤可重跑。</li>
-<li><strong>排障</strong>：若仪表板某月无数据，优先确认该月批次是否跑完；单步失败看日志定位。</li>
+<li><strong>CTO-04 7 步管线</strong>：<ol>
+<li><strong>PO 同步</strong> — 拉取 ERP 采购单</li>
+<li><strong>汇率换算</strong> — 多币种折算本位币</li>
+<li><strong>供应商汇总</strong> — 供应商维度聚合</li>
+<li><strong>库存减值</strong> — 呆滞料评估减值损失</li>
+<li><strong>AR/AP 汇算</strong> — 应收应付期末余额与核销</li>
+<li><strong>财务摘要重算</strong> — 刷新 <code>mgm_finance_summary</code></li>
+<li><strong>三大报表生成</strong> — 资产负债表 / 损益表 / 现金流量表</li>
+</ol>
+</li>
+<li><strong>幂等可回放</strong>：每步脚本支持 <code>--dry-run</code>（预演）/ <code>--apply</code>（执行）/ <code>--rollback</code>（回滚），包裹在单一 MySQL 事务中；重复执行不会产生脏数据。</li>
+<li><strong>操作</strong>：选择公司与月份 → 执行 → 查看每步状态与耗时 → 失败步骤可重跑（或 rollback 重来）。</li>
+<li><strong>灾备</strong>：72 个迁移脚本全部遵循幂等模式（先 DELETE 本次生成再重建），生产环境操作前必须先 <code>--dry-run</code> 预演，确认受影响行数正确后再 <code>--apply</code>。</li>
+<li><strong>排障</strong>：若仪表板某月无数据，优先确认该月批次是否跑完；单步失败看日志定位；迁移失败先 rollback 再查原因。</li>
 </ul>
-<h2 id="sec-10">5.2 第三方资料整合</h2><ul>
+<h2 id="sec-14">5.2 第三方资料整合</h2><ul>
 <li><strong>入口</strong>：系统 · 主档管理 → <strong>第三方资料整合</strong>（5 个页签）。</li>
 <li><strong>内容</strong>：数据源配置（<code>intg_source</code>）、作业定义（<code>intg_job</code>）、执行日志（<code>intg_log</code>）。</li>
 <li><strong>操作</strong>：<ol>
@@ -285,7 +622,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </li>
 <li><strong>安全</strong>：第三方库使用<strong>只读账号</strong>；写入仅限本系统 <code>ermm_db</code>。</li>
 </ul>
-<h2 id="sec-11">5.3 排程器</h2><table>
+<h2 id="sec-15">5.3 排程器</h2><table>
 <thead>
 <tr>
 <th>排程</th>
@@ -310,7 +647,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </tr>
 </tbody></table>
 <hr>
-<h1 id="sec-12">六、数据质量管理（🛠️）</h1><ul>
+<h1 id="sec-16">六、数据质量管理（🛠️）</h1><ul>
 <li><strong>入口</strong>：日常作业 → <strong>数据质量扫描</strong>。</li>
 <li><strong>用途</strong>：不是你日常要看，而是<strong>排障与上线前体检</strong>：7 大类 20+ 项，39ms 返回。</li>
 <li><strong>典型场景</strong>：<ul>
@@ -321,7 +658,7 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </li>
 </ul>
 <hr>
-<h1 id="sec-13">七、AI 智能层（运维视角）</h1><table>
+<h1 id="sec-17">七、AI 智能层 + AI 治理驾驶舱（运维视角）</h1><h2 id="sec-18">7.1 原有 5 大 AI 能力</h2><table>
 <thead>
 <tr>
 <th>功能</th>
@@ -363,10 +700,77 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 </tbody></table>
 <ul>
 <li><strong>LLM 配置</strong>：<code>llm_config</code> 表，<code>is_default=1 AND status=&#39;USE&#39;</code> 为当前生效服务商。<strong>禁止</strong>在其他路由自行写 SQL 查 provider，统一用 <code>getDefaultProvider(pool)</code>。</li>
+<li><strong>AI 问答页唯读</strong>：<code>pages/aiqa.js</code> 的服务商徽章（🧠 DeepSeek（预设））与 API Key 状态均为<strong>唯读展示</strong>，页面上不再有服务商下拉与「API Key 管理」按钮；<code>/api/aiqa/ask</code> 忽略前端传入的 <code>provider</code>，一律由 <code>getDefaultProvider(pool)</code> 取预设服务商，未配置则回 400 提示管理员前往「系统设定 → LLM 服务商管理」。</li>
+<li><strong>2026-11 修复</strong>：知识库未命中分支引用了未定义变量 <code>query</code>（应为 <code>q</code>），触发 ReferenceError 使查询无回应；同批修正前端固定传 <code>provider=&#39;kimi&#39;</code> 导致忽略预设服务商的问题。</li>
 <li><strong>安全边界</strong>：AI 层<strong>只读</strong>，不写账务表；写入仅限 <code>ermm_knowledge</code>、<code>ermm_kb_miss_log</code>、<code>daily_ai_summary</code>。</li>
 </ul>
+<h2 id="sec-19">7.2 CTO-09 AI 治理驾驶舱（v4.0 新增）</h2><ul>
+<li><strong>前端页面</strong>：<code>pages/llmAudit.js</code> — 6 页签 Dashboard（概览 / 调用明细 / 成本统计 / 限流日志 / 模型计价 / 异常检测）。</li>
+<li><strong>后端端点</strong>：<code>routes/llmAudit.js</code> 共 10 端点：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET /api/llm-audit/overview</code></td>
+<td>总览卡片（调用次数 / 总成本 / 平均响应 / 限流次数）</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/calls</code></td>
+<td>调用明细（支持按日期 / 用户 / 模型 / 业务场景筛选）</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/costs</code></td>
+<td>成本统计（按模型 / 业务 / 时间维度聚合）</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/rate-limits</code></td>
+<td>限流日志</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/models</code></td>
+<td>模型计价配置</td>
+</tr>
+<tr>
+<td><code>PUT /api/llm-audit/models/:id</code></td>
+<td>更新模型单价</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/anomalies</code></td>
+<td>AI 自动异常检测结果</td>
+</tr>
+<tr>
+<td><code>GET /api/llm-audit/rules</code></td>
+<td>限流规则配置</td>
+</tr>
+<tr>
+<td><code>PUT /api/llm-audit/rules/:id</code></td>
+<td>更新限流阈值</td>
+</tr>
+<tr>
+<td><code>POST /api/llm-audit/anomalies/handle</code></td>
+<td>标记异常处理</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>核心机制</strong>：<ul>
+<li><code>utils/llmClient.js</code> <strong>returnMeta 模式</strong>：所有 LLM 调用返回 <code>{ text: &#39;...&#39;, meta: { tokens: 1500, cost_usd: 0.005, latency_ms: 820, model: &#39;deepseek-chat&#39; } }</code>，meta 自动落库 <code>ermm_ai_audit</code>。</li>
+<li><code>services/llmAudit.js</code>：定时聚合成本、检测异常（token 暴增 / 响应变慢 / 非业务时段调用）。</li>
+<li><code>cams_ai_model_pricing</code>：10 模型计价（DeepSeek Chat / Reasoner / Moonshot / GPT-4o-mini / Claude Haiku 等）。</li>
+<li><code>cams_ai_rate_limit</code>：按用户 / 接口 / 时段配置 QPS 和日调用上限。</li>
+</ul>
+</li>
+</ul>
+<h2 id="sec-20">7.3 CTO-06 指标中心 &amp;amp; CTO-07 消息通知</h2><ul>
+<li><strong>CTO-06 指标中心</strong>（<code>services/metricCenter.js</code> + <code>cams_metric_def</code> 23 指标 7 类别）：被仪表板 / 滚动预算 / 多维盈利 / 库存周转统一调用；ROE、毛利率、DSI、DSO、DPO 等关键指标从此有了唯一计算口径。<strong>注意</strong>：新增指标先在 <code>cams_metric_def</code> 建行，再在 <code>metricCenter.js</code> 实现计算函数。</li>
+<li><strong>CTO-07 消息通知</strong>（<code>services/notifier.js</code>）：Email / Lark / 企微 webhook 三通道统一入口；告警、审批、日报自动推送。<strong>排障</strong>：通知没收到 → 查 <code>cams_notif_subscription</code> 是否有对应用户 + 查 <code>cams_notif_channel</code> 通道是否配置正确 + 查 webhook / SMTP 凭证。</li>
+</ul>
 <hr>
-<h1 id="sec-14">八、文档维护（系统文件）</h1><ul>
+<h1 id="sec-21">八、文档维护（系统文件）</h1><ul>
 <li><strong>入口</strong>：侧边栏最下方「系统文件」（仅管理员可见可用）：<ul>
 <li>🗺️ 系统架构与流程图 → <code>/docs/architecture</code></li>
 <li>📊 高管价值简报 → <code>/docs/executive</code></li>
@@ -383,15 +787,69 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 <li><strong>非管理员点击</strong>会弹出「你的权限不能使用这个模块功能」——这是前端 <code>openDocPage()</code> 的权限拦截。</li>
 </ul>
 <hr>
-<h1 id="sec-15">九、安全与合规</h1><ul>
+<h1 id="sec-22">九、安全与合规</h1><ul>
 <li><strong>认证</strong>：所有 <code>/api/*</code> 经 <code>authRequired</code>；令牌失效返回 401，前端统一跳登录页并清除 <code>ermm_token</code>。</li>
 <li><strong>密码策略</strong>：用户密码入库前加密；管理员账号单独管理，不共用。</li>
-<li><strong>审计</strong>：凭证、报税提交、批次执行、整合日志均留痕，可追溯。</li>
-<li><strong>备份</strong>：MySQL 定期备份（建议每日 + 月结前各一次），迁移前必须备份。</li>
-<li><strong>敏感配置</strong>：<code>llm_config.api_key</code>、第三方库连接信息不要写入前端或提交仓库。</li>
+<li><strong>模块级 API 守门</strong>：<code>middleware/moduleGuard.js</code> 对 69 条 <code>/api</code> 前缀查 <code>cams_module_permission</code>，非管理员无权限返回 403 <code>MODULE_DENIED</code>；跨模块共用 API（workflow / codes 等）仅需登录。详见 9.1。</li>
+<li><strong>CTO-02 细粒度按钮权限</strong>：<code>middleware/perms.js</code> 在敏感路由（付款 / 审批 / 删除 / 过账）挂载 <code>requireButton()</code>，55 按钮三角色 allow 矩阵（<code>cams_permission_button</code>）控制。</li>
+<li><strong>CTO-03 全量操作审计</strong>：<code>routes/audit.js</code> 审计 API 覆盖所有 CRUD + AI 智能操作，写入 <code>ermm_ai_audit</code>；<code>GET /api/audit</code> 查列表、<code>/api/audit/stats</code> 看统计、<code>/api/audit/anomaly</code> AI 自动异常检测。高管驾驶舱可实时看谁在做什么、做了什么变更。</li>
+<li><strong>CTO-09 AI 调用审计</strong>：所有 LLM 调用通过 <code>utils/llmClient.js returnMeta 模式</code> 自动落库，含 token 数 / 成本 / 延迟 / 模型 / 业务场景；<code>cams_ai_rate_limit</code> 限流防滥用。</li>
+<li><strong>备份与灾备（CTO-04）</strong>：MySQL 定期备份（建议每日 + 月结前各一次）；72 个迁移脚本全部幂等，支持 <code>--dry-run</code> / <code>--apply</code> / <code>--rollback</code>；生产操作前必须 dry-run 预演。</li>
+<li><strong>敏感配置</strong>：<code>llm_config.api_key</code>、第三方库连接信息、Lark / 企微 webhook URL 不要写入前端或提交仓库，放 <code>.env</code>（参考 <code>.env.example</code>）。</li>
+<li><strong>CTO-08 CI/CD</strong>：<code>.github/workflows/ci.yml</code> 在 push 时自动启动 MySQL 8 service 容器 → npm ci → npm test（17 文件 52+ 点），红灯必须修复才能合入 main。</li>
+</ul>
+<h2 id="sec-23">9.1 权限三层与模块级 API 守门（middleware/moduleGuard.js）</h2><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>控制什么</th>
+<th>实现位置</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>① 导航隐藏</td>
+<td>左侧菜单是否出现、页面能否打开</td>
+<td><code>public/js/app.js</code> <code>Auth.canAccess()</code></td>
+<td><strong>fail-closed</strong>：无权限缓存一律拒绝；当前页失去权限时自动跳转到第一个有权限的页面</td>
+</tr>
+<tr>
+<td>② 模块 API 守门</td>
+<td>直接呼叫 <code>/api/xxx</code> 是否放行</td>
+<td><code>middleware/moduleGuard.js</code>（<code>app.js</code> 挂在 <code>authRequired</code> 之后）</td>
+<td>按 <code>/api</code> 第一段路径映射模块（69 条），查 <code>cams_module_permission</code> 角色列，无权限 403</td>
+</tr>
+<tr>
+<td>③ 按钮权限</td>
+<td>审批 / 过账 / 删除 / 付款等敏感动作</td>
+<td><code>middleware/perms.js</code> + <code>cams_permission_button</code>（55 按钮）</td>
+<td>前端隐藏 + 后端 <code>requireButton()</code> 硬拦</td>
+</tr>
+</tbody></table>
+<p><strong>判定顺序</strong>：</p>
+<ol>
+<li><code>NODE_ENV=test</code> 且未设 <code>MODULE_GUARD_STRICT=1</code> → 直接放行（回归测试用）。</li>
+<li><code>/api</code> 后第一段路径未在 <code>PREFIX_MODULE</code> 登记 → 视为跨模块共用 / 内部 API，仅要求登录。</li>
+<li>未登录（无 <code>req.user</code>）→ 401 <code>NO_AUTH</code>。</li>
+<li><code>cams_xuser.admin = &#39;Yes&#39;</code> → 全部通过。</li>
+<li>依角色（admin / operator / general）查 <code>allow_admin</code> / <code>allow_operator</code> / <code>allow_general</code>，未登记或为 0 → 403。</li>
+</ol>
+<p><strong>共用 API 白名单（仅需登录）</strong>：<code>workflow</code>、<code>codes</code>、<code>kpi-query</code>、<code>metric-center</code>、<code>notifier</code>、<code>llm</code>、<code>diagnosis</code>、<code>daily-summary</code>、<code>batch</code>、<code>monitor</code>。</p>
+<p><strong>403 响应示例</strong>：</p>
+<pre class="code-block"><code class="language-json">{
+  "success": false,
+  "code": "MODULE_DENIED",
+  "module": "contracts",
+  "message": "你的角色沒有此功能模組的存取權限"
+}</code></pre><p><strong>缓存与开关</strong>：</p>
+<ul>
+<li>权限判定按 <code>role:module</code> 缓存 <strong>60 秒</strong>，管理员改完矩阵最慢 60 秒生效；前端 <code>refreshPermissions()</code> 另有 30 秒节流，并在窗口重新获得焦点时自动同步 <code>/api/auth/me</code>，用户不必重新登录。</li>
+<li>测试环境默认放行；需强制验证守门逻辑时设 <code>MODULE_GUARD_STRICT=1</code>。</li>
+<li>前端「看不到菜单」+ 后端「直接调 API 也被挡」构成双保险：改前端 JS 或手工 curl 均无法绕过。</li>
+<li>登出 / 401 时前端会清除 <code>ermm_permissions</code> 与 <code>ermm_role</code>，避免残留旧权限缓存。</li>
 </ul>
 <hr>
-<h1 id="sec-16">十、常见故障排查表</h1><table>
+<h1 id="sec-24">十、常见故障排查表</h1><table>
 <thead>
 <tr>
 <th>现象</th>
@@ -442,17 +900,62 @@ scripts/          # generate_docs_html.js 文档生成器</code></pre><h2 id="se
 <td>库存周转页无权限/菜单不显示</td>
 <td><code>cams_module_permission</code> 是否有 <code>inventoryTurnover</code> 行 → 用户角色是否允许</td>
 </tr>
+<tr>
+<td>某功能菜单不显示 / 页面打不开</td>
+<td>① <code>SELECT allow_general,allow_operator,allow_admin FROM cams_module_permission WHERE module_code=&#39;xxx&#39;</code>（无行 → 执行 Migration 059 或补登记 <code>module_code</code>）② 该用户角色列是否为 1（角色按使用者类别判定，不是看身份 <code>Operator</code>）③ 浏览器 <code>ermm_permissions</code> 是否为旧缓存 → 重新登录或切回窗口等待 30 秒自动同步</td>
+</tr>
+<tr>
+<td>呼叫 API 回 403 <code>MODULE_DENIED</code></td>
+<td>响应 <code>module</code> 字段即模块代码 → 查 <code>cams_module_permission</code> 该行角色列 → 改矩阵后等 <strong>60 秒</strong>（moduleGuard 缓存）或重登 → 确认 <code>app.js</code> 的 <code>moduleGuard</code> 挂在 <code>authRequired</code> 之后、该路径前缀在 <code>PREFIX_MODULE</code> 中 → 测试环境需 <code>MODULE_GUARD_STRICT=1</code> 才强制生效</td>
+</tr>
+<tr>
+<td>报销 / 付款提交无审批任务</td>
+<td><code>wf_process</code> 无对应 <code>business_type</code> 或 <code>enabled=0</code> → 执行 021/022 迁移或补流程定义</td>
+</tr>
+<tr>
+<td>审批待办看不到</td>
+<td><code>wf_task</code> 的审批人是否指向当前用户 → 检查 <code>steps_json</code> 角色配置</td>
+</tr>
+<tr>
+<td>借支核销 400</td>
+<td>核销金额 &gt; <code>exp_advance.balance</code>；或状态非 PAID → 先拨付再核销</td>
+</tr>
+<tr>
+<td>付款申请标记付款失败</td>
+<td>未填 <code>bank_receipt_no</code> / <code>receipt_date</code>；或状态非 APPROVED</td>
+</tr>
+<tr>
+<td>核销来源清单为空</td>
+<td><code>mgm_invoice_details</code> 无 <code>sub_amt &gt; payment</code> 的记录（该账套 / 期间已核完）</td>
+</tr>
+<tr>
+<td>组织人效页无数据</td>
+<td><code>hr_headcount_plan</code> 无该 <code>bu_no + period</code> 编制 → 先新增或「复制上月」</td>
+</tr>
+<tr>
+<td>董事会报告包导出为空</td>
+<td>该月批次未跑完 / <code>mgm_finance_summary</code> 无数据</td>
+</tr>
 </tbody></table>
 <hr>
-<h1 id="sec-17">十一、变更管理清单（上线前自检）</h1><ul>
-<li><input disabled="" type="checkbox"> 迁移脚本按序执行（001~032），<code>run_all.sql</code> 可一键建置</li>
+<h1 id="sec-25">十一、变更管理清单（上线前自检）</h1><ul>
+<li><input disabled="" type="checkbox"> 迁移脚本按序执行（<strong>001~059</strong>，共 72 个脚本含回滚），<code>run_all.sql</code> 可一键建置；<strong>生产前必须 <code>--dry-run</code> 预演</strong></li>
 <li><input disabled="" type="checkbox"> 新增路由在 <code>app.js</code> 挂载 <code>/api/xxx</code></li>
+<li><input disabled="" type="checkbox"> 新增敏感路由挂载 <code>middleware/perms.js</code> 的 <code>requireButton(&#39;button_code&#39;)</code></li>
+<li><input disabled="" type="checkbox"> 新增按钮先在 <code>cams_permission_button</code> 建行（三角色 allow 矩阵）</li>
 <li><input disabled="" type="checkbox"> 新增页面在 <code>cams_module_permission</code> 登记 <code>module_code</code>，且与 <code>index.html</code> 的 <code>data-page</code> 一致</li>
+<li><input disabled="" type="checkbox"> 新增 API 前缀（<code>/api/xxx</code>）若属单一模块，在 <code>middleware/moduleGuard.js</code> 的 <code>PREFIX_MODULE</code> 补映射；跨模块共用则确认属白名单语义（仅需登录）</li>
+<li><input disabled="" type="checkbox"> 新增模块后执行/补充迁移（参照 059 模板），确保「功能权限」页面可见且矩阵行存在</li>
 <li><input disabled="" type="checkbox"> 前端新页面使用 <code>registerPage()</code>，并在 <code>index.html</code> 加 <code>?v=</code> 缓存戳</li>
 <li><input disabled="" type="checkbox"> 新增页面文案补齐三语 i18n</li>
-<li><input disabled="" type="checkbox"> 敏感接口在路由层校验角色</li>
+<li><input disabled="" type="checkbox"> 新业务流程在 <code>wf_process</code> 建 <code>business_type</code> 定义，并确认 <code>submitWorkflow()</code> 已调用</li>
+<li><input disabled="" type="checkbox"> 敏感接口在路由层校验角色 + 按钮权限双重约束</li>
+<li><input disabled="" type="checkbox"> AI 调用必须走 <code>utils/llmClient.js</code>（returnMeta 模式），禁止自行调用 LLM SDK</li>
+<li><input disabled="" type="checkbox"> 消息通知走 <code>services/notifier.js</code>，禁止在业务代码直接调 webhook / SMTP</li>
+<li><input disabled="" type="checkbox"> 指标计算走 <code>services/metricCenter.js</code>，禁止在各模块自行写 ROE 公式</li>
 <li><input disabled="" type="checkbox"> 改完跑 <code>node scripts/generate_docs_html.js</code> 同步文档</li>
-<li><input disabled="" type="checkbox"> 回归：登录、仪表板、三大报表、数据质量扫描、AI 问答</li>
+<li><input disabled="" type="checkbox"> 回归：<code>npm test</code>（Jest）+ 登录、仪表板、三大报表、费用报销、付款申请、审批中心、数据质量扫描、AI 治理驾驶舱</li>
+<li><input disabled="" type="checkbox"> 推 GitHub 触发 CI：等 <code>Actions</code> 绿了才能合入 main</li>
 <li><input disabled="" type="checkbox"> 提交并推送 GitHub</li>
 </ul>
 

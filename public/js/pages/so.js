@@ -98,6 +98,8 @@ async function loadPipeline() {
     } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
 }
 
+const SO_COLLECT_EN = { '已收款':'Collected','部分收款':'Partial','未收款':'Uncollected','未开票':'Not Invoiced' };
+const soCollectLabel = (v) => I18N.lang === 'en' ? (SO_COLLECT_EN[v] || v) : v;
 function pipeStatusBadge(status) {
     const map = {
         '已收款': ['#dcfce7', '#166534'],
@@ -106,7 +108,7 @@ function pipeStatusBadge(status) {
         '未开票': ['#e2e8f0', '#475569']
     };
     const [bg, fg] = map[status] || ['#e2e8f0', '#475569'];
-    return `<span style="padding:2px 8px;border-radius:10px;background:${bg};color:${fg};font-size:12px">${status}</span>`;
+    return `<span style="padding:2px 8px;border-radius:10px;background:${bg};color:${fg};font-size:12px">${soCollectLabel(status)}</span>`;
 }
 
 async function traceOrder(soNbr) {

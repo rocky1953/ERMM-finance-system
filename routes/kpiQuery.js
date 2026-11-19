@@ -1,13 +1,15 @@
 /**
  * 財務 KPI 查詢路由（YG001~YG004）
  *
- * 從 mgm_finance_summary 動態計算財務比率
- * 回傳格式：{ target, lower, upper, current, color, formula }
+ * CTO-06 改動：實際計算改調用 services/metricCenter.js，
+ * 確保與 consolidation / boardPack 口徑一致（例如 ROE/ROA 統一用淨利）。
+ * FORMULAS 常量保留作為前端顯示元數據備援（名稱/類別/方向）。
  */
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
+const metricCenter = require('../services/metricCenter');
 
 // ===== 公式庫（使用 mgm_finance_summary 現成欄位）=====
 // s = summary row, p = prev month row
@@ -362,20 +364,44 @@ router.get('/query', async (req, res) => {
         const p = prev.length ? toNum(prev[0]) : null;
         const results = {};
 
-        for (const [id, def] of Object.entries(FORMULAS)) {
+        // ===== CTO-06 統一：先從 metricCenter 批量計算 =====
+        // alias：FORMULAS key → cams_metric_def.metric_code（兩邊命名略有差異）
+        const MC_ALIAS = {
+            gross_profit: 'gross_margin',
+            net_profit_margin: 'net_margin',
+        };
+        const allIds = Object.keys(FORMULAS);
+        const mcIds = [...new Set(allIds.map(id => MC_ALIAS[id] || id))];
+        const mcResults = await metricCenter.computeBatch(mcIds, s, p);
+
+        for (const id of allIds) {
+            const mcCode = MC_ALIAS[id] || id;
             let val = null;
-            try {
-                val = def.f(s, p);
-                if (val !== null && val !== undefined && !isNaN(val) && isFinite(val)) {
-                    val = Math.round(val * 10000) / 10000;
-                } else {
-                    val = null;
-                }
-            } catch (e) { val = null; }
+            let mcDef = null;
+
+            if (mcResults[mcCode] && mcResults[mcCode].value !== null) {
+                // metricCenter 有 → 用統一口徑的值
+                val = mcResults[mcCode].value;
+                mcDef = mcResults[mcCode].def;
+            } else {
+                // metricCenter 沒有（Z模型衍生/巴萨利润/沃尔比重等）→ fallback 到舊公式
+                try {
+                    val = FORMULAS[id].f(s, p);
+                    if (val !== null && val !== undefined && !isNaN(val) && isFinite(val)) {
+                        val = Math.round(val * 10000) / 10000;
+                    } else val = null;
+                } catch (e) { val = null; }
+            }
+
             results[id] = {
-                id, name: def.name, category: def.cat,
+                id,
+                name: mcDef?.metric_name || FORMULAS[id].name,
+                category: FORMULAS[id].cat,
                 current_value: val,
-                KPI1: 0, KPI2: 0, unit: '', color: null
+                formula_desc: mcDef?.formula_desc || null,
+                pct_type: mcDef?.pct_type || null,
+                source: mcDef ? 'metric_center_v' + (mcDef.version || 1) : 'legacy_formula',
+                KPI1: 0, KPI2: 0, unit: mcDef?.unit || '', color: null
             };
         }
 
@@ -448,4 +474,54 @@ router.post('/calc', async (req, res) => {
     } catch (err) { fail500(res, err); }
 });
 
+// ===== 供財務預警掃描重用：計算指定公司/月份的 KPI 值與門檻 =====
+function toNumRow(o) {
+    const out = {};
+    for (const [k, v] of Object.entries(o)) {
+        out[k] = (typeof v === 'string' && /^\d/.test(v)) ? Number(v) : v;
+    }
+    return out;
+}
+
+async function computeKpis(bu_no, YYYY_MM) {
+    const [cur] = await pool.execute(
+        'SELECT * FROM mgm_finance_summary WHERE bu_no=? AND YYYY_MM=?', [bu_no, YYYY_MM]);
+    if (cur.length === 0) return null;
+    const [prev] = await pool.execute(
+        `SELECT * FROM mgm_finance_summary
+          WHERE bu_no=? AND YYYY_MM = DATE_FORMAT(DATE_SUB(STR_TO_DATE(?, '%Y-%m'), INTERVAL 1 MONTH), '%Y-%m')`,
+        [bu_no, YYYY_MM]);
+    const [kpis] = await pool.execute('SELECT * FROM mgm_kpi_desc WHERE bu_no=?', [bu_no]);
+    const kpiMap = {};
+    kpis.forEach(k => { kpiMap[k.KPI_id] = k; });
+
+    const s = toNumRow(cur[0]);
+    const p = prev.length ? toNumRow(prev[0]) : null;
+    const out = {};
+    for (const [id, def] of Object.entries(FORMULAS)) {
+        let val = null;
+        try {
+            val = def.f(s, p);
+            if (val !== null && val !== undefined && !isNaN(val) && isFinite(val)) {
+                val = Math.round(val * 10000) / 10000;
+            } else {
+                val = null;
+            }
+        } catch (e) { val = null; }
+        const k = kpiMap[id] || {};
+        out[id] = {
+            id,
+            name: k.KPI_name || def.name,
+            category: def.cat,
+            value: val,
+            kpi1: Number(k.KPI1 || 0),
+            kpi2: Number(k.KPI2 || 0),
+            unit: k.unit || '',
+            pct_type: k.pct_type || null
+        };
+    }
+    return out;
+}
+
 module.exports = router;
+module.exports.computeKpis = computeKpis;

@@ -16,6 +16,7 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { chatCompletion, getDefaultProvider } = require('../utils/llmClient');
+const { auditCall } = require('../services/llmAudit');
 
 // 公司→產業別映射（硬編碼，配合 industry_benchmark 表）
 const BU_INDUSTRY = { HM: '制造业', SZ: '制造业', HN: '批发零售业' };
@@ -31,13 +32,12 @@ router.post('/ask', async (req, res) => {
 
         // 勾選 LLM → 走 RAG + LLM 融合回答
         if (useLLM) {
-            const pvd = String(provider || '').toLowerCase();
-            let providerToUse = pvd;
-            if (!providerToUse) {
-                const defaultCfg = await getDefaultProvider(pool);
-                if (!defaultCfg) return fail(res, '尚未設定任何 LLM 服務商，請至「系統設定 → API Key 管理」');
-                providerToUse = defaultCfg.provider;
+            // 服務商一律取自「LLM 服務商管理」中標記為預設（is_default=1）且有 API Key 的那一家
+            const defaultCfg = await getDefaultProvider(pool);
+            if (!defaultCfg) {
+                return fail(res, '尚未設定任何 LLM 服務商，請至「系統設定 → LLM 服務商管理」新增並設為預設');
             }
+            const providerToUse = defaultCfg.provider;
 
             // === E2 多輪記憶 DB 持久化 ===
             // 前端可選傳 history；若沒傳且有 convId，後端自動從 DB 拉最近 5 輪
@@ -52,10 +52,17 @@ router.post('/ask', async (req, res) => {
             }
 
             try {
+                const auditCtx = {
+                    bu_no: bu,
+                    xuser_id: req.user?.user_id || 'unknown',
+                    xuser_name: req.user?.xuser_name || req.user?.user_id || '',
+                    ip_address: req.ip || null,
+                };
                 const result = await askLLMRAG(question, bu, mm, providerToUse, lang, {
                     conversation_id: convId,
                     useKnowledge: useKnowledge !== false,
-                    history: finalHistory
+                    history: finalHistory,
+                    auditCtx,
                 });
                 try {
                     await saveAIRecord({
@@ -70,6 +77,24 @@ router.post('/ask', async (req, res) => {
                 }
                 return ok(res, result);
             } catch (e) {
+                // 失敗也寫審計
+                auditCall({
+                    bu_no: bu,
+                    xuser_id: req.user?.user_id || 'unknown',
+                    xuser_name: req.user?.xuser_name || '',
+                    conversation_id: convId,
+                    provider: providerToUse,
+                    model: '',
+                    endpoint: 'aiqa',
+                    system_prompt: '',
+                    user_prompt: question,
+                    assistant_reply: '',
+                    prompt_tokens: 0, completion_tokens: 0, total_tokens: 0,
+                    latency_ms: 0, cost_usd: 0,
+                    status: e.name === 'AbortError' ? 'TIMEOUT' : 'FAIL',
+                    error_msg: String(e.message || '').slice(0, 500),
+                    ip_address: req.ip || null,
+                }).catch(() => {});
                 if (e.code === 'LLM_KEY_MISSING' || e.code === 'NO_FINANCE_DATA') return fail(res, e.message);
                 return fail500(res, e);
             }
@@ -814,16 +839,40 @@ async function askLLMRAG(question, bu_no, YYYY_MM, provider, lang, opts = {}) {
 
     const userPrompt = sections.join('\n\n' + '─'.repeat(40) + '\n\n');
 
-    // 4. 呼叫 LLM
+    // 4. 呼叫 LLM（returnMeta 模式：拿 token_usage + latency 給 audit）
     const messages = [
         { role: 'system', content: SYSTEM_PROMPTS[uiLang] },
         { role: 'user', content: userPrompt }
     ];
-    const content = await chatCompletion(
+    const t0 = Date.now();
+    const meta = await chatCompletion(
         { base_url: cfg.base_url, api_key: cfg.api_key, model: cfg.model },
         messages,
-        { temperature: 0.2, max_tokens: 3072, timeout: 90000 }
+        { temperature: 0.2, max_tokens: 3072, timeout: 90000, returnMeta: true }
     );
+    const content = meta.content;
+
+    // 4.5 寫入 AI 審計（fail-open：審計失敗不擋主流程）
+    const auditCtx = opts.auditCtx || {};
+    auditCall({
+        bu_no: auditCtx.bu_no || bu_no,
+        xuser_id: auditCtx.xuser_id || 'unknown',
+        xuser_name: auditCtx.xuser_name || '',
+        conversation_id: opts.conversation_id || null,
+        provider: cfg.provider,
+        model: cfg.model,
+        endpoint: 'aiqa',
+        system_prompt: SYSTEM_PROMPTS[uiLang],
+        user_prompt: question,
+        assistant_reply: content,
+        prompt_tokens: meta.prompt_tokens,
+        completion_tokens: meta.completion_tokens,
+        total_tokens: meta.total_tokens,
+        latency_ms: meta.latency_ms || (Date.now() - t0),
+        status: 'SUCCESS',
+        error_msg: null,
+        ip_address: auditCtx.ip_address || null,
+    }).catch(() => {});
 
     // 5. 組裝 detail 與 suggestion
     const flagMap = {

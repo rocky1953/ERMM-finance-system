@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "jest --forceExit --detectOpenHandles --testTimeout=15000"
+    "start": "node app.js",
+    "test": "jest --forceExit --detectOpenHandles --testTimeout=15000",
+    "test:cto": "jest --testPathPattern=cto --testTimeout=20000",
+    "test:coverage": "jest --coverage --forceExit --testTimeout=15000",
+    "lint": "node --check app.js"
   },
   "keywords": [],
   "author": "",

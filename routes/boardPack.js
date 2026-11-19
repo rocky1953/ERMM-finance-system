@@ -17,6 +17,7 @@ const PptxGenJS = require('pptxgenjs');
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { buildBoardPack } = require('../services/boardPack');
+const audit = require('../services/audit');
 
 const PDF_FONT = 'C:/Windows/Fonts/msyh.ttc';
 const PDF_FONT_BOLD = 'C:/Windows/Fonts/msyhbd.ttc';
@@ -80,6 +81,12 @@ router.post('/generate', async (req, res) => {
              VALUES (?,?,?,?,?,?)`,
             [pack.bu_no, pack.YYYY_MM, pack.period, title, JSON.stringify(pack.summary), req.user && req.user.user_id || null]
         );
+        audit.log(req, {
+            module: 'boardPack', action: 'CREATE', businessType: 'BOARD-PACK',
+            businessId: String(r.insertId),
+            summary: `生成董事会报告包 ${pack.bu_no} ${pack.YYYY_MM} ${pack.period === 'quarter' ? '季度' : '月度'} "${title}"`,
+            after: { uid: r.insertId, bu_no: pack.bu_no, YYYY_MM: pack.YYYY_MM, period: pack.period, title }
+        });
         ok(res, { uid: r.insertId, title, pack }, '报告包已生成');
     } catch (e) { fail500(res, e); }
 });
@@ -119,8 +126,16 @@ router.get('/history/:uid', async (req, res) => {
 
 router.delete('/history/:uid', async (req, res) => {
     try {
+        // 先查旧值
+        const [oldRows] = await pool.execute('SELECT * FROM board_pack WHERE uid=?', [req.params.uid]);
         const [r] = await pool.execute('DELETE FROM board_pack WHERE uid=?', [req.params.uid]);
         if (!r.affectedRows) return fail(res, '报告包记录不存在', 404);
+        audit.log(req, {
+            module: 'boardPack', action: 'DELETE', businessType: 'BOARD-PACK',
+            businessId: String(req.params.uid),
+            summary: `删除董事会报告包 id=${req.params.uid} ${oldRows[0]?.bu_no || ''} ${oldRows[0]?.YYYY_MM || ''} "${oldRows[0]?.title || ''}"`,
+            before: oldRows[0]
+        });
         ok(res, { uid: Number(req.params.uid) }, '已删除');
     } catch (e) { fail500(res, e); }
 });

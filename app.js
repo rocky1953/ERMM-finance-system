@@ -8,14 +8,27 @@ const cors = require('cors');
 const path = require('path');
 const { testConnection } = require('./config/db');
 const { authRequired } = require('./middleware/auth');
+const trace = require('./middleware/trace');
+const metrics = require('./middleware/metrics');
+const auditBare = require('./middleware/audit');
+const errorHandler = require('./middleware/error_handler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ======= CTO-04 可观测性中间件 =======
+// 顺序：trace（为每个请求生 traceId）→ metrics（采集接口指标）→ body json
+app.use(trace);
+app.use(metrics);
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// ======= CTO-03 兜底审计（写请求自动捕获） =======
+// 必须在所有路由之前（包括 auth），这样连登录登出都能被兜底覆盖
+app.use(auditBare);
 
 // 請求日誌
 app.use((req, res, next) => {
@@ -65,6 +78,7 @@ const cashMCRoutes = require('./routes/cashMonteCarlo');
 const diagnosisRoutes = require('./routes/diagnosis');
 const budgetRoutes = require('./routes/budget');
 const consolidationRoutes = require('./routes/consolidation');
+const fxRoutes = require('./routes/fx');
 const closingRoutes = require('./routes/closing');
 const prRequestRoutes = require('./routes/prRequest');
 const poGrnRoutes = require('./routes/poGrn');
@@ -72,6 +86,9 @@ const poMatchRoutes = require('./routes/poMatch');
 const receiptRoutes = require('./routes/receipt');
 const arMatchRoutes = require('./routes/arMatch');
 const permissionRoutes = require('./routes/permission');
+const metricCenterRoutes = require('./routes/metricCenter');
+const notifierRoutes = require('./routes/notifier');
+const contractRoutes = require('./routes/contracts');
 const mgmtAccountingRoutes = require('./routes/mgmtAccounting');
 const aiqaRoutes = require('./routes/aiqa');
 const dailySummaryRoutes = require('./routes/dailySummary');
@@ -79,10 +96,16 @@ const arSmartRoutes = require('./routes/arSmart');
 const dataQualityRoutes = require('./routes/dataQuality');
 const scenarioRoutes = require('./routes/scenario');
 const llmRoutes = require('./routes/llm');
+const llmAuditRoutes = require('./routes/llmAudit');
 const dailyReportRoutes = require('./routes/dailyReport');
 const financeRoutes = require('./routes/finance');
 const integrationRoutes = require('./routes/integration');
 const taxRoutes = require('./routes/tax');
+const taxPlanningRoutes = require('./routes/taxPlanning');
+const taxComplianceRoutes = require('./routes/taxCompliance');
+const strategyRoutes = require('./routes/strategy');
+const cashLiquidityRoutes = require('./routes/cashLiquidity');
+const investmentRoutes = require('./routes/investment');
 const warRoomRoutes = require('./routes/warRoom');
 const codesRoutes = require('./routes/codes');
 const workflowRoutes = require('./routes/workflow');
@@ -94,13 +117,18 @@ const rollingBudgetRoutes = require('./routes/rollingBudget');
 const inventoryTurnoverRoutes = require('./routes/inventoryTurnover');
 const boardPackRoutes = require('./routes/boardPack');
 const projectProfitRoutes = require('./routes/projectProfit');
-
+const hrEfficiencyRoutes = require('./routes/hrEfficiency');
+const monitorRoutes = require('./routes/monitor');
 // ======= 路由註冊 =======
 // 公開端點（不需登入）：登入 API
 app.use('/api/auth', authRoutes);
 
 // 其餘 /api/* 一律需通過 JWT 登入驗證（白名單：/api/health；測試環境自動放行）
 app.use('/api', authRequired);
+
+// 模組級權限守門：依 cams_module_permission 矩陣擋下無權限模組的 API 呼叫
+// （與前端導航隱藏互為表裡，防止直接呼叫端點繞過前端）
+app.use('/api', require('./middleware/moduleGuard'));
 
 app.use('/api/system', systemRoutes);
 app.use('/api/arap', arapRoutes);
@@ -144,6 +172,7 @@ app.use('/api/cash-forecast', cashMCRoutes);
 app.use('/api/diagnosis', diagnosisRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/consolidation', consolidationRoutes);
+app.use('/api/fx', fxRoutes);
 app.use('/api/closing', closingRoutes);
 app.use('/api/pr-request', prRequestRoutes);
 app.use('/api/po-grn', poGrnRoutes);
@@ -151,6 +180,9 @@ app.use('/api/po-match', poMatchRoutes);
 app.use('/api/receipt', receiptRoutes);
 app.use('/api/ar-match', arMatchRoutes);
 app.use('/api/permission', permissionRoutes);
+app.use('/api/metric-center', metricCenterRoutes);
+app.use('/api/notifier', notifierRoutes);
+app.use('/api/contracts', contractRoutes);
 app.use('/api/mgmt-accounting', mgmtAccountingRoutes);
 app.use('/api/aiqa', aiqaRoutes);
 app.use('/api/daily-summary', dailySummaryRoutes);
@@ -158,15 +190,25 @@ app.use('/api/ar-smart', arSmartRoutes);
 app.use('/api/data-quality', dataQualityRoutes);
 app.use('/api/scenario', scenarioRoutes);
 app.use('/api/llm', llmRoutes);
+app.use('/api/llm-audit', llmAuditRoutes);
 app.use('/api/daily-report', dailyReportRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/integration', integrationRoutes);
 app.use('/api/tax', taxRoutes);
+app.use('/api/tax-planning', taxPlanningRoutes);
+app.use('/api/tax-compliance', taxComplianceRoutes);
+app.use('/api/strategy', strategyRoutes);
+app.use('/api/cash-liquidity', cashLiquidityRoutes);
+app.use('/api/investment', investmentRoutes);
 app.use('/api/war-room', warRoomRoutes);
 app.use('/api/codes', codesRoutes);
 app.use('/api/workflow', workflowRoutes);
 app.use('/api/expense', expenseRoutes);
 app.use('/api/pay-request', payRequestRoutes);
+app.use('/api/hr-efficiency', hrEfficiencyRoutes);
+
+// ======= CTO-04 监控与备份（管理员权限由 monitor 路由内部 requireAdmin 管控） =======
+app.use('/api/monitor', monitorRoutes);
 
 // ======= API 健康檢查 =======
 app.get('/api/health', (req, res) => {
@@ -228,23 +270,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ======= 錯誤處理 =======
-app.use((err, req, res, next) => {
-    console.error('❌ Server Error:', err);
-    res.status(500).json({
-        success: false,
-        message: err.message || 'Internal Server Error',
-        timestamp: new Date().toISOString()
-    });
-});
-
 // 404
 app.use((req, res) => {
     res.status(404).json({
         success: false,
-        message: `Route not found: ${req.method} ${req.url}`
+        code: 'NOT_FOUND',
+        message: `Route not found: ${req.method} ${req.url}`,
+        traceId: req.traceId
     });
 });
+
+// ======= CTO-04 全局错误处理 =======
+app.use(errorHandler);
 
 // ======= 啟動 =======
 async function start() {

@@ -11,7 +11,7 @@ const EXPENSE_TYPES_FALLBACK = [
     { code_value: 'OTHER', value_description: '其他费用' }
 ];
 
-const EXP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const EXP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 function expEsc(v) {
     return String(v == null ? '' : v)
@@ -57,11 +57,13 @@ function expTypeLabel(code) {
 const ExpensePage = {
     tab: 'mine',
     rows: [],
+    advances: [],
 
     renderTabs() {
         const tabs = [
             ['mine', EXP_L('我的报销', '我的報銷', 'My Claims')],
-            ['todo', EXP_L('待我审批', '待我審批', 'My Approvals')]
+            ['todo', EXP_L('待我审批', '待我審批', 'My Approvals')],
+            ['advances', EXP_L('借支管理', '借支管理', 'Advances')]
         ];
         if (Auth.isAdmin() || Auth.isManager()) tabs.push(['all', EXP_L('全部报销', '全部報銷', 'All Claims')]);
         const el = document.getElementById('expTabs');
@@ -86,6 +88,11 @@ const ExpensePage = {
                 const res = await API.get('/api/workflow/pending?business_type=EXPENSE');
                 this.rows = res.data || [];
                 this.renderTodo();
+            } else if (this.tab === 'advances') {
+                const scope = (Auth.isAdmin() || Auth.isManager()) ? 'all' : 'mine';
+                const res = await API.get(`/api/expense/advances?scope=${scope}`);
+                this.advances = res.data || [];
+                this.renderAdvances();
             } else {
                 const scope = this.tab === 'all' ? 'all' : 'mine';
                 const res = await API.get(`/api/expense?scope=${scope}`);
@@ -179,6 +186,250 @@ const ExpensePage = {
                 </tr>`).join('')}
                 </tbody>
             </table></div>`;
+    },
+
+    advanceTypeLabel(code) {
+        return {
+            TRAVEL: EXP_L('差旅借支', '差旅借支', 'Travel Advance'),
+            GENERAL: EXP_L('一般借支', '一般借支', 'General Advance'),
+            PETTY: EXP_L('备用金', '備用金', 'Petty Cash')
+        }[code] || code || '-';
+    },
+
+    advanceStatusLabel(s) {
+        return {
+            DRAFT: EXP_L('草稿', '草稿', 'Draft'),
+            PENDING: EXP_L('审批中', '審批中', 'Pending'),
+            APPROVED: EXP_L('已通过', '已通過', 'Approved'),
+            PAID: EXP_L('已拨付', '已撥付', 'Paid'),
+            SETTLED: EXP_L('已结清', '已結清', 'Settled'),
+            REJECTED: EXP_L('已驳回', '已駁回', 'Rejected'),
+            CANCELLED: EXP_L('已撤回', '已撤回', 'Cancelled')
+        }[s] || s;
+    },
+
+    advanceStatusBadge(s) {
+        const cls = {
+            DRAFT: 'bg-info', PENDING: 'bg-warning', APPROVED: 'bg-success',
+            PAID: 'bg-success', SETTLED: 'bg-info', REJECTED: 'bg-danger', CANCELLED: 'bg-danger'
+        }[s] || 'bg-info';
+        return `<span class="badge ${cls}">${this.advanceStatusLabel(s)}</span>`;
+    },
+
+    renderAdvances() {
+        const el = document.getElementById('expList');
+        if (!el) return;
+        const showApplicant = (Auth.isAdmin() || Auth.isManager());
+        if (!this.advances.length) {
+            el.innerHTML = UI.empty('💳', EXP_L('暂无借支单', '暫無借支單', 'No advances'));
+            return;
+        }
+        const me = Auth.getUser()?.user_id;
+        const admin = Auth.isAdmin();
+        const mgr = Auth.isManager();
+        el.innerHTML = `
+            <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead><tr>
+                    <th>${EXP_L('单号', '單號', 'No.')}</th>
+                    <th>${EXP_L('事由', '事由', 'Title')}</th>
+                    <th>${EXP_L('类型', '類型', 'Type')}</th>
+                    ${showApplicant ? `<th>${EXP_L('申请人', '申請人', 'Applicant')}</th>` : ''}
+                    <th>${EXP_L('借支金额', '借支金額', 'Amount')}</th>
+                    <th>${EXP_L('已核销', '已核銷', 'Settled')}</th>
+                    <th>${EXP_L('未核销余额', '未核銷餘額', 'Balance')}</th>
+                    <th>${EXP_L('状态', '狀態', 'Status')}</th>
+                    <th>${EXP_L('预计报销日', '預計報銷日', 'Expected Return')}</th>
+                    <th>${EXP_L('操作', '操作', 'Actions')}</th>
+                </tr></thead>
+                <tbody>
+                ${this.advances.map(r => {
+                    const owner = String(r.applicant_id) === String(me);
+                    const acts = [`<button class="btn btn-ghost" onclick="ExpensePage.advanceDetail(${r.id})">${EXP_L('查看', '查看', 'View')}</button>`];
+                    if (owner && ['DRAFT', 'REJECTED'].includes(r.status)) {
+                        acts.push(`<button class="btn btn-ghost" onclick="ExpensePage.openAdvanceForm(${r.id})">${EXP_L('编辑', '編輯', 'Edit')}</button>`);
+                        acts.push(`<button class="btn btn-primary" onclick="ExpensePage.submitAdvance(${r.id})">${EXP_L('提交审批', '提交審批', 'Submit')}</button>`);
+                    }
+                    if (admin && r.status === 'APPROVED') {
+                        acts.push(`<button class="btn btn-primary" onclick="ExpensePage.payAdvance(${r.id})">${EXP_L('拨付', '撥付', 'Pay Out')}</button>`);
+                    }
+                    if ((admin || mgr) && ['PAID', 'SETTLED'].includes(r.status) && Number(r.balance) > 0) {
+                        acts.push(`<button class="btn btn-warning" onclick="ExpensePage.openSettleForm(${r.id}, ${r.balance})">${EXP_L('核销', '核銷', 'Settle')}</button>`);
+                    }
+                    return `<tr>
+                        <td style="white-space:nowrap;">${expEsc(r.advance_no || ('#' + r.id))}</td>
+                        <td>${expEsc(r.title)}</td>
+                        <td>${expEsc(this.advanceTypeLabel(r.advance_type))}</td>
+                        ${showApplicant ? `<td>${expEsc(r.applicant_name || r.applicant_id)}</td>` : ''}
+                        <td style="text-align:right;white-space:nowrap;">${UI.fmt(r.amount)}</td>
+                        <td style="text-align:right;white-space:nowrap;">${UI.fmt(r.settled_amount)}</td>
+                        <td style="text-align:right;white-space:nowrap;color:${Number(r.balance) > 0 ? '#e67e22' : '#27ae60'};">${UI.fmt(r.balance)}</td>
+                        <td>${this.advanceStatusBadge(r.status)}</td>
+                        <td style="white-space:nowrap;">${expEsc(r.expected_return_date ? String(r.expected_return_date).substring(0, 10) : '-')}</td>
+                        <td style="white-space:nowrap;">${acts.join(' ')}</td>
+                    </tr>`;
+                }).join('')}
+                </tbody>
+            </table></div>`;
+    },
+
+    async openAdvanceForm(id) {
+        let adv = null;
+        try {
+            if (id) {
+                const res = await API.get(`/api/expense/advances/${id}`);
+                adv = res.data;
+            }
+        } catch (e) { UI.toast(e.message, 'error'); return; }
+
+        const buOpts = await CodeHelper.buSel({ selected: adv?.bu_no || State.bu_no });
+        const typeOpts = ['TRAVEL', 'GENERAL', 'PETTY'].map(c =>
+            `<option value="${c}" ${adv?.advance_type === c ? 'selected' : ''}>${this.advanceTypeLabel(c)}</option>`
+        ).join('');
+        UI.modal(id ? EXP_L('编辑借支单', '編輯借支單', 'Edit Advance') : EXP_L('新建借支单', '新增借支單', 'New Advance'), `
+            <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div><label>${EXP_L('借支事由', '借支事由', 'Title')} *</label>
+                    <input id="advTitle" value="${expEsc(adv?.title || '')}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+                <div><label>${EXP_L('借支类型', '借支類型', 'Type')}</label>
+                    <select id="advType" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">${typeOpts}</select></div>
+                <div><label>${EXP_L('公司', '公司', 'Company')}</label>
+                    <select id="advBU" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">${buOpts}</select></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div><label>${EXP_L('借支金额', '借支金額', 'Amount')} *</label>
+                    <input id="advAmount" type="number" step="0.01" min="0" value="${adv?.amount != null ? adv.amount : ''}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;text-align:right;"></div>
+                <div><label>${EXP_L('预计报销/归还日', '預計報銷/歸還日', 'Expected Return')}</label>
+                    <input id="advReturn" type="date" value="${expEsc(adv?.expected_return_date ? String(adv.expected_return_date).substring(0, 10) : '')}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+            </div>
+            <div><label>${EXP_L('备注', '備註', 'Remark')}</label>
+                <input id="advRemark" value="${expEsc(adv?.remark || '')}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+        `, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('cancel')}</button>
+            <button class="btn btn-ghost" onclick="ExpensePage.saveAdvance(${id || 0}, false)">${EXP_L('保存草稿', '儲存草稿', 'Save Draft')}</button>
+            <button class="btn btn-primary" onclick="ExpensePage.saveAdvance(${id || 0}, true)">${EXP_L('保存并提交', '儲存並提交', 'Save & Submit')}</button>`);
+    },
+
+    async saveAdvance(id, submit) {
+        const payload = {
+            title: document.getElementById('advTitle')?.value.trim(),
+            advance_type: document.getElementById('advType')?.value,
+            bu_no: document.getElementById('advBU')?.value,
+            amount: Number(document.getElementById('advAmount')?.value) || 0,
+            expected_return_date: document.getElementById('advReturn')?.value || null,
+            remark: document.getElementById('advRemark')?.value || ''
+        };
+        if (!payload.title) { UI.toast(EXP_L('请填写借支事由', '請填寫借支事由', 'Title is required'), 'error'); return; }
+        if (!(payload.amount > 0)) { UI.toast(EXP_L('借支金额必须大于 0', '借支金額必須大於 0', 'Amount must be > 0'), 'error'); return; }
+        try {
+            let id2 = id;
+            if (id) await API.put(`/api/expense/advances/${id}`, payload);
+            else {
+                const res = await API.post('/api/expense/advances', payload);
+                id2 = res.data.id;
+            }
+            if (submit) {
+                await API.post(`/api/expense/advances/${id2}/submit`);
+                UI.toast(EXP_L('已提交审批', '已提交審批', 'Submitted'), 'success');
+            } else {
+                UI.toast(EXP_L('草稿已保存', '草稿已儲存', 'Draft saved'), 'success');
+            }
+            UI.closeModal();
+            this.tab = 'advances';
+            this.load();
+        } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    async submitAdvance(id) {
+        if (!confirm(EXP_L('确认提交审批？', '確認提交審批？', 'Submit for approval?'))) return;
+        try {
+            const res = await API.post(`/api/expense/advances/${id}/submit`);
+            UI.toast(res.message || EXP_L('已提交审批', '已提交審批', 'Submitted'), 'success');
+            this.load();
+        } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    async payAdvance(id) {
+        if (!confirm(EXP_L('确认已拨付该借支？', '確認已撥付該借支？', 'Confirm advance paid out?'))) return;
+        try {
+            await API.post(`/api/expense/advances/${id}/pay`);
+            UI.toast(EXP_L('已拨付', '已撥付', 'Paid out'), 'success');
+            this.load();
+        } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    async advanceDetail(id) {
+        try {
+            const res = await API.get(`/api/expense/advances/${id}`);
+            const a = res.data;
+            const settles = (a.settles || []).map(s => `<tr>
+                <td>${expEsc(s.settle_date ? String(s.settle_date).substring(0, 10) : '-')}</td>
+                <td>${expEsc(s.report_no || (s.report_id ? '#' + s.report_id : '-'))}</td>
+                <td style="text-align:right;">${UI.fmt(s.settle_amount)}</td>
+                <td>${expEsc(s.operator_id || '-')}</td>
+                <td>${expEsc(s.note || '')}</td>
+            </tr>`).join('');
+            const admin = Auth.isAdmin();
+            const mgr = Auth.isManager();
+            let footer = `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('cancel')}</button>`;
+            if (admin && a.status === 'APPROVED') {
+                footer += `<button class="btn btn-primary" onclick="UI.closeModal();ExpensePage.payAdvance(${a.id})">${EXP_L('拨付', '撥付', 'Pay Out')}</button>`;
+            }
+            if ((admin || mgr) && ['PAID', 'SETTLED'].includes(a.status) && Number(a.balance) > 0) {
+                footer += `<button class="btn btn-warning" onclick="UI.closeModal();ExpensePage.openSettleForm(${a.id}, ${a.balance})">${EXP_L('核销', '核銷', 'Settle')}</button>`;
+            }
+            UI.modal(`${expEsc(a.advance_no || ('#' + a.id))} ${this.advanceStatusBadge(a.status)}`, `
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;font-size:0.9em;margin-bottom:12px;">
+                    <div><b>${EXP_L('事由', '事由', 'Title')}：</b>${expEsc(a.title)}</div>
+                    <div><b>${EXP_L('申请人', '申請人', 'Applicant')}：</b>${expEsc(a.applicant_name || a.applicant_id)}</div>
+                    <div><b>${EXP_L('类型', '類型', 'Type')}：</b>${expEsc(this.advanceTypeLabel(a.advance_type))}</div>
+                    <div><b>${EXP_L('公司', '公司', 'Company')}：</b>${expEsc(a.bu_no || '-')}</div>
+                    <div><b>${EXP_L('借支金额', '借支金額', 'Amount')}：</b>${UI.fmt(a.amount)}</div>
+                    <div><b>${EXP_L('已核销', '已核銷', 'Settled')}：</b>${UI.fmt(a.settled_amount)}</div>
+                    <div><b>${EXP_L('未核销余额', '未核銷餘額', 'Balance')}：</b>${UI.fmt(a.balance)}</div>
+                    <div><b>${EXP_L('预计报销日', '預計報銷日', 'Expected Return')}：</b>${expEsc(a.expected_return_date ? String(a.expected_return_date).substring(0, 10) : '-')}</div>
+                    <div><b>${EXP_L('备注', '備註', 'Remark')}：</b>${expEsc(a.remark || '-')}</div>
+                </div>
+                <h4 style="margin:8px 0;">${EXP_L('核销记录', '核銷記錄', 'Settlement History')}</h4>
+                <table class="data-table">
+                    <thead><tr><th>${EXP_L('日期', '日期', 'Date')}</th><th>${EXP_L('报销单', '報銷單', 'Claim')}</th>
+                        <th>${EXP_L('核销金额', '核銷金額', 'Settled')}</th><th>${EXP_L('操作人', '操作人', 'Operator')}</th><th>${EXP_L('说明', '說明', 'Note')}</th></tr></thead>
+                    <tbody>${settles || `<tr><td colspan="5" style="text-align:center;">${t('no_data')}</td></tr>`}</tbody>
+                </table>
+            `, footer);
+        } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    openSettleForm(id, balance) {
+        UI.modal(EXP_L('借支核销', '借支核銷', 'Settle Advance'), `
+            <div style="margin-bottom:10px;"><label>${EXP_L('核销金额', '核銷金額', 'Settle Amount')} *</label>
+                <input id="stlAmount" type="number" step="0.01" min="0" max="${balance}" value="${balance}"
+                    style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;text-align:right;">
+                <small style="color:#7f8c8d;">${EXP_L('未核销余额', '未核銷餘額', 'Balance')}：${UI.fmt(balance)}</small></div>
+            <div style="margin-bottom:10px;"><label>${EXP_L('核销日期', '核銷日期', 'Settle Date')}</label>
+                <input id="stlDate" type="date" value="${expToday()}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+            <div style="margin-bottom:10px;"><label>${EXP_L('关联报销单 ID（可选）', '關聯報銷單 ID（可選）', 'Linked Claim ID (optional)')}</label>
+                <input id="stlReport" type="number" min="1" placeholder="${EXP_L('报销单 ID', '報銷單 ID', 'Claim ID')}"
+                    style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+            <div><label>${EXP_L('说明', '說明', 'Note')}</label>
+                <input id="stlNote" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;"></div>
+        `, `<button class="btn btn-ghost" onclick="UI.closeModal()">${t('cancel')}</button>
+            <button class="btn btn-primary" onclick="ExpensePage.saveSettle(${id})">${EXP_L('确认核销', '確認核銷', 'Confirm')}</button>`);
+    },
+
+    async saveSettle(id) {
+        const amount = Number(document.getElementById('stlAmount')?.value) || 0;
+        if (!(amount > 0)) { UI.toast(EXP_L('核销金额必须大于 0', '核銷金額必須大於 0', 'Amount must be > 0'), 'error'); return; }
+        const reportId = document.getElementById('stlReport')?.value;
+        try {
+            const res = await API.post(`/api/expense/advances/${id}/settle`, {
+                amount,
+                settle_date: document.getElementById('stlDate')?.value || null,
+                report_id: reportId ? Number(reportId) : null,
+                note: document.getElementById('stlNote')?.value || ''
+            });
+            UI.toast(res.message || EXP_L('已核销', '已核銷', 'Settled'), 'success');
+            UI.closeModal();
+            this.load();
+        } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async detail(id, taskId) {
@@ -434,6 +685,7 @@ registerPage('expense', async (c) => {
             </h2>
             <div class="spacer"></div>
             <button class="btn btn-primary" onclick="ExpensePage.openForm()">＋ ${EXP_L('新建报销', '新增報銷', 'New Claim')}</button>
+            <button class="btn btn-ghost" onclick="ExpensePage.openAdvanceForm()">＋ ${EXP_L('新建借支', '新增借支', 'New Advance')}</button>
             <button class="btn btn-ghost" onclick="ExpensePage.load()">${t('refresh')}</button>
         </div>
         <div class="tabs" id="expTabs"></div>

@@ -1,0 +1,10 @@
+* text=auto
+
+# 服务器 Shell 脚本必须使用 LF，否则 Ubuntu 上会报 /usr/bin/env: 'bash\r'
+*.sh text eol=lf
+git-hooks/* text eol=lf
+scripts/git-hooks/* text eol=lf
+deploy.sh text eol=lf
+
+*.bat text eol=crlf
+*.sql text eol=lf

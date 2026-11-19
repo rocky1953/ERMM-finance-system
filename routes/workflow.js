@@ -9,7 +9,9 @@ const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { requireAdmin } = require('../middleware/auth');
 const { actOnTask, cancelWorkflow } = require('../services/workflow');
+const audit = require('../services/audit');
 
+const { perms, readScope } = require('../middleware/perms');
 const APPROVER_TYPES = ['dept_manager', 'admin', 'user'];
 
 // 待我审批
@@ -104,6 +106,12 @@ router.put('/processes/:id', requireAdmin, async (req, res) => {
             'UPDATE wf_process SET proc_name=?, steps_json=?, enabled=? WHERE id=?',
             [proc_name, JSON.stringify(clean), enabled ? 1 : 0, req.params.id]
         );
+        audit.log(req, {
+            module: 'workflow', action: 'UPDATE', businessType: 'WF-PROCESS',
+            businessId: req.params.id,
+            summary: `更新流程定义 ID${req.params.id} 名称「${proc_name}」${clean.length} 步骤 enabled=${!!enabled}`,
+            after: { proc_name, steps_count: clean.length, enabled: !!enabled }
+        });
         ok(res, null, '流程已更新');
     } catch (err) {
         if (err.message && err.message.includes('指定人员')) return fail(res, err.message, 400);
@@ -157,6 +165,12 @@ router.post('/tasks/:id/action', async (req, res) => {
             action,
             comment: req.body.comment
         });
+        audit.log(req, {
+            module: 'workflow', action: action === 'approve' ? 'APPROVE' : 'REJECT', businessType: 'WF-TASK',
+            businessId: `${result.task_id || req.params.id}-${result.instance_id || ''}`,
+            summary: `${action === 'approve' ? '审批通过' : '驳回'}任务 ID${req.params.id} 实例 ${result.instance_id || ''}`,
+            after: result
+        });
         ok(res, result, action === 'approve' ? '已通过' : '已驳回');
     } catch (err) {
         if (['FORBIDDEN', 'NOT_FOUND', 'WF_DONE', 'WF_NO_APPROVER'].includes(err.code)) {
@@ -170,6 +184,12 @@ router.post('/tasks/:id/action', async (req, res) => {
 router.post('/instances/:id/cancel', async (req, res) => {
     try {
         const result = await cancelWorkflow({ instanceId: req.params.id, userId: req.user.user_id });
+        audit.log(req, {
+            module: 'workflow', action: 'CANCEL', businessType: 'WF-CANCEL',
+            businessId: req.params.id,
+            summary: `撤回审批实例 ${req.params.id}`,
+            after: result
+        });
         ok(res, result, '已撤回');
     } catch (err) {
         if (['FORBIDDEN', 'NOT_FOUND', 'WF_DONE'].includes(err.code)) {

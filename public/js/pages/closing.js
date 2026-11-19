@@ -1,4 +1,4 @@
-﻿﻿﻿﻿/**
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
  * 关账页面：日历 + 任务清单 + 抵消分录 + 折算汇率
  */
 const ClosingPage = {
@@ -9,10 +9,9 @@ const ClosingPage = {
         const el = document.getElementById('pageContent');
         if (!el) return;
         if (!Auth.isLoggedIn()) { Auth.showLogin(); return; }
-        // 默认取最新可用月份
+        // 默认依「画面最上方」全局年月
         if (!this.YYYY_MM) {
-            const res = await API.get('/api/consolidation/income?YYYY_MM=2025-12').catch(() => null);
-            this.YYYY_MM = '2025-12';
+            this.YYYY_MM = State.YYYY_MM;
         }
         this.renderTabs();
         try {
@@ -187,8 +186,7 @@ const ClosingPage = {
             <table class="data-table">
                 <thead><tr>
                     <th>${APP_L('发起方', '發起方', 'From')}</th><th>${APP_L('接收方', '接收方', 'To')}</th>
-                    <th>${APP_L('类型', '類型', 'Type')}</th><th>${APP_L('金额', '金額', 'Amount')}</th>
-                    <th>${APP_L('汇率', '匯率', 'Rate')}</th><th>${APP_L('新台币', '新台幣', 'TWD')}</th>
+                    <th>${APP_L('类型', '類型', 'Type')}</th><th>${APP_L('金额（RMB）', '金額（RMB）', 'Amount (RMB)')}</th>
                     <th>${APP_L('来源', '來源', 'Source')}</th><th>${APP_L('状态', '狀態', 'Status')}</th>
                     <th>${APP_L('操作', '操作', 'Actions')}</th>
                 </tr></thead>
@@ -197,9 +195,7 @@ const ClosingPage = {
                         <td>${appEsc(r.bu_no_from)}</td>
                         <td>${appEsc(r.bu_no_to)}</td>
                         <td>${appEsc(r.entry_type)}</td>
-                        <td style="text-align:right;">${UI.fmt(r.amount)} ${appEsc(r.currency)}</td>
-                        <td>${r.rate_to_twd}</td>
-                        <td style="text-align:right;">${UI.fmt(r.amount_twd)}</td>
+                        <td style="text-align:right;">${UI.fmt(r.amount)}</td>
                         <td>${r.source==='AUTO_INTERNAL_SALE'?'🔄':'✏️'}</td>
                         <td>${r.is_confirmed?'<span class="badge bg-success">'+APP_L('已确认','已確認','Confirmed')+'</span>':'<span class="badge bg-warning">'+APP_L('待确认','待確認','Pending')+'</span>'}</td>
                         <td>
@@ -207,7 +203,7 @@ const ClosingPage = {
                             ${!r.is_confirmed?`<button class="btn btn-ghost" onclick="ClosingPage.confirmElim(${r.id})">${APP_L('确认','確認','Confirm')}</button>`:''}
                             <button class="btn btn-danger" onclick="ClosingPage.delElim(${r.id})">${APP_L('删除','刪除','Del')}</button>
                         </td>
-                    </tr>`).join('') : `<tr><td colspan="9" style="text-align:center;color:#999;padding:20px;">${APP_L('暂无抵消分录', '暫無抵消分錄', 'No entries yet')}</td></tr>`}
+                    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">${APP_L('暂无抵消分录', '暫無抵消分錄', 'No entries yet')}</td></tr>`}
                 </tbody>
             </table></div>
         `;
@@ -223,7 +219,7 @@ const ClosingPage = {
 
     async openElimForm(id) {
         const appEsc = (s) => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-        let d = { YYYY_MM: this.YYYY_MM, bu_no_from: 'HM', bu_no_to: 'HN', entry_type: 'SALE', amount: 0, currency: 'TWD', rate_to_twd: 1, is_confirmed: false, remark: '' };
+        let d = { YYYY_MM: this.YYYY_MM, bu_no_from: 'HM', bu_no_to: 'HN', entry_type: 'SALE', amount: 0, currency: 'RMB', is_confirmed: false, remark: '' };
         if (id) {
             // 简单读取列表中数据（也可调用详情）
             const res = await API.get(`/api/closing/elimination?YYYY_MM=${this.YYYY_MM}`);
@@ -237,9 +233,7 @@ const ClosingPage = {
                 <div><label>${APP_L('发起方', '發起方', 'From')}</label><select class="form-input" id="f_from">${['HM','HN','SZ'].map(v=>`<option ${d.bu_no_from===v?'selected':''}>${v}</option>`).join('')}</select></div>
                 <div><label>${APP_L('接收方', '接收方', 'To')}</label><select class="form-input" id="f_to">${['HM','HN','SZ'].map(v=>`<option ${d.bu_no_to===v?'selected':''}>${v}</option>`).join('')}</select></div>
                 <div><label>${APP_L('类型', '類型', 'Type')}</label><select class="form-input" id="f_type">${['SALE','AR','AP','LOAN','DIVIDEND','OTHER'].map(v=>`<option ${d.entry_type===v?'selected':''}>${v}</option>`).join('')}</select></div>
-                <div><label>${APP_L('金额', '金額', 'Amount')}</label><input type="number" step="0.01" class="form-input" id="f_amt" value="${d.amount}"></div>
-                <div><label>${APP_L('币种', '幣種', 'Currency')}</label><select class="form-input" id="f_cur">${['TWD','USD','RMB','EUR','HKD','JPY'].map(v=>`<option ${d.currency===v?'selected':''}>${v}</option>`).join('')}</select></div>
-                <div><label>${APP_L('汇率', '匯率', 'Rate')}</label><input type="number" step="0.000001" class="form-input" id="f_rate" value="${d.rate_to_twd || 1}"></div>
+                <div><label>${APP_L('金额（RMB）', '金額（RMB）', 'Amount (RMB)')}</label><input type="number" step="0.01" class="form-input" id="f_amt" value="${d.amount}"></div>
                 <div class="col-2"><label>${APP_L('备注', '備註', 'Remark')}</label><input class="form-input" id="f_remark" value="${appEsc(d.remark||'')}"></div>
                 <div><label><input type="checkbox" id="f_conf" ${d.is_confirmed?'checked':''}> ${APP_L('确认生效', '確認生效', 'Confirm')}</label></div>
             </div>
@@ -254,7 +248,6 @@ const ClosingPage = {
         const body = {
             YYYY_MM: f('#f_ym'), bu_no_from: f('#f_from'), bu_no_to: f('#f_to'),
             entry_type: f('#f_type'), amount: Number(f('#f_amt')) || 0,
-            currency: f('#f_cur'), rate_to_twd: Number(f('#f_rate')) || 1,
             remark: f('#f_remark'), is_confirmed: document.querySelector('#f_conf').checked
         };
         try {

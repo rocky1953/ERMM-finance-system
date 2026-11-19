@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ERMM 财务模组管理系统</title>
-<link rel="stylesheet" href="/css/style.css?v=20261113badge">
+<link rel="stylesheet" href="/css/style.css?v=20261120i">
 <script src="/vendor/chart.umd.min.js"></script>
 </head>
 <body class="locked">
@@ -33,7 +33,7 @@
 
 <!-- 侧边栏 -->
 <aside id="sidebar">
-    <div class="logo" onclick="SystemMap.open()" title="点击查看系统架构图"
+    <div class="logo" id="appLogo" onclick="SystemMap.open()" title="点击查看系统架构图"
          role="button" tabindex="0"
          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();SystemMap.open();}">
         <h2>🏢 ERMM</h2>
@@ -71,6 +71,24 @@
         <div class="nav-item" data-page="consolidation" onclick="navigate('consolidation')">
             <span class="nav-icon">📋</span><span data-i18n="nav.consolidation">合并报表</span>
         </div>
+        <div class="nav-item" data-page="fxExposure" onclick="navigate('fxExposure')">
+            <span class="nav-icon">🌐</span><span data-i18n="nav.fxExposure">汇率敞口/对冲</span>
+        </div>
+        <div class="nav-item" data-page="taxPlanning" onclick="navigate('taxPlanning')">
+            <span class="nav-icon">🧮</span><span data-i18n="nav.taxPlanning">税务筹划/风险</span>
+        </div>
+        <div class="nav-item" data-page="taxCompliance" onclick="navigate('taxCompliance')">
+            <span class="nav-icon">🛡️</span><span data-i18n="nav.taxCompliance">税务与合规管理</span>
+        </div>
+        <div class="nav-item" data-page="strategy" onclick="navigate('strategy')">
+            <span class="nav-icon">🧭</span><span data-i18n="nav.strategy">战略目标/平衡计分卡</span>
+        </div>
+        <div class="nav-item" data-page="investment" onclick="navigate('investment')">
+            <span class="nav-icon">📈</span><span data-i18n="nav.investment">投资与资本配置</span>
+        </div>
+        <div class="nav-item" data-page="cashLiquidity" onclick="navigate('cashLiquidity')">
+            <span class="nav-icon">💰</span><span data-i18n="nav.cashLiquidity">资金与流动性管理</span>
+        </div>
         <div class="nav-item" data-page="aiqa" onclick="navigate('aiqa')">
             <span class="nav-icon">🤖</span><span data-i18n="nav.aiqa">AI 问答</span>
         </div>
@@ -85,6 +103,9 @@
         </div>
         <div class="nav-item" data-page="projectProfit" onclick="navigate('projectProfit')">
             <span class="nav-icon">🧾</span><span data-i18n="nav.projectProfit">项目损益</span>
+        </div>
+        <div class="nav-item" data-page="hrEfficiency" onclick="navigate('hrEfficiency')">
+            <span class="nav-icon">👥</span><span data-i18n="nav.hrEfficiency">组织人效分析</span>
         </div>
         <div class="nav-item" data-page="benchmark" onclick="navigate('benchmark')">
             <span class="nav-icon">📊</span><span data-i18n="nav.benchmark">同业标杆</span>
@@ -167,6 +188,12 @@
         </div>
         <div class="nav-item" data-page="codeTable" onclick="navigate('codeTable')">
             <span class="nav-icon">📚</span><span data-i18n="nav.codeTable">系统码表管理</span>
+        </div>
+        <div class="nav-item" data-page="audit" onclick="navigate('audit')">
+            <span class="nav-icon">🔍</span><span data-i18n="nav.audit">操作审计</span>
+        </div>
+        <div class="nav-item" data-page="llmAudit" onclick="navigate('llmAudit')">
+            <span class="nav-icon">🤖</span><span data-i18n="nav.llmAudit">AI 治理</span>
         </div>
         <div class="nav-item" data-page="dailyReport" onclick="navigate('dailyReport')">
             <span class="nav-icon">📝</span><span data-i18n="nav.dailyReport">工作日报表</span>
@@ -252,6 +279,9 @@
         <div class="nav-item" data-page="relation" onclick="navigate('relation')">
             <span class="nav-icon">👥</span><span data-i18n="nav.relation">往来对象</span>
         </div>
+        <div class="nav-item" data-page="contracts" onclick="navigate('contracts')">
+            <span class="nav-icon">📝</span><span data-i18n="nav.contracts">合同主檔</span>
+        </div>
     </div>
 
     <div class="nav-group">
@@ -312,70 +342,80 @@
 <!-- Toast -->
 <div id="toast"></div>
 
-<script src="/js/i18n.js?v=20261114nav1"></script>
-<script src="/js/app.js?v=20261114perm"></script>
-<script src="/js/pages/systemMap.js?v=20261025d"></script>
-<script src="/js/pages/dashboard.js?v=20261114diag"></script>
-<script src="/js/pages/po.js?v=20261110sup"></script>
-<script src="/js/pages/so.js?v=20261113coo3"></script>
-<script src="/js/pages/preorder.js?v=20261109range"></script>
+<script src="/js/i18n.js?v=20261120i"></script>
+<script src="/js/app.js?v=20261120i"></script>
+<script src="/js/pages/systemMap.js?v=20261120i"></script>
+<script src="/js/pages/dashboard.js?v=20261120i"></script>
+<script src="/js/pages/po.js?v=20261120i"></script>
+<script src="/js/pages/so.js?v=20261120i"></script>
+<script src="/js/pages/preorder.js?v=20261120i"></script>
 <script src="/js/pages/cash.js"></script>
 <script src="/js/pages/invoice.js"></script>
 <script src="/js/pages/pay.js"></script>
-<script src="/js/pages/check.js"></script>
-<script src="/js/pages/bank.js?v=20261113cfo9"></script>
-<script src="/js/pages/arap.js?v=20261113cfo7"></script>
-<script src="/js/pages/arSmart.js?v=20261105d"></script>
-<script src="/js/pages/dataQuality.js?v=20261110fix2"></script>
-<script src="/js/pages/codeTable.js?v=20261112del"></script>
+<script src="/js/pages/check.js?v=20261120i"></script>
+<script src="/js/pages/bank.js?v=20261120i"></script>
+<script src="/js/pages/arap.js?v=20261120i"></script>
+<script src="/js/pages/arSmart.js?v=20261120i"></script>
+<script src="/js/pages/dataQuality.js?v=20261120i"></script>
+<script src="/js/pages/codeTable.js?v=20261120i"></script>
+<script src="/js/pages/audit.js?v=20261120i"></script>
+<script src="/js/pages/llmAudit.js?v=20261120i"></script>
 <script src="/js/pages/summary.js"></script>
-<script src="/js/pages/report.js?v=20261107bs"></script>
-<script src="/js/pages/risk.js?v=20261114diag"></script>
+<script src="/js/pages/report.js?v=20261120i"></script>
+<script src="/js/pages/risk.js?v=20261120i"></script>
 <script src="/js/pages/forecast.js"></script>
-<script src="/js/pages/trend.js"></script>
-<script src="/js/pages/batch.js"></script>
-<script src="/js/pages/system.js?v=20261111bu"></script>
-<script src="/js/pages/kpi.js?v=20261111bu"></script>
-<script src="/js/pages/branch.js?v=20261111bu"></script>
-<script src="/js/pages/relation.js?v=20261111relt"></script>
-<script src="/js/pages/monthly.js?v=20261111bu"></script>
-<script src="/js/pages/account.js?v=20261111bu"></script>
-<script src="/js/pages/finance.js?v=20261111bu"></script>
-<script src="/js/pages/dn.js?v=20261111bu"></script>
-<script src="/js/pages/user.js?v=20261114logins2"></script>
-<script src="/js/pages/tempPo.js?v=20261111bu"></script>
-<script src="/js/pages/xitems.js?v=20261111bu"></script>
-<script src="/js/pages/kpiQuery.js?v=20261111bu"></script>
-<script src="/js/pages/benchmark.js"></script>
-<script src="/js/pages/bep.js?v=20261111bu"></script>
-<script src="/js/pages/actions.js?v=20261111act"></script>
-<script src="/js/pages/expense.js?v=20261113wf2"></script>
-<script src="/js/pages/payRequest.js?v=20261114bu"></script>
-<script src="/js/pages/closing.js?v=20261113close1"></script>
-<script src="/js/pages/prRequest.js?v=20261114bu"></script>
-<script src="/js/pages/poMatch.js?v=20261114grnbu"></script>
-<script src="/js/pages/salesCredit.js?v=20261113coo3"></script>
-<script src="/js/pages/arMatch.js?v=20261113ar1"></script>
-<script src="/js/pages/permission.js?v=20261114perm"></script>
-<script src="/js/pages/approvals.js?v=20261113wf2"></script>
-<script src="/js/pages/alerts.js"></script>
-<script src="/js/pages/drilldown.js?v=20261111bu"></script>
-<script src="/js/pages/cashForecast.js?v=20261111bu"></script>
-<script src="/js/pages/mgmtAccounting.js?v=20261111bu"></script>
-<script src="/js/pages/profitAnalysis.js?v=20261113cfo6c"></script>
-<script src="/js/pages/budget.js?v=20261111bu"></script>
-<script src="/js/pages/rollingBudget.js?v=20261113cfo5"></script>
-<script src="/js/pages/inventoryTurnover.js?v=20261113coo5"></script>
-<script src="/js/pages/consolidation.js"></script>
-<script src="/js/pages/aiqa.js?v=20261113ai2"></script>
-<script src="/js/pages/scenario.js?v=20261111bu"></script>
-<script src="/js/pages/dailyReport.js?v=20261113globalym"></script>
-<script src="/js/pages/dailyReportUnfinished.js?v=20261113sync2"></script>
-<script src="/js/pages/integration.js?v=20261112sql1"></script>
-<script src="/js/pages/tax.js?v=20261112rate"></script>
-<script src="/js/pages/warRoom.js?v=20261114en"></script>
-<script src="/js/pages/boardPack.js?v=20261114bp"></script>
-<script src="/js/pages/projectProfit.js?v=20261114pg"></script>
+<script src="/js/pages/trend.js?v=20261120i"></script>
+<script src="/js/pages/batch.js?v=20261120i"></script>
+<script src="/js/pages/system.js?v=20261120i"></script>
+<script src="/js/pages/kpi.js?v=20261120i"></script>
+<script src="/js/pages/branch.js?v=20261120i"></script>
+<script src="/js/pages/relation.js?v=20261120i"></script>
+<script src="/js/pages/monthly.js?v=20261120i"></script>
+<script src="/js/pages/account.js?v=20261120i"></script>
+<script src="/js/pages/finance.js?v=20261120i"></script>
+<script src="/js/pages/dn.js?v=20261120i"></script>
+<script src="/js/pages/user.js?v=20261120i"></script>
+<script src="/js/pages/tempPo.js?v=20261120i"></script>
+<script src="/js/pages/xitems.js?v=20261120i"></script>
+<script src="/js/pages/kpiQuery.js?v=20261120i"></script>
+<script src="/js/pages/benchmark.js?v=20261120i"></script>
+<script src="/js/pages/bep.js?v=20261120i"></script>
+<script src="/js/pages/actions.js?v=20261120i"></script>
+<script src="/js/pages/expense.js?v=20261120i"></script>
+<script src="/js/pages/payRequest.js?v=20261120i"></script>
+<script src="/js/pages/closing.js?v=20261120i"></script>
+<script src="/js/pages/prRequest.js?v=20261120i"></script>
+<script src="/js/pages/poMatch.js?v=20261120i"></script>
+<script src="/js/pages/salesCredit.js?v=20261120i"></script>
+<script src="/js/pages/arMatch.js?v=20261120i"></script>
+<script src="/js/pages/permission.js?v=20261120i"></script>
+<script src="/js/pages/approvals.js?v=20261120i"></script>
+<script src="/js/pages/alerts.js?v=20261120i"></script>
+<script src="/js/pages/drilldown.js?v=20261120i"></script>
+<script src="/js/pages/cashForecast.js?v=20261120i"></script>
+<script src="/js/pages/mgmtAccounting.js?v=20261120i"></script>
+<script src="/js/pages/profitAnalysis.js?v=20261120i"></script>
+<script src="/js/pages/budget.js?v=20261120i"></script>
+<script src="/js/pages/rollingBudget.js?v=20261120i"></script>
+<script src="/js/pages/inventoryTurnover.js?v=20261120i"></script>
+<script src="/js/pages/consolidation.js?v=20261120i"></script>
+<script src="/js/pages/fxExposure.js?v=20261120i"></script>
+<script src="/js/pages/aiqa.js?v=20261120i"></script>
+<script src="/js/pages/scenario.js?v=20261120i"></script>
+<script src="/js/pages/dailyReport.js?v=20261120i"></script>
+<script src="/js/pages/dailyReportUnfinished.js?v=20261120i"></script>
+<script src="/js/pages/integration.js?v=20261120i"></script>
+<script src="/js/pages/tax.js?v=20261120i"></script>
+<script src="/js/pages/taxPlanning.js?v=20261120i"></script>
+<script src="/js/pages/taxCompliance.js?v=20261120i"></script>
+<script src="/js/pages/strategy.js?v=20261120i"></script>
+<script src="/js/pages/investment.js?v=20261120i"></script>
+<script src="/js/pages/cashLiquidity.js?v=20261120i"></script>
+<script src="/js/pages/warRoom.js?v=20261120i"></script>
+<script src="/js/pages/boardPack.js?v=20261120i"></script>
+<script src="/js/pages/projectProfit.js?v=20261120i"></script>
+<script src="/js/pages/hrEfficiency.js?v=20261120i"></script>
+<script src="/js/pages/contracts.js?v=20261120i"></script>
 <script>
 let currentPage = 'dashboard';
 const origNav = navigate;
@@ -385,6 +425,7 @@ navigate = async function(pageId, params) {
     currentPage = pageId;
     document.getElementById('pageTitle').textContent = t('page.' + pageId);
     await origNav(pageId, params);
+    if (typeof DateLocale !== 'undefined') DateLocale.refreshAll();
 };
 
 // 初始化全局月份
@@ -396,6 +437,7 @@ document.getElementById('loginLang').onchange = function () { I18N.setLang(this.
 
 // 应用语言到侧边栏
 I18N.applyUI();
+if (typeof DateLocale !== 'undefined') DateLocale.refreshAll();
 
 // 登入表单送出
 document.getElementById('loginForm').addEventListener('submit', async function (e) {

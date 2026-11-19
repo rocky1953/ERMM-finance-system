@@ -95,3 +95,17 @@ mysql -hlocalhost -uroot -p ERMM_db -e "SELECT * FROM schema_migrations ORDER BY
 node database/generate_migrations.js       # 生成 + 自動執行
 node database/generate_migrations.js --no-run  # 只生成檔案
 ```
+
+## 自動化部署（台賬制）
+
+伺服器 `git pull` 後由 `scripts/db_migrate.js` 比對 `schema_migration_files` 台賬，只執行尚未執行過的檔案：
+
+```bash
+node scripts/db_migrate.js                   # 執行未執行過的遷移
+node scripts/db_migrate.js --dry-run         # 只列出將執行哪些檔
+node scripts/db_migrate.js --baseline-through 037   # 首次指定歷史基線（預設 037）
+```
+
+- `deploy.sh` 已改為呼叫此腳本，`./deploy.sh` 會自動完成結構更新。
+- 伺服器可安裝 `scripts/git-hooks/post-merge`，讓 `git pull` 自動遷移並重啟 PM2。
+- 新增變更時請新增 `NNN_說明.sql`（編號遞增），**不要修改已執行過的舊檔**，並確保 SQL 可重複執行。

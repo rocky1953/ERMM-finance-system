@@ -2,7 +2,7 @@
  * 项目损益（COO-02）
  * 项目组合概览 · 单项目月度损益 · 年度预算 · 成本归集 · 收入确认（含出货自动引入）
  */
-const PP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const PP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 const PP_ESC = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const PP_MONEY = (v) => (v === null || v === undefined || isNaN(v)) ? '-'
@@ -577,5 +577,9 @@ const ProjectProfitPage = {
 };
 
 registerPage('projectProfit', async () => {
+    // 每次進入頁面依「畫面最上方」全域年月重置
+    ProjectProfitPage.bu = State.bu_no || 'GROUP';
+    ProjectProfitPage.ym = State.YYYY_MM;
+    ProjectProfitPage.year = String(State.year());
     await ProjectProfitPage.load();
 });

@@ -2,7 +2,7 @@
  * 销售履约与信用（COO-03）
  * 信用额度 · 销售退货 · 履约风险
  */
-const SC_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const SC_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 const SalesCreditPage = {
     tab: 'credit',        // credit | returns | risks

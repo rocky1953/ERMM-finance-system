@@ -6,6 +6,7 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { runMatch } = require('../services/poMatch');
+const audit = require('../services/audit');
 
 // ====== 执行匹配 ======
 router.post('/run', async (req, res) => {
@@ -13,6 +14,12 @@ router.post('/run', async (req, res) => {
     try {
         const { YYYY_MM, bu_no, qtyTol, amtTol, amtRateTol } = req.body;
         const result = await runMatch(conn, { YYYY_MM, bu_no, qtyTol, amtTol, amtRateTol });
+        audit.log(req, {
+            module: 'poMatch', action: 'CREATE', businessType: 'PO-MATCH-RUN',
+            businessId: `run/${YYYY_MM}/${bu_no || 'GROUP'}`,
+            summary: `执行PO三单匹配 ${YYYY_MM} ${bu_no || 'GROUP'} 匹配${result.matched}/差异${result.partial}/未匹配${result.unmatched}/过量${result.excess}`,
+            detail: { YYYY_MM, bu_no, qtyTol, amtTol, amtRateTol, matched: result.matched, partial: result.partial, unmatched: result.unmatched, excess: result.excess }
+        });
         ok(res, result, `匹配完成：匹配 ${result.matched} / 差异 ${result.partial} / 未匹配 ${result.unmatched} / 过量 ${result.excess}`);
     } catch (err) {
         fail500(res, err);
@@ -111,7 +118,7 @@ router.post('/results/:id/handle', async (req, res) => {
         if (!allow.includes(handle_status)) return fail(res, 'handle_status 非法', 400);
         if (handle_status !== 'PENDING' && !reason) return fail(res, '请填写处置原因', 400);
 
-        const [rows] = await pool.execute('SELECT id, match_status, ap_settled FROM po_match_result WHERE id=?', [req.params.id]);
+        const [rows] = await pool.execute('SELECT * FROM po_match_result WHERE id=?', [req.params.id]);
         if (!rows.length) return fail(res, '记录不存在', 404);
         if (rows[0].ap_settled) return fail(res, '已生成应付款，不能变更处置', 400);
 
@@ -121,6 +128,13 @@ router.post('/results/:id/handle', async (req, res) => {
              WHERE id=?`,
             [handle_status, reason || null, u ? u.user_id : null, req.params.id]
         );
+        audit.log(req, {
+            module: 'poMatch', action: 'UPDATE', businessType: 'PO-MATCH-HANDLE',
+            businessId: String(req.params.id),
+            summary: `PO匹配差异处置 id=${req.params.id} ${rows[0].match_status} → ${handle_status} 原因=${reason || '(无)'}`,
+            before: rows[0],
+            detail: { handle_status_from: rows[0].handle_status, handle_status_to: handle_status, reason }
+        });
         ok(res, null, '处置已保存');
     } catch (err) { fail500(res, err); }
 });
@@ -131,10 +145,18 @@ router.post('/results/:id/confirm', async (req, res) => {
         const u = req.user;
         const { match_status } = req.body;
         if (!match_status) return fail(res, '需要 match_status', 400);
+        const [oldRows] = await pool.execute('SELECT * FROM po_match_result WHERE id=?', [req.params.id]);
         await pool.execute(
             `UPDATE po_match_result SET match_status=?, matched_by=?, matched_time=NOW() WHERE id=?`,
             [match_status, u.user_id, req.params.id]
         );
+        audit.log(req, {
+            module: 'poMatch', action: 'UPDATE', businessType: 'PO-MATCH-CONFIRM',
+            businessId: String(req.params.id),
+            summary: `手动确认PO匹配 id=${req.params.id} ${oldRows[0]?.match_status || ''} → ${match_status}`,
+            before: oldRows[0],
+            detail: { match_status_from: oldRows[0]?.match_status, match_status_to: match_status }
+        });
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
@@ -177,6 +199,12 @@ router.post('/results/:id/settle', async (req, res) => {
             [pay.insertId, req.params.id]
         );
         await conn.commit();
+        audit.log(req, {
+            module: 'poMatch', action: 'CREATE', businessType: 'PO-MATCH-SETTLE',
+            businessId: String(req.params.id),
+            summary: `PO匹配自动生成应付款 id=${req.params.id} ${invoiceNum} ${supplier} ¥${Number(r.invoice_amount || r.grn_amount || 0)} → pay_detail.uid=${pay.insertId}`,
+            detail: { match_id: req.params.id, pay_uid: pay.insertId, invoice_num: invoiceNum, supplier, amount: Number(r.invoice_amount || r.grn_amount || 0), bu_no: r.bu_no }
+        });
         ok(res, { pay_uid: pay.insertId }, '已生成应付款');
     } catch (err) {
         await conn.rollback();

@@ -87,7 +87,7 @@ router.post('/', async (req, res) => {
             VALUES (?,?,?,?,?,?,?,?,?,?)`,
             [bu_no, client_id, invoice_uid, invoice_no, order_id,
              d.receipt_date || null, receipt_amt, d.bank_name || null,
-             d.currency_ab || 'TWD', d.remark || null]
+             d.currency_ab || 'RMB', d.remark || null]
         );
         ok(res, { uid: r.insertId }, '收款单已登记');
     } catch (err) { fail500(res, err); }

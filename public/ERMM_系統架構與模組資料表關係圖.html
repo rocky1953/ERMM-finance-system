@@ -78,17 +78,25 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d3" href="#sec-29">3.10 电子化报税模块（VAT / CIT / IIT）</a>
 <a class="toc-item d3" href="#sec-34">3.11 智能化模块（AI 层 · RAG / 摘要 / 催收 / 质检 / 概率预测）</a>
 <a class="toc-item d3" href="#sec-40">3.12 经营分析模块（多维盈利 / 滚动预算 / 库存周转）</a>
-<a class="toc-item d2" href="#sec-45">四、RUID 全链路追溯图（财务核心）</a>
-<a class="toc-item d2" href="#sec-46">五、跨模块共用资料表</a>
-<a class="toc-item d2" href="#sec-47">六、技术栈汇总</a>
-<a class="toc-item d2" href="#sec-48">七、资料表清单（共 89 张 · 2026-11-13）</a>
-<a class="toc-item d2" href="#sec-49">八、数据覆盖状态（2026-10-24 更新）</a>
-<a class="toc-item d3" href="#sec-50">8.1 账套 × 年份 覆盖矩阵</a>
-<a class="toc-item d3" href="#sec-51">8.2 2023 年销售成本明细对齐状态</a>
-<a class="toc-item d3" href="#sec-52">8.3 HN 2023 补齐摘要</a>
+<a class="toc-item d3" href="#sec-45">3.13 费用报销与借支核销模块（CFO-01）</a>
+<a class="toc-item d3" href="#sec-46">3.14 付款申请 / 排程 / 银行回单 / AR·AP 核销模块（CFO-02）</a>
+<a class="toc-item d3" href="#sec-47">3.15 通用审批流模块（wf_*）</a>
+<a class="toc-item d3" href="#sec-48">3.16 组织人效 / 战略 / 董事会 / 项目损益 / 销售信用</a>
+<a class="toc-item d3" href="#sec-49">3.17 合同主档模块（CTO-05 · Migration 057）</a>
+<a class="toc-item d3" href="#sec-52">3.18 指标中心模块（CTO-06 · Migration 056）</a>
+<a class="toc-item d3" href="#sec-55">3.19 消息通知模块（CTO-07 · Migration 055）</a>
+<a class="toc-item d3" href="#sec-56">3.20 AI 治理模块（CTO-09 · Migration 058）</a>
+<a class="toc-item d2" href="#sec-61">四、RUID 全链路追溯图（财务核心）</a>
+<a class="toc-item d2" href="#sec-62">五、跨模块共用资料表</a>
+<a class="toc-item d2" href="#sec-63">六、技术栈汇总</a>
+<a class="toc-item d2" href="#sec-64">七、资料表清单（共 152 张 · 2026-11-17）</a>
+<a class="toc-item d2" href="#sec-65">八、数据覆盖状态（2026-10-24 更新）</a>
+<a class="toc-item d3" href="#sec-66">8.1 账套 × 年份 覆盖矩阵</a>
+<a class="toc-item d3" href="#sec-67">8.2 2023 年销售成本明细对齐状态</a>
+<a class="toc-item d3" href="#sec-68">8.3 HN 2023 补齐摘要</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 11:59<br>
+    產生時間：2026-11-17 04:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/executive">切換另一份文件</a>
   </div>
@@ -101,7 +109,8 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   <article class="doc">
 <blockquote>
 <p>基于代码事实抽取（routes/<em>.js、database/add_</em>.js、public/index.html 菜单、public/js/pages/*.js）
-生成日期：2026-10-06｜更新日期：2026-11-13（新增经营分析三模块：多维盈利 / 滚动预算 / 库存周转）</p>
+生成日期：2026-10-06｜更新日期：2026-11-17（v3.6：v3.5 审批流与资金闭环 + <strong>CTO-02 细粒度按钮权限 cams_permission_button 55 按钮三角色 allow · CTO-03 全量操作审计 routes/audit.js · CTO-04 备份灾备批次管线 · CTO-05 合同主档 Migration 057 ermm_contract 28 栏 · CTO-06 指标中心 Migration 056 cams_metric_def 23 指标 · CTO-07 消息通知 Migration 055 cams_notif_channel + cams_notif_subscription · CTO-08 CI/CD .github/workflows/ci.yml · CTO-09 AI 治理 Migration 058 ermm_ai_audit + cams_ai_model_pricing + cams_ai_rate_limit</strong>；2026-11-17 补 <strong>权限体系三层化：Migration 059 权限矩阵补登（77→81 模组）+ middleware/moduleGuard.js 模块级 API 守门 + 前端导航 fail-closed</strong>）
+规模事实：81 个功能模组（8 分组）· 68 个前端页面 · 74 个 API 路由模块 · 152 张资料表 · 72 个迁移脚本 · 55 个按钮权限 · 17 个测试文件</p>
 </blockquote>
 <hr>
 <h2 id="sec-2">一、系统整体架构图（分层架构）</h2><p><img src="/diagrams/01-architecture-layers.svg" alt="ERMM 分层架构图"></p>
@@ -114,10 +123,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     end
 
     subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口&lt;br/&gt;+ 侧边栏菜单 (60 个入口 / 8 个分组)"]
+        Index["index.html 入口&lt;br/&gt;+ 侧边栏菜单 (68 个页面 / 8 个分组)"]
         App["app.js&lt;br/&gt;路由/导航/弹窗/通用 UI"]
         I18n["i18n.js&lt;br/&gt;简/繁/英 三语"]
-        Pages["pages/*.js (60 个功能入口)&lt;br/&gt;dashboard / dailyReport / finance / tax / integration&lt;br/&gt;profitAnalysis / rollingBudget / inventoryTurnover / ..."]
+        Pages["pages/*.js (68 个功能页面)&lt;br/&gt;dashboard / dailyReport / finance / tax / integration&lt;br/&gt;profitAnalysis / rollingBudget / inventoryTurnover&lt;br/&gt;expense / payRequest / approvals / hrEfficiency / ..."]
         Chart["Chart.js 图表引擎"]
     end
 
@@ -127,7 +136,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         Static["静态资源服务&lt;br/&gt;public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 64 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 74 个路由)"]
         direction LR
         S1["📊 绩效闭环&lt;br/&gt;dailyReport"]
         S2["🔔 预警引擎&lt;br/&gt;alert"]
@@ -138,10 +147,13 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         S7["📋 预算/管会/合并&lt;br/&gt;budget/mgmtAccounting/consolidation"]
         S8["🤖 AI 能力&lt;br/&gt;aiqa/dailySummary/llm/diagnosis&lt;br/&gt;arSmart/dataQuality/scenario"]
         S9["📦 业务单据&lt;br/&gt;po/so/dn/tempPo"]
-        S10["⚙️ 系统支撑&lt;br/&gt;system/user/batch/kpi/action"]
+        S10["⚙️ 系统支撑&lt;br/&gt;system/user/permission/batch/kpi/action"]
         S11["🔌 第三方资料整合&lt;br/&gt;integration"]
-        S12["🧮 电子化报税&lt;br/&gt;tax"]
+        S12["🧮 电子化报税&lt;br/&gt;tax/taxPlanning/taxCompliance"]
         S13["📈 经营分析&lt;br/&gt;profit/rollingBudget/inventoryTurnover"]
+        S14["💼 费用与资金&lt;br/&gt;expense/payRequest"]
+        S15["🔐 审批流&lt;br/&gt;workflow"]
+        S16["🏢 组织经营&lt;br/&gt;hrEfficiency/strategy/boardPack&lt;br/&gt;projectProfit/soCredit"]
     end
 
     subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
@@ -155,6 +167,9 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
         TaxIn["税务录入表&lt;br/&gt;tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
         AiT["AI 知识库与摘要表&lt;br/&gt;ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / ermm_ai_records"]
         AnalysisT["经营分析表&lt;br/&gt;sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action"]
+        BizT["费用与资金表&lt;br/&gt;exp_report / exp_report_item / exp_advance / exp_advance_settle&lt;br/&gt;pay_request / pay_request_item / pay_writeoff"]
+        WfT["审批流表&lt;br/&gt;wf_process / wf_instance / wf_task / wf_log"]
+        OrgT["组织经营表&lt;br/&gt;hr_headcount_plan / bsc_objective / bsc_progress / board_pack&lt;br/&gt;project_budget / project_cost / project_revenue / sales_credit_limit / sales_return"]
     end
 
     subgraph EXTERNAL["⑥ 外部/支撑"]
@@ -169,7 +184,7 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     Browser --&gt; Index
     Index --&gt; App --&gt; Pages --&gt; Chart
     App --&gt; Auth --&gt; AuthReq
-    AuthReq --&gt; S1 &amp; S2 &amp; S3 &amp; S4 &amp; S5 &amp; S6 &amp; S7 &amp; S8 &amp; S9 &amp; S10 &amp; S11 &amp; S12
+    AuthReq --&gt; S1 &amp; S2 &amp; S3 &amp; S4 &amp; S5 &amp; S6 &amp; S7 &amp; S8 &amp; S9 &amp; S10 &amp; S11 &amp; S12 &amp; S13 &amp; S14 &amp; S15 &amp; S16
     S1 --&gt; CoreT &amp; AuditT
     S2 --&gt; AuditT &amp; Scheduler --&gt; Mailer
     S3 --&gt; CoreT
@@ -184,6 +199,9 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
     S11 --&gt; ThirdPartyDB &amp; ExcelFile &amp; IntgSched
     S12 --&gt; TaxT &amp; TaxIn &amp; CoreT
     S13 --&gt; CoreT &amp; AnalysisT
+    S14 --&gt; BizT &amp; CoreT &amp; WfT
+    S15 --&gt; WfT &amp; BizT &amp; BaseT
+    S16 --&gt; OrgT &amp; CoreT &amp; AuditT
     Ledger --&gt; CoreT
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
@@ -629,6 +647,206 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>inventoryTurnover</td>
 <td><code>inv_slow_moving_action</code> <code>e2_xitems_daily_status</code> <code>mgm_finance_summary</code> <code>ermm_erp_so</code> <code>ermm_erp_po</code></td>
 <td>库龄结构、周转率/DSI、呆滞清单下发处理、补货建议；详见 3.12</td>
+</tr>
+<tr>
+<td>53</td>
+<td><strong>费用报销（CFO-01）</strong></td>
+<td><code>/api/expense</code></td>
+<td>expense</td>
+<td><code>exp_report</code> <code>exp_report_item</code> <code>wf_instance</code> <code>wf_task</code> <code>wf_log</code> <code>cams_xuser</code></td>
+<td>草稿→提交→审批→付款闭环；支持多明细、发票号、税额</td>
+</tr>
+<tr>
+<td>54</td>
+<td><strong>借支与核销（CFO-01）</strong></td>
+<td><code>/api/expense/advances/*</code></td>
+<td>expense（借支管理页签）</td>
+<td><code>exp_advance</code> <code>exp_advance_settle</code> <code>exp_report</code> <code>wf_instance</code> <code>wf_log</code></td>
+<td>借支单 <code>JK+日期+序号</code>；拨付（管理员）→ 核销（管理员/主管，金额 ≤ 余额，可关联报销单）；余额为 0 → SETTLED</td>
+</tr>
+<tr>
+<td>55</td>
+<td><strong>付款申请（CFO-02）</strong></td>
+<td><code>/api/pay-request</code></td>
+<td>payRequest</td>
+<td><code>pay_request</code> <code>pay_request_item</code> <code>wf_instance</code> <code>wf_task</code> <code>wf_log</code></td>
+<td>多明细付款申请，<code>PK+YYYYMM</code> 单号；DRAFT→PENDING→APPROVED→PAID</td>
+</tr>
+<tr>
+<td>56</td>
+<td><strong>付款排程 / 银行回单（CFO-02）</strong></td>
+<td><code>/api/pay-request/schedule</code> <code>/api/pay-request/:id/receipt</code></td>
+<td>payRequest（付款排程页签）</td>
+<td><code>pay_request</code>（planned_pay_date / bank_receipt_no / receipt_date / receipt_amount）</td>
+<td>按月排程汇总（计划笔数/金额、已付/待付）；APPROVED 才可登记回单，登记后转 PAID</td>
+</tr>
+<tr>
+<td>57</td>
+<td><strong>AR/AP 核销（CFO-02）</strong></td>
+<td><code>/api/pay-request/writeoff-sources</code> <code>/api/pay-request/:id/writeoff</code></td>
+<td>payRequest（核销弹窗）</td>
+<td><code>pay_writeoff</code> <code>mgm_invoice_details</code> <code>pay_request</code></td>
+<td>来源为未付清发票（<code>sub_amt &gt; payment</code>）；累计核销金额回写 <code>writeoff_status</code>（UNWRITTEN / PARTIAL / WRITTEN）</td>
+</tr>
+<tr>
+<td>58</td>
+<td><strong>审批中心（通用审批流）</strong></td>
+<td><code>/api/workflow</code></td>
+<td>approvals / payRequest「待我审批」/ expense「待我审批」</td>
+<td><code>wf_process</code> <code>wf_instance</code> <code>wf_task</code> <code>wf_log</code> <code>cams_xuser</code></td>
+<td>跨业务类型统一待办；管理员维护流程步骤（steps_json）；动作 APPROVE/REJECT 写 <code>wf_log</code></td>
+</tr>
+<tr>
+<td>59</td>
+<td><strong>组织人效（CEO-05）</strong></td>
+<td><code>/api/hr-efficiency</code></td>
+<td>hrEfficiency</td>
+<td><code>hr_headcount_plan</code> <code>cams_xuser</code> <code>mgm_finance_summary</code> <code>daily_report</code> <code>daily_report_detail</code> <code>bsc_objective</code></td>
+<td>部门编制 CRUD + 复制上月；KPI：实际/编制人数、达成率、人均产值、人工成本率、工时；近 6 个月趋势；目标贯通（公司→部门→个人）</td>
+</tr>
+<tr>
+<td>60</td>
+<td><strong>战略目标 / BSC（CEO-01）</strong></td>
+<td><code>/api/strategy</code></td>
+<td>strategy</td>
+<td><code>bsc_objective</code> <code>bsc_progress</code></td>
+<td>公司→部门→个人三级目标，进度记录与得分对比、偏差分析</td>
+</tr>
+<tr>
+<td>61</td>
+<td><strong>董事会 / 投资人报告包（CEO-02）</strong></td>
+<td><code>/api/board-pack</code></td>
+<td>boardPack</td>
+<td><code>board_pack</code></td>
+<td>六大区块预览（经营摘要/三大报表/核心 KPI/风险/重大事项/BU 对比）；生成留存 + PDF / PPTX 导出</td>
+</tr>
+<tr>
+<td>62</td>
+<td><strong>项目损益（COO-02）</strong></td>
+<td><code>/api/project-profit</code></td>
+<td>projectProfit</td>
+<td><code>project_budget</code> <code>project_cost</code> <code>project_revenue</code> <code>project_customer_map</code> <code>ermm_erp_so</code> <code>mgm_customer_projects</code></td>
+<td>五页签：项目概览 / 项目损益 / 年度预算 / 成本归集 / 收入确认；收入可从出货同步</td>
+</tr>
+<tr>
+<td>63</td>
+<td><strong>销售履约与信用（COO-03）</strong></td>
+<td><code>/api/so-credit</code></td>
+<td>salesCredit</td>
+<td><code>sales_credit_limit</code> <code>sales_return</code> <code>ermm_erp_so</code></td>
+<td>信用额度、销售退货登记与状态流转、履约风险清单</td>
+</tr>
+<tr>
+<td>64</td>
+<td><strong>模块权限</strong></td>
+<td><code>/api/permission</code></td>
+<td>permission</td>
+<td><code>cams_module_permission</code> <code>cams_xuser</code></td>
+<td>三角色（一般 / 操作员 / 管理员）× 81 个模组矩阵，前端 <code>Auth.canAccess(page)</code> 控制（fail-closed）；后端 <code>middleware/moduleGuard.js</code> 按模块做 API 守门</td>
+</tr>
+<tr>
+<td>65</td>
+<td><strong>月结关账</strong></td>
+<td><code>/api/closing</code></td>
+<td>closing</td>
+<td><code>closing_calendar</code> <code>closing_task</code> <code>closing_task_instance</code> <code>mgm_finance_summary</code></td>
+<td>关账日历、任务分配与实例跟踪</td>
+</tr>
+<tr>
+<td>66</td>
+<td><strong>外汇曝险与避险</strong></td>
+<td><code>/api/fx</code></td>
+<td>fxExposure</td>
+<td><code>fx_exposure_item</code> <code>fx_hedge</code> <code>mgm_bank_loan_details</code> <code>pay_detail</code></td>
+<td>外币敞口测算与避险工具登记</td>
+</tr>
+<tr>
+<td>67</td>
+<td><strong>请购与采购到货</strong></td>
+<td><code>/api/pr-request</code> <code>/api/po-grn</code> <code>/api/po-match</code></td>
+<td>prRequest / poMatch</td>
+<td><code>pr_request</code> <code>pr_request_item</code> <code>po_grn</code> <code>po_match_result</code> <code>ermm_erp_po</code></td>
+<td>请购单审批 → 到货单 → 三单匹配</td>
+</tr>
+<tr>
+<td>68</td>
+<td><strong>收款与应收核销</strong></td>
+<td><code>/api/receipt</code> <code>/api/ar-match</code></td>
+<td>arMatch</td>
+<td><code>receipt_detail</code> <code>ar_match_result</code> <code>mgm_invoice_details</code></td>
+<td>收款登记与应收发票匹配核销</td>
+</tr>
+<tr>
+<td>69</td>
+<td><strong>资金流动性与投资</strong></td>
+<td><code>/api/cash-liquidity</code> <code>/api/investment</code></td>
+<td>cashLiquidity / investment</td>
+<td><code>cash_plan_item</code> <code>investment_project</code> <code>investment_budget</code> <code>investment_cashflow</code></td>
+<td>资金计划项、投资项目预算与现金流</td>
+</tr>
+<tr>
+<td>70</td>
+<td><strong>税务筹划与合规</strong></td>
+<td><code>/api/tax-planning</code> <code>/api/tax-compliance</code></td>
+<td>taxPlanning / taxCompliance</td>
+<td><code>tax_preference</code> <code>tax_regulation</code> <code>tax_compliance_item</code> <code>tax_filing_task</code> <code>vat_declarations</code></td>
+<td>税收优惠适用、法规台账、合规事项与申报任务</td>
+</tr>
+<tr>
+<td>71</td>
+<td><strong>预算审批留痕</strong></td>
+<td><code>/api/budget</code></td>
+<td>budget</td>
+<td><code>budget</code> <code>budget_detail</code> <code>budget_approval_log</code></td>
+<td>预算提交/审批动作记录</td>
+</tr>
+<tr>
+<td><strong>72</strong></td>
+<td><strong>CTO-02 细粒度按钮权限</strong></td>
+<td><code>/api/permission/buttons</code></td>
+<td>permission（扩展）</td>
+<td><code>cams_permission_button</code></td>
+<td>55 按钮 × 三角色 allow 矩阵；middleware perms.js 新增 readScope + requireButton；模块级 API 守门 <code>middleware/moduleGuard.js</code>（PREFIX_MODULE 69 条，未授权 403 MODULE_DENIED）</td>
+</tr>
+<tr>
+<td><strong>73</strong></td>
+<td><strong>CTO-03 操作审计</strong></td>
+<td><code>/api/audit/*</code></td>
+<td>auditLog</td>
+<td><code>ermm_ai_audit</code> + 全量业务审计（自动串接每个 CRUD）</td>
+<td>9 个端点：list + stats + detail + byModule + byUser + export</td>
+</tr>
+<tr>
+<td><strong>74</strong></td>
+<td><strong>CTO-05 合同主档</strong></td>
+<td><code>/api/contracts/*</code></td>
+<td>contracts</td>
+<td><code>ermm_contract</code></td>
+<td>Migration 057 · 28 字段 · UK (contract_no, bu_no) · FK 关联 ermm_erp_po.po_uid · 从 PO 自动种子 10 笔示范 · 9 端点：CRUD + stats + types + po-options</td>
+</tr>
+<tr>
+<td><strong>75</strong></td>
+<td><strong>CTO-06 指标中心</strong></td>
+<td><code>/api/metric-center/*</code></td>
+<td>metricCenter</td>
+<td><code>cams_metric_def</code> <code>cams_metric_lineage</code></td>
+<td>Migration 056 · 23 指标 7 类别 · services/metricCenter.js 统一计算引擎 · ROE 统一口径</td>
+</tr>
+<tr>
+<td><strong>76</strong></td>
+<td><strong>CTO-07 消息通知</strong></td>
+<td><code>/api/notifier/*</code></td>
+<td>notifier</td>
+<td><code>cams_notif_channel</code> <code>cams_notif_subscription</code></td>
+<td>Migration 055 · 3 默认渠道（Email/Lark/企微 webhook）· 6 订阅规则 · services/notifier.js 统一入口</td>
+</tr>
+<tr>
+<td><strong>77</strong></td>
+<td><strong>CTO-09 AI 治理</strong></td>
+<td><code>/api/llm-audit/*</code></td>
+<td>llmAudit</td>
+<td><code>ermm_ai_audit</code> <code>cams_ai_model_pricing</code> <code>cams_ai_rate_limit</code></td>
+<td>Migration 058 · 10 端点（list + stats + cost + users + detail + limits + pricing）· services/llmAudit.js auditCall + calcCost + checkRateLimit · utils/llmClient.js returnMeta 模式 · 前端 6 页签 Dashboard</td>
 </tr>
 </tbody></table>
 <hr>
@@ -2448,7 +2666,834 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-45">四、RUID 全链路追溯图（财务核心）</h2><div class="diagram"><div class="mermaid">flowchart LR
+<h3 id="sec-45">3.13 费用报销与借支核销模块（CFO-01）</h3><blockquote>
+<p><strong>模块性质</strong>：日常作业层，路由组 <code>/api/expense</code>，左侧菜单「日常作业」→「费用报销」。审批统一走通用审批流 <code>wf_*</code>。
+迁移脚本：<code>021_workflow_expense.sql</code>（报销/审批基础表）、<code>047_hr_payment_advance.sql</code>（借支与核销、付款扩展）。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    cams_xuser ||--o{ exp_report : "申请人"
+    exp_report ||--o{ exp_report_item : "费用明细"
+    cams_xuser ||--o{ exp_advance : "借支人"
+    exp_advance ||--o{ exp_advance_settle : "核销记录"
+    exp_report ||--o{ exp_advance_settle : "关联报销单（可选）"
+    exp_report ||--o| wf_instance : "business_type=EXPENSE"
+    exp_advance ||--o| wf_instance : "business_type=ADVANCE"
+    wf_instance ||--o{ wf_task : "审批任务"
+    wf_instance ||--o{ wf_log : "审批日志"
+
+    exp_report {
+        int id PK
+        varchar report_no "BX+日期+序号"
+        varchar applicant_id
+        varchar title
+        decimal total_amount
+        varchar status "DRAFT/PENDING/APPROVED/PAID/REJECTED"
+        int wf_instance_id
+        datetime submit_time
+        datetime pay_time
+    }
+    exp_report_item {
+        int id PK
+        int report_id FK
+        date expense_date
+        varchar category
+        varchar description
+        decimal amount
+        varchar invoice_no
+        decimal tax_amount
+    }
+    exp_advance {
+        int id PK
+        varchar advance_no "JK+YYYYMMDD+序号"
+        varchar applicant_id
+        varchar dept
+        varchar bu_no
+        varchar advance_type "TRAVEL/GENERAL/PETTY"
+        varchar title
+        decimal amount
+        decimal balance "可核销余额"
+        date expected_return_date
+        varchar status "DRAFT/PENDING/APPROVED/PAID/SETTLED/REJECTED"
+        int wf_instance_id
+    }
+    exp_advance_settle {
+        int id PK
+        int advance_id FK
+        int report_id FK "可空"
+        decimal settle_amount
+        varchar operator_id
+        varchar remark
+        datetime create_time
+    }</div></div><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>报销列表 / 详情</td>
+<td><code>GET /api/expense</code>、<code>GET /api/expense/:id</code></td>
+<td><code>mine</code> 只能看自己，<code>all</code> 需主管/管理员</td>
+</tr>
+<tr>
+<td>新建 / 编辑 / 删除</td>
+<td><code>POST/PUT/DELETE /api/expense</code></td>
+<td>仅 DRAFT/REJECTED 可编辑，DRAFT 可删除</td>
+</tr>
+<tr>
+<td>提交 / 付款</td>
+<td><code>POST /api/expense/:id/submit</code>、<code>POST /api/expense/:id/pay</code></td>
+<td>提交后生成审批实例；付款仅管理员</td>
+</tr>
+<tr>
+<td>借支列表 / 详情</td>
+<td><code>GET /api/expense/advances</code>、<code>GET /api/expense/advances/:id</code></td>
+<td>详情含核销记录</td>
+</tr>
+<tr>
+<td>借支增删改 / 提交</td>
+<td><code>POST/PUT/DELETE /api/expense/advances</code>、<code>POST /advances/:id/submit</code></td>
+<td>金额 &gt; 0、事由必填</td>
+</tr>
+<tr>
+<td>借支拨付 / 核销</td>
+<td><code>POST /advances/:id/pay</code>、<code>POST /advances/:id/settle</code></td>
+<td>拨付仅管理员；核销管理员或部门主管，金额 ≤ balance，余额 0 → SETTLED</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="sec-46">3.14 付款申请 / 排程 / 银行回单 / AR·AP 核销模块（CFO-02）</h3><blockquote>
+<p><strong>模块性质</strong>：资金管理层，路由组 <code>/api/pay-request</code>，左侧菜单「日常作业」→「付款申请」。
+迁移脚本：<code>022_workflow_payment.sql</code>（付款申请/审批）、<code>047_hr_payment_advance.sql</code>（排程、回单、核销扩展列与 <code>pay_writeoff</code>）。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    cams_xuser ||--o{ pay_request : "申请人"
+    pay_request ||--o{ pay_request_item : "付款明细"
+    pay_request ||--o| wf_instance : "business_type=PAYMENT"
+    mgm_invoice_details ||--o{ pay_writeoff : "AR/AP 发票核销来源"
+    pay_request ||--o{ pay_writeoff : "付款单核销"
+
+    pay_request {
+        int id PK
+        varchar request_no "PK+YYYYMM"
+        varchar applicant_id
+        varchar dept
+        varchar bu_no
+        varchar pay_type
+        varchar pay_target "收款方"
+        decimal total_amount
+        varchar currency
+        varchar pay_method
+        date due_date
+        date planned_pay_date "付款排程"
+        varchar bank_receipt_no "银行回单号"
+        date receipt_date
+        decimal receipt_amount
+        varchar writeoff_status "UNWRITTEN/PARTIAL/WRITTEN"
+        varchar status "DRAFT/PENDING/APPROVED/PAID/REJECTED/CANCELLED"
+        int wf_instance_id
+    }
+    pay_request_item {
+        int id PK
+        int request_id FK
+        int item_no
+        varchar supplier_name
+        varchar pay_type
+        varchar invoice_num
+        date invoice_date
+        decimal amount
+    }
+    pay_writeoff {
+        int id PK
+        int request_id FK
+        varchar source_type "AR/AP"
+        int invoice_uid FK
+        decimal writeoff_amount
+        varchar operator_id
+        datetime create_time
+    }</div></div><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>付款申请 CRUD</td>
+<td><code>GET/POST /api/pay-request</code>、<code>PUT/DELETE /api/pay-request/:id</code></td>
+<td>明细合计自动回写 <code>total_amount</code>；仅 DRAFT/REJECTED 可编辑</td>
+</tr>
+<tr>
+<td>提交 / 标记付款</td>
+<td><code>POST /api/pay-request/:id/submit</code>、<code>POST /:id/pay</code></td>
+<td>提交生成 PAYMENT 审批实例；付款仅管理员</td>
+</tr>
+<tr>
+<td>付款排程</td>
+<td><code>GET /api/pay-request/schedule?month=YYYY-MM</code>、<code>PUT /:id/schedule</code></td>
+<td>返回当月笔数/金额、已付/待付汇总；PAID/CANCELLED 不可改排程</td>
+</tr>
+<tr>
+<td>银行回单</td>
+<td><code>POST /api/pay-request/:id/receipt</code></td>
+<td>仅 APPROVED 可登记；回单号必填；登记后转 PAID 并回写审批实例</td>
+</tr>
+<tr>
+<td>核销来源 / 核销</td>
+<td><code>GET /api/pay-request/writeoff-sources</code>、<code>POST /:id/writeoff</code>、<code>DELETE /:id/writeoff/:wid</code></td>
+<td>来源 <code>sub_amt &gt; payment</code>；累计金额 ≥ 总额 → WRITTEN，否则 PARTIAL；撤销后重算</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="sec-47">3.15 通用审批流模块（wf_*）</h3><blockquote>
+<p><strong>模块性质</strong>：跨模块支撑层，路由组 <code>/api/workflow</code>，前端「审批中心」页 + 各业务页「待我审批」页签。
+迁移脚本：<code>021_workflow_expense.sql</code>、<code>022_workflow_payment.sql</code>。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    wf_process ||--o{ wf_instance : "proc_code / business_type"
+    wf_instance ||--o{ wf_task : "逐级审批任务"
+    wf_instance ||--o{ wf_log : "动作留痕"
+    cams_xuser ||--o{ wf_task : "审批人"
+
+    wf_process {
+        int id PK
+        varchar proc_code UK
+        varchar proc_name
+        varchar business_type "EXPENSE/ADVANCE/PAYMENT/PR"
+        text steps_json "步骤与审批人配置"
+        tinyint enabled
+    }
+    wf_instance {
+        int id PK
+        varchar business_type
+        int business_id
+        int current_step
+        varchar status "PENDING/APPROVED/REJECTED/CANCELLED"
+        varchar applicant_id
+        decimal amount
+    }
+    wf_task {
+        int id PK
+        int instance_id FK
+        int step_no
+        varchar approver_id
+        varchar action "APPROVE/REJECT"
+        varchar status "PENDING/DONE"
+        datetime done_time
+    }
+    wf_log {
+        int id PK
+        int instance_id FK
+        int step_no
+        varchar action
+        varchar operator_id
+        varchar comment
+        datetime create_time
+    }</div></div><blockquote>
+<p>服务层入口：<code>services/workflow.js → submitWorkflow(conn, {businessType, businessId, title, amount, applicantId, dept, buNo})</code>，返回 <code>{instanceId, status, approvers}</code>；业务表仅保存 <code>wf_instance_id</code> 与自身状态。
+审批动作 <code>POST /api/workflow/tasks/:id/action</code>（APPROVE/REJECT）；撤回 <code>POST /api/workflow/instances/:id/cancel</code>；管理员流程维护 <code>GET/PUT /api/workflow/processes</code>。</p>
+</blockquote>
+<hr>
+<h3 id="sec-48">3.16 组织人效 / 战略 / 董事会 / 项目损益 / 销售信用</h3><blockquote>
+<p><strong>模块性质</strong>：经营决策层，路由组 <code>/api/hr-efficiency</code>、<code>/api/strategy</code>、<code>/api/board-pack</code>、<code>/api/project-profit</code>、<code>/api/so-credit</code>。
+迁移脚本：<code>029_sales_credit_return.sql</code>、<code>034_board_pack.sql</code>、<code>035_project_profit.sql</code>、<code>036_project_customer_map.sql</code>、<code>037_project_budget_bu.sql</code>、<code>043_strategy_bsc.sql</code>、<code>047_hr_payment_advance.sql</code>（<code>hr_headcount_plan</code>）。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    mgm_finance_summary ||--o{ hr_headcount_plan : "人数/薪资/产值口径"
+    cams_xuser ||--o{ hr_headcount_plan : "部门在册人数回退"
+    bsc_objective ||--o{ bsc_progress : "目标进度"
+    bsc_objective ||--o{ hr_headcount_plan : "目标贯通（只读）"
+    mgm_finance_summary ||--o{ board_pack : "报告包取数"
+    mgm_customer_projects ||--o{ project_budget : "项目主档"
+    project_budget ||--o{ project_cost : "成本归集"
+    project_budget ||--o{ project_revenue : "收入确认"
+    ermm_erp_so ||--o{ sales_credit_limit : "客户信用额度"
+    ermm_erp_so ||--o{ sales_return : "销售退货"
+
+    hr_headcount_plan {
+        int uid PK
+        varchar bu_no
+        varchar period "YYYY-MM"
+        varchar depart_name
+        int plan_headcount
+        int actual_headcount
+        decimal plan_labor_cost
+        varchar remark
+    }
+    bsc_objective {
+        int id PK
+        varchar period
+        varchar scope "company/dept/personal"
+        varchar owner_id
+        varchar objective
+        decimal weight
+        decimal score
+    }
+    bsc_progress {
+        int id PK
+        int objective_id FK
+        varchar period
+        decimal actual_value
+        decimal progress_rate
+        varchar note
+    }
+    board_pack {
+        int uid PK
+        varchar bu_no
+        varchar period_type "month/quarter"
+        varchar period_label
+        varchar status
+        datetime create_time
+    }
+    project_budget {
+        int uid PK
+        varchar bu_no
+        varchar project_code
+        varchar project_name
+        year_year int
+        decimal budget_revenue
+        decimal budget_cost
+    }
+    project_cost {
+        int uid PK
+        varchar project_code
+        varchar period
+        varchar cost_type "MATERIAL/LABOR/OUTSOURCE/TRAVEL/OTHER"
+        decimal amount
+        varchar source "manual/erp"
+    }
+    project_revenue {
+        int uid PK
+        varchar project_code
+        varchar period
+        decimal amount
+        varchar source "manual/so"
+    }
+    sales_credit_limit {
+        int uid PK
+        varchar client_id
+        varchar client_name
+        decimal credit_limit
+        int credit_days
+        varchar status
+    }
+    sales_return {
+        int uid PK
+        varchar return_no
+        varchar so_no
+        decimal return_amount
+        varchar reason
+        varchar status "PENDING/APPROVED/REJECTED/DONE"
+    }</div></div><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>关键端点</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>组织人效</td>
+<td><code>GET /api/hr-efficiency/overview?bu_no=&amp;YYYY_MM=</code></td>
+<td>KPI + 部门表 + 近 6 月趋势 + 目标树；实际人数回退 <code>cams_xuser</code></td>
+</tr>
+<tr>
+<td>部门编制</td>
+<td><code>GET/POST /api/hr-efficiency/headcount-plans</code>、<code>PUT/DELETE /:uid</code>、<code>POST /copy</code></td>
+<td>唯一键 <code>(bu_no, period, depart_name)</code>；支持复制上月编制</td>
+</tr>
+<tr>
+<td>战略 BSC</td>
+<td><code>GET/POST /api/strategy/objectives</code>、<code>PUT/DELETE /:id</code>、<code>GET/POST /:id/progress</code>、<code>POST /sync</code></td>
+<td>三级目标与进度；<code>sync</code> 汇总进度得分</td>
+</tr>
+<tr>
+<td>董事会包</td>
+<td><code>GET /api/board-pack/data</code>、<code>POST /generate</code>、<code>GET /history</code>、`GET /export/pdf</td>
+<td>pptx`</td>
+</tr>
+<tr>
+<td>项目损益</td>
+<td>`GET /api/project-profit/projects</td>
+<td>overview</td>
+</tr>
+<tr>
+<td>销售信用</td>
+<td>`GET /api/so-credit/limits</td>
+<td>summary</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="sec-49">3.17 合同主档模块（CTO-05 · Migration 057）</h3><blockquote>
+<p><strong>模块性质</strong>：合同从采购单（PO）自动种子或手工新建，28 字段覆盖合同编号 / 名称 / 客户供应商 / 金额 / 期限 / 付款条款 / 状态 / 备注，唯一键 <code>(contract_no, bu_no)</code>，外键关联 <code>ermm_erp_po.po_uid</code>。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    ermm_erp_po ||--o{ ermm_contract : "FK po_uid 自动种子"
+    cams_xuser ||--o{ ermm_contract : "contract_by"
+
+    ermm_contract {
+        bigint uid PK
+        varchar bu_no
+        varchar contract_no UK
+        varchar contract_name
+        varchar contract_type
+        varchar party_role "客户/供应商"
+        varchar partner_name
+        varchar partner_contact
+        decimal amount
+        string currency
+        date sign_date
+        date effective_date
+        date expire_date
+        varchar payment_terms
+        varchar status "DRAFT/ACTIVE/EXPIRED/TERMINATED"
+        text remarks
+        bigint po_uid FK "→ ermm_erp_po.po_uid"
+        bigint so_uid FK
+        varchar contract_by
+        datetime create_time
+        datetime update_time
+        varchar created_by
+        varchar updated_by
+        tinyint inuse_flag
+    }</div></div><h4 id="sec-50">3.17.1 索引与约束</h4><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>名称</th>
+<th>列</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PK</td>
+<td>PRIMARY</td>
+<td><code>uid</code></td>
+</tr>
+<tr>
+<td>UK</td>
+<td><code>uk_contract_no_bu</code></td>
+<td><code>(contract_no, bu_no)</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_bu</code></td>
+<td><code>bu_no</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_partner</code></td>
+<td><code>partner_name</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_status</code></td>
+<td><code>status</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_expire</code></td>
+<td><code>expire_date</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_po</code></td>
+<td><code>po_uid</code></td>
+</tr>
+<tr>
+<td>IDX</td>
+<td><code>idx_so</code></td>
+<td><code>so_uid</code></td>
+</tr>
+</tbody></table>
+<h4 id="sec-51">3.17.2 API 端点（routes/contracts.js · 9 端点）</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/contracts</code></td>
+<td>列表（bu_no / status / keyword）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/contracts/:uid</code></td>
+<td>详情</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/contracts</code></td>
+<td>新建</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/contracts/:uid</code></td>
+<td>更新</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/contracts/:uid</code></td>
+<td>停用（软删除 <code>inuse_flag=0</code>）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/contracts/stats</code></td>
+<td>统计（按状态 / 客户供应商 / 合同类型）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/contracts/types</code></td>
+<td>合同类型下拉</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/contracts/po-options</code></td>
+<td>从 <code>ermm_erp_po</code> 拉取种子候选</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/contracts/seed-from-po</code></td>
+<td>自动种子（从 PO 新建 10 笔示范）</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="sec-52">3.18 指标中心模块（CTO-06 · Migration 056）</h3><blockquote>
+<p><strong>模块性质</strong>：23 指标 7 类别，<code>services/metricCenter.js</code> 统一计算引擎，消除散落在各服务中的指标计算重复代码。ROE 统一口径。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    cams_metric_def ||--o{ cams_metric_lineage : "指标血缘"
+
+    cams_metric_def {
+        bigint uid PK
+        varchar metric_code UK
+        varchar metric_name
+        varchar category "7 类别：profitability/liquidity/solvency/activity/growth/market/custom"
+        varchar formula_type "SQL/JS"
+        text formula_body
+        varchar unit
+        tinyint direction "1=越大越好/-1=越小越好/0=中性"
+        decimal warn_threshold
+        decimal danger_threshold
+        text description
+        tinyint enabled
+        int sort_order
+        datetime create_time
+        datetime update_time
+    }
+
+    cams_metric_lineage {
+        bigint uid PK
+        varchar metric_code FK
+        varchar source_table
+        varchar source_column
+        varchar transform
+        int priority
+    }</div></div><h4 id="sec-53">3.18.1 ROE 统一口径</h4><pre class="code-block"><code>ROE = 净利润（period） ÷ 平均股东权益（(期初 + 期末) / 2）
+    净利润 取 fin_tax_return 中 CIT actual_revenue - actual_cost
+    股东权益 取 mgm_finance_summary 的 equity + retained_earnings</code></pre><h4 id="sec-54">3.18.2 7 类别 × 23 指标</h4><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>指标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>盈利能力</td>
+<td>ROE · ROA · 毛利率 · 净利率 · 资产报酬率</td>
+</tr>
+<tr>
+<td>流动性</td>
+<td>流动比率 · 速动比率 · 现金比率</td>
+</tr>
+<tr>
+<td>偿债能力</td>
+<td>资产负债率 · 利息保障倍数</td>
+</tr>
+<tr>
+<td>运营效率</td>
+<td>存货周转天数 DSI · 应收账款周转天数 DSO · 应付账款周转天数 DPO · 总资产周转率</td>
+</tr>
+<tr>
+<td>成长</td>
+<td>营收增长率 · 毛利增长率 · 净利增长率</td>
+</tr>
+<tr>
+<td>市场</td>
+<td>毛利率趋势 · 费用率趋势</td>
+</tr>
+<tr>
+<td>自定义</td>
+<td>可扩展</td>
+</tr>
+</tbody></table>
+<hr>
+<h3 id="sec-55">3.19 消息通知模块（CTO-07 · Migration 055）</h3><blockquote>
+<p><strong>模块性质</strong>：3 默认渠道（Email / Lark / 企微 webhook），6 订阅规则，<code>services/notifier.js</code> 统一入口，支持未来扩展企业微信机器人、Slack 等。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    cams_notif_channel ||--o{ cams_notif_subscription : "规则绑定渠道"
+    cams_xuser ||--o{ cams_notif_subscription : "用户订阅"
+
+    cams_notif_channel {
+        bigint uid PK
+        varchar channel_code UK "email/lark/wecom_webhook"
+        varchar channel_name
+        varchar channel_type
+        json config "{host,port,from,webhook_url,...}"
+        tinyint enabled
+        datetime create_time
+        datetime update_time
+    }
+
+    cams_notif_subscription {
+        bigint uid PK
+        varchar user_id FK
+        varchar channel_code FK
+        varchar event_type "6 规则：report_balance/wk_reminder/low_cash/ap_cm/overdue_invoice/auction_notice"
+        tinyint enabled
+        text filter_json
+        datetime last_sent_at
+        datetime create_time
+    }</div></div><hr>
+<h3 id="sec-56">3.20 AI 治理模块（CTO-09 · Migration 058）</h3><blockquote>
+<p><strong>模块性质</strong>：全量 AI 调用审计（每次 LLM 调用都自动写入 <code>ermm_ai_audit</code>）、模型计价表、速率限制（global + bu_HM/HN/SZ 四档配额）。前端 6 页签 Dashboard。</p>
+</blockquote>
+<div class="diagram"><div class="mermaid">erDiagram
+    ermm_ai_audit }o--|| cams_ai_model_pricing : "model → 计价"
+    cams_ai_model_pricing ||--o{ cams_ai_rate_limit : "model → 限额"
+    cams_xuser ||--o{ ermm_ai_audit : "user_id"
+
+    ermm_ai_audit {
+        bigint uid PK
+        varchar provider
+        varchar model
+        varchar endpoint
+        varchar user_id FK
+        varchar bu_no
+        int prompt_tokens
+        int completion_tokens
+        int total_tokens
+        int latency_ms
+        decimal cost_usd
+        varchar status "SUCCESS/FAILED/TIMEOUT"
+        text system_prompt
+        text user_prompt
+        text assistant_reply
+        text error_msg
+        datetime create_time
+    }
+
+    cams_ai_model_pricing {
+        bigint uid PK
+        varchar provider
+        varchar model UK
+        decimal input_usd_per_1k
+        decimal output_usd_per_1k
+        tinyint enabled
+        datetime create_time
+    }
+
+    cams_ai_rate_limit {
+        bigint uid PK
+        varchar scope "global/bu_HM/bu_HN/bu_SZ"
+        varchar model
+        int daily_quota_tokens
+        int hourly_quota_tokens
+        tinyint enabled
+        datetime create_time
+    }</div></div><h4 id="sec-57">3.20.1 10 端点（routes/llmAudit.js）</h4><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>路径</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GET</td>
+<td><code>/api/llm-audit/list</code></td>
+<td>审计列表（bu_no / provider / model / date / status）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/stats</code></td>
+<td>聚合统计（总 token / 总 cost / 按模型 / 按日）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/cost</code></td>
+<td>成本分析（按日期区间 / 按模型 / 按 bu_no）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/users</code></td>
+<td>用户维度（每人用量 / 成本 / 调用次数 Top N）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/:uid</code></td>
+<td>单条审计详情（完整 prompt / reply / latency）</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/limits</code></td>
+<td>查询全局与各 BU 配额</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/llm-audit/limits/:uid</code></td>
+<td>修改配额</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/pricing</code></td>
+<td>10 模型计价表</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/llm-audit/pricing/:uid</code></td>
+<td>修改计价</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/llm-audit/models</code></td>
+<td>可用模型清单（provider + model）</td>
+</tr>
+</tbody></table>
+<h4 id="sec-58">3.20.2 10 种模型计价</h4><table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Model</th>
+<th>Input (USD/1K)</th>
+<th>Output (USD/1K)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>deepseek</td>
+<td>deepseek-chat</td>
+<td>0.00014</td>
+<td>0.00028</td>
+</tr>
+<tr>
+<td>deepseek</td>
+<td>deepseek-reasoner</td>
+<td>0.00055</td>
+<td>0.00219</td>
+</tr>
+<tr>
+<td>deepseek</td>
+<td>deepseek-v3</td>
+<td>0.00014</td>
+<td>0.00028</td>
+</tr>
+<tr>
+<td>openai</td>
+<td>gpt-4o-mini</td>
+<td>0.00015</td>
+<td>0.00060</td>
+</tr>
+<tr>
+<td>openai</td>
+<td>gpt-4o</td>
+<td>0.00250</td>
+<td>0.01000</td>
+</tr>
+<tr>
+<td>openai</td>
+<td>gpt-4.1</td>
+<td>0.00250</td>
+<td>0.01000</td>
+</tr>
+<tr>
+<td>anthropic</td>
+<td>claude-3.5-sonnet</td>
+<td>0.00300</td>
+<td>0.01500</td>
+</tr>
+<tr>
+<td>anthropic</td>
+<td>claude-3.7-sonnet</td>
+<td>0.00300</td>
+<td>0.01500</td>
+</tr>
+<tr>
+<td>qwen</td>
+<td>qwen-plus</td>
+<td>0.00080</td>
+<td>0.00200</td>
+</tr>
+<tr>
+<td>qwen</td>
+<td>qwen-max</td>
+<td>0.00200</td>
+<td>0.00600</td>
+</tr>
+</tbody></table>
+<h4 id="sec-59">3.20.3 速率限制四档</h4><table>
+<thead>
+<tr>
+<th>范围</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>global</code></td>
+<td>全系统每日 token 总量上限</td>
+</tr>
+<tr>
+<td><code>bu_HM</code></td>
+<td>鸿鸣（HM）独立配额</td>
+</tr>
+<tr>
+<td><code>bu_HN</code></td>
+<td>华南（HN）独立配额</td>
+</tr>
+<tr>
+<td><code>bu_SZ</code></td>
+<td>深圳（SZ）独立配额</td>
+</tr>
+</tbody></table>
+<h4 id="sec-60">3.20.4 前端 6 页签 Dashboard</h4><table>
+<thead>
+<tr>
+<th>页签</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>📊 总览</td>
+<td>总 token / 总 cost / 调用次数 / 成功率</td>
+</tr>
+<tr>
+<td>📈 成本趋势</td>
+<td>按日 / 按模型 / 按 BU 分析</td>
+</tr>
+<tr>
+<td>👥 用户排行</td>
+<td>Top 20 高消耗用户</td>
+</tr>
+<tr>
+<td>🧩 模型明细</td>
+<td>每模型用量与计价</td>
+</tr>
+<tr>
+<td>🛡️ 配额与限制</td>
+<td>查看并调整 global / BU 四档配额</td>
+</tr>
+<tr>
+<td>📝 调用详情</td>
+<td>逐条审计追溯（完整 prompt + reply）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="sec-61">四、RUID 全链路追溯图（财务核心）</h2><div class="diagram"><div class="mermaid">flowchart LR
     A["📒 会计凭证&lt;br/&gt;fin_voucher"] --&gt;|产生 RUID| R["🗂️ fin_ruid_ledger&lt;br/&gt;RUID 主台账"]
     A --&gt;|分录| AE["fin_voucher_entry"]
     B["🧾 纳税申报&lt;br/&gt;fin_tax_return"] --&gt;|产生 RUID| R
@@ -2465,7 +3510,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <li>已知报税回执号 <code>RXHM20250101</code> → 查 <code>fin_tax_return</code> 得 RUID → 查 <code>fin_ruid_ledger</code> 确认 → 查 <code>fin_reconciliation</code> 找到匹配的入账凭证 RUID → 查 <code>fin_voucher</code> + <code>fin_voucher_entry</code> 看到完整分录。</li>
 </ul>
 <hr>
-<h2 id="sec-46">五、跨模块共用资料表</h2><table>
+<h2 id="sec-62">五、跨模块共用资料表</h2><table>
 <thead>
 <tr>
 <th>资料表</th>
@@ -2498,7 +3543,15 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><code>mgm_invoice_details</code></td>
-<td>发票、财务分析、多维下钻、日报经营数据、<strong>仪表板下钻、电子化报税（VAT 取数）</strong></td>
+<td>发票、财务分析、多维下钻、日报经营数据、<strong>仪表板下钻、电子化报税（VAT 取数）</strong>、<strong>付款 AR/AP 核销（<code>sub_amt &gt; payment</code> 为可核销来源）</strong></td>
+</tr>
+<tr>
+<td><strong><code>wf_instance</code> / <code>wf_task</code> / <code>wf_log</code></strong></td>
+<td><strong>通用审批流</strong>：费用报销（EXPENSE）、借支（ADVANCE）、付款申请（PAYMENT）、请购（PR）等所有走审批的业务共用；业务表只留 <code>wf_instance_id</code></td>
+</tr>
+<tr>
+<td><code>cams_module_permission</code></td>
+<td><strong>模块权限</strong>：按一般 / 操作员 / 管理员 × <strong>81 个模组</strong>（8 分组）控制菜单与页面可见性，<code>Auth.canAccess(page)</code> 读取；后端由 <code>middleware/moduleGuard.js</code> 按同一矩阵做模块级 API 守门（403 <code>MODULE_DENIED</code>）。Migration 059_module_permission_sync 补登合同主档 / 功能权限 / 操作审计 / AI 治理 4 个模组（77→81，分组数不变）</td>
 </tr>
 <tr>
 <td><code>budget_detail</code></td>
@@ -2522,7 +3575,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-47">六、技术栈汇总</h2><table>
+<h2 id="sec-63">六、技术栈汇总</h2><table>
 <thead>
 <tr>
 <th>层</th>
@@ -2558,6 +3611,14 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>ExcelJS（导入解析 + 导出 CSV 带 BOM）</td>
 </tr>
 <tr>
+<td>报表导出</td>
+<td>PDFKit（董事会包 PDF）、PptxGenJS（董事会包 PPTX）</td>
+</tr>
+<tr>
+<td>审批流</td>
+<td><code>services/workflow.js</code>（wf_process / wf_instance / wf_task / wf_log，步骤由 <code>steps_json</code> 驱动）</td>
+</tr>
+<tr>
 <td>AI</td>
 <td>LLM API（aiqa / diagnosis 路由）</td>
 </tr>
@@ -2571,8 +3632,9 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 </tbody></table>
 <hr>
-<h2 id="sec-48">七、资料表清单（共 89 张 · 2026-11-13）</h2><blockquote>
-<p>89 张含 2 张第三方整合演示表 <code>intg_demo_src</code> / <code>intg_demo_tgt</code>，业务有效表 87 张（较 2026-11-12 新增 4 张经营分析表）。</p>
+<h2 id="sec-64">七、资料表清单（共 152 张 · 2026-11-17）</h2><blockquote>
+<p>152 张含 2 张第三方整合演示表 <code>intg_demo_src</code> / <code>intg_demo_tgt</code>；业务有效表 150 张。较 2026-11-15（v3.5，134 张）<strong>新增 8 张 CTO 交付表</strong>：较 2026-11-15（v3.5，134 张）<strong>新增 8 张 CTO 交付表</strong>：<code>ermm_contract</code>（CTO-05 合同主档 · Migration 057，28 字段）、<code>cams_metric_def</code> / <code>cams_metric_lineage</code>（CTO-06 指标中心 · Migration 056）、<code>cams_notif_channel</code> / <code>cams_notif_subscription</code>（CTO-07 消息通知 · Migration 055）、<code>ermm_ai_audit</code> / <code>cams_ai_model_pricing</code> / <code>cams_ai_rate_limit</code>（CTO-09 AI 治理 · Migration 058）。
+另新增 1 张权限表 <code>cams_permission_button</code>（CTO-02 细粒度按钮权限，55 按钮 × 三角色 allow 矩阵）。</p>
 </blockquote>
 <table>
 <thead>
@@ -2583,7 +3645,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </thead>
 <tbody><tr>
 <td><strong>系统/基础</strong></td>
-<td>cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config, ermm_users（遗留）</td>
+<td>cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, cams_module_permission, <strong>cams_permission_button（CTO-02）</strong>, schema_migrations, llm_config, ermm_users（遗留）</td>
 </tr>
 <tr>
 <td><strong>日报绩效</strong></td>
@@ -2599,7 +3661,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><strong>现金流</strong></td>
-<td>mgm_casher_details, mgm_cash_safe_level</td>
+<td>mgm_casher_details, mgm_cash_safe_level, cash_plan_item</td>
 </tr>
 <tr>
 <td><strong>财务核算</strong></td>
@@ -2607,11 +3669,59 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 </tr>
 <tr>
 <td><strong>预算管会</strong></td>
-<td>budget, budget_detail, mgmt_dept, mgmt_dept_pl</td>
+<td>budget, budget_detail, budget_approval_log, mgmt_dept, mgmt_dept_pl</td>
 </tr>
 <tr>
 <td><strong>业务单据</strong></td>
 <td>ermm_erp_so, ermm_erp_po, ermm_temp_po, ermm_erp_so_dn, ermm_arap_detail, ermm_erp_documents, transit_price, mgm_preorder_lists, mgm_customer_projects, ermm_erp_mo, ermm_erp_mo_component, ermm_erp_routing, ermm_erp_work_report</td>
+</tr>
+<tr>
+<td><strong>合同主档（CTO-05）</strong></td>
+<td><strong>ermm_contract</strong>（28 字段 · Migration 057 · FK → ermm_erp_po.po_uid）</td>
+</tr>
+<tr>
+<td><strong>请购/到货/匹配/核销</strong></td>
+<td>pr_request, pr_request_item, po_grn, po_match_result, receipt_detail, ar_match_result</td>
+</tr>
+<tr>
+<td><strong>费用与借支</strong></td>
+<td>exp_report, exp_report_item, exp_advance, exp_advance_settle</td>
+</tr>
+<tr>
+<td><strong>付款与核销</strong></td>
+<td>pay_request, pay_request_item, pay_writeoff</td>
+</tr>
+<tr>
+<td><strong>审批流</strong></td>
+<td>wf_process, wf_instance, wf_task, wf_log</td>
+</tr>
+<tr>
+<td><strong>组织/战略/董事会</strong></td>
+<td>hr_headcount_plan, bsc_objective, bsc_progress, board_pack, group_target</td>
+</tr>
+<tr>
+<td><strong>项目损益</strong></td>
+<td>project_budget, project_cost, project_revenue, project_customer_map</td>
+</tr>
+<tr>
+<td><strong>销售信用</strong></td>
+<td>sales_credit_limit, sales_return</td>
+</tr>
+<tr>
+<td><strong>关账/合并/外汇</strong></td>
+<td>closing_calendar, closing_task, closing_task_instance, consol_elimination_entry, consol_exchange_rate, fx_exposure_item, fx_hedge</td>
+</tr>
+<tr>
+<td><strong>投资</strong></td>
+<td>investment_project, investment_budget, investment_cashflow</td>
+</tr>
+<tr>
+<td><strong>指标中心（CTO-06）</strong></td>
+<td><strong>cams_metric_def</strong>（23 指标 7 类别）, <strong>cams_metric_lineage</strong>（5 行血缘）</td>
+</tr>
+<tr>
+<td><strong>消息通知（CTO-07）</strong></td>
+<td><strong>cams_notif_channel</strong>（3 默认渠道 Email/Lark/企微 webhook）, <strong>cams_notif_subscription</strong>（6 规则）</td>
 </tr>
 <tr>
 <td><strong>分析预测</strong></td>
@@ -2626,8 +3736,12 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td>vat_declarations, cit_annual_settlements, iit_withholding_batches, iit_withholding_details, tax_submit_receipts, tax_vat_adjustments, tax_cit_inputs, tax_cit_adjustments, payroll_details, bonus_details</td>
 </tr>
 <tr>
-<td><strong>AI 智能层</strong></td>
-<td>ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆）</td>
+<td><strong>税务筹划/合规</strong></td>
+<td>tax_preference, tax_regulation, tax_compliance_item, tax_filing_task</td>
+</tr>
+<tr>
+<td><strong>AI 智能层 + AI 治理（CTO-09）</strong></td>
+<td>ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆）, <strong>ermm_ai_audit</strong>（全量审计 · Migration 058）, <strong>cams_ai_model_pricing</strong>（10 模型 USD/1K 计价）, <strong>cams_ai_rate_limit</strong>（global + bu_HM/HN/SZ 四档配额）</td>
 </tr>
 <tr>
 <td><strong>经营分析</strong></td>
@@ -2642,7 +3756,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <p>备注：<code>ermm_erp_mo</code> / <code>ermm_erp_mo_component</code> / <code>ermm_erp_routing</code> / <code>ermm_erp_work_report</code> 为 ERP 工单/BOM/工艺/报工预留表，当前无业务数据；<code>ermm_users</code> 为旧表，登录与权限实际使用 <code>cams_xuser</code>。</p>
 </blockquote>
 <hr>
-<h2 id="sec-49">八、数据覆盖状态（2026-10-24 更新）</h2><h3 id="sec-50">8.1 账套 × 年份 覆盖矩阵</h3><table>
+<h2 id="sec-65">八、数据覆盖状态（2026-10-24 更新）</h2><h3 id="sec-66">8.1 账套 × 年份 覆盖矩阵</h3><table>
 <thead>
 <tr>
 <th>账套</th>
@@ -2674,7 +3788,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td><strong>36</strong></td>
 </tr>
 </tbody></table>
-<h3 id="sec-51">8.2 2023 年销售成本明细对齐状态</h3><table>
+<h3 id="sec-67">8.2 2023 年销售成本明细对齐状态</h3><table>
 <thead>
 <tr>
 <th>账套</th>
@@ -2713,7 +3827,7 @@ ORDER BY r.tax_period, r.return_id, i.item_id;</code></pre><table>
 <td><strong>36/36 PASS</strong></td>
 </tr>
 </tbody></table>
-<h3 id="sec-52">8.3 HN 2023 补齐摘要</h3><ul>
+<h3 id="sec-68">8.3 HN 2023 补齐摘要</h3><ul>
 <li><strong>补齐脚本</strong>：<a href="file:///e:/finance/scripts/seed_hn_2023.js">scripts/seed_hn_2023.js</a>（支持 <code>--dry-run</code> / <code>--apply</code> / <code>--rollback</code>）</li>
 <li><strong>验证脚本</strong>：<a href="file:///e:/finance/scripts/verify_hn_2023.js">scripts/verify_hn_2023.js</a>（12 月 × 7 项断言）</li>
 <li><strong>数据性质</strong>：以 HN 2024 年同月为模板 ×0.9，保留季节性；非真实历史账</li>

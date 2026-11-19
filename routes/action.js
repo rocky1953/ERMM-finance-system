@@ -3,6 +3,7 @@
  * 任務 CRUD + 狀態統計
  */
 const express = require('express');
+const { perms, readScope } = require('../middleware/perms');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
@@ -31,7 +32,7 @@ router.get('/:uid', async (req, res) => {
 });
 
 // 新增
-router.post('/', async (req, res) => {
+router.post('/', perms('action','CREATE'), async (req, res) => {
     try {
         const { bu_no, source_kpi, title, description, assignee, due_date, target_value, priority, created_by } = req.body;
         if (!bu_no || !title) return fail(res, '缺少必要欄位');
@@ -45,7 +46,7 @@ router.post('/', async (req, res) => {
 });
 
 // 更新
-router.put('/:uid', async (req, res) => {
+router.put('/:uid', perms('action','UPDATE'), async (req, res) => {
     try {
         const { title, description, assignee, due_date, status, progress, priority } = req.body;
         const fields = [];
@@ -65,7 +66,7 @@ router.put('/:uid', async (req, res) => {
 });
 
 // 刪除
-router.delete('/:uid', async (req, res) => {
+router.delete('/:uid', perms('action','DELETE'), async (req, res) => {
     try {
         await pool.execute('DELETE FROM action_task WHERE uid=?', [req.params.uid]);
         ok(res, { msg: '已刪除' });

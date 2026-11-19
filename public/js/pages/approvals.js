@@ -3,7 +3,7 @@
  *  - 待我审批（跨业务类型）
  *  - 流程设定（管理员）
  */
-const APP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const APP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 function appEsc(v) {
     return String(v == null ? '' : v)

@@ -2,7 +2,7 @@
  * 滚动预算与三表联动（CFO-05）
  * 损益表 / 资产负债表 / 现金流量表 / 13 周现金 / 假设参数
  */
-const RB_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const RB_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 const RollingBudgetPage = {
     bu: State.bu_no,

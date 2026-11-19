@@ -2,7 +2,7 @@
  * 多维盈利分析（CFO-06）
  * 客户 / 产品 / 渠道 / 项目
  */
-const PA_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const PA_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 
 const ProfitAnalysisPage = {
     dim: 'customer',      // customer | product | channel | project
@@ -48,15 +48,15 @@ const ProfitAnalysisPage = {
         if (tabsEl && typeof bindTabs === 'function') bindTabs(tabsEl);
     },
 
-    switchDim(d) { this.dim = d; this.renderShell(); this.loadCurrent(false); },
-    setRange(r) { this.range = r; this.renderShell(); this.loadCurrent(false); },
-    setMonth(m) { if (!m) return; this.month = m; this.loadCurrent(false); },
+    switchDim(d) { this.dim = d; this.renderShell(); this.loadCurrent(); },
+    setRange(r) { this.range = r; this.renderShell(); this.loadCurrent(); },
+    setMonth(m) { if (!m) return; this.month = m; this.loadCurrent(); },
 
     query() {
         return this.range === 'month' ? `&YYYY_MM=${this.month}` : `&YYYY=${this.month.slice(0, 4)}`;
     },
 
-    async loadCurrent(autoFix = true) {
+    async loadCurrent() {
         const el = document.getElementById('paBody');
         el.innerHTML = `<div style="padding:30px;text-align:center;color:#999">⏳</div>`;
         try {
@@ -70,12 +70,7 @@ const ProfitAnalysisPage = {
             this.data = dimRes.data || { rows: [], totals: {} };
             this.costRates = {};
             ((rateRes && rateRes.data) || []).forEach(r => { this.costRates[r.xitems] = Number(r.cost_rate); });
-            if (autoFix && this.range === 'month' && !(this.data.totals?.line_cnt > 0)
-                && this.summary.latest_month && this.summary.latest_month !== this.month) {
-                this.month = this.summary.latest_month;
-                this.renderShell();
-                return this.loadCurrent(false);
-            }
+            // 不再自動跳轉到最新月份：期間一律遵循使用者選擇（含畫面最上方全域年月）
             this.render();
         } catch (e) {
             el.innerHTML = `<div style="padding:20px;color:#e74c3c">${e.message}</div>`;
@@ -115,7 +110,7 @@ const ProfitAnalysisPage = {
                 ${card(PA_L('成本率覆盖', '成本率覆蓋', 'Cost-rate Coverage'), `${s.cost_rate_coverage ?? 0}%`, PA_L('标准成本+料件成本率', '標準成本+料件成本率', 'std + item rate'), '#14b8a6')}
             </div>
             <div style="font-size:12px;color:#64748b;margin-bottom:10px">
-                ${PA_L('成本口径', '成本口徑', 'Cost basis')}: ${s.cost_ratio_source || '-'}
+                ${PA_L('成本口径', '成本口徑', 'Cost basis')}: ${I18N.fixAlert(s.cost_ratio_source || '-')}
                 · ${PA_L('公司成本率', '公司成本率', 'Company cost ratio')} ${s.cost_ratio ?? '-'}%
                 · ${PA_L('收入按已出货数量计算', '收入按已出貨數量計算', 'Revenue on delivered qty')}
             </div>
@@ -276,4 +271,8 @@ const ProfitAnalysisPage = {
     }
 };
 
-registerPage('profitAnalysis', async () => { await ProfitAnalysisPage.load(); });
+registerPage('profitAnalysis', async () => {
+    // 每次進入頁面依「畫面最上方」全域年月重置
+    ProfitAnalysisPage.month = State.YYYY_MM;
+    await ProfitAnalysisPage.load();
+});

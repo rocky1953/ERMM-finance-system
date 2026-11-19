@@ -2,7 +2,7 @@
  * 库存周转、库龄与呆滞（COO-05）
  * 周转概览 · 库龄结构 · 呆滞清单（可下发处理） · 补货建议 · 处理记录
  */
-const IT_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const IT_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 const IT_ESC = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

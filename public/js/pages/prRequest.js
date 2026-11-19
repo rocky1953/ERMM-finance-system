@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿/**
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿/**
  * 采购申请页面
  */
 const PrRequestPage = {
@@ -122,7 +122,7 @@ const PrRequestPage = {
             try { d = (await API.get(`/api/pr-request/${id}`)).data; }
             catch(e) { return UI.toast(e.message, 'error'); }
         }
-        const form = d || { bu_no:'HM', pr_type:'MATERIAL', currency:'TWD', items:[{}] };
+        const form = d || { bu_no:'HM', pr_type:'MATERIAL', currency:'RMB', items:[{}] };
         const types = ['MATERIAL','SERVICE','ASSET','OTHER'];
         const typeSel = types.map(v => `<option value="${v}" ${form.pr_type===v?'selected':''}>${this.typeLabel(v)}</option>`).join('');
         const supSel = `<option value="">${APP_L('请选择供应商','請選擇供應商','Select Supplier')}</option>` +

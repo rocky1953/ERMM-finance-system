@@ -46,10 +46,10 @@
         charts: [],
         view: 'chart',
         persons: [],
-        // 图表页筛选状态（跨视图持久化）
+        // 图表页筛选状态（跨视图持久化）——預設依「畫面最上方」全域年月
         chartFilters: {
-            year: new Date().getFullYear(),
-            month: String(new Date().getMonth() + 1).padStart(2, '0'),
+            year: State.year(),
+            month: State.mm(),
             depart_id: ''
         },
         detail: { user_id: '', user_name: '', year: '', month: '', page: 1, pageSize: 13, rows: [], total: 0 },
@@ -68,7 +68,7 @@
         },
 
         yearOptions(sel) {
-            const y = new Date().getFullYear();
+            const y = State.year();
             const s = Number(sel) || y;
             const max = Math.max(y + 1, s);
             const min = Math.min(y - 6, s);
@@ -93,7 +93,7 @@
         deptOptions(sel) {
             const ds = (this.meta && this.meta.departments) || [];
             return `<option value="">${t('dr.all')}</option>` +
-                ds.map(d => `<option value="${esc(d)}" ${sel === d ? 'selected' : ''}>${esc(d)}</option>`).join('');
+                ds.map(d => `<option value="${esc(d)}" ${sel === d ? 'selected' : ''}>${esc(tDept(d))}</option>`).join('');
         },
         wkOptions() {
             return (this.meta.wk_types || []).map(w => `<option value="${esc(w)}">${this.wkLabel(w)}</option>`).join('');

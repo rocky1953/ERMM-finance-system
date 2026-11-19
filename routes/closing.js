@@ -6,6 +6,8 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
+const audit = require('../services/audit');
+const { perms, readScope } = require('../middleware/perms');
 
 // ====== 关账日历概览 ======
 router.get('/calendar', async (req, res) => {
@@ -44,7 +46,7 @@ router.get('/calendar', async (req, res) => {
 });
 
 // ====== 关账 ======
-router.post('/calendar/:bu_no/:YYYY_MM/close', async (req, res) => {
+router.post('/calendar/:bu_no/:YYYY_MM/close', perms('closing','CLOSE'), async (req, res) => {
     try {
         const u = req.user;
         const { bu_no, YYYY_MM } = req.params;
@@ -76,12 +78,17 @@ router.post('/calendar/:bu_no/:YYYY_MM/close', async (req, res) => {
                 [bu_no, YYYY_MM, 'CLOSED', u.user_id]
             );
         }
+        audit.log(req, {
+            module: 'closing', action: 'LOCK', businessType: 'CLOSING',
+            businessId: `${bu_no}/${YYYY_MM}`,
+            summary: `关账 ${bu_no} ${YYYY_MM} by ${u.user_id}`
+        });
         ok(res, null, `${bu_no} ${YYYY_MM} 已关账`);
     } catch (err) { fail500(res, err); }
 });
 
 // ====== 重开关账 ======
-router.post('/calendar/:bu_no/:YYYY_MM/reopen', async (req, res) => {
+router.post('/calendar/:bu_no/:YYYY_MM/reopen', perms('closing','REOPEN'), async (req, res) => {
     try {
         const u = req.user;
         if (String(u.admin || '').trim() !== 'Yes') return fail(res, '仅管理员可重开关账', 403);
@@ -91,6 +98,11 @@ router.post('/calendar/:bu_no/:YYYY_MM/reopen', async (req, res) => {
              ON DUPLICATE KEY UPDATE status='OPEN', reopen_time=NOW(), reopen_by=?`,
             [bu_no, YYYY_MM, 'OPEN', u.user_id, u.user_id]
         );
+        audit.log(req, {
+            module: 'closing', action: 'UNLOCK', businessType: 'CLOSING',
+            businessId: `${bu_no}/${YYYY_MM}`,
+            summary: `反关账（重开）${bu_no} ${YYYY_MM} by ${u.user_id}`
+        });
         ok(res, null, `${bu_no} ${YYYY_MM} 已重开`);
     } catch (err) { fail500(res, err); }
 });
@@ -127,11 +139,13 @@ router.get('/checklist', async (req, res) => {
 });
 
 // ====== 更新任务状态 ======
-router.put('/checklist/:id', async (req, res) => {
+router.put('/checklist/:id', perms('closing','UPDATE'), async (req, res) => {
     try {
         const u = req.user;
         const { status, remark } = req.body;
         if (!['OPEN', 'DONE', 'NA'].includes(status)) return fail(res, 'status 必须是 OPEN/DONE/NA', 400);
+        // 先查旧值
+        const [oldRows] = await pool.execute('SELECT * FROM closing_task_instance WHERE id=?', [req.params.id]);
         const updates = ['status=?'];
         const params = [status];
         if (status === 'DONE') { updates.push('done_time=NOW()', 'done_by=?'); params.push(u.user_id); }
@@ -139,6 +153,17 @@ router.put('/checklist/:id', async (req, res) => {
         if (remark !== undefined) { updates.push('remark=?'); params.push(remark); }
         params.push(req.params.id);
         await pool.execute(`UPDATE closing_task_instance SET ${updates.join(', ')} WHERE id=?`, params);
+
+        // === 显式审计 ===
+        const task = oldRows[0];
+        audit.log(req, {
+            module: 'closing', action: 'UPDATE', businessType: 'CLOSING-TASK',
+            businessId: String(req.params.id),
+            summary: `关账任务实例 id=${req.params.id} 状态 ${task?.status || '?'} → ${status} ${remark || ''}`,
+            before: task,
+            after: { status, done_by: status === 'DONE' ? u.user_id : null, remark }
+        });
+
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
@@ -157,7 +182,7 @@ router.get('/elimination', async (req, res) => {
 });
 
 // ====== 抵消分录 CRUD ======
-router.post('/elimination', async (req, res) => {
+router.post('/elimination', perms('closing','ELIM'), async (req, res) => {
     try {
         const d = req.body;
         const u = req.user;
@@ -168,15 +193,23 @@ router.post('/elimination', async (req, res) => {
                  is_confirmed, confirmed_by, confirmed_time, remark, source)
              VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
             [d.YYYY_MM, d.bu_no_from, d.bu_no_to, d.entry_type, Number(d.amount) || 0,
-             d.currency || 'TWD', rate, d.is_confirmed ? 1 : 0,
+             d.currency || 'RMB', rate, d.is_confirmed ? 1 : 0,
              d.is_confirmed ? u.user_id : null, d.is_confirmed ? new Date() : null,
              d.remark || '', d.source || 'MANUAL']
         );
+        audit.log(req, {
+            module: 'closing', action: 'CREATE', businessType: 'ELIM',
+            businessId: String(r.insertId),
+            summary: `新增抵消 ${d.YYYY_MM} ${d.bu_no_from}→${d.bu_no_to} ${d.entry_type} ${d.amount}${d.currency || 'RMB'} 确认=${d.is_confirmed ? '是' : '否'}`,
+            after: { id: r.insertId, YYYY_MM: d.YYYY_MM, bu_no_from: d.bu_no_from, bu_no_to: d.bu_no_to,
+                     entry_type: d.entry_type, amount: Number(d.amount) || 0, currency: d.currency || 'RMB',
+                     rate_to_twd: rate, is_confirmed: d.is_confirmed ? 1 : 0 }
+        });
         ok(res, { id: r.insertId }, '已新增');
     } catch (err) { fail500(res, err); }
 });
 
-router.put('/elimination/:id', async (req, res) => {
+router.put('/elimination/:id', perms('closing','UPDATE'), async (req, res) => {
     try {
         const d = req.body;
         const u = req.user;
@@ -185,23 +218,42 @@ router.put('/elimination/:id', async (req, res) => {
         if (d.is_confirmed) {
             if (String(u.admin || '').trim() !== 'Yes') return fail(res, '仅管理员可确认抵消', 403);
         }
+        // 先查旧值
+        const [oldRows] = await pool.execute('SELECT * FROM consol_elimination_entry WHERE id=?', [req.params.id]);
         await pool.execute(
             `UPDATE consol_elimination_entry SET
                 bu_no_from=?, bu_no_to=?, entry_type=?, amount=?, currency=?, rate_to_twd=?,
                 is_confirmed=?, confirmed_by=?, confirmed_time=?, remark=?
              WHERE id=?`,
             [d.bu_no_from, d.bu_no_to, d.entry_type, Number(d.amount) || 0,
-             d.currency || 'TWD', rate,
+             d.currency || 'RMB', rate,
              d.is_confirmed ? 1 : 0, d.is_confirmed ? u.user_id : null,
              d.is_confirmed ? new Date() : null, d.remark || '', req.params.id]
         );
+        audit.log(req, {
+            module: 'closing', action: 'UPDATE', businessType: 'ELIM',
+            businessId: String(req.params.id),
+            summary: `修改抵消 id=${req.params.id} ${oldRows[0]?.bu_no_from || ''}→${oldRows[0]?.bu_no_to || ''} 确认=${d.is_confirmed ? '是' : '否'}`,
+            before: oldRows[0],
+            after: { bu_no_from: d.bu_no_from, bu_no_to: d.bu_no_to, entry_type: d.entry_type,
+                     amount: Number(d.amount) || 0, currency: d.currency || 'RMB',
+                     is_confirmed: d.is_confirmed ? 1 : 0 }
+        });
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
 
-router.delete('/elimination/:id', async (req, res) => {
+router.delete('/elimination/:id', perms('closing','DELETE'), async (req, res) => {
     try {
+        // 先查旧值
+        const [oldRows] = await pool.execute('SELECT * FROM consol_elimination_entry WHERE id=?', [req.params.id]);
         await pool.execute('DELETE FROM consol_elimination_entry WHERE id=?', [req.params.id]);
+        audit.log(req, {
+            module: 'closing', action: 'DELETE', businessType: 'ELIM',
+            businessId: String(req.params.id),
+            summary: `删除抵消 id=${req.params.id} ${oldRows[0]?.bu_no_from || ''}→${oldRows[0]?.bu_no_to || ''} ${oldRows[0]?.entry_type || ''} ${oldRows[0]?.amount || 0}`,
+            before: oldRows[0]
+        });
         ok(res, null, '已删除');
     } catch (err) { fail500(res, err); }
 });
@@ -231,11 +283,17 @@ router.post('/elimination/generate', async (req, res) => {
             await pool.execute(
                 `INSERT INTO consol_elimination_entry
                     (YYYY_MM, bu_no_from, bu_no_to, entry_type, amount, currency, rate_to_twd, is_confirmed, remark, source)
-                 VALUES (?,?,?, 'SALE', ?, 'TWD', 1, 0, '自動從 AR_affiliate_amt 生成，待確認', 'AUTO_INTERNAL_SALE')`,
+                 VALUES (?,?,?, 'SALE', ?, 'RMB', 1, 0, '自動從 AR_affiliate_amt 生成，待確認', 'AUTO_INTERNAL_SALE')`,
                 [YYYY_MM, r.bu_no, 'CONSOL', Number(r.AR_affiliate_amt)]
             );
             created++;
         }
+        audit.log(req, {
+            module: 'closing', action: 'CREATE', businessType: 'ELIM-AUTO',
+            businessId: `generate/${YYYY_MM}`,
+            summary: `自动生成内部销售冲销 ${YYYY_MM} 共 ${created} 条（source=AUTO_INTERNAL_SALE，已覆盖旧数据）`,
+            detail: { YYYY_MM, created, source: 'AUTO_INTERNAL_SALE', rows: rows.map(r => ({ bu_no: r.bu_no, AR_affiliate_amt: r.AR_affiliate_amt })) }
+        });
         ok(res, { created }, `已生成 ${created} 条自动冲销分录（待确认）`);
     } catch (err) { fail500(res, err); }
 });
@@ -272,6 +330,12 @@ router.post('/rates', async (req, res) => {
                 );
             }
             await conn.commit();
+            audit.log(req, {
+                module: 'closing', action: 'UPDATE', businessType: 'RATE',
+                businessId: `${YYYY_MM}`,
+                summary: `保存折算汇率 ${YYYY_MM} 共 ${rates.length} 条`,
+                detail: { YYYY_MM, count: rates.length, currencies: rates.map(r => r.currency) }
+            });
             ok(res, null, `已保存 ${rates.length} 条汇率`);
         } catch (e) { await conn.rollback(); throw e; }
         finally { conn.release(); }

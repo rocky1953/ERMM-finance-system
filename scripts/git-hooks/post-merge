@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# 服务器端 Git 钩子：git pull 合并完成后，自动同步数据库结构并重启服务
+#
+# 安装（在服务器项目目录执行一次）：
+#   cp scripts/git-hooks/post-merge .git/hooks/post-merge
+#   chmod +x .git/hooks/post-merge
+#
+# 说明：只应安装在服务器；本机开发环境不需要（会误改本机数据库）。
+set -Eeuo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[post-merge] 代码已更新，开始同步数据库结构"
+node scripts/db_migrate.js
+
+if command -v pm2 >/dev/null 2>&1; then
+  if pm2 describe ermm-finance-system >/dev/null 2>&1; then
+    pm2 restart ermm-finance-system --update-env >/dev/null
+    echo "[post-merge] 已重启 ermm-finance-system"
+  else
+    echo "[post-merge] ⚠️ 未找到 pm2 进程 ermm-finance-system，请手动重启" >&2
+  fi
+fi

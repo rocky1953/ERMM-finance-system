@@ -75,16 +75,31 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d1" href="#sec-11">四、现金管理（💧 + 🎯）</a>
 <a class="toc-item d2" href="#sec-12">4.1 现金预测（13 周 + 概率）</a>
 <a class="toc-item d2" href="#sec-13">4.2 AR 智能催收（🎯）</a>
-<a class="toc-item d1" href="#sec-14">五、预算与分析</a>
-<a class="toc-item d2" href="#sec-15">5.1 滚动预算与三表联动（🔄）</a>
-<a class="toc-item d2" href="#sec-16">5.2 多维盈利（💹）</a>
-<a class="toc-item d2" href="#sec-17">5.3 库存周转与呆滞（📦）</a>
-<a class="toc-item d1" href="#sec-18">六、每周 / 每月 / 每季动作</a>
-<a class="toc-item d1" href="#sec-19">七、权限与边界</a>
-<a class="toc-item d1" href="#sec-20">八、常见问题</a>
+<a class="toc-item d2" href="#sec-14">4.3 费用报销与借支核销（🧾 CFO-01）</a>
+<a class="toc-item d3" href="#sec-15">费用报销</a>
+<a class="toc-item d3" href="#sec-16">借支与核销</a>
+<a class="toc-item d2" href="#sec-17">4.4 付款申请 / 付款排程 / 银行回单 / AR·AP 核销（💳 CFO-02）</a>
+<a class="toc-item d3" href="#sec-18">付款申请</a>
+<a class="toc-item d3" href="#sec-19">付款排程</a>
+<a class="toc-item d3" href="#sec-20">银行回单登记</a>
+<a class="toc-item d3" href="#sec-21">AR / AP 核销</a>
+<a class="toc-item d2" href="#sec-22">4.5 审批中心（✅）</a>
+<a class="toc-item d2" href="#sec-23">4.6 月结关账（📅）</a>
+<a class="toc-item d2" href="#sec-24">4.7 外汇曝险与避险（🌐）</a>
+<a class="toc-item d2" href="#sec-25">4.8 税务筹划与税务合规（🧾）</a>
+<a class="toc-item d2" href="#sec-26">4.9 资金流动性与投资（💧）</a>
+<a class="toc-item d1" href="#sec-27">五、预算与分析</a>
+<a class="toc-item d2" href="#sec-28">5.1 滚动预算与三表联动（🔄）</a>
+<a class="toc-item d2" href="#sec-29">5.2 多维盈利（💹）</a>
+<a class="toc-item d2" href="#sec-30">5.3 库存周转与呆滞（📦）</a>
+<a class="toc-item d2" href="#sec-31">5.4 合同主档与三单匹配联动（📝 CTO-05 新增）</a>
+<a class="toc-item d2" href="#sec-32">5.5 指标中心统一盈利口径（📊 CTO-06 新增）</a>
+<a class="toc-item d1" href="#sec-33">六、每周 / 每月 / 每季动作</a>
+<a class="toc-item d1" href="#sec-34">七、权限与边界</a>
+<a class="toc-item d1" href="#sec-35">八、常见问题</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 11:59<br>
+    產生時間：2026-11-17 04:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -96,11 +111,12 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   </div>
   <article class="doc">
 <blockquote>
-<p>适用角色：CFO（财务长 / 财务主管）｜适用版本：v3.2（2026-11-05）
+<p>适用角色：CFO（财务长 / 财务主管）｜适用版本：v4.0（2026-11-16）
 系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜建议浏览器：Chrome / Edge
-本手册覆盖你日常真正要操作的模块：看数、算账、报税、管现金、催收、质检。</p>
+本手册覆盖你日常真正要操作的模块：看数、算账、报税、管现金、催收、质检、<strong>费用与付款审批</strong>。
+本版新增：<strong>费用报销与借支核销（CFO-01）／付款申请·排程·银行回单·AR·AP 核销（CFO-02）／审批中心／合同主档与三单匹配联动（CTO-05）／指标中心统一盈利口径（CTO-06）</strong>。</p>
 </blockquote>
-<p>CFO 是系统的<strong>主要深度使用者</strong>：既要看结果（报表），也要管过程（入账、报税、现金、催收），还要保证数据可信（质量扫描）。系统里 50 个入口中，约 30 个与你的职责直接相关。</p>
+<p>CFO 是系统的<strong>主要深度使用者</strong>：既要看结果（报表），也要管过程（入账、报税、现金、催收、费用与付款），还要保证数据可信（质量扫描）。系统里 <strong>68 个</strong>入口中，约 36 个与你的职责直接相关。</p>
 <hr>
 <h1 id="sec-2">二、登录与全局操作</h1><ul>
 <li><strong>登录</strong>：<a href="http://localhost:3008">http://localhost:3008</a> → 账号密码 → 仪表板。</li>
@@ -111,7 +127,11 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </ul>
 <hr>
 <h1 id="sec-3">三、月度结账标准流程（按顺序执行）</h1><pre class="code-block"><code>① 数据质检（数据质量扫描）→ ② 财务摘要核对 → ③ 三大报表出表
-→ ④ 风险预警处理 → ⑤ 财务入账/凭证 → ⑥ 电子化报税 → ⑦ 合并报表</code></pre><h2 id="sec-4">3.1 ① 数据质量扫描（🛠️ 日常作业组）</h2><ul>
+→ ④ 风险预警处理 → ⑤ 财务入账/凭证 → ⑥ 电子化报税 → ⑦ 合并报表
+→ ⑧ 费用报销 / 付款单据结清（审批、拨付、回单、核销）</code></pre><blockquote>
+<p>⑧ 贯穿全月：报销与付款是日常动作，但<strong>月结前必须把已通过的款付完、回单登记完、核销做完</strong>，否则费用与应付余额对不上账。</p>
+</blockquote>
+<h2 id="sec-4">3.1 ① 数据质量扫描（🛠️ 日常作业组）</h2><ul>
 <li><strong>目的</strong>：出报表前先确认底层数据没有脏、缺、重、矛盾。</li>
 <li><strong>操作</strong>：<ol>
 <li>侧边栏「日常作业 · 工作日报」→ <strong>数据质量扫描</strong>。</li>
@@ -183,8 +203,102 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <li><strong>评分公式</strong>：账龄 40% + 逾期 30% + 金额规模 15% + 风险综合 10% + 单笔占比 5%。</li>
 <li><strong>注意</strong>：清单是<strong>建议排序</strong>，系统不自动发催收函。</li>
 </ul>
+<h2 id="sec-14">4.3 费用报销与借支核销（🧾 CFO-01）</h2><p><strong>入口</strong>：日常作业 · 工作日报 → <strong>费用报销</strong>（页签：我的报销 / 待我审批 / 借支管理 / 全部报销）。</p>
+<h3 id="sec-15">费用报销</h3><ul>
+<li><strong>目的</strong>：把纸质报销单搬到线上，审批与付款状态可查。</li>
+<li><strong>新建流程</strong>：<ol>
+<li>点「新增报销」→ 填<strong>事由、费用类型（差旅 / 交通 / 业务招待 / 办公 / 其他）、公司、备注</strong>。</li>
+<li>加<strong>明细行</strong>：费用日期、费用类别、说明、金额、发票号、税额；合计自动汇总。</li>
+<li><strong>保存草稿</strong>（状态 DRAFT）或<strong>保存并提交</strong>（状态 PENDING，进入审批流）。</li>
+<li>提交后生成单号 <code>BX+日期+序号</code>，可在「我的报销」查看进度。</li>
+</ol>
+</li>
+<li><strong>审批</strong>：审批人在「待我审批」页签或「审批中心」处理，通过后状态 APPROVED；管理员再点「标记付款」→ PAID。</li>
+<li><strong>撤回</strong>：审批中（PENDING）本人可撤回，状态变 CANCELLED；被驳回（REJECTED）可修改后重新提交。</li>
+</ul>
+<h3 id="sec-16">借支与核销</h3><ul>
+<li><strong>目的</strong>：员工出差 / 采购先借钱，回来凭票核销，余额自动结清。</li>
+<li><strong>借支申请</strong>：借支管理页签 → 新增 → 选类型（<strong>差旅借支 / 一般借支 / 备用金</strong>）、金额、用途 → 提交审批；单号 <code>JK+YYYYMMDD+序号</code>。</li>
+<li><strong>拨付</strong>：审批通过（APPROVED）后，<strong>仅管理员</strong>可执行「标记已拨付」→ PAID。</li>
+<li><strong>核销</strong>：出差结束在借支行点「核销」→ 填核销金额与说明；<strong>核销金额不得超过剩余余额</strong>；余额归零自动 SETTLED（已结清）。</li>
+<li><strong>注意</strong>：借支余额是硬约束，多次核销累计扣减；已结清的借支不能再核销。</li>
+</ul>
 <hr>
-<h1 id="sec-14">五、预算与分析</h1><table>
+<h2 id="sec-17">4.4 付款申请 / 付款排程 / 银行回单 / AR·AP 核销（💳 CFO-02）</h2><p><strong>入口</strong>：日常作业 → <strong>付款申请</strong>（页签：我的申请 / 待我审批 / 全部 / 付款排程）。</p>
+<h3 id="sec-18">付款申请</h3><ol>
+<li>新增 → 填供应商、事由、公司、金额，加付款明细行 → 保存或提交。</li>
+<li>单号 <code>PK+YYYYMM</code>，状态：DRAFT → PENDING → APPROVED → PAID（或 REJECTED / CANCELLED）。</li>
+<li>审批通过后，才进入付款执行环节。</li>
+</ol>
+<h3 id="sec-19">付款排程</h3><ul>
+<li><strong>目的</strong>：把「这个月要付哪些钱」排到日历上，提前看资金压力。</li>
+<li><strong>操作</strong>：切到「付款排程」页签 → 按月汇总待付金额 → 逐笔设置<strong>计划付款日</strong>（<code>planned_pay_date</code>）→ 保存。</li>
+<li><strong>用法</strong>：结合「现金预测」13 周曲线，把大额付款错开现金低点。</li>
+</ul>
+<h3 id="sec-20">银行回单登记</h3><ul>
+<li><strong>操作</strong>：实际付款后，在已通过（APPROVED）的付款申请上点「登记回单」→ 填<strong>回单号（必填）、回单日期、实付金额</strong> → 保存。</li>
+<li><strong>结果</strong>：状态自动 APPROVED → <strong>PAID</strong>，账实同步；回单号与实付金额留档备查。</li>
+</ul>
+<h3 id="sec-21">AR / AP 核销</h3><ul>
+<li><strong>目的</strong>：确认「这笔付款到底核掉哪几张发票」，避免重复付款与漏核销。</li>
+<li><strong>操作</strong>：<ol>
+<li>切到「核销」页签 → 选择付款申请 → 点「选择核销来源」。</li>
+<li>系统列出可核销发票（<code>mgm_invoice_details</code> 中 <code>sub_amt &gt; payment</code> 的未核销款），勾选并填核销金额。</li>
+<li>支持<strong>部分核销</strong>：累计核销金额 ≥ 发票总额 → 状态 <strong>WRITTEN（全额）</strong>；否则 <strong>PARTIAL（部分）</strong>。</li>
+<li>核销错误可「撤销」，撤销后重新核销。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：核销金额不得大于发票未核销余额；跨账套不可混核。</li>
+</ul>
+<hr>
+<h2 id="sec-22">4.5 审批中心（✅）</h2><ul>
+<li><strong>入口</strong>：日常作业 → <strong>审批中心</strong>（页签：待我审批 / 我发起的 / 流程设定）。</li>
+<li><strong>处理待办</strong>：进入「待我审批」→ 点单据查看明细（金额、明细行、事由）→ <strong>通过 / 驳回</strong>（驳回需填意见）。</li>
+<li><strong>看我发起的</strong>：跟踪自己提交的单据走到哪一关、卡在谁那里。</li>
+<li><strong>流程设定（仅管理员）</strong>：维护 <code>wf_process</code> 的签核层级（<code>steps_json</code>），可按费用报销 / 借支 / 付款申请分别设定审批人与顺序。</li>
+<li><strong>要点</strong>：审批动作写入 <code>wf_log</code>（审批人、意见、时间），全流程可追溯；同一张单只有一个进行中的实例。</li>
+</ul>
+<h2 id="sec-23">4.6 月结关账（📅）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>月结关账</strong>。</li>
+<li><strong>目的</strong>：把月结从「口头催办」变成「任务清单 + 时间点」，谁没做完一目了然。</li>
+<li><strong>操作</strong>：<ol>
+<li>选公司与月份 → 系统按关账日历生成任务清单（<code>closing_calendar</code> / <code>closing_task</code> / <code>closing_task_instance</code>）。</li>
+<li>逐项执行：数据质检、计提、摊销、结转、对账、报表出表。</li>
+<li>每项任务标记完成（记录负责人与时间）；全部完成后执行<strong>关账</strong>，关账后当期不再允许改数。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：关账前必须先把费用报销、付款、回单、核销处理完（见 3.1 第 ⑧ 步）；需要调整时走「反关账」，须高阶权限并留痕。</li>
+</ul>
+<h2 id="sec-24">4.7 外汇曝险与避险（🌐）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>外汇曝险</strong>。</li>
+<li><strong>用途</strong>：按币别汇总未结外汇敞口（应收 / 应付 / 借款），并登记已做的避险工具（远期 / 期权）。</li>
+<li><strong>操作</strong>：<ol>
+<li>看敞口表：币别、敞口金额、折本币金额、已避险比例。</li>
+<li>「避险登记」：录入避险工具类型、金额、汇率、到期日（<code>fx_hedge</code>）。</li>
+<li>看「覆盖率」：已避险 / 总敞口；覆盖率低且本币波动大时，考虑补做避险。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：本模块为<strong>管理口径</strong>，不自动生成会计分录入账；实际交割仍走资金与银行模块。</li>
+</ul>
+<h2 id="sec-25">4.8 税务筹划与税务合规（🧾）</h2><ul>
+<li><strong>入口</strong>：财务分析·税务申报 → <strong>税务筹划</strong>、<strong>税务合规</strong>。</li>
+<li><strong>税务筹划</strong>：查看适用税务优惠政策（<code>tax_preference</code>）与可抵扣项（<code>vat_deductions</code>），评估节税空间；筹划方案不直接改申报数据，需人工确认后录入。</li>
+<li><strong>税务合规</strong>：<ol>
+<li>法规清单（<code>tax_regulation</code>）与合规事项（<code>tax_compliance_item</code>）：按税种、期间查看应办事项。</li>
+<li>申报任务（<code>tax_filing_task</code>）：显示截止日与状态，逾期标红。</li>
+<li>完成后在任务上标记办结，形成「法规 → 事项 → 任务」的合规证据链。</li>
+</ol>
+</li>
+<li><strong>用法</strong>：每月申报前先看任务清单，避免漏报；季度做一次优惠政策复核。</li>
+</ul>
+<h2 id="sec-26">4.9 资金流动性与投资（💧）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>资金流动性</strong>、<strong>投资管理</strong>。</li>
+<li><strong>资金流动性</strong>：按周 / 月看现金计划（<code>cash_plan_item</code>）与实际流入流出，评估流动性缺口与融资需求。</li>
+<li><strong>投资管理</strong>：登记投资项目、预算与实际现金流（<code>investment_project</code> / <code>investment_budget</code> / <code>investment_cashflow</code>），看回收期与 IRR 口径。</li>
+<li><strong>用法</strong>：大额付款排程前先看流动性缺口；投资项目立项前用本模块做现金流测算，避免与现金预测脱节。</li>
+</ul>
+<hr>
+<h1 id="sec-27">五、预算与分析</h1><table>
 <thead>
 <tr>
 <th>模块</th>
@@ -253,8 +367,26 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>报表异常自动甄别</td>
 <td>月度结账后跑一次</td>
 </tr>
+<tr>
+<td>预算审批留痕</td>
+<td>经营决策 → 预算编制 → 审批</td>
+<td>预算版本提交 / 审批 / 驳回记录（<code>budget_approval_log</code>）</td>
+<td>提交前确认版本号与期间，驳回需填意见</td>
+</tr>
+<tr>
+<td>收款与应收核销</td>
+<td>日常作业 → 收款管理</td>
+<td>登记收款并核销应收（<code>receipt_detail</code> / <code>ar_match_result</code>）</td>
+<td>先登记收款 → 选发票核销 → 支持部分核销</td>
+</tr>
+<tr>
+<td>请购 / 到货 / 三单匹配</td>
+<td>ERP 原始单据 → 请购单 / 到货单 / 三单匹配</td>
+<td>请购 → 采购 → 到货 → 发票金额比对</td>
+<td>差异行标红，人工确认后再入账</td>
+</tr>
 </tbody></table>
-<h2 id="sec-15">5.1 滚动预算与三表联动（🔄）</h2><ul>
+<h2 id="sec-28">5.1 滚动预算与三表联动（🔄）</h2><ul>
 <li><strong>入口</strong>：经营决策 → 滚动预算。</li>
 <li><strong>默认口径</strong>：以财务汇总最新实际月为基准，取最近 3 个月平均推导收入与费用结构；无保存假设时按实际数自动推导。</li>
 <li><strong>操作</strong>：<ol>
@@ -265,13 +397,13 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </li>
 <li><strong>关注点</strong>：最低现金余额出现的月份、期末现金、三表平衡差（应接近 0）。预算属于<strong>假设驱动</strong>，改任一假设都会联动影响三张表，评审前先固定假设版本。</li>
 </ul>
-<h2 id="sec-16">5.2 多维盈利（💹）</h2><ul>
+<h2 id="sec-29">5.2 多维盈利（💹）</h2><ul>
 <li><strong>入口</strong>：经营决策 → 多维盈利。</li>
 <li><strong>用途</strong>：按客户、产品、区域、渠道等维度拆解收入、毛利与净利，识别「高收入低毛利」的客户/产品。</li>
 <li><strong>操作</strong>：选公司与期间 → 切换分析维度 → 看贡献排名与毛利率分布；导出结论用于定价与资源调整。</li>
 <li><strong>注意</strong>：维度归集依赖原始单据字段完整性；若某维度出现大量「未分类」，先让 COO/业务侧补主档。</li>
 </ul>
-<h2 id="sec-17">5.3 库存周转与呆滞（📦）</h2><ul>
+<h2 id="sec-30">5.3 库存周转与呆滞（📦）</h2><ul>
 <li><strong>入口</strong>：经营决策 → 库存周转。</li>
 <li><strong>核心指标</strong>：存货周转率 = 近 12 个月销售成本 ÷ 平均存货价值；周转天数 DSI = 365 ÷ 周转率。</li>
 <li><strong>库龄</strong>：取自库存日快照，默认选择料件最完整的最近日期，可在页头切换快照；分 0-30 / 31-90 / 91-180 / &gt;180 天四档。</li>
@@ -279,15 +411,50 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <li><strong>补货建议</strong>：目标覆盖天数可调，补货点 = 交期 + 安全天数；无销售数据的料件以采购量近似需求。</li>
 <li><strong>财务用法</strong>：每月审「呆滞金额占比 + 减值准备」，与库存减值模块交叉核对；对超储料件推动暂缓采购。</li>
 </ul>
+<h2 id="sec-31">5.4 合同主档与三单匹配联动（📝 CTO-05 新增）</h2><ul>
+<li><strong>入口</strong>：ERP 原始单据 → <strong>合同主档</strong>。</li>
+<li><strong>目的</strong>：把合同信息纳入三单匹配（PO / 到货 / 发票），避免「采购价与合同价对不上还在付款」。</li>
+<li><strong>合同主档结构</strong>：28 栏（<code>ermm_contract</code>），核心字段：合同编号 / 甲方 / 乙方 / 合同金额 / 币种 / 签约日 / 到期日 / 合同状态 / 关联 PO 编号 / 付款条款。</li>
+<li><strong>三单匹配联动</strong>：<ol>
+<li>以前三单只比 PO / 到货 / 发票的数量和单价。</li>
+<li>现在多一层 <strong>合同价校验</strong>：PO 的单价 vs 合同约定价，差异超过阈值（可配置）直接标红。</li>
+<li>合同 → 采购 → 到货 → 发票 → 付款，全链路可追溯，付款前必须确认合同已关联且价格无差异。</li>
+</ol>
+</li>
+<li><strong>财务用法</strong>：<ul>
+<li>月结前跑一次三单匹配，把合同价格差异的单拎出来处理。</li>
+<li>新供应商付款前，先确认有没有合同；没合同的让采购补签再走流程。</li>
+<li>合同到期预警：到期前 30 天系统自动提醒续签。</li>
+</ul>
+</li>
+<li><strong>注意</strong>：合同主档系统已从 <code>ermm_erp_po</code> 自动种了 10 笔示范数据；正式使用前请让 CTO 跑一次清理脚本把示范数据删掉。</li>
+</ul>
+<h2 id="sec-32">5.5 指标中心统一盈利口径（📊 CTO-06 新增）</h2><ul>
+<li><strong>入口</strong>：你不需要直接操作这个模块 — 它是底层引擎（<code>services/metricCenter.js</code> + <code>cams_metric_def</code> 23 指标 7 类别），被仪表板、滚动预算、多维盈利、库存周转统一调用。</li>
+<li><strong>对你的影响</strong>：<ol>
+<li><strong>毛利率口径统一</strong>：以前仪表板毛利 = 收入 - 发票成本，多维盈利毛利 = 收入 - 财务摘要成本，偶尔差几个点。现在都从指标中心取，公式唯一。</li>
+<li><strong>ROE 计算透明</strong>：ROE = 净利润 / 平均股东权益（权益取期初 + 期末 / 2），公式在 <code>cams_metric_def</code> 里是公开的，任何人都可以查。</li>
+<li><strong>DSI / DSO / DPO 同源</strong>：存货周转天数 = 365 × 平均存货 / 销售成本，应收周转天数 = 365 × 平均应收 / 收入，统一从财务摘要取数，不再各算各的。</li>
+</ol>
+</li>
+<li><strong>财务用法</strong>：<ul>
+<li>有人问「为什么仪表板 ROE 和我算的不一样？」→ 让对方去指标中心看公式，确认自己的公式有没有差。</li>
+<li>新增指标口径变更 → 让 CTO 改 <code>cams_metric_def</code> + 更新 <code>metricCenter.js</code>，不要在多个 Excel 里各改一遍。</li>
+</ul>
+</li>
+</ul>
 <hr>
-<h1 id="sec-18">六、每周 / 每月 / 每季动作</h1><ul>
+<h1 id="sec-33">六、每周 / 每月 / 每季动作</h1><ul>
 <li><strong>每日</strong>：看仪表板 AI 摘要 → AR 智能催收清单（🔴 当天处理）。</li>
 <li><strong>每周</strong>：现金预测看 13 周缺口 → 更新收付款计划 → 预警处理。</li>
 <li><strong>每月</strong>：按第三章 ①~⑦ 顺序完成结账；报税前跑一次数据质量扫描；看一次滚动预算与库存周转（呆滞占比、DSI）。</li>
 <li><strong>每季</strong>：预算执行复盘 + 风险模型复核 + 同业标杆对比。</li>
 </ul>
 <hr>
-<h1 id="sec-19">七、权限与边界</h1><table>
+<h1 id="sec-34">七、权限与边界</h1><blockquote>
+<p>下表为<strong>动作级</strong>边界；模块（菜单）可见性由「系统 · 主档管理 → 功能权限」按一般 / 操作员 / 管理员控制，完整 <strong>78 个模组</strong>清单见《使用者操作手册》附录 A。你是管理员时可直接在该页调整。</p>
+</blockquote>
+<table>
 <thead>
 <tr>
 <th>你的权限</th>
@@ -314,12 +481,20 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>滚动预算假设维护、呆滞处理单下发</td>
 <td>使用者管理、系统设定</td>
 </tr>
+<tr>
+<td>费用报销 / 借支 / 付款申请审批</td>
+<td>借支拨付（仅管理员）</td>
+</tr>
+<tr>
+<td>付款排程、银行回单登记、AR/AP 核销</td>
+<td>审批流程设定（仅管理员）</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p>财务入账、报税提交等敏感操作受角色权限控制；若按钮不可用，说明当前账号角色不足，请联系管理员。</p>
 </blockquote>
 <hr>
-<h1 id="sec-20">八、常见问题</h1><table>
+<h1 id="sec-35">八、常见问题</h1><table>
 <thead>
 <tr>
 <th>现象</th>
@@ -353,6 +528,26 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <tr>
 <td>系统文件打不开</td>
 <td>需管理员账号；非管理员会提示无权限</td>
+</tr>
+<tr>
+<td>报销单提交后没有待办</td>
+<td>检查「流程设定」是否有该 <code>business_type</code> 且启用；审批人是否已指定</td>
+</tr>
+<tr>
+<td>借支核销报金额超限</td>
+<td>核销金额须 ≤ 剩余余额；多次核销累计扣减，余额 0 自动结清</td>
+</tr>
+<tr>
+<td>付款申请无法标记付款</td>
+<td>需先登记银行回单（回单号必填、实付金额），状态须为 APPROVED</td>
+</tr>
+<tr>
+<td>核销清单为空</td>
+<td>该账套 / 期间没有未核销发票（<code>sub_amt &gt; payment</code>）</td>
+</tr>
+<tr>
+<td>付款排程看不到单据</td>
+<td>仅已通过（APPROVED）的付款申请进入排程视图</td>
 </tr>
 </tbody></table>
 

@@ -4,6 +4,8 @@
  *   - 内联编辑 P10 / P25 / Median / P75 / P90 / Note
  *   - 保存按钮
  */
+const BM_IND_EN = { '制造业':'Manufacturing','批发零售业':'Wholesale & Retail' };
+const bmIndLabel = (v) => I18N.lang === 'en' ? (BM_IND_EN[v] || v) : v;
 registerPage('benchmark', async (c) => {
     c.innerHTML = `<div style="text-align:center;padding:40px;color:#999;">${t('loading')}</div>`;
 
@@ -31,7 +33,7 @@ registerPage('benchmark', async (c) => {
 
     function render() {
         const indOpts = ['', ...meta.industries].map(i =>
-            `<option value="${i}" ${filterInd===i?'selected':''}>${i||'—'}</option>`
+            `<option value="${i}" ${filterInd===i?'selected':''}>${i?bmIndLabel(i):'—'}</option>`
         ).join('');
         const yrOpts = ['', ...meta.years].map(y =>
             `<option value="${y}" ${String(filterYear)===String(y)?'selected':''}>${y||'—'}</option>`
@@ -40,7 +42,7 @@ registerPage('benchmark', async (c) => {
         const tableHtml = rows.map(r => `
             <tr data-uid="${r.uid}">
                 <td><code style="font-size:12px;">${r.kpi_id}</code></td>
-                <td>${r.industry}</td>
+                <td>${bmIndLabel(r.industry)}</td>
                 <td>${r.year}</td>
                 ${['p10','p25','median','p75','p90'].map(k => `
                     <td><input data-k="${k}" type="number" step="0.001" value="${r[k] ?? ''}"
@@ -122,7 +124,7 @@ registerPage('benchmark', async (c) => {
         const kpi_id = prompt(t('benchmark.prompt_kpi') || '请输入 KPI ID（如 roe）');
         if (!kpi_id) return;
         const industry = prompt(t('benchmark.prompt_industry') || '行业（制造业 / 批发零售业）') || '制造业';
-        const year = prompt(t('benchmark.prompt_year') || '年份', new Date().getFullYear()) || new Date().getFullYear();
+        const year = prompt(t('benchmark.prompt_year') || '年份', String(State.year())) || String(State.year());
         await saveRow(0, { kpi_id, industry, year, p10:null, p25:null, median:null, p75:null, p90:null, note:'新增' });
         await load();
     };

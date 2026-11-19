@@ -1,9 +1,10 @@
 # ERMM 財務模組管理系統 — 完整技術手冊
 
-**版本**: v1.1（遷移 006–032）  
-**最後更新**: 2026-11-13  
+**版本**: v1.4（遷移 001–059）  
+**最後更新**: 2026-11-17  
 **系統地址**: http://localhost:3008  
 **技術棧**: Node.js 18 + Express 5 + MySQL 8（後端）；原生 HTML/CSS/JS + Chart.js（前端）；JWT 認證  
+**規模事實**: 81 個功能模組（8 分組）· 68 個前端頁面 · 74 個 API 路由 · 152 張資料表 · 24 個業務服務 · **72 個遷移腳本** · 55 個按鈕權限 · 17 個測試文件（+ 2 個 CTO 服務統一引擎 metricCenter / notifier）
 
 ---
 
@@ -38,7 +39,7 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 │              Express 伺服器 :3008                             │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
 │  │ middleware│ │  routes  │ │ services │ │  utils / i18n     │ │
-│  │  auth.js │ │  64 個   │ │  tax/... │ │  三語切換         │ │
+│  │  auth.js │ │  74 個   │ │  tax/... │ │  三語切換         │ │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────────────┘ │
 │                                                               │
 │  health: GET /api/health                                      │
@@ -68,7 +69,7 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 
 ## 第二章 七大業務域模組介紹
 
-系統按功能分為 7 大業務域，共 **64 個後端路由文件 / 60 個前端頁面腳本 / 89 張資料表**。
+系統按功能分為 7 大業務域，共 **74 個後端路由文件 / 68 個前端頁面 / 152 張資料表**（2026-11-17 實測）。
 
 ---
 
@@ -86,7 +87,7 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 | 管理會計 | `mgmtAccounting.js` | `/api/mgmtAccounting/*` | 內部責任中心績效（利潤中心 / 成本中心） |
 | 預算編制 | `budget.js` | `/api/budget/*` | 年度預算編制 / 執行率 / 差異分析 |
 | 合併報表 | `consolidation.js` | `/api/consolidation/*` | 多子公司合併抵消分錄 |
-| AI 問答 | `aiqa.js` | `/api/aiqa/*` | 自然語言問財務數據（LLM 接駁） |
+| AI 問答 | `aiqa.js` | `/api/aiqa/*` | 自然語言問財務數據（LLM 接駁；服務商唯讀，統一取 `llm_config` 預設 `is_default=1`） |
 | 情景模擬 | `scenario.js` | *(service 層)* | 假設分析：若銷量降 10% 淨利影響多少 |
 | 多維盈利 | `profitAnalysis.js` | `/api/profit/*` | 客戶 / 產品 / 渠道 / 項目四維毛利與淨利，渠道映射與料件成本率可覆蓋 |
 | 滾動預算 | `rollingBudget.js` | `/api/rolling-budget/*` | 12 個月滾動預測，損益 / 資產負債 / 現金流量三表聯動 + 13 週現金 |
@@ -104,6 +105,16 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 
 > 三模組均為**只讀分析**，不回寫賬務；僅庫存周轉會寫 `inv_slow_moving_action`。權限於 `cams_module_permission` 登記為 `profitAnalysis` / `rollingBudget` / `inventoryTurnover`，模組組別為「經營決策」。
 
+#### 域 1 補充 2：組織人效 / 戰略 BSC / 董事會報告包（2026-11 新增）
+
+| 模組 | 前端頁 | 後端路由 | 遷移 | 核心資料表 | 口徑與操作要點 |
+|------|-------|---------|------|-----------|---------------|
+| 組織人效 | `hrEfficiency.js` | `/api/hr-efficiency/*` | `047_hr_payment_advance.sql` | `hr_headcount_plan`（另讀 `cams_xuser`、薪資表） | 12 張 KPI 卡（編制 / 在職 / 人均產值 / 人工成本率等）+ 近 6 個月趨勢；部門編制按 `bu_no + period + depart_name` 唯一，可一鍵複製上月 |
+| 戰略目標 BSC | `strategy.js` | `/api/strategy/*` | `043_strategy_bsc.sql` | `bsc_objective`、`bsc_progress` | 公司 → 部門 → 個人三層目標對齊，進度錄入後自動彙總達成率 |
+| 董事會報告包 | `boardPack.js` | `/api/board-pack/*` | `034_board_pack.sql` | `board_pack` | 財務摘要 + 經營 KPI + 預算執行 + 風險提示組包，支援 PDF / PPTX 匯出 |
+
+> 組織人效的目標貫通直接複用 `bsc_objective` / `bsc_progress`，不另建目標體系；三者皆為只讀彙總 + 配置維護，不回寫賬務。
+
 ---
 
 ### 域 2：ERP 原始單據（Source Documents）
@@ -118,6 +129,14 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 | SO 交貨單 | `dn.js` | `/api/dn/*` | 實際送貨 / 物流追蹤 / 簽收回執 |
 
 **關聯資料表**：`mgm_po`、`mgm_so`、`mgm_dn`、`mgm_supplier`、`mgm_customer`、`mgm_product`、`mgm_inventory`
+
+#### 域 2 補充：項目損益與銷售信用（COO-02 / COO-03）
+
+| 模組 | 前端頁 | 後端路由 | 遷移 | 核心資料表 | 要點 |
+|------|-------|---------|------|-----------|------|
+| 項目損益 | `projectProfit.js` | `/api/project-profit/*` | `035` / `036` / `037` | `project_budget`、`project_cost`、`project_revenue`、`project_customer_map` | 五頁簽：預算 / 成本 / 收入 / 客戶映射 / 損益彙總；預算按 `bu_no` 區分帳套 |
+| 銷售信用 | `soCredit.js` | `/api/so-credit/*` | `029_sales_credit_return.sql` | `sales_credit_limit`、`sales_return` | 客戶信用額度設定與超額預警；退貨原因與金額歸集，回沖毛利 |
+| 請購 / 到貨 / 三單匹配 | `prRequest.js` / `poGrn.js` / `poMatch.js` | `/api/pr-request/*`、`/api/po-grn/*`、`/api/po-match/*` | `024` / `025` / `028` | `pr_request*`、`po_grn`、`po_match_result` | 請購 → 採購 → 到貨 → 發票三單匹配，差異可追到單據 |
 
 ---
 
@@ -135,6 +154,18 @@ ERMM（Enterprise Resource & Money Management）是一套面向製造業 / 貿�
 | 應收應付 | `arap.js` | `/api/arap/*` | 應收賬齡分析 / 應付賬齡分析 / 往來單位對賬 |
 
 **關聯資料表**：`mgm_cash_ledger`、`mgm_invoice_details`（**報稅的核心數據來源**）、`mgm_payment`、`mgm_check`、`mgm_loan`、`mgm_ar_detail`、`mgm_ap_detail`
+
+#### 域 3 補充：費用與付款閉環（CFO-01 / CFO-02）+ 通用審批流
+
+| 模組 | 前端頁 | 後端路由 | 遷移 | 核心資料表 | 要點 |
+|------|-------|---------|------|-----------|------|
+| 費用報銷 | `expense.js` | `/api/expense/*` | `021_workflow_expense.sql` / `047` | `exp_report`、`exp_report_item` | 單號 `BX+日期+序號`；狀態 DRAFT → PENDING → APPROVED → PAID / REJECTED；明細到發票號與稅額 |
+| 借支與核銷 | `expense.js`（借支頁簽） | `/api/expense/advances/*` | `047_hr_payment_advance.sql` | `exp_advance`、`exp_advance_settle` | 單號 `JK+YYYYMMDD+序號`；TRAVEL / GENERAL / PETTY；撥付僅管理員，核銷金額 ≤ 餘額，餘額 0 自動 SETTLED |
+| 付款申請與排程 | `payRequest.js` | `/api/pay-request/*` | `022_workflow_payment.sql` | `pay_request`、`pay_request_item` | 單號 `PK+YYYYMM`；`planned_pay_date` 排程、銀行回單（`bank_receipt_no` / `receipt_date` / `receipt_amount`）回寫 PAID |
+| AR/AP 核銷 | `payRequest.js`（核銷頁簽） | `/api/pay-request/writeoffs` | `026_receipt_match.sql` | `pay_writeoff`（來源 `mgm_invoice_details`） | 支援部分核銷；累計核銷 ≥ 總額 → WRITTEN，否則 PARTIAL；可撤銷 |
+| 審批中心 | `approvals.js` | `/api/workflow/*` | `021` / `022` | `wf_process`、`wf_instance`、`wf_task`、`wf_log` | 待辦 / 我發起 / 流程設定三視圖；`services/workflow.js → submitWorkflow()` 統一提交 |
+
+> 審批流為通用引擎：`wf_process.steps_json` 定義簽核層級，`business_type` 區分 EXPENSE / ADVANCE / PAYMENT；新業務接入只需在提交時呼叫 `submitWorkflow()`，不新增流程表。
 
 ---
 
@@ -219,6 +250,31 @@ mgm_payroll (如有) → payroll_details
 | 第三方整合 | `integration.js` | `/api/integration/*` | 外部系統 API 接駁日誌 |
 | 系統設置 | `system.js` | `/api/system/*` | 參數配置 / 字典型 |
 | 使用者管理 | `user.js` | `/api/user/*` | 角色 / 權限 / 密碼 |
+
+#### 域 7 補充：CTO 系列項目細節（2026-11 交付）
+
+| 項目 | 遷移 | 核心資料表 / 文件 | 後端路由 / 服務 | 要點 |
+|------|------|-------------------|----------------|------|
+| **CTO-02 細粒度按鈕權限** | 新增表 | `cams_permission_button`（55 按鈕 × 三角色 allow 矩陣） | middleware `perms.js` 新增 `readScope` + `requireButton`；`middleware/moduleGuard.js` 模組級 API 守門 | 模組級 `cams_module_permission` 之外，再往下鑽到按鈕級（如「編輯」「刪除」「提交」「審批」）；角色判定沿用三角色邏輯（管理員 / 操作員 / 一般）；moduleGuard 掛載於 `authRequired` 之後、路由之前 |
+| **CTO-03 操作審計** | 無新遷移（全量串接） | `routes/audit.js` 自動寫入所有 CRUD 操作 | `routes/audit.js`（list + stats + byModule + byUser + detail + export） | 全量操作審計 API，與既有 `daily_report_audit_log` 串接；AI 層審計另由 CTO-09 獨立記錄 |
+| **CTO-04 備份災備** | 無新遷移 | `.github/workflows/backup.yml` · MySQL 遷移可回放腳本 | 批次管線擴充備份步驟 | 批次管線 7 步之外新增備份/災備回滾腳本；MySQL 遷移腳本全部可回放（rollback 成對） |
+| **CTO-05 合同主檔** | `057_contract.sql` | `ermm_contract`（28 字段，PK uid，UK (contract_no, bu_no)，FK → `ermm_erp_po.po_uid`，索引 idx_bu / idx_partner / idx_status / idx_expire / idx_po / idx_so） | `routes/contracts.js`（9 端點：CRUD + stats + types + po-options + seed-from-po） | 從 `ermm_erp_po` 自動種子 10 筆示範；前端 1 頁（列表 + 統計） |
+| **CTO-06 指標中心** | `056_metric_center.sql` | `cams_metric_def`（23 指標 7 類別）· `cams_metric_lineage`（5 行血緣） | `services/metricCenter.js`（統一計算引擎） | ROE 統一口徑：淨利潤 ÷ 平均股東權益；消除儀表板/戰情看板/經營分析各自重複 SQL；前端 1 頁（總覽 + 閾值調整） |
+| **CTO-07 消息通知** | `055_notifier.sql` | `cams_notif_channel`（3 預設：Email/Lark/企微 webhook）· `cams_notif_subscription`（6 規則） | `services/notifier.js`（Email / Lark / 企微 webhook 統一入口） | 統一發送入口，支持未來擴充；訂閱規則：report_balance / wk_reminder / low_cash / ap_cm / overdue_invoice / auction_notice |
+| **CTO-08 CI/CD** | 無遷移（配置） | `.github/workflows/ci.yml`（含 MySQL 8 service + Jest 17 test files 52+ test points）· `.env.example` | 本地 `npm test` 回歸測試 | CI 每次 push 自動跑 Jest；`.env.example` 標準化本地環境變量 |
+| **CTO-09 AI 治理** | `058_ai_audit.sql` | `ermm_ai_audit`（全量 AI 調用審計）· `cams_ai_model_pricing`（10 模型 USD/1K 計價）· `cams_ai_rate_limit`（global + bu_HM/HN/SZ 四檔配額） | `routes/llmAudit.js`（10 端點：list + stats + cost + users + detail + limits + pricing + models）· `services/llmAudit.js`（auditCall + calcCost + checkRateLimit）· `utils/llmClient.js`（returnMeta 模式） | 前端 6 頁簽 Dashboard：📊 總覽 / 📈 成本趨勢 / 👥 用戶排行 / 🧩 模型明細 / 🛡️ 配額與限制 / 📝 調用詳情；每次 LLM 調用自動採集 token、latency、cost |
+
+#### 域 7 補充：權限體系三層化（2026-11）
+
+權限由外到內分三層，任一層拒絕即無法存取：
+
+| 層 | 位置 | 機制 | 拒絕表現 |
+|---|---|---|---|
+| ① 導航隱藏 | 前端 `public/js/app.js` | `Auth.canAccess()` 對 `ermm_permissions` 採 **fail-closed**（缺失或非陣列即拒絕）；`Auth.refreshPermissions(force)` 從 `/api/auth/me` 同步角色與矩陣（30 秒節流）；`Auth._bindFocusRefresh()` 視窗取得焦點自動同步，管理員改矩陣後使用者無需重新登入；`applyNavPermissions(enforceCurrent)` 當前頁失去權限時強制跳轉 `resolveStartPage()`；`handle401()` / `logout()` 一併清除 `ermm_permissions` 與 `ermm_role` | 選單不顯示 / 跳轉起始頁 |
+| ② 模組 API 守門 | 後端 `middleware/moduleGuard.js`（掛載：`app.use('/api', authRequired); app.use('/api', moduleGuard);`） | 以 `/api` 之後第一段路徑查 `PREFIX_MODULE` 映射（69 條，如 `contracts→contracts`、`llm-audit→llmAudit`、`analysis→drilldown`、`po-grn→poMatch`、`receipt→arMatch`、`so-credit→salesCredit`）；管理員（`cams_xuser.admin='Yes'`）直接放行；其餘按 `req.user.role` 查 `cams_module_permission` 的 `allow_general / allow_operator / allow_admin`，未配置或為 0 即拒；未登記前綴＝跨模組共用 API，僅要求登入（auth、health、workflow、codes、kpi-query、metric-center、notifier、llm、diagnosis、daily-summary、batch、monitor）；`role:module` 快取 60 秒；DB 查詢異常返回 500 `PERM_CHECK_ERR`；`NODE_ENV=test` 預設放行，可用 `MODULE_GUARD_STRICT=1` 強制啟用 | `403 {code:'MODULE_DENIED'}` |
+| ③ 按鈕權限 | 後端路由 + `cams_permission_button`（55 按鈕） | 三角色 allow 位逐按鈕校驗（`requireButton`） | `403` 拒絕該操作 |
+
+> 模組權限矩陣為 **81 模組 × 3 角色**（8 分組）；`059_module_permission_sync.sql` 補登合同主檔 / 功能權限 / 操作審計 / AI 治理 4 個遺漏模組（77→81，分組數不變：日常作業 18→20、系統主檔 7→9）。
 
 ---
 
@@ -664,6 +720,58 @@ erDiagram
 
 ---
 
+### 圖 4：通用審批流（費用報銷 / 借支 / 付款申請）
+
+```mermaid
+flowchart LR
+    subgraph SUBMIT["① 提交端（業務頁）"]
+        EXP["費用報銷<br/>exp_report"]
+        ADV["借支<br/>exp_advance"]
+        PAY["付款申請<br/>pay_request"]
+    end
+
+    subgraph ENGINE["② 審批引擎 services/workflow.js"]
+        SW["submitWorkflow()<br/>businessType + businessId + amount"]
+        PROC["wf_process<br/>steps_json 定義關卡"]
+        INST["wf_instance<br/>狀態 RUNNING / APPROVED / REJECTED"]
+        TASK["wf_task<br/>每關一條任務"]
+        LOG["wf_log<br/>動作 / 意見 / 時間"]
+    end
+
+    subgraph ACT["③ 審批端（審批中心）"]
+        TODO["待我審批"]
+        MINE["我發起的"]
+        CFG["流程設定（僅管理員）"]
+    end
+
+    subgraph OUT["④ 結果回寫"]
+        PAID["付款 / 撥付<br/>PAID"]
+        SETTLE["核銷 / 結清<br/>SETTLED"]
+        REJ["駁回 REJECTED<br/>可修改重提"]
+    end
+
+    EXP --> SW
+    ADV --> SW
+    PAY --> SW
+    SW --> PROC --> INST --> TASK
+    INST --> LOG
+    TASK --> TODO
+    TODO -->|通過| INST
+    TODO -->|駁回| INST
+    MINE --> INST
+    CFG --> PROC
+    INST -->|全部通過| PAID
+    INST -->|全部通過| SETTLE
+    INST -->|任一駁回| REJ
+
+    style ENGINE fill:#e0f7fa,stroke:#00838f
+    style ACT fill:#fff8e1,stroke:#ffa000
+```
+
+> 設計要點：狀態機集中在 `wf_instance`，業務表只保留 `status` 冗餘欄位用於列表篩選；駁回後業務表回到 `REJECTED`，申請人可修改重提（同一 businessId 重新開實例）。
+
+---
+
 ## 第五章 數據流轉全景
 
 ### 5.1 發票 → 增值稅申報
@@ -807,6 +915,14 @@ node scripts/tax_audit.js                 # 18 / 18 PASS
 node scripts/purge_tax_test_data.js
 ```
 
+**Jest 回歸測試（2026-11 新增）**：
+
+```bash
+npm test        # Jest：test/ 下 17 個測試檔，覆蓋支出借支 / 付款流程 / 人效 / 稅務籌劃 / 日報 / 系統 / KPI 等
+```
+
+測試環境會自動注入預設管理員身分，無需先登入即可呼叫 `app.js` 匯出的 Express 實例。
+
 ### 6.4 遷移版本歷史
 
 | 版本 | 說明 | 狀態 |
@@ -816,10 +932,32 @@ node scripts/purge_tax_test_data.js
 | 008 | VAT 按季申報字段（filing_cycle / period_start / period_end / tax_exempt） | ✅ 已執行 |
 | 009 | 年終獎金（bonus_details + batch bonus_mode + detail bonus_* 三欄） | ✅ 已執行 |
 | 010 | CIT 收入/成本覆蓋（revenue_override / cost_override / is_overridden） | ✅ 已執行 |
-| 011–029 | 其他模組遷移（AI 知識庫、第三方整合、分析預測、報稅擴充、權限碼表等），詳見 `migrations/` 目錄 | ✅ 已執行 |
+| 011–020 | AI 知識庫、每日摘要、未命中日誌、請購單、帳號 admin Yes/No 等 | ✅ 已執行 |
+| 021–022 | 通用審批流（`wf_process` / `wf_instance` / `wf_task` / `wf_log`）+ 費用報銷 + 付款申請 | ✅ 已執行 |
+| 023–026 | 合併與月結關帳、請購流程、PO 三單匹配、收款與應收核銷 | ✅ 已執行 |
+| 027–028 | 模組權限 `cams_module_permission`、PO 匹配增強 | ✅ 已執行 |
+| 029 | 銷售信用與退貨（`sales_credit_limit` / `sales_return`） | ✅ 已執行 |
 | 030 | 多維盈利（`sales_channel_map` / `profit_cost_rate` + SALES_CHANNEL 碼表 + `profitAnalysis` 權限） | ✅ 已執行 |
 | 031 | 滾動預算（`rolling_budget_assumption` + `rollingBudget` 權限） | ✅ 已執行 |
 | 032 | 庫存周轉與呆滯（`inv_slow_moving_action` + INV_DISPOSAL_TYPE 碼表 + `inventoryTurnover` 權限） | ✅ 已執行 |
+| 033–034 | 集團駕駛艙（`groupCockpit`）、董事會報告包（`board_pack`） | ✅ 已執行 |
+| 035–037 | 項目損益（`project_budget` / `project_cost` / `project_revenue` / `project_customer_map`） | ✅ 已執行 |
+| 038–040 | 預算審批留痕（`budget_approval_log`）、合併匯率 2023–2026 | ✅ 已執行 |
+| 041–042 | 外匯曝險與避險（`fx_exposure_item` / `fx_hedge`）、稅務籌劃與風險 | ✅ 已執行 |
+| 043–044 | 戰略 BSC（`bsc_objective` / `bsc_progress`）、現金流動性與投資（`cash_plan_item` / `investment_*`） | ✅ 已執行 |
+| 045–046 | 投資與資本支出、稅務合規（`tax_preference` / `tax_regulation` / `tax_compliance_item` / `tax_filing_task`） | ✅ 已執行 |
+| 047 | 人效與借支核銷（`hr_headcount_plan` / `exp_advance` / `exp_advance_settle` + 付款排程與回單欄位） | ✅ 已執行 |
+| 048 | 補齊 CTO / COO 手冊模組權限（`cams_module_permission` 系統文件分組，共 77 個模組） | ✅ 已執行 |
+| 049 | **CTO-02 細粒度按鈕權限**（`cams_permission_button` · 55 按鈕 × 三角色 allow 矩陣） | ✅ 已執行 |
+| 050 | **CTO-03 操作審計路由**（`routes/audit.js` 全量審計 API，無新表） | ✅ 已執行（無遷移） |
+| 051 | **CTO-04 備份災備**（批次管線擴充備份步驟 + `.github/workflows/backup.yml`，無新表） | ✅ 已執行（無遷移） |
+| 055 | **CTO-07 消息通知**（`cams_notif_channel` + `cams_notif_subscription` · 3 預設渠道 + 6 訂閱規則） | ✅ 已執行 |
+| 056 | **CTO-06 指標中心**（`cams_metric_def` 23 指標 7 類別 + `cams_metric_lineage` 5 行血緣） | ✅ 已執行 |
+| 057 | **CTO-05 合同主檔**（`ermm_contract` · 28 字段 · UK (contract_no, bu_no) · FK → ermm_erp_po.po_uid · 6 索引） | ✅ 已執行 |
+| 058 | **CTO-09 AI 治理**（`ermm_ai_audit` + `cams_ai_model_pricing` 10 模型計價 + `cams_ai_rate_limit` 四檔配額） | ✅ 已執行 |
+| 059 | **權限矩陣補登**（CTO-02 補登：合同主檔 / 功能權限 / 操作審計 / AI 治理 4 模組，77→81；配合 `middleware/moduleGuard.js` 模組級 API 守門） | ✅ 已執行 |
+
+> 說明：CTO-04 備份災備與 CTO-08 CI/CD 為配置類交付（`.github/workflows/*.yml`、`.env.example`），不產生資料庫遷移腳本，故無 051~054 遷移編號跳號。CI/CD 配置含 MySQL 8 service + Jest 17 test files 52+ test points。
 
 ### 6.5 常見問題排查
 
@@ -835,7 +973,13 @@ node scripts/purge_tax_test_data.js
 | 呆滯清單 / 補貨建議為空 | 當前快照無庫齡 > 90 天料件；補貨建議需有近 12 月 SO 出貨或 PO 採購需求 |
 | 滾動預算無預測結果 | `mgm_finance_summary` 無該帳套實際月資料，先跑 ERP 批次 Step 7 |
 | 經營分析菜單不顯示 | 檢查 `cams_module_permission` 是否已執行 030~032 遷移，且使用者角色允許 |
+| 報銷單提交後沒有審批任務 | 檢查 `wf_process` 是否有對應 `business_type`（EXPENSE / ADVANCE / PAYMENT）且 `enabled=1` |
+| 借支核銷報「金額超過餘額」 | 核銷金額須 ≤ `exp_advance.balance`；多次核銷累計扣減，餘額為 0 自動 SETTLED |
+| 付款申請無法標記已付款 | 需先填銀行回單號（`bank_receipt_no`）與回單日期，狀態須為 APPROVED |
+| 核銷清單為空 | 來源為 `mgm_invoice_details` 中 `sub_amt > payment` 的發票；確認帳套與期間有未核銷款 |
+| 組織人效頁無數據 | 檢查 `hr_headcount_plan` 是否已有該 `bu_no + period` 編制；無編制時可先「複製上月」 |
+| 審批中心待辦為空 | 確認當前帳號是該流程關卡的審批人；管理員可在「流程設定」查看 `steps_json` |
 
 ---
 
-*本手冊基於 2026-11-13 代碼庫生成（v1.1，遷移 006–032）。Mermaid 圖表可在 VS Code（需 Mermaid 插件）或 GitHub / GitLab / Notion 直接渲染。*
+*本手冊基於 2026-11-17 代碼庫生成（v1.4，遷移 001–059；74 路由 / 68 頁面 / 152 表 / 81 模組）。Mermaid 圖表可在 VS Code（需 Mermaid 插件）或 GitHub / GitLab / Notion 直接渲染。*

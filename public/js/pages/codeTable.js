@@ -2,6 +2,31 @@
  * 系统码表管理
  * 通用字典维护界面：type 左侧列表 + 右侧码值表（增删改）+ 新增弹窗
  */
+// 前 21 个主要币别（ISO 4217，含 RMB 别名 CNY），用于 COMPANY_CURRENCY 类型的下拉选择
+const CURRENCY_OPTIONS = [
+    { code: 'USD', name: '美元 / US Dollar' },
+    { code: 'EUR', name: '欧元 / Euro' },
+    { code: 'RMB', name: '人民币 / Chinese Yuan (RMB)' },
+    { code: 'CNY', name: '人民币 / Chinese Yuan (CNY)' },
+    { code: 'JPY', name: '日元 / Japanese Yen' },
+    { code: 'GBP', name: '英镑 / British Pound' },
+    { code: 'HKD', name: '港币 / Hong Kong Dollar' },
+    { code: 'AUD', name: '澳元 / Australian Dollar' },
+    { code: 'CAD', name: '加元 / Canadian Dollar' },
+    { code: 'CHF', name: '瑞士法郎 / Swiss Franc' },
+    { code: 'SGD', name: '新加坡元 / Singapore Dollar' },
+    { code: 'KRW', name: '韩元 / Korean Won' },
+    { code: 'TWD', name: '新台币 / New Taiwan Dollar' },
+    { code: 'INR', name: '印度卢比 / Indian Rupee' },
+    { code: 'MYR', name: '马币 / Malaysian Ringgit' },
+    { code: 'THB', name: '泰铢 / Thai Baht' },
+    { code: 'IDR', name: '印尼盾 / Indonesian Rupiah' },
+    { code: 'PHP', name: '菲律宾比索 / Philippine Peso' },
+    { code: 'NZD', name: '纽元 / New Zealand Dollar' },
+    { code: 'SEK', name: '瑞典克朗 / Swedish Krona' },
+    { code: 'NOK', name: '挪威克朗 / Norwegian Krone' }
+];
+
 registerPage('codeTable', async (c) => {
     c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -162,8 +187,15 @@ const CodeTable = {
                 </select>
                 <label>${t('codeTable.code_value')} <span style="color:#e74c3c;">*</span></label>
                 <input id="ctFValue" value="${esc(row?.code_value || '')}" style="padding:7px;border:1px solid #ddd;border-radius:6px;" ${edit ? '' : ''}>
-                <label>${t('codeTable.desc')}</label>
-                <input id="ctFDesc" value="${esc(row?.value_description || '')}" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
+                <label>${defaultType === 'COMPANY_CURRENCY' ? t('codeTable.currency_code') : t('codeTable.desc')}</label>
+                ${defaultType === 'COMPANY_CURRENCY'
+                    ? `<select id="ctFDesc" style="padding:7px;border:1px solid #ddd;border-radius:6px;">${
+                        CURRENCY_OPTIONS.map(o =>
+                            `<option value="${o.code}" ${o.code === (row?.value_description || '') ? 'selected' : ''}>${o.code} — ${o.name}</option>`
+                        ).join('')
+                    }</select>`
+                    : `<input id="ctFDesc" value="${esc(row?.value_description || '')}" style="padding:7px;border:1px solid #ddd;border-radius:6px;">`
+                }
                 <label>${t('codeTable.f_n1')}</label>
                 <input id="ctFN1" type="number" step="any" value="${row?.value_number1 ?? ''}" style="padding:7px;border:1px solid #ddd;border-radius:6px;">
                 <label>${t('codeTable.f_n2')}</label>

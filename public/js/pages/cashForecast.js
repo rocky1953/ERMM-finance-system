@@ -2,6 +2,7 @@
  * 现金流量预测页面
  * 未来 13 周滚动预测（點估計 + Monte Carlo 概率分佈 + 壓力測試）
  */
+const CF_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 registerPage('cashForecast', async (c) => {
     const _bu = await CodeHelper.buSel();
     c.innerHTML = `
@@ -165,7 +166,7 @@ function renderProbCard(mc, stressRev = 0, stressCost = 0) {
             <div class="kpi-card blue">
                 <div class="kpi-label">${t('cash.worst_case') || '最差情境（13週 P10）'}</div>
                 <div class="kpi-value">${UI.fmt(worstStressed)}</div>
-                <div class="kpi-sub">${(stressRev || stressCost) ? `${t('cash.worst_scenario') || '最差情境'} P10：${UI.fmt(w13.p10 || 0)}<br>` : ''}${t('cash.history') || '歷史參數'}：AR ${mc.ar_days}天 / AP ${mc.ap_days}天</div>
+                <div class="kpi-sub">${(stressRev || stressCost) ? CF_L(`最差情境 P10：${UI.fmt(w13.p10 || 0)}`, `最差情境 P10：${UI.fmt(w13.p10 || 0)}`, `Worst-case P10: ${UI.fmt(w13.p10 || 0)}`) + '<br>' : ''}${CF_L(`历史参数：AR ${mc.ar_days}天 / AP ${mc.ap_days}天`, `歷史參數：AR ${mc.ar_days}天 / AP ${mc.ap_days}天`, `History params: AR ${mc.ar_days}d / AP ${mc.ap_days}d`)}</div>
             </div>
         </div>`;
 }

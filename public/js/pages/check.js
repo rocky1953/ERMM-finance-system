@@ -1,6 +1,8 @@
 /**
  * 票据管理页面
  */
+const CHK_TYPE_EN = { '转账支票':'Transfer Check','现金支票':'Cash Check','本票':'Promissory Note' };
+const chkTypeLabel = (v) => I18N.lang === 'en' ? (CHK_TYPE_EN[v] || v) : v;
 registerPage('check', async (c) => {
     const _mgr = Auth.isManager();
     c.innerHTML = `
@@ -36,7 +38,7 @@ async function loadChk() {
                 const isCleared = r.status === '已兑现';
                 return `<tr>
                 <td>${r.check_num || '-'}</td>
-                <td>${r.check_type || '-'}</td>
+                <td>${chkTypeLabel(r.check_type) || '-'}</td>
                 <td>${UI.fmtDate(r.check_date)}</td>
                 <td>${UI.fmtDate(r.due_date)}</td>
                 <td class="num">${UI.fmt(r.amount)}</td>
@@ -56,7 +58,7 @@ const ChkForm = {
     open() {
         UI.modal(t('chk.add'), `
             <div class="form-row">
-                <div class="form-group"><label>${t('chk.type')}</label><select id="cf_type"><option>转账支票</option><option>现金支票</option><option>本票</option></select></div>
+                <div class="form-group"><label>${t('chk.type')}</label><select id="cf_type"><option value="转账支票">${chkTypeLabel('转账支票')}</option><option value="现金支票">${chkTypeLabel('现金支票')}</option><option value="本票">${chkTypeLabel('本票')}</option></select></div>
                 <div class="form-group"><label>${t('chk.no')}</label><input id="cf_num"></div>
                 <div class="form-group"><label>${t('chk.amount')}</label><input type="number" id="cf_amt" value="0"></div>
             </div>

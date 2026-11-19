@@ -8,6 +8,8 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const { scanBu } = require('../services/drAlertScanner');
+const { scanBuFinance } = require('../services/kpiAlertScanner');
+const { computeKpis } = require('./kpiQuery');
 
 // ============ M3 身份解析（與 routes/dailyReport.js 同口徑） ============
 const codeCache = require('../services/codeCache');
@@ -50,6 +52,15 @@ function parseCfg(v) {
     if (v == null) return {};
     if (typeof v === 'object') return v;
     try { return JSON.parse(v) || {}; } catch { return {}; }
+}
+
+// KPI 灯号（与 kpiQuery 口径一致）：asc 值高=差；desc 值低=差
+function kpiColor(val, low, high, pctType) {
+    if (val === null || val === undefined || isNaN(val)) return null;
+    if ((!low && !high) || Number(low) === Number(high)) return null;
+    const asc = pctType !== 'desc';
+    if (asc) return val <= low ? 'GREEN' : (val > high ? 'RED' : 'YELLOW');
+    return val >= high ? 'GREEN' : (val < low ? 'RED' : 'YELLOW');
 }
 
 // 通知列表（M3：支援 domain 過濾 FINANCE/DAILY_REPORT）
@@ -248,6 +259,95 @@ router.post('/daily-scan/run', async (req, res) => {
                             Number(m[4]), Number(m[5]), m[6] ? Number(m[6]) : 0, 0);
         }
         const result = await scanBu(bu, { asOf });
+        ok(res, result);
+    } catch (err) { fail500(res, err); }
+});
+
+// ============ 财务 KPI 自动预警（FINANCE 域） ============
+// 规则清单：附带当前公司最新月份的 KPI 实时值
+router.get('/finance-rules', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可查看财务 KPI 预警规则', 403);
+
+        const bu = String(req.query.bu_no || 'HM').toUpperCase();
+        let month = String(req.query.YYYY_MM || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(month)) {
+            const [m] = await pool.execute(
+                'SELECT MAX(YYYY_MM) AS m FROM mgm_finance_summary WHERE bu_no=?', [bu]);
+            month = m[0]?.m || null;
+        }
+        const kpis = month ? await computeKpis(bu, month) : null;
+
+        const [rows] = await pool.execute(
+            `SELECT uid, rule_name, bu_no, kpi_id, cond, threshold, notify_channel,
+                    notify_user, cooldown_hours, status, alert_domain, scope_type, rule_config
+               FROM alert_rule
+              WHERE alert_domain='FINANCE' AND (bu_no IS NULL OR bu_no=?)
+              ORDER BY uid`, [bu]);
+        ok(res, {
+            bu_no: bu,
+            YYYY_MM: month,
+            rules: rows.map(r => {
+                const k = kpis ? kpis[r.kpi_id] : null;
+                return {
+                    ...r,
+                    rule_config: parseCfg(r.rule_config),
+                    kpi_name: k ? k.name : null,
+                    current_value: k ? k.value : null,
+                    unit: k ? k.unit : '',
+                    color: k && k.pct_type
+                        ? kpiColor(Number(k.value), k.kpi1, k.kpi2, k.pct_type)
+                        : null
+                };
+            })
+        });
+    } catch (err) { fail500(res, err); }
+});
+
+// 修改财务 KPI 规则（仅阈值/冷却/状态/通知，kpi_id 与 cond 不可变）
+router.put('/finance-rules/:uid', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可修改财务 KPI 预警规则', 403);
+        if (req.body && ('kpi_id' in req.body || 'alert_domain' in req.body)) {
+            return fail(res, 'kpi_id / alert_domain 为不可变字段', 400);
+        }
+        const [exist] = await pool.execute(
+            "SELECT uid FROM alert_rule WHERE uid=? AND alert_domain='FINANCE' LIMIT 1",
+            [req.params.uid]);
+        if (exist.length === 0) return fail(res, '财务 KPI 规则不存在', 404);
+
+        const b = req.body || {};
+        if (b.threshold !== undefined && (!Number.isFinite(Number(b.threshold)))) {
+            return fail(res, '阈值必须为数字', 400);
+        }
+        const fields = [];
+        const values = [];
+        const set = (k, v) => { if (v !== undefined) { fields.push(`${k}=?`); values.push(v); } };
+        set('threshold', b.threshold);
+        set('cooldown_hours', b.cooldown_hours);
+        set('status', b.status);
+        set('notify_channel', b.notify_channel);
+        set('notify_user', b.notify_user);
+        if (fields.length === 0) return fail(res, '无更新字段', 400);
+        values.push(req.params.uid);
+        await pool.execute(`UPDATE alert_rule SET ${fields.join(',')} WHERE uid=?`, values);
+        ok(res, { msg: '已更新', uid: Number(req.params.uid) });
+    } catch (err) { fail500(res, err); }
+});
+
+// 手动触发财务 KPI 扫描（仅主管）
+router.post('/finance-scan/run', async (req, res) => {
+    try {
+        const actor = await resolveActor(req);
+        if (actor.error) return fail(res, '使用者不存在或未登入', 403);
+        if (!actor.isManager) return fail(res, '权限不足，仅主管可触发扫描', 403);
+        const bu = String((req.body && req.body.bu_no) || 'HM').toUpperCase();
+        const month = (req.body && req.body.YYYY_MM) || undefined;
+        const result = await scanBuFinance(bu, { YYYY_MM: month });
         ok(res, result);
     } catch (err) { fail500(res, err); }
 });

@@ -176,8 +176,10 @@
     }
 
     function getHTML() {
-        const today = new Date();
-        const defYM = today.getFullYear() + '/' + String(today.getMonth() + 1).padStart(2, '0');
+        // 預設期間依「畫面最上方」全域年月（YYYY-MM）
+        const defYM = (State.YYYY_MM && /^\d{4}-\d{2}$/.test(State.YYYY_MM))
+            ? State.YYYY_MM.replace('-', '/')
+            : new Date().getFullYear() + '/' + String(new Date().getMonth() + 1).padStart(2, '0');
         return '<div class="bep-wrap">'
             + '<div class="bep-toolbar">'
             + '<label>' + t('bep.toolbar.bu') + ':</label>'

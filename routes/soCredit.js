@@ -7,7 +7,9 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, n } = require('../utils/response');
 const { getCreditRows, checkCredit } = require('../services/soCredit');
+const audit = require('../services/audit');
 
+const { perms, readScope } = require('../middleware/perms');
 // ====== 信用额度看板 ======
 router.get('/limits', async (req, res) => {
     try {
@@ -79,6 +81,10 @@ router.put('/limits/:client_id', async (req, res) => {
         const limit = Number(credit_limit || 0);
         if (limit < 0) return fail(res, '信用额度不可为负', 400);
         const st = status === 'HOLD' ? 'HOLD' : 'USE';
+        // 先查旧值（区分 upsert 是新增还是更新）
+        const [oldRows] = await pool.execute(
+            'SELECT * FROM sales_credit_limit WHERE bu_no=? AND client_id=?', [bu_no, clientId]
+        );
         await pool.execute(`
             INSERT INTO sales_credit_limit
                 (bu_no, client_id, client_name, credit_limit, credit_days, status, remark, update_by)
@@ -91,6 +97,16 @@ router.put('/limits/:client_id', async (req, res) => {
             Number(credit_days || 30), st, n(remark),
             req.user ? req.user.user_id : null
         ]);
+        // === 显式审计 ===
+        const isNew = !oldRows.length;
+        const after = { bu_no, client_id: clientId, client_name, credit_limit: limit, credit_days: Number(credit_days || 30), status: st };
+        audit.log(req, {
+            module: 'soCredit', action: isNew ? 'CREATE' : 'UPDATE', businessType: 'SO-LIMIT',
+            businessId: `${bu_no}/${clientId}`,
+            summary: `${isNew ? '新增' : '修改'}信用额度 ${bu_no} ${clientId}(${client_name || ''}) 额度=${limit} 状态=${st}`,
+            before: oldRows[0],
+            after
+        });
         ok(res, { client_id: clientId, credit_limit: limit, status: st }, '信用额度已保存');
     } catch (err) { fail500(res, err); }
 });
@@ -99,8 +115,18 @@ router.delete('/limits/:client_id', async (req, res) => {
     try {
         const { bu_no } = req.query;
         if (!bu_no) return fail(res, '缺少 bu_no', 400);
+        // 先查旧值
+        const [oldRows] = await pool.execute(
+            'SELECT * FROM sales_credit_limit WHERE bu_no=? AND client_id=?', [bu_no, req.params.client_id]
+        );
         await pool.execute('DELETE FROM sales_credit_limit WHERE bu_no=? AND client_id=?',
             [bu_no, req.params.client_id]);
+        audit.log(req, {
+            module: 'soCredit', action: 'DELETE', businessType: 'SO-LIMIT',
+            businessId: `${bu_no}/${req.params.client_id}`,
+            summary: `删除信用额度 ${bu_no} ${req.params.client_id}(${oldRows[0]?.client_name || ''}) 原额度=${oldRows[0]?.credit_limit || 0}`,
+            before: oldRows[0]
+        });
         ok(res, null, '信用额度已删除');
     } catch (err) { fail500(res, err); }
 });
@@ -160,6 +186,13 @@ router.post('/returns', async (req, res) => {
             d.bu_no, return_no, n(d.so_nbr), n(client_id), n(client_name), n(xitems), return_date,
             qty, unit_price, d.reason_type || 'QUALITY', 'PENDING', n(d.remark)
         ]);
+        audit.log(req, {
+            module: 'soCredit', action: 'CREATE', businessType: 'SO-RETURN',
+            businessId: return_no,
+            summary: `登记退货 ${return_no} ${d.bu_no} ${client_id || ''}/${client_name || ''} ${xitems || ''} qty=${qty} ¥${unit_price}`,
+            after: { uid: r.insertId, return_no, bu_no: d.bu_no, client_id, client_name, xitems,
+                     return_qty: qty, unit_price, reason_type: d.reason_type || 'QUALITY', so_nbr: d.so_nbr }
+        });
         ok(res, { uid: r.insertId, return_no }, '退货单已登记');
     } catch (err) { fail500(res, err); }
     finally { conn.release(); }
@@ -187,6 +220,17 @@ router.post('/returns/:uid/status', async (req, res) => {
             UPDATE sales_return
                SET status=?, handled_by=?, handled_time=NOW(), handle_reason=?
              WHERE uid=?`, [status, req.user ? req.user.user_id : null, n(reason), req.params.uid]);
+
+        // === 显式审计 ===
+        const actionMap = { APPROVED: 'APPROVE', REJECTED: 'REJECT', CLOSED: 'CLOSE', PENDING: 'REOPEN' };
+        audit.log(req, {
+            module: 'soCredit', action: actionMap[status] || 'UPDATE', businessType: 'SO-RETURN',
+            businessId: rows[0].return_no,
+            summary: `退货单 ${rows[0].return_no} 状态 ${cur} → ${status} ${reason ? '原因: ' + reason : ''}`,
+            before: rows[0],
+            after: { status, handled_by: req.user ? req.user.user_id : null, handle_reason: reason }
+        });
+
         ok(res, { uid: Number(req.params.uid), status }, '退货单状态已更新');
     } catch (err) { fail500(res, err); }
 });

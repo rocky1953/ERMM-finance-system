@@ -3,7 +3,7 @@
  * 预览六大区块：经营摘要 · 三大报表 · 核心 KPI · 风险预警 · 重大事项 · BU 对比
  * 支持生成留存（board_pack）与 PDF / PPTX 导出
  */
-const BP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const BP_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
 const BP_ESC = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -17,6 +17,24 @@ const BP_LEVEL = (lv) => lv === 'critical'
     : lv === 'warning'
         ? { text: BP_L('关注', '關注', 'Watch'), color: '#d97706', bg: '#fffbeb' }
         : { text: BP_L('提示', '提示', 'Info'), color: '#2563eb', bg: '#eff6ff' };
+// KPI 指標 / 單位閉集（僅 EN 生效；作用域限 boardPack，避免「元」「應收」等裸字汙染其他 fixAlert 字串）
+const BP_KPI_MAP = {
+    '营业收入': 'Revenue', '營業收入': 'Revenue',
+    '净利率': 'Net Margin', '淨利率': 'Net Margin',
+    '净资产收益率(ROE)': 'ROE', '淨資產收益率(ROE)': 'ROE',
+    '净资产收益率': 'Return on Equity', '淨資產收益率': 'Return on Equity',
+    '资产负债率': 'Debt Ratio', '資產負債率': 'Debt Ratio',
+    '流动比率': 'Current Ratio', '流動比率': 'Current Ratio',
+    '存货周转率': 'Inventory Turnover', '存貨週轉率': 'Inventory Turnover',
+    '净借款': 'Net Borrowings', '淨借款': 'Net Borrowings',
+    '应收': 'AR', '應收': 'AR',
+    '元': 'CNY', '倍': 'x', '天': 'days', '次/年': 'times/yr', '次': 'times'
+};
+const BP_KPI = (s) => {
+    if (I18N.lang !== 'en' || s == null) return s;
+    const k = String(s).trim();
+    return BP_KPI_MAP[k] || I18N.fixAlert(k);
+};
 
 const BoardPackPage = {
     bu: State.bu_no,
@@ -132,12 +150,12 @@ const BoardPackPage = {
             ${this.card(BP_L('净利润', '淨利潤', 'Net Profit'), BP_MONEY(inc.net_profit), yoyText(inc.net_profit, ly && ly.net_profit), Number(inc.net_profit) < 0 ? '#dc2626' : '#16a34a')}
             ${this.card(BP_L('毛利率', '毛利率', 'Gross Margin'), BP_RATIO(inc.gross_margin), BP_L('净利率 ', '淨利率 ', 'Net margin ') + BP_RATIO(inc.net_margin), '#7c3aed')}
             ${this.card(BP_L('现金及存款', '現金及存款', 'Cash & Deposits'), BP_MONEY(bal.cash_total), BP_L('净借款 ', '淨借款 ', 'Net debt ') + BP_MONEY(bal.net_debt), '#0891b2')}
-            ${this.card(BP_L('资产负债率', '資產負債率', 'Debt Ratio'), BP_RATIO(bal.debt_ratio), BP_L('流动比率 ', '流動比率 ', 'Current ratio ') + BP_RATIO(bal.current_ratio, '倍'), '#d97706')}
+            ${this.card(BP_L('资产负债率', '資產負債率', 'Debt Ratio'), BP_RATIO(bal.debt_ratio), BP_L('流动比率 ', '流動比率 ', 'Current ratio ') + BP_RATIO(bal.current_ratio, BP_L('倍', '倍', 'x')), '#d97706')}
             ${this.card(BP_L('风险预警', '風險預警', 'Risk Alerts'), `${risks.length}`, riskCnt ? BP_L('其中严重 ', '其中嚴重 ', 'critical ') + riskCnt : BP_L('无严重项', '無嚴重項', 'no critical'), riskCnt ? '#dc2626' : '#16a34a')}
         </div>`;
 
         const summaryHtml = `<ol style="margin:0;padding-left:20px;line-height:1.9;font-size:13px;color:#334155">
-            ${(pack.summary || []).map(l => `<li>${BP_ESC(l)}</li>`).join('')}
+            ${(pack.summary || []).map(l => `<li>${BP_ESC(BP_KPI(l))}</li>`).join('')}
         </ol>`;
 
         const incomeRows = [
@@ -172,7 +190,7 @@ const BoardPackPage = {
             [BP_L('负债合计', '負債合計', 'Total Liabilities'), BP_MONEY(bal.total_liab), BP_MONEY(balPrev.total_liab)],
             [BP_L('所有者权益', '所有者權益', 'Equity'), BP_MONEY(bal.equity), BP_MONEY(balPrev.equity)],
             [BP_L('资产负债率', '資產負債率', 'Debt Ratio'), BP_RATIO(bal.debt_ratio), BP_RATIO(balPrev.debt_ratio)],
-            [BP_L('流动比率', '流動比率', 'Current Ratio'), BP_RATIO(bal.current_ratio, '倍'), BP_RATIO(balPrev.current_ratio, '倍')]
+            [BP_L('流动比率', '流動比率', 'Current Ratio'), BP_RATIO(bal.current_ratio, BP_L('倍', '倍', 'x')), BP_RATIO(balPrev.current_ratio, BP_L('倍', '倍', 'x'))]
         ];
         const balanceTable = this.table(
             [BP_L('项目', '項目', 'Item'), BP_L('期末', '期末', 'End'), BP_L('上期', '上期', 'Previous')],
@@ -195,13 +213,13 @@ const BoardPackPage = {
         if (targets.length) kpiHead.push(BP_L('年度目标', '年度目標', 'Annual Target'));
         kpiHead.push(BP_L('单位', '單位', 'Unit'));
         const kpiRows = kpis.map(k => {
-            const row = [k.label, k.value === null ? '-' : BP_RATIO(k.value, ''),
+            const row = [BP_KPI(k.label), k.value === null ? '-' : BP_RATIO(k.value, ''),
                 k.yoy === null || k.yoy === undefined ? '-' : BP_RATIO(k.yoy)];
             if (targets.length) {
                 const tg = targets.find(t => t.kpi_code === k.code);
                 row.push(tg ? BP_RATIO(tg.target, '') : '-');
             }
-            row.push(k.unit || '');
+            row.push(BP_KPI(k.unit || ''));
             return row;
         });
 
@@ -213,7 +231,7 @@ const BoardPackPage = {
                     const lv = BP_LEVEL(r.level);
                     return `<tr>
                         <td><span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;color:${lv.color};background:${lv.bg}">${lv.text}</span></td>
-                        <td>${BP_ESC(r.area)}</td><td>${BP_ESC(r.title)}</td><td style="text-align:left">${BP_ESC(r.detail)}</td>
+                        <td>${BP_ESC(BP_KPI(r.area))}</td><td>${BP_ESC(BP_KPI(r.title))}</td><td style="text-align:left">${BP_ESC(BP_KPI(r.detail))}</td>
                     </tr>`;
                 }).join('')}</tbody></table></div>`;
 
@@ -222,7 +240,7 @@ const BoardPackPage = {
             : `<ul style="margin:0;padding-left:20px;line-height:1.9;font-size:13px;color:#334155">
                 ${events.slice(0, 10).map(e => {
                     const lv = BP_LEVEL(e.level);
-                    return `<li><span style="color:${lv.color};font-weight:600">【${lv.text}】</span>${BP_ESC(e.title)}${e.bu_no ? `（${BP_ESC(e.bu_no)}）` : ''}：${BP_ESC(e.message || '')}</li>`;
+                    return `<li><span style="color:${lv.color};font-weight:600">【${lv.text}】</span>${BP_ESC(BP_KPI(e.title))}${e.bu_no ? `（${BP_ESC(e.bu_no)}）` : ''}：${BP_ESC(BP_KPI(e.message || ''))}</li>`;
                 }).join('')}
             </ul>`;
 
@@ -239,7 +257,7 @@ const BoardPackPage = {
         document.getElementById('bpBody').innerHTML = `
             <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px">
                 <h2 style="margin:0;font-size:19px;color:#1e3a5f">📑 ${BP_ESC(BP_BU(pack.bu_no))} · ${BP_ESC(pack.period === 'quarter' ? pack.period_label + BP_L(' 季度', ' 季度', ' Quarterly') : pack.YYYY_MM + BP_L(' 月度', ' 月度', ' Monthly'))}</h2>
-                <div style="font-size:12px;color:#94a3b8">${BP_L('生成时间：', '產生時間：', 'Generated: ')}${new Date(pack.generated_at).toLocaleString('zh-CN')}</div>
+                <div style="font-size:12px;color:#94a3b8">${BP_L('生成时间：', '產生時間：', 'Generated: ')}${DateLocale.fmtDateTime(pack.generated_at)}</div>
             </div>
             ${cards}
             ${this.section('📝 ' + BP_L('经营摘要', '經營摘要', 'Executive Summary'), summaryHtml)}
@@ -287,7 +305,7 @@ const BoardPackPage = {
                 <tbody>${rows.map(r => `<tr>
                     <td>${BP_ESC(r.title)}</td><td>${BP_ESC(BP_BU(r.bu_no))}</td>
                     <td>${BP_ESC(r.period_type === 'quarter' ? r.YYYY_MM + ' Q' + Math.ceil(Number(String(r.YYYY_MM).slice(5, 7)) / 3) : r.YYYY_MM)}</td>
-                    <td>${new Date(r.created_at).toLocaleString('zh-CN')}</td>
+                    <td>${DateLocale.fmtDateTime(r.created_at)}</td>
                     <td>${BP_ESC(r.generated_by || '-')}</td>
                     <td style="text-align:left">
                         <button class="btn btn-ghost" style="padding:2px 8px;font-size:12px" onclick="BoardPackPage.openHistory(${r.uid})">${BP_L('打开', '開啟', 'Open')}</button>
@@ -325,5 +343,8 @@ const BoardPackPage = {
 };
 
 registerPage('boardPack', async (c) => {
+    // 每次進入頁面依「畫面最上方」全域年月重置
+    BoardPackPage.bu = State.bu_no;
+    BoardPackPage.ym = State.YYYY_MM;
     await BoardPackPage.load();
 });

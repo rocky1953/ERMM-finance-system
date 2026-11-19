@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const { ok, fail } = require('../utils/response');
 const { signToken, authRequired } = require('../middleware/auth');
+const audit = require('../services/audit');
 
 // 密碼雜湊規則必須與 routes/user.js 的 hashPwd 完全一致
 function hashPwd(pwd) {
@@ -68,6 +69,18 @@ router.post('/login', async (req, res) => {
                 [user.xuser_id, req.body.bu_no || 'HM']
             );
         } catch (e) { console.error('login record:', e.message); }
+
+        // === 显式审计：登录成功 ===
+        // 登录端点无 authRequired，req.user 不存在 → 手动挂一下让 buildRow 能取到 user 信息
+        req.user = { user_id: user.xuser_id, user_name: user.xuser_name || user.xuser_id, admin: user.admin || 'No' };
+        audit.log(req, {
+            module: 'auth',
+            action: 'LOGIN',
+            businessType: 'AUTH',
+            businessId: user.xuser_id,
+            summary: `登入成功 ${user.xuser_id} (${user.xuser_name}) role=${isAdmin ? 'admin' : isOperator ? 'operator' : 'general'} admin=${user.admin || 'No'}`,
+            detail: { role: isAdmin ? 'admin' : (isOperator ? 'operator' : 'general'), admin: user.admin || 'No', permissions_count: permissions.length }
+        });
 
         ok(res, {
             token,
@@ -121,6 +134,13 @@ router.get('/me', authRequired, async (req, res) => {
 
 // 登出（JWT 無狀態：主要由前端刪除本地 token）
 router.post('/logout', authRequired, (req, res) => {
+    audit.log(req, {
+        module: 'auth',
+        action: 'LOGOUT',
+        businessType: 'AUTH',
+        businessId: req.user.user_id,
+        summary: `登出 ${req.user.user_id} (${req.user.user_name || ''})`
+    });
     ok(res, { logged_out: true }, '已登出');
 });
 

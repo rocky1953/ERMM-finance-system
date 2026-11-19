@@ -1,7 +1,8 @@
 # ERMM 系统架构图与相关联流程图
 
 > 基于代码事实抽取（app.js / routes/*.js / services/*.js / scheduler/*.js / public/js/pages/*.js）
-> 生成日期：2026-10-20 ｜ 更新日期：2026-11-13 ｜ 适用版本：v3.4（财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 经营分析：多维盈利/滚动预算/库存周转）
+> 生成日期：2026-10-20 ｜ 更新日期：2026-11-17 ｜ 适用版本：v3.6（v3.5 财务模块 + 第三方整合 + 批次管线 + 电子化报税 + 智能化 AI 层 + 经营分析 + 审批流与资金闭环 + 组织人效与战略/董事会/项目损益/销售信用 + **CTO-02 细粒度按钮权限 · CTO-03 全量操作审计 · CTO-04 备份灾备 · CTO-05 合同主档 · CTO-06 指标中心 · CTO-07 消息通知 · CTO-08 CI/CD · CTO-09 AI 治理**）
+> 规模事实：81 个功能模组（8 分组）· 68 个前端页面 · 74 个 API 路由模块 · 152 张数据表 · 72 个迁移脚本 · 55 个按钮权限 · 17 个测试文件 · 2 个服务层统一引擎（metricCenter / notifier）· 1 个 AI 审计统一入口（llmAudit）
 
 ---
 
@@ -23,9 +24,10 @@ flowchart TB
     end
 
     subgraph GATEWAY["🚪 接入层"]
-        EXPRESS["Express 5 路由<br/>64 个路由模块"]
+        EXPRESS["Express 5 路由<br/>74 个路由模块"]
         AUTH["JWT 认证中间件<br/>authRequired"]
-        PERM["权限分级<br/>员工/部门主管/高阶主管/管理员"]
+        GUARD["模块级 API 守门<br/>middleware/moduleGuard.js<br/>PREFIX_MODULE 69 条映射<br/>未授权 → 403 MODULE_DENIED"]
+        PERM["权限分级<br/>员工/部门主管/高阶主管/管理员<br/>+ cams_module_permission 模块权限<br/>+ cams_permission_button 55 按钮三角色 allow"]
     end
 
     subgraph SERVICE["⚙️ 业务服务层"]
@@ -72,9 +74,40 @@ flowchart TB
             S25["滚动预算<br/>rollingBudget (三表 + 13 周)"]
             S26["库存周转<br/>inventoryTurnover (库龄/呆滞/补货)"]
         end
+        subgraph BIZ["💼 费用与资金（CFO-01 / CFO-02）"]
+            S27["费用报销<br/>expense (申请→审批→付款)"]
+            S28["借支与核销<br/>advance + advance_settle"]
+            S29["付款申请与排程<br/>payRequest (计划付款日)"]
+            S30["银行回单<br/>receipt (PAID 回写)"]
+            S31["AR/AP 核销<br/>pay_writeoff (部分/全额)"]
+        end
+        subgraph WF["🔐 审批流引擎"]
+            S32["流程定义<br/>wf_process (steps_json)"]
+            S33["实例与任务<br/>wf_instance / wf_task"]
+            S34["审批日志<br/>wf_log"]
+        end
+        subgraph ORG["🏢 组织·战略·项目"]
+            S35["组织人效<br/>hrEfficiency (编制/人均产值)"]
+            S36["战略目标 BSC<br/>strategy (公司→部门→个人)"]
+            S37["董事会报告包<br/>boardPack (PDF/PPTX)"]
+            S38["项目损益<br/>projectProfit (预算/成本/收入)"]
+            S39["销售信用与退货<br/>soCredit (额度/退货/风险)"]
+        end
+        subgraph CONTRACT["📄 合同主档（CTO-05）"]
+            S40["合同 CRUD + stats<br/>routes/contracts.js (9 端点)<br/>从 ermm_erp_po 自动种子 10 笔示范"]
+        end
+        subgraph METRIC["📈 指标中心（CTO-06）"]
+            S41["services/metricCenter.js<br/>统一计算引擎<br/>23 指标 7 类别 + ROE 统一口径"]
+        end
+        subgraph NOTIF["📣 消息通知（CTO-07）"]
+            S42["services/notifier.js<br/>Email / Lark / 企微 webhook 统一入口<br/>6 订阅规则"]
+        end
+        subgraph AI_GOV["🤖 AI 治理（CTO-09）"]
+            S43["routes/llmAudit.js (10 端点)<br/>services/llmAudit.js + utils/llmClient.js<br/>returnMeta 模式 · 6 页签 Dashboard"]
+        end
     end
 
-    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 89 表)"]
+    subgraph DATA["🗄️ 数据层 (MySQL 8 · ermm_db · 152 表)"]
         DB_HR["daily_report*<br/>alert_* / forecast_log"]
         DB_FIN["fin_voucher / fin_tax_return<br/>fin_reconciliation<br/>fin_ruid_ledger"]
         DB_CASH["mgm_casher_details<br/>mgm_cash_safe_level"]
@@ -83,18 +116,26 @@ flowchart TB
         DB_TAX["vat_declarations<br/>cit_annual_settlements<br/>iit_withholding_*<br/>tax_submit_receipts<br/>tax_*_adjustments / tax_cit_inputs<br/>payroll_details / bonus_details"]
         DB_AI["ermm_knowledge / ermm_kb_miss_log<br/>daily_ai_summary / llm_config"]
         DB_ANALYSIS["sales_channel_map / profit_cost_rate<br/>rolling_budget_assumption<br/>inv_slow_moving_action"]
+        DB_BIZ["exp_report / exp_report_item<br/>exp_advance / exp_advance_settle<br/>pay_request / pay_request_item<br/>pay_writeoff"]
+        DB_WF["wf_process / wf_instance<br/>wf_task / wf_log"]
+        DB_ORG["hr_headcount_plan / bsc_objective<br/>bsc_progress / board_pack<br/>project_budget / project_cost<br/>project_revenue / sales_credit_limit<br/>sales_return"]
+        DB_CTO_CONTRACT["ermm_contract<br/>（28 字段，FK → ermm_erp_po.po_uid）"]
+        DB_CTO_METRIC["cams_metric_def<br/>cams_metric_lineage"]
+        DB_CTO_NOTIF["cams_notif_channel<br/>cams_notif_subscription"]
+        DB_CTO_AI["ermm_ai_audit<br/>cams_ai_model_pricing<br/>cams_ai_rate_limit"]
     end
 
     subgraph EXTERNAL["🌐 外部系统"]
         EXT_DB["第三方 MySQL 数据库"]
         EXT_MAIL["SMTP 邮件服务"]
         EXT_LLM["LLM API<br/>DeepSeek（预设）"]
+        EXT_LARK["Lark / 企微 webhook"]
     end
 
     BROWSER -->|HTTP/JWT| EXPRESS
     EXCEL_USER -->|上传 xlsx| EXPRESS
-    EXPRESS --> AUTH --> PERM
-    PERM --> HR & FIN & CASH & ERP & INTG & TAX & AI & ANALYZE
+    EXPRESS --> AUTH --> GUARD --> PERM
+    PERM --> HR & FIN & CASH & ERP & INTG & TAX & AI & ANALYZE & BIZ & WF & ORG & CONTRACT & METRIC & NOTIF & AI_GOV
 
     S1 & S2 & S3 & S4 & S5 --> DB_HR
     S6 & S7 & S8 & S9 --> DB_FIN
@@ -103,6 +144,19 @@ flowchart TB
     S15 & S16 --> DB_INTG
     S17 & S18 --> DB_TAX
     S19 & S20 & S21 & S22 & S23 --> DB_AI
+    S27 & S28 --> DB_BIZ
+    S29 & S30 & S31 --> DB_BIZ
+    S27 & S28 & S29 -->|提交/审批| S33
+    S32 --> S33 --> S34
+    S33 --> DB_WF
+    S35 --> DB_ORG
+    S35 -->|取数| DB_HR
+    S36 & S37 --> DB_ORG
+    S36 -->|目标取数| DB_HR
+    S37 -->|取数| DB_FIN
+    S38 & S39 --> DB_ORG
+    S38 -->|取数| DB_ERP
+    S39 -->|取数| DB_ERP
     S24 -->|只读取数| DB_ERP
     S25 -->|基准/期初取数| DB_FIN
     S26 -->|周转取数| DB_FIN
@@ -120,14 +174,41 @@ flowchart TB
     S15 -->|UPSERT 写入| DATA
     S4 -->|告警通知| EXT_MAIL
     S19 & S20 -->|LLM 推理| EXT_LLM
+    S40 --> DB_CTO_CONTRACT
+    S40 -->|FK 关联| DB_ERP
+    S41 --> DB_CTO_METRIC
+    S41 -->|只读取数| DB_FIN & DB_ORG
+    S42 --> DB_CTO_NOTIF
+    S42 -->|推送| EXT_MAIL & EXT_LARK
+    S43 --> DB_CTO_AI
+    S43 -->|审计全量 LLM 调用| EXT_LLM
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
     style GATEWAY fill:#fff3e0,stroke:#f57c00
     style SERVICE fill:#e8f5e9,stroke:#388e3c
     style DATA fill:#fce4ec,stroke:#c2185b
     style AI fill:#ede7f6,stroke:#5e35b1
+    style BIZ fill:#fff8e1,stroke:#ffa000
+    style WF fill:#e0f7fa,stroke:#00838f
+    style ORG fill:#f1f8e9,stroke:#558b2f
+    style CONTRACT fill:#fff9c4,stroke:#f9a825
+    style METRIC fill:#b2dfdb,stroke:#00796b
+    style NOTIF fill:#ffe0b2,stroke:#e65100
+    style AI_GOV fill:#d1c4e9,stroke:#4527a0
     style EXTERNAL fill:#f3e5f5,stroke:#7b1fa2
 ```
+
+### 1.1 权限体系三层化（导航 → 模块 API → 按钮）
+
+权限校验由外到内分三层，任一层拒绝即无法访问：
+
+| 层 | 位置 | 机制 | 拒绝表现 |
+|---|---|---|---|
+| ① 导航隐藏 | 前端 `public/js/app.js` | `Auth.canAccess()` 对 `ermm_permissions` 采 **fail-closed**（缺失或非数组即拒绝）；`Auth.refreshPermissions(force)` 从 `/api/auth/me` 同步角色与矩阵（30 秒节流）；`Auth._bindFocusRefresh()` 窗口取得焦点自动同步，管理员改矩阵后用户无需重新登录；`applyNavPermissions(enforceCurrent)` 在当前页失去权限时强制跳转 `resolveStartPage()`；`handle401()` / `logout()` 一并清除 `ermm_permissions` 与 `ermm_role` | 菜单不显示 / 跳转起始页 |
+| ② 模块 API 守门 | 后端 `middleware/moduleGuard.js`（挂载于 `authRequired` 之后、路由之前：`app.use('/api', authRequired); app.use('/api', moduleGuard);`） | 取 `/api` 之后第一段路径查 `PREFIX_MODULE` 映射（69 条，如 `contracts→contracts`、`llm-audit→llmAudit`、`analysis→drilldown`、`po-grn→poMatch`、`receipt→arMatch`、`so-credit→salesCredit`）；管理员（`cams_xuser.admin='Yes'`）直接放行；其余按 `req.user.role` 查 `cams_module_permission` 的 `allow_general / allow_operator / allow_admin`，未配置或为 0 即拒；未登记前缀视为跨模块共用 API，仅要求登录（auth、health、workflow、codes、kpi-query、metric-center、notifier、llm、diagnosis、daily-summary、batch、monitor）；`role:module` 结果缓存 60 秒；DB 异常返回 500 `PERM_CHECK_ERR` | `403 {code:'MODULE_DENIED'}` |
+| ③ 按钮权限 | 后端路由 + `cams_permission_button`（55 个按钮） | 按三角色 allow 位逐按钮校验 | `403` 拒绝该操作 |
+
+> 模块权限矩阵共 **81 个功能模组（8 分组）**；`059_module_permission_sync.sql` 补登合同主档 / 功能权限 / 操作审计 / AI 治理 4 个遗漏模组（77→81），分组数不变（日常作业 18→20，系统主档 7→9）。
 
 ---
 
@@ -464,18 +545,90 @@ flowchart TB
 
 ---
 
-## 十、部署架构
+## 十、费用报销与付款审批闭环（CFO-01 / CFO-02）
+
+```mermaid
+flowchart TB
+    subgraph EXP["① 费用报销与借支（CFO-01）"]
+        E1["员工新建报销/借支<br/>exp_report / exp_advance<br/>状态 DRAFT"] --> E2["提交审批<br/>submitWorkflow('EXPENSE' / 'ADVANCE')"]
+        E2 --> E3{"审批结果"}
+        E3 -->|通过| E4["APPROVED"]
+        E3 -->|驳回| E5["REJECTED（可修改重提）"]
+        E4 --> E6["财务标记付款<br/>report → PAID"]
+        E4 --> E7["借支拨付<br/>advance → PAID（管理员）"]
+        E7 --> E8["费用核销 settle<br/>金额 ≤ balance<br/>可关联报销单"]
+        E8 --> E9["部分核销 → PAID<br/>余额=0 → SETTLED"]
+    end
+
+    subgraph PAY["② 付款申请与资金核销（CFO-02）"]
+        P1["新建付款申请<br/>pay_request + pay_request_item<br/>DRAFT"] --> P2["提交审批<br/>PAYMENT"]
+        P2 --> P3{"审批结果"}
+        P3 -->|通过| P4["APPROVED"]
+        P3 -->|驳回/撤回| P5["REJECTED / CANCELLED"]
+        P4 --> P6["付款排程<br/>planned_pay_date（按月日历）"]
+        P6 --> P7["银行回单登记<br/>bank_receipt_no / receipt_date<br/>status → PAID"]
+        P7 --> P8["AR/AP 核销<br/>pay_writeoff（来源 mgm_invoice_details）"]
+        P8 --> P9["PARTIAL（部分）<br/>WRITTEN（全额）"]
+        P9 -->|撤销| P10["DEL → 重算 writeoff_status"]
+    end
+
+    E2 -.->|审批任务| WF[("wf_instance / wf_task / wf_log")]
+    P2 -.->|审批任务| WF
+    P4 -.->|付款数据| P6
+```
+
+> **接口**：报销 `/api/expense/*`（列表/详情/新建/编辑/删除/提交/付款）；借支 `/api/expense/advances/*`（提交/拨付/核销）；付款申请 `/api/pay-request/*`（排程 `GET /schedule`、`PUT /:id/schedule`、回单 `POST /:id/receipt`、核销来源 `GET /writeoff-sources`、核销 `POST /:id/writeoff`、撤销 `DELETE /:id/writeoff/:wid`）。
+> **状态机**：`DRAFT → PENDING → APPROVED → PAID`，异常分支 `REJECTED / CANCELLED`；借支另有 `SETTLED`；付款核销状态 `UNWRITTEN / PARTIAL / WRITTEN`。
+
+---
+
+## 十一、审批流引擎与组织·战略·项目闭环
+
+```mermaid
+flowchart TB
+    subgraph WF["审批流引擎（wf_*）"]
+        D1["流程定义 wf_process<br/>proc_code / business_type / steps_json"] --> D2["提交 submitWorkflow<br/>生成 wf_instance + wf_task"]
+        D2 --> D3["审批中心 /api/workflow/pending<br/>跨业务类型统一待办"]
+        D3 --> D4["任务动作 /tasks/:id/action<br/>APPROVE / REJECT"]
+        D4 --> D5["写 wf_log（人/时间/意见）<br/>全部通过 → APPROVED"]
+        D5 -->|回写业务状态| BIZ[("exp_report / exp_advance<br/>pay_request / pr_request")]
+        D3 -->|管理员| D6["流程设定<br/>GET/PUT /processes"]
+    end
+
+    subgraph CEO["组织·战略·董事会（CEO-01 / 02 / 05）"]
+        H1["hr_headcount_plan<br/>部门编制（人/人工成本）"] --> H2["/api/hr-efficiency/overview<br/>实际人数/人均产值/人工成本率/工时"]
+        H2 --> H3["近 6 个月趋势 + 部门下钻"]
+        H2 --> H4["目标贯通<br/>公司 → 部门 → 个人"]
+        H5["bsc_objective / bsc_progress<br/>/api/strategy"] --> H4
+        H3 --> H6["board_pack<br/>/api/board-pack 六大区块<br/>PDF / PPTX 导出"]
+        H4 --> H6
+    end
+
+    subgraph OPS["运营·项目（COO-02 / COO-03）"]
+        O1["project_budget / project_cost<br/>project_revenue"] --> O2["/api/project-profit<br/>项目概览 / 损益 / 预算 / 归集 / 收入确认"]
+        O3["sales_credit_limit<br/>sales_return"] --> O4["/api/so-credit<br/>信用额度 / 退货 / 履约风险"]
+    end
+```
+
+> **人效口径**：实际人数优先取部门编制录入的实际值，否则回退 `cams_xuser` 同部门在册人数；产值取 `mgm_finance_summary`，工时取 `daily_report_detail`（`status1='USE'`）。
+> **目标贯通**：直接复用 BSC 三级目标（`bsc_objective` 的 company / dept / personal 层级），不另建一套目标表。
+
+---
+
+## 十二、部署架构
 
 ```mermaid
 flowchart LR
     USER["👥 用户浏览器"] -->|HTTP :3008| NODE["Node.js<br/>node app.js"]
     subgraph NODE_PROC["同一进程内"]
-        NODE --> EXP["Express 路由 ×64"]
+        NODE --> EXP["Express 路由 ×74"]
         NODE --> SCH1["日报告警排程<br/>09:30/16:30/月末16:00"]
         NODE --> SCH2["整合批次排程<br/>每分钟 tick"]
+        NODE --> AUDITJOB["CTO-03 操作审计<br/>全量自动串接"]
+        NODE --> NOTIFJOB["CTO-07 消息通知<br/>订阅规则驱动"]
     end
     EXP -->|mysql2 连接池<br/>limit 20| MYSQL[("MySQL 8<br/>ermm_db")]
-    SCH1 & SCH2 --> MYSQL
+    SCH1 & SCH2 & AUDITJOB & NOTIFJOB --> MYSQL
     EXP -->|HTTPS| LLMAPI["LLM API（DeepSeek 预设）"]
 
     style NODE_PROC fill:#e8f5e9,stroke:#388e3c
@@ -483,11 +636,11 @@ flowchart LR
 
 ---
 
-## 十一、模块间依赖关系总图
+## 十三、模块间依赖关系总图
 
 ```mermaid
 flowchart TB
-    subgraph MOD["60 个前端入口 / 8 个菜单分组"]
+    subgraph MOD["68 个前端页面 / 8 个菜单分组（+ 3 页签 CTO-09 Dashboard）"]
         P_DR["日报/绩效/签核/审计/告警/预测"]
         P_FIN["财务入账/报税/勾稽/报税明细"]
         P_CASH["日记账/现金预测/安全水位/概率预测"]
@@ -496,29 +649,45 @@ flowchart TB
         P_TAX["电子化报税(4 Tab)<br/>VAT/CIT/IIT/录入维护"]
         P_AI["AI 问答 / 每日摘要 / AR 智能催收<br/>数据质量扫描 / 情景模拟 / 战情看板"]
         P_ANALYZE["多维盈利 / 滚动预算 / 库存周转"]
-        P_SYS["系统管理/用户/系统码/系统文件(管理员)"]
+        P_BIZ["费用报销 / 借支核销<br/>付款申请 / 排程 / 回单 / 核销"]
+        P_WF["审批中心 / 流程设定"]
+        P_ORG["组织人效 / 战略目标 / 董事会包<br/>项目损益 / 销售信用"]
+        P_SYS["系统管理/用户/模块权限/系统码/系统文件(管理员)"]
+        P_CONTRACT["📄 合同主档（CTO-05）"]
+        P_METRIC["📈 指标中心（CTO-06）"]
+        P_AI_GOV["🤖 AI 治理（CTO-09 · 6 页签 Dashboard）"]
     end
 
     P_FIN -->|"RUID 贯穿"| P_FIN
     P_ERP -->|"ermm_erp_po 供数"| P_FIN
     P_FIN -->|"发票/财报取数"| P_TAX
     P_INTG -->|"UPSERT 写入"| P_DR & P_FIN & P_CASH & P_ERP
-    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX & P_AI & P_ANALYZE
+    P_SYS -->|"权限/汇率/参数"| P_DR & P_FIN & P_CASH & P_ERP & P_TAX & P_AI & P_ANALYZE & P_BIZ & P_ORG & P_CONTRACT & P_METRIC
     P_AI -->|"只读取数"| P_FIN & P_CASH & P_ERP
     P_ANALYZE -->|"只读取数"| P_FIN & P_ERP
     P_ANALYZE -->|"呆滞处理单回写"| P_ANALYZE
+    P_BIZ -->|"提交审批"| P_WF
+    P_WF -->|"审批结果回写业务状态"| P_BIZ
+    P_BIZ -->|"发票核销取数"| P_FIN
+    P_ORG -->|"人效/战略取数"| P_DR
+    P_ORG -->|"产值/报表取数"| P_FIN
+    P_ORG -->|"项目收入/需求取数"| P_ERP
+    P_CONTRACT -->|"FK 关联 ermm_erp_po"| P_ERP
+    P_METRIC -->|"统一引擎只读财报/人效"| P_FIN & P_ORG
+    P_AI_GOV -->|"审计全量 LLM 调用"| P_AI
 
     style MOD fill:#e3f2fd,stroke:#1976d2
 ```
 
 ---
 
-> **说明**：以上 12 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
+> **说明**：以上 15 张图均可在 VS Code（Mermaid 插件）/ GitHub / Typora 直接渲染。
 > 与 [ERMM_系統架構與模組資料表關係圖.md](ERMM_系統架構與模組資料表關係圖.md) 互补：本文侧重**运行时流程**，该文档侧重**资料表结构关系**。
 
 ---
 
 > **更新日志**
+> - 2026-11-15（v3.5）：① 新增第十章「费用报销与付款审批闭环（CFO-01 / CFO-02）」、第十一章「审批流引擎与组织·战略·项目闭环」；② 架构图服务层新增 BIZ / WF / ORG 三个子域（S27~S39），数据层新增 DB_BIZ / DB_WF / DB_ORG；③ 路由数 64→**72**、前端页面 60→**67**、资料表 89→**134**；④ 依赖图新增费用资金、审批中心、组织经营节点；⑤ 部署图同步路由数。
 > - 2026-11-13（v3.4）：① 新增第九章「经营分析流程图」（多维盈利 / 滚动预算 / 库存周转），原部署、依赖章节顺延为第十、十一章；② 架构图服务层新增 ANALYZE 子域（S24~S26）、数据层新增 DB_ANALYSIS（sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action）；③ 路由数 50→**64**、前端入口 50→**60**、资料表 83→**89**；④ 依赖图新增经营分析节点与只读取数关系。
 > - 2026-11-12（v3.3）：① 路由模块数 48→**50**（新增 `/api/preorders`、`/api/codes`，`/api/cash-forecast` 双挂载）；② 第六章第三方整合新增「前端 5 Tab 操作台」子图（Excel 导入 / SQL 线上整合 / 批次作业 / 数据源 / 执行日志），补充 Excel 模板动态生成、日志筛选/CSV 导出、失败作业重试链路；③ 补充码表驱动（`cams_system_codes`，缓存 TTL 1 小时）与三语 i18n（默认简体）说明；④ 架构图与部署图同步路由数。
 > - 2026-11-05（v3.2）：① 新增第八章「智能化（AI）流程图」：AI 问答 RAG 检索链路 + 摘要/催收/质检/概率预测四链路；② 架构图服务层新增 AI 子域（S19~S23）、数据层新增 DB_AI（ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / llm_config）、外部新增 LLM API；③ 路由数 42→48、资料表 74→83、前端入口 41→50（8 个菜单分组）；④ 部署图补充 LLM API 出向调用；⑤ 新增系统文件菜单（`/docs/architecture`、`/docs/data-model`，仅管理员）。

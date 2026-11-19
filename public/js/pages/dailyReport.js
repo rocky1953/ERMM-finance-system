@@ -44,17 +44,16 @@
             const f = this.filters || {};
             const y = document.getElementById('drfYear'), m = document.getElementById('drfMonth');
             const d = document.getElementById('drfDept'), u = document.getElementById('drfUser');
-            const now = new Date();
             return {
-                year: (y ? y.value : f.year) || String(now.getFullYear()),
-                mm: (m ? m.value : f.month) || String(now.getMonth() + 1).padStart(2, '0'),
+                year: (y ? y.value : f.year) || String(State.year()),
+                mm: (m ? m.value : f.month) || State.mm(),
                 depart_id: (d ? d.value : f.depart_id) || '',
                 user_id: (u ? u.value : f.user_id) || ''
             };
         },
 
         yearOptions(sel) {
-            const y = new Date().getFullYear();
+            const y = State.year();
             let html = `<option value="">${t('dr.all')}</option>`;
             for (let yy = y + 1; yy >= y - 25; yy--) {
                 html += `<option value="${yy}" ${String(sel) === String(yy) ? 'selected' : ''}>${yy}</option>`;
@@ -78,7 +77,7 @@
         deptOptions(sel) {
             const ds = (this.meta && this.meta.departments) || [];
             return `<option value="">${t('dr.all')}</option>` +
-                ds.map(d => `<option value="${esc(d)}" ${sel === d ? 'selected' : ''}>${esc(d)}</option>`).join('');
+                ds.map(d => `<option value="${esc(d)}" ${sel === d ? 'selected' : ''}>${esc(tDept(d))}</option>`).join('');
         },
 
         // ============ 列表视图 ============
@@ -87,7 +86,7 @@
             const res = await API.get('/api/daily-report/meta');
             this.meta = res.data;
             this.me = res.data.me;
-            if (!this.filters.year) this.filters.year = new Date().getFullYear();
+            if (!this.filters.year) this.filters.year = State.year();
         },
 
         renderList() {
@@ -1659,7 +1658,7 @@
             const dash = `<span style="color:#bdc3c7;" title="${esc(t('dr.eff.dept_p5_tip'))}">-</span>`;
             tb.innerHTML = rows.map(dp => `
                 <tr>
-                    <td>${esc(dp.depart_id)}</td>
+                    <td>${esc(tDept(dp.depart_id))}</td>
                     <td class="num">${dp.emp_cnt}</td>
                     <td class="num">${UI.fmt(dp.total_hours)}</td>
                     <td class="num">${UI.fmt(dp.per_capita_hours)}</td>
@@ -1765,7 +1764,7 @@
                             <thead><tr><th>${t('dr.sum.col.depart')}</th><th>${t('dr.eff.kpi.emp')}</th><th>${t('dr.eff.kpi.hours')}</th><th>${t('dr.eff.kpi.per_hours')}</th></tr></thead>
                             <tbody>${r.departments.map(dp => `
                                 <tr>
-                                    <td>${esc(dp.depart_id)}</td>
+                                    <td>${esc(tDept(dp.depart_id))}</td>
                                     <td class="num">${dp.emp_cnt}</td>
                                     <td class="num">${UI.fmt(dp.total_hours)}</td>
                                     <td class="num">${dp.emp_cnt > 0 ? UI.fmt(Math.round(dp.total_hours / dp.emp_cnt * 100) / 100) : 0}</td>
@@ -1934,7 +1933,7 @@
             const deptSel = document.getElementById('arDept');
             (this.meta?.depts || []).forEach(d => {
                 const o = document.createElement('option');
-                o.value = d.dept_id || d; o.textContent = d.dept_name || d.dept_id || d;
+                o.value = d.dept_id || d; o.textContent = tDept(d.dept_name || d.dept_id || d);
                 deptSel.appendChild(o);
             });
             this.loadAnnualReview();

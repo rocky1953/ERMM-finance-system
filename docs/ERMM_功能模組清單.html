@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERMM 功能模块清单</title>
+<style>
+    :root { --navy:#0f2d4a; --blue:#1e5a8a; --accent:#2563eb; --line:#e2e8f0; --muted:#64748b; --bg:#f5f7fa; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:#1f2937;
+           font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif; line-height:1.6; }
+    header { background:linear-gradient(135deg,#0f2d4a,#1e5a8a 60%,#2563eb); color:#fff; padding:28px 32px 22px; }
+    header h1 { margin:0 0 6px; font-size:24px; font-weight:700; letter-spacing:.5px; }
+    header .sub { font-size:13px; opacity:.85; }
+    .stats { display:flex; gap:26px; margin-top:18px; flex-wrap:wrap; }
+    .stat { background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22);
+            border-radius:10px; padding:8px 16px; min-width:104px; }
+    .stat b { display:block; font-size:20px; line-height:1.2; }
+    .stat span { font-size:12px; opacity:.85; }
+    .toolbar { position:sticky; top:0; z-index:20; background:#fff; border-bottom:1px solid var(--line);
+               padding:12px 32px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .toolbar input { flex:1; min-width:220px; max-width:420px; padding:8px 12px; border:1px solid #cbd5e1;
+                     border-radius:8px; font-size:13px; }
+    .toolbar input:focus { outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+    .chip { border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:16px; padding:5px 12px;
+            font-size:12px; cursor:pointer; }
+    .chip:hover { border-color:var(--accent); color:var(--accent); }
+    .chip.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+    .hint { font-size:12px; color:var(--muted); margin-left:auto; }
+    main { padding:20px 32px 48px; }
+    section.group { margin-bottom:22px; }
+    section.group h2 { font-size:16px; color:var(--navy); margin:0 0 8px; padding-left:10px;
+                       border-left:4px solid var(--accent); }
+    .count { font-size:12px; color:var(--muted); font-weight:400; margin-left:6px; }
+    .tw { background:#fff; border:1px solid var(--line); border-radius:10px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+    thead th { background:var(--navy); color:#fff; font-weight:600; text-align:left; padding:10px 12px;
+               position:sticky; top:0; white-space:nowrap; }
+    tbody td { padding:9px 12px; border-top:1px solid #eef2f7; vertical-align:top; }
+    tbody tr:nth-child(even) { background:#fbfcfe; }
+    tbody tr:hover { background:#f0f7ff; }
+    .mname { font-weight:600; color:#0f2d4a; }
+    code { background:#eef2f7; color:#334155; padding:1px 6px; border-radius:4px; font-size:12px;
+           font-family:Consolas,Monaco,monospace; }
+    .mdesc { color:#475569; }
+    .c { text-align:center; white-space:nowrap; }
+    .ok { color:#15803d; font-weight:700; }
+    .no { color:#cbd5e1; }
+    .empty { text-align:center; color:var(--muted); padding:40px; background:#fff;
+             border:1px dashed #cbd5e1; border-radius:10px; }
+    footer { padding:0 32px 32px; font-size:12px; color:var(--muted); }
+    @media print {
+        body { background:#fff; }
+        .toolbar { position:static; }
+        .chip, .toolbar input { display:none; }
+        section.group { break-inside:avoid; }
+        thead th { position:static; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+</style>
+</head>
+<body>
+<header>
+    <h1>ERMM 财务模块管理系统 · 功能模块清单</h1>
+    <div class="sub">共 81 个功能模块 / 8 个分组 · 权限矩阵来源 cams_module_permission · 生成日期 2026-11-17</div>
+    <div class="stats">
+        <div class="stat"><b>81</b><span>功能模块</span></div>
+        <div class="stat"><b>8</b><span>功能分组</span></div>
+        <div class="stat"><b>54</b><span>一般员工可用</span></div>
+        <div class="stat"><b>71</b><span>操作员可用</span></div>
+        <div class="stat"><b>81</b><span>管理员可用</span></div>
+    </div>
+</header>
+
+<div class="toolbar">
+    <input type="text" id="kw" placeholder="搜索模块名称 / 代码 / 功能说明…">
+    <button class="chip active" data-g="all">全部</button>
+    <button class="chip" data-g="仪表板">仪表板</button><button class="chip" data-g="经营决策">经营决策</button><button class="chip" data-g="ERP 原始单据">ERP 原始单据</button><button class="chip" data-g="日常作业">日常作业</button><button class="chip" data-g="财务分析">财务分析</button><button class="chip" data-g="财务预警">财务预警</button><button class="chip" data-g="系统主档">系统主档</button><button class="chip" data-g="系统文件">系统文件</button>
+    <span class="hint" id="hint">显示 81 个模块</span>
+</div>
+
+<main id="list">
+<section class="group" data-group="仪表板">
+            <h2>仪表板 <span class="count">1 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="dashboard" data-name="仪表板" data-desc="高管經營總覽：收入／成本／毛利／現金與預警卡片，支持柱體下鑽至 AR/AP 發票明細">
+                <td class="mname">仪表板</td>
+                <td><code>dashboard</code></td>
+                <td class="mdesc">高管經營總覽：收入／成本／毛利／現金與預警卡片，支持柱體下鑽至 AR/AP 發票明細</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="经营决策">
+            <h2>经营决策 <span class="count">23 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="actions" data-name="KPI 动作" data-desc="KPI 異常行動項追蹤，待處理／進行中／已完成三態管理">
+                <td class="mname">KPI 动作</td>
+                <td><code>actions</code></td>
+                <td class="mdesc">KPI 異常行動項追蹤，待處理／進行中／已完成三態管理</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="alerts" data-name="预警中心" data-desc="預警中心：內置告警規則與告警記錄，支援 Email／Lark／企微推送">
+                <td class="mname">预警中心</td>
+                <td><code>alerts</code></td>
+                <td class="mdesc">預警中心：內置告警規則與告警記錄，支援 Email／Lark／企微推送</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="drilldown" data-name="KPI 穿透" data-desc="KPI 多維穿透，按公司／期間／維度下鑽至單據明細">
+                <td class="mname">KPI 穿透</td>
+                <td><code>drilldown</code></td>
+                <td class="mdesc">KPI 多維穿透，按公司／期間／維度下鑽至單據明細</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="cashForecast" data-name="现金预测" data-desc="13 周現金流預測與安全水位，含 Monte Carlo 機率預測（P10/P50/P90）">
+                <td class="mname">现金预测</td>
+                <td><code>cashForecast</code></td>
+                <td class="mdesc">13 周現金流預測與安全水位，含 Monte Carlo 機率預測（P10/P50/P90）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="mgmtAccounting" data-name="管理会计" data-desc="部門損益與管理會計口徑分析">
+                <td class="mname">管理会计</td>
+                <td><code>mgmtAccounting</code></td>
+                <td class="mdesc">部門損益與管理會計口徑分析</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="budget" data-name="预算管理" data-desc="年度預算編制、明細維護與提交審批留痕">
+                <td class="mname">预算管理</td>
+                <td><code>budget</code></td>
+                <td class="mdesc">年度預算編制、明細維護與提交審批留痕</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="consolidation" data-name="合并报表" data-desc="多公司（HM/HN/SZ）合併報表與內部抵消">
+                <td class="mname">合并报表</td>
+                <td><code>consolidation</code></td>
+                <td class="mdesc">多公司（HM/HN/SZ）合併報表與內部抵消</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="aiqa" data-name="AI 问答" data-desc="自然語言問財務數據：RAG 檢索知識庫 + 預設 LLM 作答（服務商唯讀）">
+                <td class="mname">AI 问答</td>
+                <td><code>aiqa</code></td>
+                <td class="mdesc">自然語言問財務數據：RAG 檢索知識庫 + 預設 LLM 作答（服務商唯讀）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="scenario" data-name="情景模拟" data-desc="多情景假設測算，方案可命名保存與回看">
+                <td class="mname">情景模拟</td>
+                <td><code>scenario</code></td>
+                <td class="mdesc">多情景假設測算，方案可命名保存與回看</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="warRoom" data-name="作战室" data-desc="高管實時經營作戰看板">
+                <td class="mname">作战室</td>
+                <td><code>warRoom</code></td>
+                <td class="mdesc">高管實時經營作戰看板</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="benchmark" data-name="标杆对标" data-desc="同業標桿指標對標與排名">
+                <td class="mname">标杆对标</td>
+                <td><code>benchmark</code></td>
+                <td class="mdesc">同業標桿指標對標與排名</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="rollingBudget" data-name="滚动预算" data-desc="12 個月滾動預算，損益／資產負債／現金流三表聯動 + 13 周現金">
+                <td class="mname">滚动预算</td>
+                <td><code>rollingBudget</code></td>
+                <td class="mdesc">12 個月滾動預算，損益／資產負債／現金流三表聯動 + 13 周現金</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="profitAnalysis" data-name="多维盈利分析" data-desc="客戶／產品／渠道／項目四維毛利與淨利分析">
+                <td class="mname">多维盈利分析</td>
+                <td><code>profitAnalysis</code></td>
+                <td class="mdesc">客戶／產品／渠道／項目四維毛利與淨利分析</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="inventoryTurnover" data-name="库存周转" data-desc="庫齡結構、周轉率／DSI、呆滯清單下發與補貨建議">
+                <td class="mname">库存周转</td>
+                <td><code>inventoryTurnover</code></td>
+                <td class="mdesc">庫齡結構、周轉率／DSI、呆滯清單下發與補貨建議</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="boardPack" data-name="董事会报告包" data-desc="董事會／投資人報告包：六大區塊生成與 PDF／PPTX 導出">
+                <td class="mname">董事会报告包</td>
+                <td><code>boardPack</code></td>
+                <td class="mdesc">董事會／投資人報告包：六大區塊生成與 PDF／PPTX 導出</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="projectProfit" data-name="项目损益" data-desc="項目概覽／項目損益／年度預算／成本歸集／收入確認五頁籤">
+                <td class="mname">项目损益</td>
+                <td><code>projectProfit</code></td>
+                <td class="mdesc">項目概覽／項目損益／年度預算／成本歸集／收入確認五頁籤</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="fxExposure" data-name="汇率敞口/对冲" data-desc="外幣敞口測算與避險工具登記">
+                <td class="mname">汇率敞口/对冲</td>
+                <td><code>fxExposure</code></td>
+                <td class="mdesc">外幣敞口測算與避險工具登記</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="taxPlanning" data-name="税务筹划/风险" data-desc="稅收優惠適用與稅務風險籌劃">
+                <td class="mname">税务筹划/风险</td>
+                <td><code>taxPlanning</code></td>
+                <td class="mdesc">稅收優惠適用與稅務風險籌劃</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="strategy" data-name="战略目标/平衡计分卡" data-desc="公司→部門→個人三級 BSC 目標、進度記錄與得分對比">
+                <td class="mname">战略目标/平衡计分卡</td>
+                <td><code>strategy</code></td>
+                <td class="mdesc">公司→部門→個人三級 BSC 目標、進度記錄與得分對比</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="cashLiquidity" data-name="资金与流动性管理" data-desc="資金計劃項、流動性缺口與投資／融資安排">
+                <td class="mname">资金与流动性管理</td>
+                <td><code>cashLiquidity</code></td>
+                <td class="mdesc">資金計劃項、流動性缺口與投資／融資安排</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="investment" data-name="投资与资本配置" data-desc="投資項目預算與現金流測算">
+                <td class="mname">投资与资本配置</td>
+                <td><code>investment</code></td>
+                <td class="mdesc">投資項目預算與現金流測算</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="taxCompliance" data-name="税务与合规管理" data-desc="稅務法規台賬、合規事項與申報任務跟蹤">
+                <td class="mname">税务与合规管理</td>
+                <td><code>taxCompliance</code></td>
+                <td class="mdesc">稅務法規台賬、合規事項與申報任務跟蹤</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="hrEfficiency" data-name="组织人效分析" data-desc="部門編制、人均產值、人工成本率與人效趨勢">
+                <td class="mname">组织人效分析</td>
+                <td><code>hrEfficiency</code></td>
+                <td class="mdesc">部門編制、人均產值、人工成本率與人效趨勢</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="ERP 原始单据">
+            <h2>ERP 原始单据 <span class="count">6 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="po" data-name="采购订单" data-desc="採購訂單查詢與維護（ermm_erp_po）">
+                <td class="mname">采购订单</td>
+                <td><code>po</code></td>
+                <td class="mdesc">採購訂單查詢與維護（ermm_erp_po）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="so" data-name="销售订单" data-desc="銷售訂單查詢與維護">
+                <td class="mname">销售订单</td>
+                <td><code>so</code></td>
+                <td class="mdesc">銷售訂單查詢與維護</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="preorder" data-name="预购单" data-desc="銷售預估訂單，關聯客戶與項目">
+                <td class="mname">预购单</td>
+                <td><code>preorder</code></td>
+                <td class="mdesc">銷售預估訂單，關聯客戶與項目</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="dn" data-name="出货单" data-desc="出貨單（DN）登記與銷售訂單對應">
+                <td class="mname">出货单</td>
+                <td><code>dn</code></td>
+                <td class="mdesc">出貨單（DN）登記與銷售訂單對應</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="tempPo" data-name="临时 PO" data-desc="採購訂單暫存草稿，確認後轉正式 PO">
+                <td class="mname">临时 PO</td>
+                <td><code>tempPo</code></td>
+                <td class="mdesc">採購訂單暫存草稿，確認後轉正式 PO</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="salesCredit" data-name="销售履约与信用" data-desc="客戶信用額度、銷售退貨登記與履約風險清單">
+                <td class="mname">销售履约与信用</td>
+                <td><code>salesCredit</code></td>
+                <td class="mdesc">客戶信用額度、銷售退貨登記與履約風險清單</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="日常作业">
+            <h2>日常作业 <span class="count">20 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="approvals" data-name="审批待办" data-desc="通用審批待辦中心，跨業務類型統一處理 APPROVE／REJECT">
+                <td class="mname">审批待办</td>
+                <td><code>approvals</code></td>
+                <td class="mdesc">通用審批待辦中心，跨業務類型統一處理 APPROVE／REJECT</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="expense" data-name="费用报销" data-desc="費用報銷與借支核銷全流程（草稿→提交→審批→付款）">
+                <td class="mname">费用报销</td>
+                <td><code>expense</code></td>
+                <td class="mdesc">費用報銷與借支核銷全流程（草稿→提交→審批→付款）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="payRequest" data-name="付款申请" data-desc="付款申請、按月排程、銀行回單登記與 AR/AP 核銷">
+                <td class="mname">付款申请</td>
+                <td><code>payRequest</code></td>
+                <td class="mdesc">付款申請、按月排程、銀行回單登記與 AR/AP 核銷</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="closing" data-name="关账管理" data-desc="月結關賬日曆、任務分派與實例跟蹤">
+                <td class="mname">关账管理</td>
+                <td><code>closing</code></td>
+                <td class="mdesc">月結關賬日曆、任務分派與實例跟蹤</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="prRequest" data-name="采购申请" data-desc="請購單申請與審批，通過後轉採購">
+                <td class="mname">采购申请</td>
+                <td><code>prRequest</code></td>
+                <td class="mdesc">請購單申請與審批，通過後轉採購</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="poMatch" data-name="PO 三单匹配" data-desc="採購三單匹配（請購／採購／到貨），差異核對">
+                <td class="mname">PO 三单匹配</td>
+                <td><code>poMatch</code></td>
+                <td class="mdesc">採購三單匹配（請購／採購／到貨），差異核對</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="cash" data-name="现金日记" data-desc="現金日記賬登記與餘額核對">
+                <td class="mname">现金日记</td>
+                <td><code>cash</code></td>
+                <td class="mdesc">現金日記賬登記與餘額核對</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="invoice" data-name="发票管理" data-desc="銷項／進項發票管理">
+                <td class="mname">发票管理</td>
+                <td><code>invoice</code></td>
+                <td class="mdesc">銷項／進項發票管理</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="pay" data-name="付款管理" data-desc="付款流水明細">
+                <td class="mname">付款管理</td>
+                <td><code>pay</code></td>
+                <td class="mdesc">付款流水明細</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="check" data-name="支票管理" data-desc="應收／應付票據管理">
+                <td class="mname">支票管理</td>
+                <td><code>check</code></td>
+                <td class="mdesc">應收／應付票據管理</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="bank" data-name="银行管理" data-desc="銀行貸款本金、利息與還款計劃">
+                <td class="mname">银行管理</td>
+                <td><code>bank</code></td>
+                <td class="mdesc">銀行貸款本金、利息與還款計劃</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="arMatch" data-name="收款核销" data-desc="收款登記與應收發票匹配核銷">
+                <td class="mname">收款核销</td>
+                <td><code>arMatch</code></td>
+                <td class="mdesc">收款登記與應收發票匹配核銷</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="arap" data-name="应收应付" data-desc="應收應付台賬，由 SO／PO 自動產生">
+                <td class="mname">应收应付</td>
+                <td><code>arap</code></td>
+                <td class="mdesc">應收應付台賬，由 SO／PO 自動產生</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="arSmart" data-name="AR 智能分析" data-desc="AR 智能催收評分（賬齡／逾期／金額／風險），四級燈號排序">
+                <td class="mname">AR 智能分析</td>
+                <td><code>arSmart</code></td>
+                <td class="mdesc">AR 智能催收評分（賬齡／逾期／金額／風險），四級燈號排序</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="dataQuality" data-name="数据质量" data-desc="全庫 7 大類 20+ 項數據質量體檢（只掃描不自動修復）">
+                <td class="mname">数据质量</td>
+                <td><code>dataQuality</code></td>
+                <td class="mdesc">全庫 7 大類 20+ 項數據質量體檢（只掃描不自動修復）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="codeTable" data-name="码表管理" data-desc="系統碼表維護：下拉選項、公司別、稅率、匯率">
+                <td class="mname">码表管理</td>
+                <td><code>codeTable</code></td>
+                <td class="mdesc">系統碼表維護：下拉選項、公司別、稅率、匯率</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="dailyReport" data-name="工作日报" data-desc="工作日報填報、審核、鎖定與目標對比">
+                <td class="mname">工作日报</td>
+                <td><code>dailyReport</code></td>
+                <td class="mdesc">工作日報填報、審核、鎖定與目標對比</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="dailyReportUnfinished" data-name="未结日报" data-desc="基於日報明細統計延誤與未完成事項">
+                <td class="mname">未结日报</td>
+                <td><code>dailyReportUnfinished</code></td>
+                <td class="mdesc">基於日報明細統計延誤與未完成事項</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="audit" data-name="操作审计" data-desc="全量操作審計：查詢、統計、按模塊／用戶分析與導出">
+                <td class="mname">操作审计</td>
+                <td><code>audit</code></td>
+                <td class="mdesc">全量操作審計：查詢、統計、按模塊／用戶分析與導出</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="llmAudit" data-name="AI 治理" data-desc="AI 治理駕駛艙：調用審計、成本分析、限流配額、模型計價">
+                <td class="mname">AI 治理</td>
+                <td><code>llmAudit</code></td>
+                <td class="mdesc">AI 治理駕駛艙：調用審計、成本分析、限流配額、模型計價</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="财务分析">
+            <h2>财务分析 <span class="count">11 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="summary" data-name="财务汇总" data-desc="月度財務摘要：收入／成本／毛利／費用／淨利">
+                <td class="mname">财务汇总</td>
+                <td><code>summary</code></td>
+                <td class="mdesc">月度財務摘要：收入／成本／毛利／費用／淨利</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="report" data-name="管理报表" data-desc="資產負債表、利潤表、現金流量表">
+                <td class="mname">管理报表</td>
+                <td><code>report</code></td>
+                <td class="mdesc">資產負債表、利潤表、現金流量表</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="risk" data-name="风险分析" data-desc="財務風險指標監控與預警">
+                <td class="mname">风险分析</td>
+                <td><code>risk</code></td>
+                <td class="mdesc">財務風險指標監控與預警</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="forecast" data-name="预测分析" data-desc="財務數據預測（WMA + 線性回歸）">
+                <td class="mname">预测分析</td>
+                <td><code>forecast</code></td>
+                <td class="mdesc">財務數據預測（WMA + 線性回歸）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="trend" data-name="趋势分析" data-desc="年度趨勢圖表">
+                <td class="mname">趋势分析</td>
+                <td><code>trend</code></td>
+                <td class="mdesc">年度趨勢圖表</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="monthly" data-name="月结汇总" data-desc="月度項目匯總">
+                <td class="mname">月结汇总</td>
+                <td><code>monthly</code></td>
+                <td class="mdesc">月度項目匯總</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="bep" data-name="盈亏平衡" data-desc="盈虧平衡點測算與門檻維護">
+                <td class="mname">盈亏平衡</td>
+                <td><code>bep</code></td>
+                <td class="mdesc">盈虧平衡點測算與門檻維護</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="account" data-name="账户管理" data-desc="會計科目與科目餘額">
+                <td class="mname">账户管理</td>
+                <td><code>account</code></td>
+                <td class="mdesc">會計科目與科目餘額</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="finance" data-name="财务总览" data-desc="財務入賬／報稅／勾稽（RUID 全鏈路）">
+                <td class="mname">财务总览</td>
+                <td><code>finance</code></td>
+                <td class="mdesc">財務入賬／報稅／勾稽（RUID 全鏈路）</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="tax" data-name="税务申报" data-desc="電子化報稅：VAT／CIT／IIT 算稅→核對→提交">
+                <td class="mname">税务申报</td>
+                <td><code>tax</code></td>
+                <td class="mdesc">電子化報稅：VAT／CIT／IIT 算稅→核對→提交</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="xitems" data-name="料件管理" data-desc="料件與存貨日狀態明細">
+                <td class="mname">料件管理</td>
+                <td><code>xitems</code></td>
+                <td class="mdesc">料件與存貨日狀態明細</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="财务预警">
+            <h2>财务预警 <span class="count">4 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="yg001" data-name="KPI 查询 1" data-desc="KPI 預警指標查詢">
+                <td class="mname">KPI 查询 1</td>
+                <td><code>yg001</code></td>
+                <td class="mdesc">KPI 預警指標查詢</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="yg002" data-name="KPI 查询 2" data-desc="KPI 指標管理">
+                <td class="mname">KPI 查询 2</td>
+                <td><code>yg002</code></td>
+                <td class="mdesc">KPI 指標管理</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="yg003" data-name="KPI 查询 3" data-desc="報表異常甄別">
+                <td class="mname">KPI 查询 3</td>
+                <td><code>yg003</code></td>
+                <td class="mdesc">報表異常甄別</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="yg004" data-name="KPI 查询 4" data-desc="預測模型分析">
+                <td class="mname">KPI 查询 4</td>
+                <td><code>yg004</code></td>
+                <td class="mdesc">預測模型分析</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="系统主档">
+            <h2>系统主档 <span class="count">9 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="batch" data-name="批次管理" data-desc="批次管線（Step1~Step7）加工與重算控制">
+                <td class="mname">批次管理</td>
+                <td><code>batch</code></td>
+                <td class="mdesc">批次管線（Step1~Step7）加工與重算控制</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="integration" data-name="系统集成" data-desc="第三方資料整合：Excel 導入／SQL 線上／批次作業／數據源／執行日誌">
+                <td class="mname">系统集成</td>
+                <td><code>integration</code></td>
+                <td class="mdesc">第三方資料整合：Excel 導入／SQL 線上／批次作業／數據源／執行日誌</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="system" data-name="系统设置" data-desc="系統參數與系統碼配置">
+                <td class="mname">系统设置</td>
+                <td><code>system</code></td>
+                <td class="mdesc">系統參數與系統碼配置</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="user" data-name="用户管理" data-desc="使用者、部門與角色維護">
+                <td class="mname">用户管理</td>
+                <td><code>user</code></td>
+                <td class="mdesc">使用者、部門與角色維護</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="kpi" data-name="KPI 设置" data-desc="KPI 指標定義、門檻與查詢配置">
+                <td class="mname">KPI 设置</td>
+                <td><code>kpi</code></td>
+                <td class="mdesc">KPI 指標定義、門檻與查詢配置</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="branch" data-name="公司管理" data-desc="分公司（HM/HN/SZ）基本資料">
+                <td class="mname">公司管理</td>
+                <td><code>branch</code></td>
+                <td class="mdesc">分公司（HM/HN/SZ）基本資料</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="relation" data-name="往来单位" data-desc="客戶／供應商往來單位資料">
+                <td class="mname">往来单位</td>
+                <td><code>relation</code></td>
+                <td class="mdesc">客戶／供應商往來單位資料</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="contracts" data-name="合同主档" data-desc="合同主檔：關聯 PO/SO，含金額、期限、付款條件與到期預警">
+                <td class="mname">合同主档</td>
+                <td><code>contracts</code></td>
+                <td class="mdesc">合同主檔：關聯 PO/SO，含金額、期限、付款條件與到期預警</td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="permission" data-name="功能权限" data-desc="功能模塊權限矩陣（81 模塊 × 三角色）與按鈕級權限配置">
+                <td class="mname">功能权限</td>
+                <td><code>permission</code></td>
+                <td class="mdesc">功能模塊權限矩陣（81 模塊 × 三角色）與按鈕級權限配置</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section><section class="group" data-group="系统文件">
+            <h2>系统文件 <span class="count">7 个模块</span></h2>
+            <div class="tw">
+                <table>
+                    <thead><tr>
+                        <th style="width:150px;">模块名称</th>
+                        <th style="width:130px;">模块代码</th>
+                        <th>功能说明</th>
+                        <th style="width:64px;" class="c">一般</th>
+                        <th style="width:64px;" class="c">操作员</th>
+                        <th style="width:64px;" class="c">管理员</th>
+                    </tr></thead>
+                    <tbody><tr data-code="docArchitecture" data-name="系统架构图" data-desc="系統架構與流程圖（HTML，只讀文檔）">
+                <td class="mname">系统架构图</td>
+                <td><code>docArchitecture</code></td>
+                <td class="mdesc">系統架構與流程圖（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docExecutive" data-name="高管简报" data-desc="高管價值簡報（HTML，只讀文檔）">
+                <td class="mname">高管简报</td>
+                <td><code>docExecutive</code></td>
+                <td class="mdesc">高管價值簡報（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docDataModel" data-name="数据模型" data-desc="系統架構與模塊資料表關係圖（HTML，只讀文檔）">
+                <td class="mname">数据模型</td>
+                <td><code>docDataModel</code></td>
+                <td class="mdesc">系統架構與模塊資料表關係圖（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docManualCeo" data-name="CEO 手册" data-desc="CEO 操作手冊（HTML，只讀文檔）">
+                <td class="mname">CEO 手册</td>
+                <td><code>docManualCeo</code></td>
+                <td class="mdesc">CEO 操作手冊（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docManualCfo" data-name="CFO 手册" data-desc="CFO 操作手冊（HTML，只讀文檔）">
+                <td class="mname">CFO 手册</td>
+                <td><code>docManualCfo</code></td>
+                <td class="mdesc">CFO 操作手冊（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docManualCto" data-name="CTO 手册" data-desc="CTO 操作手冊（HTML，只讀文檔）">
+                <td class="mname">CTO 手册</td>
+                <td><code>docManualCto</code></td>
+                <td class="mdesc">CTO 操作手冊（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr><tr data-code="docManualCoo" data-name="COO 手册" data-desc="COO 操作手冊（HTML，只讀文檔）">
+                <td class="mname">COO 手册</td>
+                <td><code>docManualCoo</code></td>
+                <td class="mdesc">COO 操作手冊（HTML，只讀文檔）</td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="no" title="无权限">—</span></td>
+                <td class="c"><span class="ok" title="允许">✓</span></td>
+            </tr></tbody>
+                </table>
+            </div>
+        </section>
+<div class="empty" id="empty" style="display:none;">没有符合条件的模块</div>
+</main>
+
+<footer>
+    说明：✓ = 该角色具备模块访问权限（后端 middleware/moduleGuard.js 据此拦截 API，未授权返回 403 MODULE_DENIED）；— = 无权限。<br>
+    模块权限可在「系统主档 → 功能权限」中调整，调整后最多 60 秒生效。
+</footer>
+
+<script>
+(function () {
+    var kw = document.getElementById('kw');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('section.group'));
+    var hint = document.getElementById('hint');
+    var empty = document.getElementById('empty');
+    var activeGroup = 'all';
+
+    function apply() {
+        var q = (kw.value || '').trim().toLowerCase();
+        var shown = 0;
+        sections.forEach(function (sec) {
+            var group = sec.getAttribute('data-group');
+            var groupOk = activeGroup === 'all' || group === activeGroup;
+            var rows = sec.querySelectorAll('tbody tr');
+            var visible = 0;
+            rows.forEach(function (tr) {
+                var text = (tr.getAttribute('data-name') + ' ' + tr.getAttribute('data-code') + ' ' + tr.getAttribute('data-desc')).toLowerCase();
+                var hit = !q || text.indexOf(q) >= 0;
+                var show = groupOk && hit;
+                tr.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            sec.style.display = (groupOk && visible > 0) ? '' : 'none';
+            shown += visible;
+        });
+        hint.textContent = '显示 ' + shown + ' 个模块';
+        empty.style.display = shown ? 'none' : '';
+    }
+
+    kw.addEventListener('input', apply);
+    chips.forEach(function (c) {
+        c.addEventListener('click', function () {
+            chips.forEach(function (x) { x.classList.remove('active'); });
+            c.classList.add('active');
+            activeGroup = c.getAttribute('data-g');
+            apply();
+        });
+    });
+    apply();
+})();
+</script>
+</body>
+</html>

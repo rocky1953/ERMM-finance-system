@@ -9,10 +9,14 @@
  * 僅在 require.main 直接啟動且 NODE_ENV!=='test' 時由 app.js 呼叫 startScheduler()。
  */
 const { scanAll } = require('../services/drAlertScanner');
+const { scanAllFinance } = require('../services/kpiAlertScanner');
+const { scanAllTax } = require('../services/taxRiskScanner');
 const { startIntgScheduler } = require('../services/intgScheduler');
 
 const SCAN_TIMES = ['09:30', '16:30'];  // 工作日掃描時刻
 const MONTH_END_TIME = '16:00';         // 月末最後一日額外掃描時刻
+const FINANCE_SCAN_TIME = '08:30';      // 財務 KPI 自動預警（每日）
+const TAX_SCAN_TIME = '08:35';          // 稅務風險掃描（每日）
 
 let timer = null;
 let running = false;
@@ -36,6 +40,12 @@ function dueKeys(now) {
     if (isLastDayOfMonth(now) && hm === MONTH_END_TIME) {
         keys.push(`monthEnd|${dateKey(now)}`);
     }
+    if (hm === FINANCE_SCAN_TIME) {
+        keys.push(`finance|${dateKey(now)}`);
+    }
+    if (hm === TAX_SCAN_TIME) {
+        keys.push(`tax|${dateKey(now)}`);
+    }
     return keys;
 }
 
@@ -49,11 +59,31 @@ async function tick() {
 
     running = true;
     try {
-        console.log(`[scheduler] 觸發日報告警掃描: ${due.join(', ')} @ ${now.toISOString()}`);
-        const r = await scanAll({ asOf: now });
-        const total = r.bus.reduce((s, b) => s + (b.created || []).length, 0);
-        const errs = r.bus.reduce((s, b) => s + (b.errors || []).length, 0);
-        console.log(`[scheduler] 掃描完成: ${r.bus.length} 個 BU，新增告警 ${total} 條，錯誤 ${errs} 條`);
+        const finDue = due.filter(k => k.startsWith('finance|'));
+        const taxDue = due.filter(k => k.startsWith('tax|'));
+        const drDue = due.filter(k => !k.startsWith('finance|') && !k.startsWith('tax|'));
+
+        if (drDue.length) {
+            console.log(`[scheduler] 觸發日報告警掃描: ${drDue.join(', ')} @ ${now.toISOString()}`);
+            const r = await scanAll({ asOf: now });
+            const total = r.bus.reduce((s, b) => s + (b.created || []).length, 0);
+            const errs = r.bus.reduce((s, b) => s + (b.errors || []).length, 0);
+            console.log(`[scheduler] 掃描完成: ${r.bus.length} 個 BU，新增告警 ${total} 條，錯誤 ${errs} 條`);
+        }
+
+        if (finDue.length) {
+            console.log(`[scheduler] 觸發財務 KPI 預警掃描: ${finDue.join(', ')} @ ${now.toISOString()}`);
+            const r = await scanAllFinance();
+            const errs = r.bus.reduce((s, b) => s + (b.errors || []).length, 0);
+            console.log(`[scheduler] 財務 KPI 掃描完成: ${r.bus.length} 個 BU，新增告警 ${r.total_created} 條，錯誤 ${errs} 條`);
+        }
+
+        if (taxDue.length) {
+            console.log(`[scheduler] 觸發稅務風險掃描: ${taxDue.join(', ')} @ ${now.toISOString()}`);
+            const r = await scanAllTax();
+            const errs = r.bus.reduce((s, b) => s + (b.errors || []).length, 0);
+            console.log(`[scheduler] 稅務風險掃描完成: ${r.bus.length} 個 BU，新增告警 ${r.total_created} 條，錯誤 ${errs} 條`);
+        }
     } catch (e) {
         console.error('[scheduler] 掃描失敗:', e.message);
     } finally {

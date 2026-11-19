@@ -2,6 +2,8 @@
  * 往来对象 relation_detail CRUD（客户 / 供应商 / 关系人主档）
  * 下拉类型：RELATION_TYPE / BUSINESS_ID 统一读码表 cams_system_codes
  */
+const REL_TYPE_EN = { '客户':'Customer','供应商':'Supplier','关系人':'Related Party' };
+const relTypeLabel = (v) => I18N.lang === 'en' ? (REL_TYPE_EN[v] || v) : v;
 registerPage('relation', async (c) => {
     const _mgr = Auth.isManager();
     // 预取两类码值
@@ -9,7 +11,7 @@ registerPage('relation', async (c) => {
         CodeHelper.values('RELATION_TYPE', ['客户', '供应商', '关系人']),
         CodeHelper.values('BUSINESS_ID', ['HM', 'HN', 'SZ'])
     ]);
-    const relSel = relTypes.map(v => `<option value="${v}">${v}</option>`).join('');
+    const relSel = relTypes.map(v => `<option value="${v}">${relTypeLabel(v)}</option>`).join('');
     const buSel  = buOpts.map(v => `<option value="${v}">${v}</option>`).join('');
 
     c.innerHTML = `
@@ -49,7 +51,7 @@ async function loadRelation() {
             <tbody>${rows.map(r => `
                 <tr>
                     <td>${r.bu_no}</td>
-                    <td><span style="padding:2px 8px;border-radius:10px;font-size:0.8em;background:${relTypeColor(r.relation_type)};color:#333">${r.relation_type||'-'}</span></td>
+                    <td><span style="padding:2px 8px;border-radius:10px;font-size:0.8em;background:${relTypeColor(r.relation_type)};color:#333">${relTypeLabel(r.relation_type)||'-'}</span></td>
                     <td>${r.relation_id}</td><td>${r.relation_name||'-'}</td>
                     <td>${r.contact_person||'-'}</td><td>${r.contact_phone||'-'}</td>
                     <td>${r.tax_id||'-'}</td>
@@ -91,7 +93,7 @@ const RelationForm = {
     },
     _render(d) {
         const isEdit = !!d.uid;
-        const relSel = (this._relTypes || []).map(v => `<option value="${v}">${v}</option>`).join('');
+        const relSel = (this._relTypes || []).map(v => `<option value="${v}">${relTypeLabel(v)}</option>`).join('');
         const buSel  = (this._buOpts  || []).map(v => `<option value="${v}">${v}</option>`).join('');
         UI.modal((isEdit ? t('modal.edit') : t('modal.add')) + t('relation.title'), `
             <div class="form-row">

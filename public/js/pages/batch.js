@@ -41,7 +41,7 @@ registerPage('batch', async (c) => {
 function batchLog(msg, type = 'info') {
     const el = document.getElementById('batchLog');
     const colors = { info: '#0f0', success: '#27ae60', error: '#e74c3c', warn: '#f39c12' };
-    const time = new Date().toLocaleTimeString();
+    const time = DateLocale.fmtTime(new Date());
     el.innerHTML += `<div style="color:${colors[type]}">[${time}] ${msg}</div>`;
     el.scrollTop = el.scrollHeight;
 }

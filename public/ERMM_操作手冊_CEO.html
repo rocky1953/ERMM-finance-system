@@ -79,12 +79,19 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <a class="toc-item d2" href="#sec-15">4.11 滚动预算（🔄）</a>
 <a class="toc-item d2" href="#sec-16">4.12 多维盈利（💹）</a>
 <a class="toc-item d2" href="#sec-17">4.13 库存周转（📦）</a>
-<a class="toc-item d1" href="#sec-18">五、你的权限范围</a>
-<a class="toc-item d1" href="#sec-19">六、每周 / 每月固定动作</a>
-<a class="toc-item d1" href="#sec-20">七、常见问题</a>
+<a class="toc-item d2" href="#sec-18">4.14 战略目标 BSC（🎯 经营决策组）</a>
+<a class="toc-item d2" href="#sec-19">4.15 董事会报告包（📦）</a>
+<a class="toc-item d2" href="#sec-20">4.16 组织人效（👥 CEO-05）</a>
+<a class="toc-item d2" href="#sec-21">4.17 月结关账进度（📅）</a>
+<a class="toc-item d2" href="#sec-22">4.18 外汇曝险与税务合规（🌐）</a>
+<a class="toc-item d2" href="#sec-23">4.19 AI 治理驾驶舱（🤖 AI 智能组，CTO-09 新增）</a>
+<a class="toc-item d2" href="#sec-24">4.20 指标中心统一口径（📊 经营决策组，CTO-06 新增）</a>
+<a class="toc-item d1" href="#sec-25">五、你的权限范围</a>
+<a class="toc-item d1" href="#sec-26">六、每周 / 每月固定动作</a>
+<a class="toc-item d1" href="#sec-27">七、常见问题</a>
   </nav>
   <div class="side-foot">
-    產生時間：2026-11-13 11:59<br>
+    產生時間：2026-11-17 04:59<br>
     <a href="http://localhost:3008/" target="_blank">← 返回 ERMM 系統</a><br>
     <a href="/docs/architecture">切換另一份文件</a>
   </div>
@@ -96,9 +103,10 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
   </div>
   <article class="doc">
 <blockquote>
-<p>适用角色：CEO（总经理 / 董事长）｜适用版本：v3.2（2026-11-05）
+<p>适用角色：CEO（总经理 / 董事长）｜适用版本：v4.0（2026-11-16）
 系统地址：<a href="http://localhost:3008">http://localhost:3008</a> ｜建议浏览器：Chrome / Edge
-本手册只写<strong>你实际会点到的地方</strong>：菜单名、页面名、操作顺序。技术细节不在本手册范围。</p>
+本手册只写<strong>你实际会点到的地方</strong>：菜单名、页面名、操作顺序。技术细节不在本手册范围。
+本版新增：<strong>战略目标 BSC（CEO-01）／董事会报告包（CEO-02）／组织人效（CEO-05）／AI 治理驾驶舱（CTO-09，6 页签 Dashboard）／指标中心统一口径（CTO-06，ROE 从此只有一种算法）</strong>。</p>
 </blockquote>
 <p>CEO 在系统中的角色是<strong>看全局、抓方向、定资源</strong>，不是录单据、不是做账。因此你的日常只有三类动作：</p>
 <ol>
@@ -256,8 +264,124 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 </li>
 <li><strong>决策用法</strong>：DSI 上升 + 呆滞占比上升，就是压降库存的信号；让 COO 对呆滞清单逐项下发处理，CFO 跟踪减值。</li>
 </ul>
+<h2 id="sec-18">4.14 战略目标 BSC（🎯 经营决策组）</h2><ul>
+<li><strong>目的</strong>：把「公司年度战略」拆成部门与个人目标，并随时看达成率，不让目标停在上次会议上。</li>
+<li><strong>操作</strong>：<ol>
+<li>进入「战略目标」→ 选择公司与期间（年度 / 季度）。</li>
+<li>看三层结构：<strong>公司目标 → 部门目标 → 个人目标</strong>，每层显示权重、目标值、实际值、达成率。</li>
+<li>新增 / 编辑目标：填写目标名称、维度（财务 / 客户 / 流程 / 学习成长）、责任人、目标值、截止日期。</li>
+<li>进度录入后，上层目标自动汇总，不用手工加总。</li>
+</ol>
+</li>
+<li><strong>你要看的</strong>：达成率红色（&lt; 80%）的部门与目标，以及连续两期没有进度的目标。</li>
+<li><strong>决策用法</strong>：季度复盘会上直接开此页，按红黄绿逐项过，现场定资源与责任人。</li>
+</ul>
+<h2 id="sec-19">4.15 董事会报告包（📦）</h2><ul>
+<li><strong>目的</strong>：开会前 1 分钟拿到一份可直接分发的董事会材料，不用等财务拼 PPT。</li>
+<li><strong>操作</strong>：<ol>
+<li>进入「董事会报告包」→ 选公司与期间。</li>
+<li>系统自动组包：<strong>财务摘要 + 经营 KPI + 预算执行 + 风险提示</strong>。</li>
+<li>点击导出，生成 PDF / PPTX；导出前可先在线预览各章节。</li>
+</ol>
+</li>
+<li><strong>注意</strong>：报告包内容来自当期已加工数据，<strong>导出前确认该月批次已跑完</strong>，否则数字会缺。</li>
+<li><strong>建议</strong>：董事会前 1 天先导出一次预览版，留给 CFO 核对口径的时间。</li>
+</ul>
+<h2 id="sec-20">4.16 组织人效（👥 CEO-05）</h2><ul>
+<li><strong>目的</strong>：回答「人是不是配多了、产出是不是配得上人力成本」。</li>
+<li><strong>操作</strong>：<ol>
+<li>进入「组织人效」→ 选择公司与月份。</li>
+<li>顶部 <strong>12 张 KPI 卡</strong>：编制人数、在职人数、缺编 / 超编、人均产值、人工成本率、人均人工成本等。</li>
+<li>下方 <strong>近 6 个月趋势图</strong>，看人效是升还是降。</li>
+<li>切到「部门编制」页签：按部门维护编制数，支持<strong>一键复制上月</strong>再微调。</li>
+</ol>
+</li>
+<li><strong>你要看的</strong>：<ol>
+<li>人均产值趋势向下，但人数向上 —— 增员没有带来产出。</li>
+<li>人工成本率高于行业或高于去年同期。</li>
+<li>部门超编但产出未达标。</li>
+</ol>
+</li>
+<li><strong>决策用法</strong>：编制审批前先看此页，把「增几个人」换成「人均产值要到多少」。</li>
+</ul>
+<h2 id="sec-21">4.17 月结关账进度（📅）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>月结关账</strong>。</li>
+<li><strong>目的</strong>：知道「这个月的账到底关没关」，避免拿着未关账的数字开会。</li>
+<li><strong>操作</strong>：选公司与月份 → 看关账日历与任务清单（<code>closing_calendar</code> / <code>closing_task</code>）→ 每项任务显示负责人、状态、完成时间。</li>
+<li><strong>你要看的</strong>：本月关账任务完成率、逾期任务、预计关账日。</li>
+<li><strong>决策用法</strong>：关账未完成前，报表数字只能作参考；月度经营会建议安排在关账完成后。</li>
+</ul>
+<h2 id="sec-22">4.18 外汇曝险与税务合规（🌐）</h2><ul>
+<li><strong>入口</strong>：经营决策 → <strong>外汇曝险</strong>；财务预警 → <strong>税务合规</strong>。</li>
+<li><strong>外汇曝险</strong>：按币别看未结外汇敞口（<code>fx_exposure_item</code>）与已做避险（<code>fx_hedge</code>），看「敞口覆盖了多少」。</li>
+<li><strong>税务合规</strong>：看税务优惠适用、法规清单与申报任务完成情况（<code>tax_compliance_item</code> / <code>tax_filing_task</code>），红色为逾期未办。</li>
+<li><strong>你的用法</strong>：不需要看明细科目，只看「敞口有没有对冲、税务任务有没有逾期」两件事；有异常直接找 CFO。</li>
+</ul>
+<h2 id="sec-23">4.19 AI 治理驾驶舱（🤖 AI 智能组，CTO-09 新增）</h2><ul>
+<li><strong>目的</strong>：全公司 AI 使用情况一眼看清，知道「谁在用 AI、花了多少钱、有没有异常」。</li>
+<li><strong>操作</strong>：<ol>
+<li>侧边栏「AI 智能」→ <strong>AI 治理驾驶舱</strong>。</li>
+<li>6 个页签：</li>
+</ol>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>页签</th>
+<th>你要看什么</th>
+<th>判断标准</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>概览</td>
+<td>总调用次数 / 总成本 USD / 平均响应 / 限流次数</td>
+<td>总成本突增 → 点进去看是哪个模型 / 业务场景</td>
+</tr>
+<tr>
+<td>调用明细</td>
+<td>逐条 AI 调用（谁、用了哪个模型、花了多少 token）</td>
+<td>非业务时段大量调用 → 可能有滥用或测试脚本跑飞</td>
+</tr>
+<tr>
+<td>成本统计</td>
+<td>按模型 / 业务 / 时间维度的成本聚合</td>
+<td>成本集中在某个业务场景 → 评估值不值得</td>
+</tr>
+<tr>
+<td>限流日志</td>
+<td>被限流的调用记录</td>
+<td>高频限流 → 该场景 QPS 配置可能不够</td>
+</tr>
+<tr>
+<td>模型计价</td>
+<td>10 个 LLM 模型的单价配置</td>
+<td>新模型上线前在此审核单价</td>
+</tr>
+<tr>
+<td>异常检测</td>
+<td>AI 自动标记的异常调用</td>
+<td>红色异常当天指派 CTO 排查</td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>注意</strong>：此功能需管理员权限查看；普通高管可看概览和调用明细，不能改模型计价和限流规则。</li>
+</ul>
+<h2 id="sec-24">4.20 指标中心统一口径（📊 经营决策组，CTO-06 新增）</h2><ul>
+<li><strong>目的</strong>：保证全公司所有关键指标（ROE、毛利率、DSI、DSO、DPO）只有<strong>一种计算方法</strong>，告别「A 部门说 ROE 15%、B 部门说 12%」。</li>
+<li><strong>操作</strong>：这个模块<strong>你不需要直接操作</strong>，它是系统底层引擎（<code>services/metricCenter.js</code> + <code>cams_metric_def</code> 23 指标 7 类别），仪表板、滚动预算、多维盈利、库存周转都统一调用它的计算结果。</li>
+<li><strong>你需要知道的</strong>：<ol>
+<li>所有页面显示的 ROE / 毛利率 / DSI 都走同一套公式了。</li>
+<li>如果你在两个页面看到同一个指标数字不一样 → 不是数据问题，是口径还没统一到新引擎 → 让 CTO 查哪个页面还在走旧逻辑。</li>
+</ol>
+</li>
+<li><strong>决策用法</strong>：季度经营会直接拿指标中心的数字，不用再让各部门报自己的版本。</li>
+</ul>
 <hr>
-<h1 id="sec-18">五、你的权限范围</h1><table>
+<h1 id="sec-25">五、你的权限范围</h1><blockquote>
+<p>下表为<strong>动作级</strong>边界；能否看到某个菜单还取决于「系统 · 主档管理 → 功能权限」的模块矩阵（一般 / 操作员 / 管理员），完整 <strong>78 个模组</strong>清单见《使用者操作手册》附录 A。</p>
+</blockquote>
+<table>
 <thead>
 <tr>
 <th>能做</th>
@@ -285,19 +409,32 @@ main{flex:1;min-width:0;padding:34px 46px 90px;max-width:1080px;}
 <td>—（只读查看）</td>
 </tr>
 <tr>
-<td>打开系统文件（仅管理员账号）</td>
+<td>查看战略目标 BSC、导出董事会报告包</td>
 <td>直接修改业务单据</td>
+</tr>
+<tr>
+<td>查看组织人效 KPI 与趋势（编制维护需高阶主管 / 管理员）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>查看费用报销 / 付款审批进度（审批动作由 CFO / 主管执行）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>打开系统文件（仅管理员账号）</td>
+<td>—</td>
 </tr>
 </tbody></table>
 <hr>
-<h1 id="sec-19">六、每周 / 每月固定动作</h1><ul>
+<h1 id="sec-26">六、每周 / 每月固定动作</h1><ul>
 <li><strong>每周一</strong>：战情看板 + 行动追踪未完成项 → 周会开场 5 分钟。</li>
 <li><strong>每月 3 日前</strong>：看上月合并报表与月度趋势，确认经营结论；看一次滚动预算与库存周转（DSI、呆滞占比）。</li>
-<li><strong>每季度</strong>：跑一次情景模拟（季度目标假设）+ 同业标杆对比 + 多维盈利结构复盘，调整资源配置。</li>
+<li><strong>每月</strong>：看一次组织人效（人均产值、人工成本率、超编情况），有董事会则先导出报告包预览。</li>
+<li><strong>每季度</strong>：跑一次情景模拟（季度目标假设）+ 同业标杆对比 + 多维盈利结构复盘 + <strong>战略目标达成率复盘</strong>，调整资源配置。</li>
 <li><strong>随时</strong>：看到红色预警 → 当天指派；看到 AI 摘要提到的风险 → 追问 AI 问答。</li>
 </ul>
 <hr>
-<h1 id="sec-20">七、常见问题</h1><table>
+<h1 id="sec-27">七、常见问题</h1><table>
 <thead>
 <tr>
 <th>现象</th>

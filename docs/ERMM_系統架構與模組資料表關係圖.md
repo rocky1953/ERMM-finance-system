@@ -1,7 +1,8 @@
 # ERMM 财务模组 · 系统架构图与模块-资料表关系图
 
 > 基于代码事实抽取（routes/*.js、database/add_*.js、public/index.html 菜单、public/js/pages/*.js）
-> 生成日期：2026-10-06｜更新日期：2026-11-13（新增经营分析三模块：多维盈利 / 滚动预算 / 库存周转）
+> 生成日期：2026-10-06｜更新日期：2026-11-17（v3.6：v3.5 审批流与资金闭环 + **CTO-02 细粒度按钮权限 cams_permission_button 55 按钮三角色 allow · CTO-03 全量操作审计 routes/audit.js · CTO-04 备份灾备批次管线 · CTO-05 合同主档 Migration 057 ermm_contract 28 栏 · CTO-06 指标中心 Migration 056 cams_metric_def 23 指标 · CTO-07 消息通知 Migration 055 cams_notif_channel + cams_notif_subscription · CTO-08 CI/CD .github/workflows/ci.yml · CTO-09 AI 治理 Migration 058 ermm_ai_audit + cams_ai_model_pricing + cams_ai_rate_limit**；2026-11-17 补 **权限体系三层化：Migration 059 权限矩阵补登（77→81 模组）+ middleware/moduleGuard.js 模块级 API 守门 + 前端导航 fail-closed**）
+> 规模事实：81 个功能模组（8 分组）· 68 个前端页面 · 74 个 API 路由模块 · 152 张资料表 · 72 个迁移脚本 · 55 个按钮权限 · 17 个测试文件
 
 ---
 
@@ -18,10 +19,10 @@ flowchart TB
     end
 
     subgraph FRONTEND["② 前端 SPA 层 (public/)"]
-        Index["index.html 入口<br/>+ 侧边栏菜单 (60 个入口 / 8 个分组)"]
+        Index["index.html 入口<br/>+ 侧边栏菜单 (68 个页面 / 8 个分组)"]
         App["app.js<br/>路由/导航/弹窗/通用 UI"]
         I18n["i18n.js<br/>简/繁/英 三语"]
-        Pages["pages/*.js (60 个功能入口)<br/>dashboard / dailyReport / finance / tax / integration<br/>profitAnalysis / rollingBudget / inventoryTurnover / ..."]
+        Pages["pages/*.js (68 个功能页面)<br/>dashboard / dailyReport / finance / tax / integration<br/>profitAnalysis / rollingBudget / inventoryTurnover<br/>expense / payRequest / approvals / hrEfficiency / ..."]
         Chart["Chart.js 图表引擎"]
     end
 
@@ -31,7 +32,7 @@ flowchart TB
         Static["静态资源服务<br/>public/"]
     end
 
-    subgraph SERVICE["④ 业务服务层 (routes/*.js · 64 个路由)"]
+    subgraph SERVICE["④ 业务服务层 (routes/*.js · 74 个路由)"]
         direction LR
         S1["📊 绩效闭环<br/>dailyReport"]
         S2["🔔 预警引擎<br/>alert"]
@@ -42,10 +43,13 @@ flowchart TB
         S7["📋 预算/管会/合并<br/>budget/mgmtAccounting/consolidation"]
         S8["🤖 AI 能力<br/>aiqa/dailySummary/llm/diagnosis<br/>arSmart/dataQuality/scenario"]
         S9["📦 业务单据<br/>po/so/dn/tempPo"]
-        S10["⚙️ 系统支撑<br/>system/user/batch/kpi/action"]
+        S10["⚙️ 系统支撑<br/>system/user/permission/batch/kpi/action"]
         S11["🔌 第三方资料整合<br/>integration"]
-        S12["🧮 电子化报税<br/>tax"]
+        S12["🧮 电子化报税<br/>tax/taxPlanning/taxCompliance"]
         S13["📈 经营分析<br/>profit/rollingBudget/inventoryTurnover"]
+        S14["💼 费用与资金<br/>expense/payRequest"]
+        S15["🔐 审批流<br/>workflow"]
+        S16["🏢 组织经营<br/>hrEfficiency/strategy/boardPack<br/>projectProfit/soCredit"]
     end
 
     subgraph DATA["⑤ 数据层 (MySQL 8 · ermm_db)"]
@@ -59,6 +63,9 @@ flowchart TB
         TaxIn["税务录入表<br/>tax_vat_adjustments / tax_cit_inputs / payroll_details / bonus_details"]
         AiT["AI 知识库与摘要表<br/>ermm_knowledge / ermm_kb_miss_log / daily_ai_summary / ermm_ai_records"]
         AnalysisT["经营分析表<br/>sales_channel_map / profit_cost_rate / rolling_budget_assumption / inv_slow_moving_action"]
+        BizT["费用与资金表<br/>exp_report / exp_report_item / exp_advance / exp_advance_settle<br/>pay_request / pay_request_item / pay_writeoff"]
+        WfT["审批流表<br/>wf_process / wf_instance / wf_task / wf_log"]
+        OrgT["组织经营表<br/>hr_headcount_plan / bsc_objective / bsc_progress / board_pack<br/>project_budget / project_cost / project_revenue / sales_credit_limit / sales_return"]
     end
 
     subgraph EXTERNAL["⑥ 外部/支撑"]
@@ -73,7 +80,7 @@ flowchart TB
     Browser --> Index
     Index --> App --> Pages --> Chart
     App --> Auth --> AuthReq
-    AuthReq --> S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12
+    AuthReq --> S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 & S10 & S11 & S12 & S13 & S14 & S15 & S16
     S1 --> CoreT & AuditT
     S2 --> AuditT & Scheduler --> Mailer
     S3 --> CoreT
@@ -88,6 +95,9 @@ flowchart TB
     S11 --> ThirdPartyDB & ExcelFile & IntgSched
     S12 --> TaxT & TaxIn & CoreT
     S13 --> CoreT & AnalysisT
+    S14 --> BizT & CoreT & WfT
+    S15 --> WfT & BizT & BaseT
+    S16 --> OrgT & CoreT & AuditT
     Ledger --> CoreT
 
     style CLIENT fill:#e3f2fd,stroke:#1976d2
@@ -159,6 +169,31 @@ flowchart TB
 | 50 | **多维盈利** | `/api/profit` | profitAnalysis | `sales_channel_map` `profit_cost_rate` `ermm_erp_so` `ermm_erp_po` `e2_xitems_daily_status` | 客户/产品/渠道/项目四维毛利与净利；渠道映射、料件成本率可覆盖；只读分析 |
 | 51 | **滚动预算** | `/api/rolling-budget` | rollingBudget | `rolling_budget_assumption` `mgm_finance_summary` | 12 个月滚动预测，损益/资产负债/现金流三表联动 + 13 周现金 |
 | 52 | **库存周转** | `/api/inventory-turnover` | inventoryTurnover | `inv_slow_moving_action` `e2_xitems_daily_status` `mgm_finance_summary` `ermm_erp_so` `ermm_erp_po` | 库龄结构、周转率/DSI、呆滞清单下发处理、补货建议；详见 3.12 |
+| 53 | **费用报销（CFO-01）** | `/api/expense` | expense | `exp_report` `exp_report_item` `wf_instance` `wf_task` `wf_log` `cams_xuser` | 草稿→提交→审批→付款闭环；支持多明细、发票号、税额 |
+| 54 | **借支与核销（CFO-01）** | `/api/expense/advances/*` | expense（借支管理页签） | `exp_advance` `exp_advance_settle` `exp_report` `wf_instance` `wf_log` | 借支单 `JK+日期+序号`；拨付（管理员）→ 核销（管理员/主管，金额 ≤ 余额，可关联报销单）；余额为 0 → SETTLED |
+| 55 | **付款申请（CFO-02）** | `/api/pay-request` | payRequest | `pay_request` `pay_request_item` `wf_instance` `wf_task` `wf_log` | 多明细付款申请，`PK+YYYYMM` 单号；DRAFT→PENDING→APPROVED→PAID |
+| 56 | **付款排程 / 银行回单（CFO-02）** | `/api/pay-request/schedule` `/api/pay-request/:id/receipt` | payRequest（付款排程页签） | `pay_request`（planned_pay_date / bank_receipt_no / receipt_date / receipt_amount） | 按月排程汇总（计划笔数/金额、已付/待付）；APPROVED 才可登记回单，登记后转 PAID |
+| 57 | **AR/AP 核销（CFO-02）** | `/api/pay-request/writeoff-sources` `/api/pay-request/:id/writeoff` | payRequest（核销弹窗） | `pay_writeoff` `mgm_invoice_details` `pay_request` | 来源为未付清发票（`sub_amt > payment`）；累计核销金额回写 `writeoff_status`（UNWRITTEN / PARTIAL / WRITTEN） |
+| 58 | **审批中心（通用审批流）** | `/api/workflow` | approvals / payRequest「待我审批」/ expense「待我审批」 | `wf_process` `wf_instance` `wf_task` `wf_log` `cams_xuser` | 跨业务类型统一待办；管理员维护流程步骤（steps_json）；动作 APPROVE/REJECT 写 `wf_log` |
+| 59 | **组织人效（CEO-05）** | `/api/hr-efficiency` | hrEfficiency | `hr_headcount_plan` `cams_xuser` `mgm_finance_summary` `daily_report` `daily_report_detail` `bsc_objective` | 部门编制 CRUD + 复制上月；KPI：实际/编制人数、达成率、人均产值、人工成本率、工时；近 6 个月趋势；目标贯通（公司→部门→个人） |
+| 60 | **战略目标 / BSC（CEO-01）** | `/api/strategy` | strategy | `bsc_objective` `bsc_progress` | 公司→部门→个人三级目标，进度记录与得分对比、偏差分析 |
+| 61 | **董事会 / 投资人报告包（CEO-02）** | `/api/board-pack` | boardPack | `board_pack` | 六大区块预览（经营摘要/三大报表/核心 KPI/风险/重大事项/BU 对比）；生成留存 + PDF / PPTX 导出 |
+| 62 | **项目损益（COO-02）** | `/api/project-profit` | projectProfit | `project_budget` `project_cost` `project_revenue` `project_customer_map` `ermm_erp_so` `mgm_customer_projects` | 五页签：项目概览 / 项目损益 / 年度预算 / 成本归集 / 收入确认；收入可从出货同步 |
+| 63 | **销售履约与信用（COO-03）** | `/api/so-credit` | salesCredit | `sales_credit_limit` `sales_return` `ermm_erp_so` | 信用额度、销售退货登记与状态流转、履约风险清单 |
+| 64 | **模块权限** | `/api/permission` | permission | `cams_module_permission` `cams_xuser` | 三角色（一般 / 操作员 / 管理员）× 81 个模组矩阵，前端 `Auth.canAccess(page)` 控制（fail-closed）；后端 `middleware/moduleGuard.js` 按模块做 API 守门 |
+| 65 | **月结关账** | `/api/closing` | closing | `closing_calendar` `closing_task` `closing_task_instance` `mgm_finance_summary` | 关账日历、任务分配与实例跟踪 |
+| 66 | **外汇曝险与避险** | `/api/fx` | fxExposure | `fx_exposure_item` `fx_hedge` `mgm_bank_loan_details` `pay_detail` | 外币敞口测算与避险工具登记 |
+| 67 | **请购与采购到货** | `/api/pr-request` `/api/po-grn` `/api/po-match` | prRequest / poMatch | `pr_request` `pr_request_item` `po_grn` `po_match_result` `ermm_erp_po` | 请购单审批 → 到货单 → 三单匹配 |
+| 68 | **收款与应收核销** | `/api/receipt` `/api/ar-match` | arMatch | `receipt_detail` `ar_match_result` `mgm_invoice_details` | 收款登记与应收发票匹配核销 |
+| 69 | **资金流动性与投资** | `/api/cash-liquidity` `/api/investment` | cashLiquidity / investment | `cash_plan_item` `investment_project` `investment_budget` `investment_cashflow` | 资金计划项、投资项目预算与现金流 |
+| 70 | **税务筹划与合规** | `/api/tax-planning` `/api/tax-compliance` | taxPlanning / taxCompliance | `tax_preference` `tax_regulation` `tax_compliance_item` `tax_filing_task` `vat_declarations` | 税收优惠适用、法规台账、合规事项与申报任务 |
+| 71 | **预算审批留痕** | `/api/budget` | budget | `budget` `budget_detail` `budget_approval_log` | 预算提交/审批动作记录 |
+| **72** | **CTO-02 细粒度按钮权限** | `/api/permission/buttons` | permission（扩展） | `cams_permission_button` | 55 按钮 × 三角色 allow 矩阵；middleware perms.js 新增 readScope + requireButton；模块级 API 守门 `middleware/moduleGuard.js`（PREFIX_MODULE 69 条，未授权 403 MODULE_DENIED） |
+| **73** | **CTO-03 操作审计** | `/api/audit/*` | auditLog | `ermm_ai_audit` + 全量业务审计（自动串接每个 CRUD） | 9 个端点：list + stats + detail + byModule + byUser + export |
+| **74** | **CTO-05 合同主档** | `/api/contracts/*` | contracts | `ermm_contract` | Migration 057 · 28 字段 · UK (contract_no, bu_no) · FK 关联 ermm_erp_po.po_uid · 从 PO 自动种子 10 笔示范 · 9 端点：CRUD + stats + types + po-options |
+| **75** | **CTO-06 指标中心** | `/api/metric-center/*` | metricCenter | `cams_metric_def` `cams_metric_lineage` | Migration 056 · 23 指标 7 类别 · services/metricCenter.js 统一计算引擎 · ROE 统一口径 |
+| **76** | **CTO-07 消息通知** | `/api/notifier/*` | notifier | `cams_notif_channel` `cams_notif_subscription` | Migration 055 · 3 默认渠道（Email/Lark/企微 webhook）· 6 订阅规则 · services/notifier.js 统一入口 |
+| **77** | **CTO-09 AI 治理** | `/api/llm-audit/*` | llmAudit | `ermm_ai_audit` `cams_ai_model_pricing` `cams_ai_rate_limit` | Migration 058 · 10 端点（list + stats + cost + users + detail + limits + pricing）· services/llmAudit.js auditCall + calcCost + checkRateLimit · utils/llmClient.js returnMeta 模式 · 前端 6 页签 Dashboard |
 
 ---
 
@@ -1216,6 +1251,565 @@ erDiagram
 
 ---
 
+### 3.13 费用报销与借支核销模块（CFO-01）
+
+> **模块性质**：日常作业层，路由组 `/api/expense`，左侧菜单「日常作业」→「费用报销」。审批统一走通用审批流 `wf_*`。
+> 迁移脚本：`021_workflow_expense.sql`（报销/审批基础表）、`047_hr_payment_advance.sql`（借支与核销、付款扩展）。
+
+```mermaid
+erDiagram
+    cams_xuser ||--o{ exp_report : "申请人"
+    exp_report ||--o{ exp_report_item : "费用明细"
+    cams_xuser ||--o{ exp_advance : "借支人"
+    exp_advance ||--o{ exp_advance_settle : "核销记录"
+    exp_report ||--o{ exp_advance_settle : "关联报销单（可选）"
+    exp_report ||--o| wf_instance : "business_type=EXPENSE"
+    exp_advance ||--o| wf_instance : "business_type=ADVANCE"
+    wf_instance ||--o{ wf_task : "审批任务"
+    wf_instance ||--o{ wf_log : "审批日志"
+
+    exp_report {
+        int id PK
+        varchar report_no "BX+日期+序号"
+        varchar applicant_id
+        varchar title
+        decimal total_amount
+        varchar status "DRAFT/PENDING/APPROVED/PAID/REJECTED"
+        int wf_instance_id
+        datetime submit_time
+        datetime pay_time
+    }
+    exp_report_item {
+        int id PK
+        int report_id FK
+        date expense_date
+        varchar category
+        varchar description
+        decimal amount
+        varchar invoice_no
+        decimal tax_amount
+    }
+    exp_advance {
+        int id PK
+        varchar advance_no "JK+YYYYMMDD+序号"
+        varchar applicant_id
+        varchar dept
+        varchar bu_no
+        varchar advance_type "TRAVEL/GENERAL/PETTY"
+        varchar title
+        decimal amount
+        decimal balance "可核销余额"
+        date expected_return_date
+        varchar status "DRAFT/PENDING/APPROVED/PAID/SETTLED/REJECTED"
+        int wf_instance_id
+    }
+    exp_advance_settle {
+        int id PK
+        int advance_id FK
+        int report_id FK "可空"
+        decimal settle_amount
+        varchar operator_id
+        varchar remark
+        datetime create_time
+    }
+```
+
+| 操作 | 端点 | 说明 |
+|---|---|---|
+| 报销列表 / 详情 | `GET /api/expense`、`GET /api/expense/:id` | `mine` 只能看自己，`all` 需主管/管理员 |
+| 新建 / 编辑 / 删除 | `POST/PUT/DELETE /api/expense` | 仅 DRAFT/REJECTED 可编辑，DRAFT 可删除 |
+| 提交 / 付款 | `POST /api/expense/:id/submit`、`POST /api/expense/:id/pay` | 提交后生成审批实例；付款仅管理员 |
+| 借支列表 / 详情 | `GET /api/expense/advances`、`GET /api/expense/advances/:id` | 详情含核销记录 |
+| 借支增删改 / 提交 | `POST/PUT/DELETE /api/expense/advances`、`POST /advances/:id/submit` | 金额 > 0、事由必填 |
+| 借支拨付 / 核销 | `POST /advances/:id/pay`、`POST /advances/:id/settle` | 拨付仅管理员；核销管理员或部门主管，金额 ≤ balance，余额 0 → SETTLED |
+
+---
+
+### 3.14 付款申请 / 排程 / 银行回单 / AR·AP 核销模块（CFO-02）
+
+> **模块性质**：资金管理层，路由组 `/api/pay-request`，左侧菜单「日常作业」→「付款申请」。
+> 迁移脚本：`022_workflow_payment.sql`（付款申请/审批）、`047_hr_payment_advance.sql`（排程、回单、核销扩展列与 `pay_writeoff`）。
+
+```mermaid
+erDiagram
+    cams_xuser ||--o{ pay_request : "申请人"
+    pay_request ||--o{ pay_request_item : "付款明细"
+    pay_request ||--o| wf_instance : "business_type=PAYMENT"
+    mgm_invoice_details ||--o{ pay_writeoff : "AR/AP 发票核销来源"
+    pay_request ||--o{ pay_writeoff : "付款单核销"
+
+    pay_request {
+        int id PK
+        varchar request_no "PK+YYYYMM"
+        varchar applicant_id
+        varchar dept
+        varchar bu_no
+        varchar pay_type
+        varchar pay_target "收款方"
+        decimal total_amount
+        varchar currency
+        varchar pay_method
+        date due_date
+        date planned_pay_date "付款排程"
+        varchar bank_receipt_no "银行回单号"
+        date receipt_date
+        decimal receipt_amount
+        varchar writeoff_status "UNWRITTEN/PARTIAL/WRITTEN"
+        varchar status "DRAFT/PENDING/APPROVED/PAID/REJECTED/CANCELLED"
+        int wf_instance_id
+    }
+    pay_request_item {
+        int id PK
+        int request_id FK
+        int item_no
+        varchar supplier_name
+        varchar pay_type
+        varchar invoice_num
+        date invoice_date
+        decimal amount
+    }
+    pay_writeoff {
+        int id PK
+        int request_id FK
+        varchar source_type "AR/AP"
+        int invoice_uid FK
+        decimal writeoff_amount
+        varchar operator_id
+        datetime create_time
+    }
+```
+
+| 操作 | 端点 | 说明 |
+|---|---|---|
+| 付款申请 CRUD | `GET/POST /api/pay-request`、`PUT/DELETE /api/pay-request/:id` | 明细合计自动回写 `total_amount`；仅 DRAFT/REJECTED 可编辑 |
+| 提交 / 标记付款 | `POST /api/pay-request/:id/submit`、`POST /:id/pay` | 提交生成 PAYMENT 审批实例；付款仅管理员 |
+| 付款排程 | `GET /api/pay-request/schedule?month=YYYY-MM`、`PUT /:id/schedule` | 返回当月笔数/金额、已付/待付汇总；PAID/CANCELLED 不可改排程 |
+| 银行回单 | `POST /api/pay-request/:id/receipt` | 仅 APPROVED 可登记；回单号必填；登记后转 PAID 并回写审批实例 |
+| 核销来源 / 核销 | `GET /api/pay-request/writeoff-sources`、`POST /:id/writeoff`、`DELETE /:id/writeoff/:wid` | 来源 `sub_amt > payment`；累计金额 ≥ 总额 → WRITTEN，否则 PARTIAL；撤销后重算 |
+
+---
+
+### 3.15 通用审批流模块（wf_*）
+
+> **模块性质**：跨模块支撑层，路由组 `/api/workflow`，前端「审批中心」页 + 各业务页「待我审批」页签。
+> 迁移脚本：`021_workflow_expense.sql`、`022_workflow_payment.sql`。
+
+```mermaid
+erDiagram
+    wf_process ||--o{ wf_instance : "proc_code / business_type"
+    wf_instance ||--o{ wf_task : "逐级审批任务"
+    wf_instance ||--o{ wf_log : "动作留痕"
+    cams_xuser ||--o{ wf_task : "审批人"
+
+    wf_process {
+        int id PK
+        varchar proc_code UK
+        varchar proc_name
+        varchar business_type "EXPENSE/ADVANCE/PAYMENT/PR"
+        text steps_json "步骤与审批人配置"
+        tinyint enabled
+    }
+    wf_instance {
+        int id PK
+        varchar business_type
+        int business_id
+        int current_step
+        varchar status "PENDING/APPROVED/REJECTED/CANCELLED"
+        varchar applicant_id
+        decimal amount
+    }
+    wf_task {
+        int id PK
+        int instance_id FK
+        int step_no
+        varchar approver_id
+        varchar action "APPROVE/REJECT"
+        varchar status "PENDING/DONE"
+        datetime done_time
+    }
+    wf_log {
+        int id PK
+        int instance_id FK
+        int step_no
+        varchar action
+        varchar operator_id
+        varchar comment
+        datetime create_time
+    }
+```
+
+> 服务层入口：`services/workflow.js → submitWorkflow(conn, {businessType, businessId, title, amount, applicantId, dept, buNo})`，返回 `{instanceId, status, approvers}`；业务表仅保存 `wf_instance_id` 与自身状态。
+> 审批动作 `POST /api/workflow/tasks/:id/action`（APPROVE/REJECT）；撤回 `POST /api/workflow/instances/:id/cancel`；管理员流程维护 `GET/PUT /api/workflow/processes`。
+
+---
+
+### 3.16 组织人效 / 战略 / 董事会 / 项目损益 / 销售信用
+
+> **模块性质**：经营决策层，路由组 `/api/hr-efficiency`、`/api/strategy`、`/api/board-pack`、`/api/project-profit`、`/api/so-credit`。
+> 迁移脚本：`029_sales_credit_return.sql`、`034_board_pack.sql`、`035_project_profit.sql`、`036_project_customer_map.sql`、`037_project_budget_bu.sql`、`043_strategy_bsc.sql`、`047_hr_payment_advance.sql`（`hr_headcount_plan`）。
+
+```mermaid
+erDiagram
+    mgm_finance_summary ||--o{ hr_headcount_plan : "人数/薪资/产值口径"
+    cams_xuser ||--o{ hr_headcount_plan : "部门在册人数回退"
+    bsc_objective ||--o{ bsc_progress : "目标进度"
+    bsc_objective ||--o{ hr_headcount_plan : "目标贯通（只读）"
+    mgm_finance_summary ||--o{ board_pack : "报告包取数"
+    mgm_customer_projects ||--o{ project_budget : "项目主档"
+    project_budget ||--o{ project_cost : "成本归集"
+    project_budget ||--o{ project_revenue : "收入确认"
+    ermm_erp_so ||--o{ sales_credit_limit : "客户信用额度"
+    ermm_erp_so ||--o{ sales_return : "销售退货"
+
+    hr_headcount_plan {
+        int uid PK
+        varchar bu_no
+        varchar period "YYYY-MM"
+        varchar depart_name
+        int plan_headcount
+        int actual_headcount
+        decimal plan_labor_cost
+        varchar remark
+    }
+    bsc_objective {
+        int id PK
+        varchar period
+        varchar scope "company/dept/personal"
+        varchar owner_id
+        varchar objective
+        decimal weight
+        decimal score
+    }
+    bsc_progress {
+        int id PK
+        int objective_id FK
+        varchar period
+        decimal actual_value
+        decimal progress_rate
+        varchar note
+    }
+    board_pack {
+        int uid PK
+        varchar bu_no
+        varchar period_type "month/quarter"
+        varchar period_label
+        varchar status
+        datetime create_time
+    }
+    project_budget {
+        int uid PK
+        varchar bu_no
+        varchar project_code
+        varchar project_name
+        year_year int
+        decimal budget_revenue
+        decimal budget_cost
+    }
+    project_cost {
+        int uid PK
+        varchar project_code
+        varchar period
+        varchar cost_type "MATERIAL/LABOR/OUTSOURCE/TRAVEL/OTHER"
+        decimal amount
+        varchar source "manual/erp"
+    }
+    project_revenue {
+        int uid PK
+        varchar project_code
+        varchar period
+        decimal amount
+        varchar source "manual/so"
+    }
+    sales_credit_limit {
+        int uid PK
+        varchar client_id
+        varchar client_name
+        decimal credit_limit
+        int credit_days
+        varchar status
+    }
+    sales_return {
+        int uid PK
+        varchar return_no
+        varchar so_no
+        decimal return_amount
+        varchar reason
+        varchar status "PENDING/APPROVED/REJECTED/DONE"
+    }
+```
+
+| 模块 | 关键端点 | 说明 |
+|---|---|---|
+| 组织人效 | `GET /api/hr-efficiency/overview?bu_no=&YYYY_MM=` | KPI + 部门表 + 近 6 月趋势 + 目标树；实际人数回退 `cams_xuser` |
+| 部门编制 | `GET/POST /api/hr-efficiency/headcount-plans`、`PUT/DELETE /:uid`、`POST /copy` | 唯一键 `(bu_no, period, depart_name)`；支持复制上月编制 |
+| 战略 BSC | `GET/POST /api/strategy/objectives`、`PUT/DELETE /:id`、`GET/POST /:id/progress`、`POST /sync` | 三级目标与进度；`sync` 汇总进度得分 |
+| 董事会包 | `GET /api/board-pack/data`、`POST /generate`、`GET /history`、`GET /export/pdf|pptx` | 六大区块；生成后留存 `board_pack` |
+| 项目损益 | `GET /api/project-profit/projects|overview|detail`、`GET/POST /budgets`、`/costs`、`/revenues`、`POST /costs/sync|/revenues/sync` | 五页签；成本/收入可从 ERP 同步 |
+| 销售信用 | `GET /api/so-credit/limits|summary|risks`、`PUT/DELETE /limits/:client_id`、`GET/POST /returns`、`POST /returns/:uid/status` | 额度维护、退货状态流转、履约风险清单 |
+
+---
+
+### 3.17 合同主档模块（CTO-05 · Migration 057）
+
+> **模块性质**：合同从采购单（PO）自动种子或手工新建，28 字段覆盖合同编号 / 名称 / 客户供应商 / 金额 / 期限 / 付款条款 / 状态 / 备注，唯一键 `(contract_no, bu_no)`，外键关联 `ermm_erp_po.po_uid`。
+
+```mermaid
+erDiagram
+    ermm_erp_po ||--o{ ermm_contract : "FK po_uid 自动种子"
+    cams_xuser ||--o{ ermm_contract : "contract_by"
+
+    ermm_contract {
+        bigint uid PK
+        varchar bu_no
+        varchar contract_no UK
+        varchar contract_name
+        varchar contract_type
+        varchar party_role "客户/供应商"
+        varchar partner_name
+        varchar partner_contact
+        decimal amount
+        string currency
+        date sign_date
+        date effective_date
+        date expire_date
+        varchar payment_terms
+        varchar status "DRAFT/ACTIVE/EXPIRED/TERMINATED"
+        text remarks
+        bigint po_uid FK "→ ermm_erp_po.po_uid"
+        bigint so_uid FK
+        varchar contract_by
+        datetime create_time
+        datetime update_time
+        varchar created_by
+        varchar updated_by
+        tinyint inuse_flag
+    }
+```
+
+#### 3.17.1 索引与约束
+
+| 类型 | 名称 | 列 |
+|---|---|---|
+| PK | PRIMARY | `uid` |
+| UK | `uk_contract_no_bu` | `(contract_no, bu_no)` |
+| IDX | `idx_bu` | `bu_no` |
+| IDX | `idx_partner` | `partner_name` |
+| IDX | `idx_status` | `status` |
+| IDX | `idx_expire` | `expire_date` |
+| IDX | `idx_po` | `po_uid` |
+| IDX | `idx_so` | `so_uid` |
+
+#### 3.17.2 API 端点（routes/contracts.js · 9 端点）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/contracts` | 列表（bu_no / status / keyword） |
+| GET | `/api/contracts/:uid` | 详情 |
+| POST | `/api/contracts` | 新建 |
+| PUT | `/api/contracts/:uid` | 更新 |
+| DELETE | `/api/contracts/:uid` | 停用（软删除 `inuse_flag=0`） |
+| GET | `/api/contracts/stats` | 统计（按状态 / 客户供应商 / 合同类型） |
+| GET | `/api/contracts/types` | 合同类型下拉 |
+| GET | `/api/contracts/po-options` | 从 `ermm_erp_po` 拉取种子候选 |
+| POST | `/api/contracts/seed-from-po` | 自动种子（从 PO 新建 10 笔示范） |
+
+---
+
+### 3.18 指标中心模块（CTO-06 · Migration 056）
+
+> **模块性质**：23 指标 7 类别，`services/metricCenter.js` 统一计算引擎，消除散落在各服务中的指标计算重复代码。ROE 统一口径。
+
+```mermaid
+erDiagram
+    cams_metric_def ||--o{ cams_metric_lineage : "指标血缘"
+
+    cams_metric_def {
+        bigint uid PK
+        varchar metric_code UK
+        varchar metric_name
+        varchar category "7 类别：profitability/liquidity/solvency/activity/growth/market/custom"
+        varchar formula_type "SQL/JS"
+        text formula_body
+        varchar unit
+        tinyint direction "1=越大越好/-1=越小越好/0=中性"
+        decimal warn_threshold
+        decimal danger_threshold
+        text description
+        tinyint enabled
+        int sort_order
+        datetime create_time
+        datetime update_time
+    }
+
+    cams_metric_lineage {
+        bigint uid PK
+        varchar metric_code FK
+        varchar source_table
+        varchar source_column
+        varchar transform
+        int priority
+    }
+```
+
+#### 3.18.1 ROE 统一口径
+
+```
+ROE = 净利润（period） ÷ 平均股东权益（(期初 + 期末) / 2）
+    净利润 取 fin_tax_return 中 CIT actual_revenue - actual_cost
+    股东权益 取 mgm_finance_summary 的 equity + retained_earnings
+```
+
+#### 3.18.2 7 类别 × 23 指标
+
+| 类别 | 指标 |
+|---|---|
+| 盈利能力 | ROE · ROA · 毛利率 · 净利率 · 资产报酬率 |
+| 流动性 | 流动比率 · 速动比率 · 现金比率 |
+| 偿债能力 | 资产负债率 · 利息保障倍数 |
+| 运营效率 | 存货周转天数 DSI · 应收账款周转天数 DSO · 应付账款周转天数 DPO · 总资产周转率 |
+| 成长 | 营收增长率 · 毛利增长率 · 净利增长率 |
+| 市场 | 毛利率趋势 · 费用率趋势 |
+| 自定义 | 可扩展 |
+
+---
+
+### 3.19 消息通知模块（CTO-07 · Migration 055）
+
+> **模块性质**：3 默认渠道（Email / Lark / 企微 webhook），6 订阅规则，`services/notifier.js` 统一入口，支持未来扩展企业微信机器人、Slack 等。
+
+```mermaid
+erDiagram
+    cams_notif_channel ||--o{ cams_notif_subscription : "规则绑定渠道"
+    cams_xuser ||--o{ cams_notif_subscription : "用户订阅"
+
+    cams_notif_channel {
+        bigint uid PK
+        varchar channel_code UK "email/lark/wecom_webhook"
+        varchar channel_name
+        varchar channel_type
+        json config "{host,port,from,webhook_url,...}"
+        tinyint enabled
+        datetime create_time
+        datetime update_time
+    }
+
+    cams_notif_subscription {
+        bigint uid PK
+        varchar user_id FK
+        varchar channel_code FK
+        varchar event_type "6 规则：report_balance/wk_reminder/low_cash/ap_cm/overdue_invoice/auction_notice"
+        tinyint enabled
+        text filter_json
+        datetime last_sent_at
+        datetime create_time
+    }
+```
+
+---
+
+### 3.20 AI 治理模块（CTO-09 · Migration 058）
+
+> **模块性质**：全量 AI 调用审计（每次 LLM 调用都自动写入 `ermm_ai_audit`）、模型计价表、速率限制（global + bu_HM/HN/SZ 四档配额）。前端 6 页签 Dashboard。
+
+```mermaid
+erDiagram
+    ermm_ai_audit }o--|| cams_ai_model_pricing : "model → 计价"
+    cams_ai_model_pricing ||--o{ cams_ai_rate_limit : "model → 限额"
+    cams_xuser ||--o{ ermm_ai_audit : "user_id"
+
+    ermm_ai_audit {
+        bigint uid PK
+        varchar provider
+        varchar model
+        varchar endpoint
+        varchar user_id FK
+        varchar bu_no
+        int prompt_tokens
+        int completion_tokens
+        int total_tokens
+        int latency_ms
+        decimal cost_usd
+        varchar status "SUCCESS/FAILED/TIMEOUT"
+        text system_prompt
+        text user_prompt
+        text assistant_reply
+        text error_msg
+        datetime create_time
+    }
+
+    cams_ai_model_pricing {
+        bigint uid PK
+        varchar provider
+        varchar model UK
+        decimal input_usd_per_1k
+        decimal output_usd_per_1k
+        tinyint enabled
+        datetime create_time
+    }
+
+    cams_ai_rate_limit {
+        bigint uid PK
+        varchar scope "global/bu_HM/bu_HN/bu_SZ"
+        varchar model
+        int daily_quota_tokens
+        int hourly_quota_tokens
+        tinyint enabled
+        datetime create_time
+    }
+```
+
+#### 3.20.1 10 端点（routes/llmAudit.js）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/llm-audit/list` | 审计列表（bu_no / provider / model / date / status） |
+| GET | `/api/llm-audit/stats` | 聚合统计（总 token / 总 cost / 按模型 / 按日） |
+| GET | `/api/llm-audit/cost` | 成本分析（按日期区间 / 按模型 / 按 bu_no） |
+| GET | `/api/llm-audit/users` | 用户维度（每人用量 / 成本 / 调用次数 Top N） |
+| GET | `/api/llm-audit/:uid` | 单条审计详情（完整 prompt / reply / latency） |
+| GET | `/api/llm-audit/limits` | 查询全局与各 BU 配额 |
+| PUT | `/api/llm-audit/limits/:uid` | 修改配额 |
+| GET | `/api/llm-audit/pricing` | 10 模型计价表 |
+| PUT | `/api/llm-audit/pricing/:uid` | 修改计价 |
+| GET | `/api/llm-audit/models` | 可用模型清单（provider + model） |
+
+#### 3.20.2 10 种模型计价
+
+| Provider | Model | Input (USD/1K) | Output (USD/1K) |
+|---|---|---|---|
+| deepseek | deepseek-chat | 0.00014 | 0.00028 |
+| deepseek | deepseek-reasoner | 0.00055 | 0.00219 |
+| deepseek | deepseek-v3 | 0.00014 | 0.00028 |
+| openai | gpt-4o-mini | 0.00015 | 0.00060 |
+| openai | gpt-4o | 0.00250 | 0.01000 |
+| openai | gpt-4.1 | 0.00250 | 0.01000 |
+| anthropic | claude-3.5-sonnet | 0.00300 | 0.01500 |
+| anthropic | claude-3.7-sonnet | 0.00300 | 0.01500 |
+| qwen | qwen-plus | 0.00080 | 0.00200 |
+| qwen | qwen-max | 0.00200 | 0.00600 |
+
+#### 3.20.3 速率限制四档
+
+| 范围 | 说明 |
+|---|---|
+| `global` | 全系统每日 token 总量上限 |
+| `bu_HM` | 鸿鸣（HM）独立配额 |
+| `bu_HN` | 华南（HN）独立配额 |
+| `bu_SZ` | 深圳（SZ）独立配额 |
+
+#### 3.20.4 前端 6 页签 Dashboard
+
+| 页签 | 说明 |
+|---|---|
+| 📊 总览 | 总 token / 总 cost / 调用次数 / 成功率 |
+| 📈 成本趋势 | 按日 / 按模型 / 按 BU 分析 |
+| 👥 用户排行 | Top 20 高消耗用户 |
+| 🧩 模型明细 | 每模型用量与计价 |
+| 🛡️ 配额与限制 | 查看并调整 global / BU 四档配额 |
+| 📝 调用详情 | 逐条审计追溯（完整 prompt + reply） |
+
+---
+
 ## 四、RUID 全链路追溯图（财务核心）
 
 ```mermaid
@@ -1249,7 +1843,9 @@ flowchart LR
 | `ermm_erp_so` | 销售订单、应收应付、送货单、多维下钻、日报经营数据、**多维盈利（收入归集）**、**库存周转（补货需求）** |
 | `e2_xitems_daily_status` | 存货管理、批次管线 Step 5（减值）、**库存周转（库龄/呆滞/补货）**、**多维盈利（料件成本参考）** |
 | `ermm_erp_po` | 采购单、应收应付、PO 暂存、日报经营数据 |
-| `mgm_invoice_details` | 发票、财务分析、多维下钻、日报经营数据、**仪表板下钻、电子化报税（VAT 取数）** |
+| `mgm_invoice_details` | 发票、财务分析、多维下钻、日报经营数据、**仪表板下钻、电子化报税（VAT 取数）**、**付款 AR/AP 核销（`sub_amt > payment` 为可核销来源）** |
+| **`wf_instance` / `wf_task` / `wf_log`** | **通用审批流**：费用报销（EXPENSE）、借支（ADVANCE）、付款申请（PAYMENT）、请购（PR）等所有走审批的业务共用；业务表只留 `wf_instance_id` |
+| `cams_module_permission` | **模块权限**：按一般 / 操作员 / 管理员 × **81 个模组**（8 分组）控制菜单与页面可见性，`Auth.canAccess(page)` 读取；后端由 `middleware/moduleGuard.js` 按同一矩阵做模块级 API 守门（403 `MODULE_DENIED`）。Migration 059_module_permission_sync 补登合同主档 / 功能权限 / 操作审计 / AI 治理 4 个模组（77→81，分组数不变） |
 | `budget_detail` | 预算编制、情景模拟、AI 问答 |
 | `mgmt_dept_pl` | 管理会计、合并报表、AI 问答 |
 | `mgmt_dept` | 管理会计、合并报表、日报部门维度 |
@@ -1269,30 +1865,46 @@ flowchart LR
 | 排程 | node-cron（工作日 09:30/16:30 告警扫描，月末 16:00）+ setInterval 分钟级（第三方整合 Batch 作业） |
 | 邮件 | nodemailer（告警通知） |
 | Excel | ExcelJS（导入解析 + 导出 CSV 带 BOM） |
+| 报表导出 | PDFKit（董事会包 PDF）、PptxGenJS（董事会包 PPTX） |
+| 审批流 | `services/workflow.js`（wf_process / wf_instance / wf_task / wf_log，步骤由 `steps_json` 驱动） |
 | AI | LLM API（aiqa / diagnosis 路由） |
 | 税务 | 本地算税引擎（VAT/CIT/IIT）+ 模拟税局受理（`Submit.submit`） |
 | 部署 | `node app.js`（端口 3008）/ 可 pm2 守护 |
 
 ---
 
-## 七、资料表清单（共 89 张 · 2026-11-13）
+## 七、资料表清单（共 152 张 · 2026-11-17）
 
-> 89 张含 2 张第三方整合演示表 `intg_demo_src` / `intg_demo_tgt`，业务有效表 87 张（较 2026-11-12 新增 4 张经营分析表）。
+> 152 张含 2 张第三方整合演示表 `intg_demo_src` / `intg_demo_tgt`；业务有效表 150 张。较 2026-11-15（v3.5，134 张）**新增 8 张 CTO 交付表**：较 2026-11-15（v3.5，134 张）**新增 8 张 CTO 交付表**：`ermm_contract`（CTO-05 合同主档 · Migration 057，28 字段）、`cams_metric_def` / `cams_metric_lineage`（CTO-06 指标中心 · Migration 056）、`cams_notif_channel` / `cams_notif_subscription`（CTO-07 消息通知 · Migration 055）、`ermm_ai_audit` / `cams_ai_model_pricing` / `cams_ai_rate_limit`（CTO-09 AI 治理 · Migration 058）。
+> 另新增 1 张权限表 `cams_permission_button`（CTO-02 细粒度按钮权限，55 按钮 × 三角色 allow 矩阵）。
 
 | 模块域 | 表名 |
 |---|---|
-| **系统/基础** | cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, schema_migrations, llm_config, ermm_users（遗留） |
+| **系统/基础** | cams_xuser, leader_user, login_user_record, cams_system_codes, cams_batch_control, cams_module_permission, **cams_permission_button（CTO-02）**, schema_migrations, llm_config, ermm_users（遗留） |
 | **日报绩效** | daily_report, daily_report_detail, daily_report_lock, daily_report_audit_log, daily_report_target, daily_report_okr, daily_report_okr_kr, daily_report_erp_xref, daily_report_mgmt_report, daily_report_annual_review |
 | **预警预测** | alert_rule, alert_log, daily_report_forecast_log |
 | **财务核心** | fin_ruid_ledger, fin_account_subject, fin_voucher, fin_voucher_entry, fin_tax_return, fin_tax_return_item, fin_reconciliation |
-| **现金流** | mgm_casher_details, mgm_cash_safe_level |
+| **现金流** | mgm_casher_details, mgm_cash_safe_level, cash_plan_item |
 | **财务核算** | mgm_account_details, mgm_invoice_details, pay_detail, check_detail, mgm_bank_loan_details, mgm_finance_summary, mgm_production_details, bh_mgm_tx_detail |
-| **预算管会** | budget, budget_detail, mgmt_dept, mgmt_dept_pl |
+| **预算管会** | budget, budget_detail, budget_approval_log, mgmt_dept, mgmt_dept_pl |
 | **业务单据** | ermm_erp_so, ermm_erp_po, ermm_temp_po, ermm_erp_so_dn, ermm_arap_detail, ermm_erp_documents, transit_price, mgm_preorder_lists, mgm_customer_projects, ermm_erp_mo, ermm_erp_mo_component, ermm_erp_routing, ermm_erp_work_report |
+| **合同主档（CTO-05）** | **ermm_contract**（28 字段 · Migration 057 · FK → ermm_erp_po.po_uid） |
+| **请购/到货/匹配/核销** | pr_request, pr_request_item, po_grn, po_match_result, receipt_detail, ar_match_result |
+| **费用与借支** | exp_report, exp_report_item, exp_advance, exp_advance_settle |
+| **付款与核销** | pay_request, pay_request_item, pay_writeoff |
+| **审批流** | wf_process, wf_instance, wf_task, wf_log |
+| **组织/战略/董事会** | hr_headcount_plan, bsc_objective, bsc_progress, board_pack, group_target |
+| **项目损益** | project_budget, project_cost, project_revenue, project_customer_map |
+| **销售信用** | sales_credit_limit, sales_return |
+| **关账/合并/外汇** | closing_calendar, closing_task, closing_task_instance, consol_elimination_entry, consol_exchange_rate, fx_exposure_item, fx_hedge |
+| **投资** | investment_project, investment_budget, investment_cashflow |
+| **指标中心（CTO-06）** | **cams_metric_def**（23 指标 7 类别）, **cams_metric_lineage**（5 行血缘） |
+| **消息通知（CTO-07）** | **cams_notif_channel**（3 默认渠道 Email/Lark/企微 webhook）, **cams_notif_subscription**（6 规则） |
 | **分析预测** | forecast_detail, monthly_items, mgm_bep_threshold, mgm_kpi_desc, ermm_scenario_saved |
 | **第三方整合** | intg_source, intg_job, intg_log, intg_demo_src（演示）, intg_demo_tgt（演示） |
 | **电子化报税** | vat_declarations, cit_annual_settlements, iit_withholding_batches, iit_withholding_details, tax_submit_receipts, tax_vat_adjustments, tax_cit_inputs, tax_cit_adjustments, payroll_details, bonus_details |
-| **AI 智能层** | ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆） |
+| **税务筹划/合规** | tax_preference, tax_regulation, tax_compliance_item, tax_filing_task |
+| **AI 智能层 + AI 治理（CTO-09）** | ermm_knowledge（41 条 / 6 分类）, ermm_kb_miss_log（RAG 未命中）, daily_ai_summary（每日摘要）, ermm_ai_records（对话）, industry_benchmark（同业标杆）, **ermm_ai_audit**（全量审计 · Migration 058）, **cams_ai_model_pricing**（10 模型 USD/1K 计价）, **cams_ai_rate_limit**（global + bu_HM/HN/SZ 四档配额） |
 | **经营分析** | sales_channel_map（客户渠道映射）, profit_cost_rate（料件成本率）, rolling_budget_assumption（滚动预算假设）, inv_slow_moving_action（呆滞处理单） |
 | **其他** | e2_xitems_daily_status, e2_xitems_daily_status_chart, branch_detail, relation_detail, action_task |
 

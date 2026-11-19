@@ -24,13 +24,16 @@ const Auth = {
     getRole() {
         return localStorage.getItem('ermm_role') || 'general';
     },
-    // 是否有权访问指定模块
+    // 是否有权访问指定模块（校验顺序：管理员 → 权限快取 → 角色兜底）
     canAccess(moduleCode) {
+        if (!moduleCode) return false;
         if (this.isAdmin()) return true;            // 管理员硬编码全权限
         const raw = localStorage.getItem(PERM_KEY);
-        if (raw === null) return true;              // 旧 session 无权限缓存时才默认全开
+        // 无权限快取时不得默认放行（fail-closed），由 refreshPermissions() 补齐
+        if (raw === null) return false;
         let perms = [];
         try { perms = JSON.parse(raw) || []; } catch (e) { perms = []; }
+        if (!Array.isArray(perms)) return false;
         return perms.includes(moduleCode);
     },
     // 使用者類別归一化：繁/简/历史错别字统一为简体，供权限判断使用
@@ -69,10 +72,11 @@ const Auth = {
         const target = this.resolveStartPage(typeof currentPage === 'undefined' ? null : currentPage);
         currentPage = target;
         navigate(target);
+        this._bindFocusRefresh();
         refreshApprovalBadge();
     },
 
-    renderUser() {
+    renderUser(enforceCurrent = false) {
         const el = document.getElementById('currentUser');
         if (el) {
             try {
@@ -80,11 +84,11 @@ const Auth = {
                 el.textContent = u ? (u.user_name || u.user_id || '') : '';
             } catch (e) { el.textContent = ''; }
         }
-        this.applyNavPermissions();
+        this.applyNavPermissions(enforceCurrent);
     },
 
     // 根据权限矩阵自动隐藏 nav-item，并对整组隐藏空分组标题
-    applyNavPermissions() {
+    applyNavPermissions(enforceCurrent = false) {
         const can = (code) => this.canAccess(code);
         const show = (el, visible) => { if (el) el.style.display = visible ? '' : 'none'; };
 
@@ -113,12 +117,44 @@ const Auth = {
             show(g, visible.length > 0);
         });
 
-        // 3. 当前激活页面如果无权限，强制跳 dashboard
-        const curPage = document.querySelector('#sidebar .nav-item.active[data-page]');
-        if (curPage && !can(curPage.dataset.page)) {
-            console.warn(`当前页面 ${curPage.dataset.page} 无权限，跳转到仪表板`);
-            // 不立即 navigate —— 等权限矩阵生效后自然会被隐藏
+        // 3. 当前停留页面若已无权限（例如管理员刚调整矩阵），强制跳到有权限的首个页面
+        const curEl = document.querySelector('#sidebar .nav-item.active[data-page]');
+        if (curEl && !can(curEl.dataset.page)) {
+            const denied = curEl.dataset.page;
+            const fallback = this.resolveStartPage(null);
+            if (enforceCurrent && fallback && fallback !== denied && Auth.isLoggedIn()) {
+                console.warn(`当前页面 ${denied} 无权限，跳转到 ${fallback}`);
+                if (typeof currentPage !== 'undefined') currentPage = fallback;
+                navigate(fallback);
+            }
         }
+    },
+
+    // 从服务端重新拉取当前使用者权限（登入角色/权限矩阵可能已被管理员调整）
+    async refreshPermissions(force = false) {
+        if (!this.isLoggedIn()) return;
+        const now = Date.now();
+        if (!force && now - (this._lastPermSync || 0) < 30000) return;  // 30 秒节流
+        this._lastPermSync = now;
+        try {
+            const res = await fetch('/api/auth/me');
+            if (!res.ok) return;
+            const j = await res.json();
+            if (!j || !j.success || !j.data) return;
+            localStorage.setItem(USER_KEY, JSON.stringify(j.data));
+            if (j.data.role) localStorage.setItem('ermm_role', j.data.role);
+            if (Array.isArray(j.data.permissions)) {
+                localStorage.setItem(PERM_KEY, JSON.stringify(j.data.permissions));
+            }
+            this.renderUser(true);   // 重新套用导航显隐，必要时强制离开无权限页面
+        } catch (e) { /* 网络异常时保留既有权限，不阻断操作 */ }
+    },
+
+    // 视窗重新获得焦点时同步权限（避免管理员改完矩阵后需重新登入）
+    _bindFocusRefresh() {
+        if (this._focusBound) return;
+        this._focusBound = true;
+        window.addEventListener('focus', () => { this.refreshPermissions(); });
     },
 
     // 首页选择：优先保留当前页，否则仪表板，再否则侧栏第一个有权限的模块
@@ -153,6 +189,8 @@ const Auth = {
     handle401() {
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(PERM_KEY);
+        localStorage.removeItem('ermm_role');
         this.showLogin();
     },
 
@@ -162,6 +200,8 @@ const Auth = {
         } catch (e) { /* 无状态登出，失败也照样清除本地状态 */ }
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(PERM_KEY);
+        localStorage.removeItem('ermm_role');
         const badge = document.getElementById('approvalBadge');
         if (badge) badge.style.display = 'none';
         this.showLogin();
@@ -187,6 +227,7 @@ const Auth = {
             document.body.classList.remove('locked');
             navigate(this.resolveStartPage(currentPage || 'dashboard'));
             refreshApprovalBadge();
+            this._bindFocusRefresh();
         } catch (e) {
             this.handle401();
         }
@@ -473,5 +514,307 @@ function openDocPage(url) {
 // ===== 全局状态 =====
 const State = {
     bu_no: 'HM',
-    YYYY_MM: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0')
+    YYYY_MM: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'),
+    // 畫面最上方的全域年度（YYYY_MM 前 4 碼）；各頁面初次載入一律以此為準
+    year() {
+        const y = parseInt(String(this.YYYY_MM || '').slice(0, 4), 10);
+        return isNaN(y) ? new Date().getFullYear() : y;
+    },
+    // 全域月份（YYYY_MM 後 2 碼，補零）
+    mm() {
+        const m = parseInt(String(this.YYYY_MM || '').slice(5, 7), 10);
+        return isNaN(m) ? String(new Date().getMonth() + 1).padStart(2, '0') : String(m).padStart(2, '0');
+    }
 };
+
+// ===== 語言感知日期格式化 + 原生日期輸入框顯示覆蓋 =====
+// 原生 <input type="month/date"> 的顯示格式由瀏覽器/系統本地化決定，不隨頁面語言變化；
+// 英文語系下以覆蓋層顯示英文格式（如 Nov 2026），中文語系維持原生顯示。
+const DateLocale = {
+    _lang() { return (typeof I18N !== 'undefined' && I18N.lang) || 'zh-CN'; },
+    _intlLang() {
+        const l = this._lang();
+        return l === 'en' ? 'en-US' : (l === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+    },
+    parseDate(v) {
+        if (v == null || v === '') return null;
+        if (v instanceof Date) return isNaN(v) ? null : v;
+        const s = String(v);
+        const m = s.match(/^(\d{4})[-/](\d{1,2})(?:[-/](\d{1,2}))?/);
+        if (m) return new Date(+m[1], +m[2] - 1, m[3] ? +m[3] : 1);
+        const d = new Date(s);
+        return isNaN(d) ? null : d;
+    },
+    // 年月：zh → 2026年11月，en → Nov 2026
+    fmtYM(v) {
+        const d = this.parseDate(v);
+        if (!d) return '';
+        try { return new Intl.DateTimeFormat(this._intlLang(), { year: 'numeric', month: 'short' }).format(d); }
+        catch (e) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); }
+    },
+    // 日期：zh → 2026年11月19日，en → Nov 19, 2026
+    fmtDate(v) {
+        const d = this.parseDate(v);
+        if (!d) return '-';
+        try { return new Intl.DateTimeFormat(this._intlLang(), { year: 'numeric', month: 'short', day: 'numeric' }).format(d); }
+        catch (e) { return String(v).substring(0, 10); }
+    },
+    // 日期時間
+    fmtDateTime(v) {
+        const d = this.parseDate(v);
+        if (!d) return '-';
+        try { return new Intl.DateTimeFormat(this._intlLang(), { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d); }
+        catch (e) { return String(v); }
+    },
+    // 時間
+    fmtTime(v) {
+        const d = this.parseDate(v) || new Date();
+        try { return new Intl.DateTimeFormat(this._intlLang(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(d); }
+        catch (e) { return d.toLocaleTimeString(); }
+    },
+    _needOverlay() { return this._lang() === 'en'; },
+
+    _ensureWrap(input) {
+        if (input.parentElement && input.parentElement.classList.contains('di-wrap')) return input.parentElement;
+        const wrap = document.createElement('span');
+        wrap.className = 'di-wrap';
+        const cs = getComputedStyle(input);
+        wrap.style.cssText = 'position:relative;display:' + (cs.display === 'block' ? 'block' : 'inline-block') + ';';
+        // 複製輸入框寬度，避免包一層後跑版
+        const w = input.style.width || cs.width;
+        if (w && w !== 'auto') wrap.style.width = w;
+        else if (input.offsetWidth) wrap.style.width = input.offsetWidth + 'px';
+        input.parentNode.insertBefore(wrap, input);
+        wrap.appendChild(input);
+        const overlay = document.createElement('span');
+        overlay.className = 'di-overlay';
+        wrap.appendChild(overlay);
+        return wrap;
+    },
+    _updateOne(input) {
+        const wrap = this._ensureWrap(input);
+        const overlay = wrap.querySelector('.di-overlay');
+        if (!overlay) return;
+        const type = input.type;
+        const val = input.value;
+        const cs = getComputedStyle(input);
+        overlay.style.cssText = 'position:absolute;left:' + cs.paddingLeft + ';top:0;bottom:0;display:flex;align-items:center;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:' + cs.fontSize + ';font-family:' + cs.fontFamily + ';font-weight:' + cs.fontWeight + ';';
+        if (val) {
+            // 注意：英文模式 input 已被設為 color:transparent，覆蓋層不能繼承該透明色，否則文字看不見
+            overlay.style.color = '#333';
+            overlay.textContent = type === 'month' ? this.fmtYM(val) : this.fmtDate(val);
+        } else {
+            overlay.style.color = '#999';
+            overlay.textContent = type === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD';
+        }
+    },
+    _removeOverlay(input) {
+        const wrap = input.parentElement;
+        if (wrap && wrap.classList.contains('di-wrap')) {
+            const parent = wrap.parentNode;
+            while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+            parent.removeChild(wrap);
+        }
+    },
+    refreshAll() {
+        const inputs = document.querySelectorAll('input[type="month"], input[type="date"]');
+        inputs.forEach(input => {
+            if (this._needOverlay()) {
+                input.classList.add('di-en');
+                try { this._updateOne(input); } catch (e) { /* ignore layout edge cases */ }
+            } else {
+                input.classList.remove('di-en');
+                this._removeOverlay(input);
+            }
+        });
+    },
+
+    // ===== 自訂英文日期/月份彈層（取代瀏覽器原生中文彈出）=====
+    _monthsShort: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    _daysShort: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+    _btnStyle: 'border:none;background:#f5f5f5;color:#333;padding:8px 6px;border-radius:4px;cursor:pointer;font-size:13px;',
+    _navBtnStyle: 'border:none;background:none;color:#2980b9;cursor:pointer;font-size:18px;padding:0 8px;font-weight:bold;',
+    _getPopup() {
+        let p = document.getElementById('di-popup');
+        if (!p) {
+            p = document.createElement('div');
+            p.id = 'di-popup';
+            document.body.appendChild(p);
+            const self = this;
+            p.addEventListener('click', (e) => self._onPopupClick(e));
+        }
+        return p;
+    },
+    _closePopup() {
+        const p = document.getElementById('di-popup');
+        if (p) { p.style.display = 'none'; p._input = null; }
+    },
+    _positionPopup(input) {
+        const p = this._getPopup();
+        if (p.style.display === 'none') return;
+        const r = input.getBoundingClientRect();
+        const sx = window.scrollX, sy = window.scrollY;
+        let top = r.bottom + sy + 4;
+        const left = Math.max(8, Math.min(r.left + sx, sx + window.innerWidth - p.offsetWidth - 8));
+        if (top + p.offsetHeight > sy + window.innerHeight - 8 && r.top + sy - p.offsetHeight - 4 > 0) {
+            top = r.top + sy - p.offsetHeight - 4;
+        }
+        p.style.top = top + 'px';
+        p.style.left = left + 'px';
+    },
+    _openPopup(input) {
+        const p = this._getPopup();
+        p._input = input;
+        p.style.display = 'block';
+        const cur = this.parseDate(input.value) || new Date();
+        if (input.type === 'month') {
+            p._year = cur.getFullYear();
+            this._renderMonth(input);
+        } else {
+            p._year = cur.getFullYear(); p._month = cur.getMonth();
+            this._renderDate(input);
+        }
+        this._positionPopup(input);
+    },
+    _renderMonth(input) {
+        const p = this._getPopup();
+        const cur = this.parseDate(input.value);
+        const selY = cur ? cur.getFullYear() : null, selM = cur ? cur.getMonth() : null;
+        let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+            + '<button data-act="prev" style="' + this._navBtnStyle + '">‹</button>'
+            + '<span style="font-weight:bold;font-size:14px;">' + p._year + '</span>'
+            + '<button data-act="next" style="' + this._navBtnStyle + '">›</button>'
+            + '</div>'
+            + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:230px;">';
+        for (let i = 0; i < 12; i++) {
+            const sel = (selY === p._year && selM === i) ? 'background:#2980b9;color:#fff;' : '';
+            html += '<button data-month="' + i + '" style="' + this._btnStyle + sel + '">' + this._monthsShort[i] + '</button>';
+        }
+        html += '</div><div style="display:flex;justify-content:space-between;margin-top:8px;border-top:1px solid #eee;padding-top:6px;">'
+            + '<button data-act="clear" style="border:none;background:none;color:#2980b9;cursor:pointer;font-size:12px;">Clear</button>'
+            + '<button data-act="today" style="border:none;background:none;color:#2980b9;cursor:pointer;font-size:12px;">This Month</button>'
+            + '</div>';
+        p.innerHTML = html;
+        this._positionPopup(input);
+    },
+    _renderDate(input) {
+        const p = this._getPopup();
+        const y = p._year, m = p._month;
+        const first = new Date(y, m, 1).getDay();
+        const days = new Date(y, m + 1, 0).getDate();
+        const cur = this.parseDate(input.value);
+        const selY = cur ? cur.getFullYear() : null, selM = cur ? cur.getMonth() : null, selD = cur ? cur.getDate() : null;
+        let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+            + '<button data-act="prev" style="' + this._navBtnStyle + '">‹</button>'
+            + '<span style="font-weight:bold;font-size:14px;">' + this._monthsShort[m] + ' ' + y + '</span>'
+            + '<button data-act="next" style="' + this._navBtnStyle + '">›</button>'
+            + '</div>'
+            + '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;width:230px;">';
+        this._daysShort.forEach(d => { html += '<div style="text-align:center;font-size:11px;color:#888;padding:4px 0;">' + d + '</div>'; });
+        for (let i = 0; i < first; i++) html += '<div></div>';
+        for (let d = 1; d <= days; d++) {
+            const sel = (selY === y && selM === m && selD === d) ? 'background:#2980b9;color:#fff;' : '';
+            html += '<button data-day="' + d + '" style="border:none;background:#f5f5f5;color:#333;padding:6px 0;border-radius:4px;cursor:pointer;font-size:12px;' + sel + '">' + d + '</button>';
+        }
+        html += '</div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid #eee;padding-top:6px;">'
+            + '<button data-act="clear" style="border:none;background:none;color:#2980b9;cursor:pointer;font-size:12px;">Clear</button>'
+            + '<button data-act="today" style="border:none;background:none;color:#2980b9;cursor:pointer;font-size:12px;">Today</button>'
+            + '</div>';
+        p.innerHTML = html;
+        this._positionPopup(input);
+    },
+    _onPopupClick(e) {
+        const btn = e.target.closest ? e.target.closest('button') : null;
+        if (!btn) return;
+        e.stopPropagation();
+        const p = this._getPopup();
+        const input = p._input;
+        if (!input) return;
+        const act = btn.getAttribute('data-act');
+        if (act === 'prev') {
+            if (input.type === 'month') { p._year--; this._renderMonth(input); }
+            else { if (--p._month < 0) { p._month = 11; p._year--; } this._renderDate(input); }
+            return;
+        }
+        if (act === 'next') {
+            if (input.type === 'month') { p._year++; this._renderMonth(input); }
+            else { if (++p._month > 11) { p._month = 0; p._year++; } this._renderDate(input); }
+            return;
+        }
+        if (act === 'clear') { input.value = ''; input.dispatchEvent(new Event('change', { bubbles: true })); this._updateOne(input); this._closePopup(); return; }
+        if (act === 'today') {
+            const n = new Date();
+            if (input.type === 'month') input.value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0');
+            else input.value = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+            input.dispatchEvent(new Event('change', { bubbles: true })); this._updateOne(input); this._closePopup(); return;
+        }
+        if (btn.hasAttribute('data-month')) {
+            const m = +btn.getAttribute('data-month');
+            input.value = p._year + '-' + String(m + 1).padStart(2, '0');
+            input.dispatchEvent(new Event('change', { bubbles: true })); this._updateOne(input); this._closePopup(); return;
+        }
+        if (btn.hasAttribute('data-day')) {
+            const d = +btn.getAttribute('data-day');
+            input.value = p._year + '-' + String(p._month + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            input.dispatchEvent(new Event('change', { bubbles: true })); this._updateOne(input); this._closePopup(); return;
+        }
+    }
+};
+
+// 注入覆蓋層與彈層所需樣式（隱藏英文模式下原生輸入框的中文渲染值，保留日曆圖標；彈層全英文）
+(function () {
+    if (document.getElementById('di-en-style')) return;
+    const style = document.createElement('style');
+    style.id = 'di-en-style';
+    style.textContent = [
+        'input.di-en { color: transparent !important; caret-color: #333; }',
+        'input.di-en::-webkit-datetime-edit, input.di-en::-webkit-datetime-edit-fields-wrapper { color: transparent !important; }',
+        'input.di-en::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 1; }',
+        '.di-wrap { position: relative; }',
+        '.di-overlay { position: absolute; pointer-events: none; }',
+        '#di-popup { position: absolute; z-index: 99999; background: #fff; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.2); padding: 10px; display: none; font-family: Arial, sans-serif; color: #333; }',
+        '#di-popup button:hover { filter: brightness(0.95); }'
+    ].join('\n');
+    document.head.appendChild(style);
+})();
+
+// 監聽頁面動態渲染（切頁、開彈窗）與使用者選取日期，即時更新覆蓋層；
+// 英文模式下以自訂彈層取代瀏覽器原生中文日期彈出。
+(function () {
+    let timer = null;
+    const schedule = () => {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => DateLocale.refreshAll(), 60);
+    };
+    const mo = new MutationObserver(schedule);
+    mo.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener('change', (e) => {
+        const t = e.target;
+        if (t && (t.type === 'month' || t.type === 'date')) DateLocale.refreshAll();
+    }, true);
+    document.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t && (t.type === 'month' || t.type === 'date')) { try { DateLocale._updateOne(t); } catch (err) {} }
+    }, true);
+    window.addEventListener('resize', schedule);
+
+    // 點擊英文日期輸入框 → 阻止原生彈出、開啟自訂英文彈層
+    document.addEventListener('click', (e) => {
+        const t = e.target;
+        if (t && t.tagName === 'INPUT' && (t.type === 'month' || t.type === 'date') && t.classList.contains('di-en')) {
+            e.preventDefault();
+            e.stopPropagation();
+            DateLocale._openPopup(t);
+        }
+    }, true);
+    // 點彈層外部 / 按 Esc / 滾動 → 關閉彈層
+    document.addEventListener('click', (e) => {
+        const p = document.getElementById('di-popup');
+        if (!p || p.style.display === 'none') return;
+        if (p.contains(e.target)) return;
+        if (e.target.classList && e.target.classList.contains('di-en')) return;
+        DateLocale._closePopup();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') DateLocale._closePopup(); });
+    window.addEventListener('scroll', () => DateLocale._closePopup(), true);
+})();

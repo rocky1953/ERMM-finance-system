@@ -8,7 +8,9 @@ const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
 const workflow = require('../services/workflow');
+const audit = require('../services/audit');
 
+const { perms, readScope } = require('../middleware/perms');
 function genPrNo() {
     const d = new Date();
     return `PR${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -110,7 +112,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ====== 新建 ======
-router.post('/', async (req, res) => {
+router.post('/', perms('prRequest','CREATE'), async (req, res) => {
     const conn = await pool.getConnection();
     try {
         const d = req.body;
@@ -142,7 +144,7 @@ router.post('/', async (req, res) => {
             [prNo, u.user_id, u.user_name || u.user_id, d.dept || '',
              d.bu_no, d.supplier_id || null, d.supplier_name,
              d.pr_type || 'MATERIAL', d.purpose || '', total,
-             d.currency || 'TWD', d.need_by_date || null, d.remark || '']
+             d.currency || 'RMB', d.need_by_date || null, d.remark || '']
         );
         const rid = ur.insertId;
         for (let i = 0; i < items.length; i++) {
@@ -157,6 +159,12 @@ router.post('/', async (req, res) => {
             );
         }
         await conn.commit();
+        audit.log(req, {
+            module: 'prRequest', action: 'CREATE', businessType: 'PR',
+            businessId: prNo,
+            summary: `创建采购申请 ${prNo} ${d.bu_no || ''} ${d.supplier_name || ''} ¥${total} ${d.pr_type || 'MATERIAL'} 申请人=${u.user_id}`,
+            after: { id: rid, pr_no: prNo, total_amount: total, item_count: items.length, supplier_name: d.supplier_name }
+        });
         ok(res, { id: rid, pr_no: prNo, total_amount: total, status: 'DRAFT' }, '采购申请单已创建');
     } catch (err) {
         await conn.rollback();
@@ -206,6 +214,13 @@ router.put('/:id', async (req, res) => {
             );
         }
         await conn.commit();
+        audit.log(req, {
+            module: 'prRequest', action: 'UPDATE', businessType: 'PR',
+            businessId: String(req.params.id),
+            summary: `编辑采购申请 id=${req.params.id} ${row.pr_no} 原¥${row.total_amount} → ¥${total} 明细${items.length}行`,
+            before: row,
+            after: { supplier_name: d.supplier_name, total_amount: total, item_count: items.length, currency: d.currency }
+        });
         ok(res, null, '已更新');
     } catch (err) {
         await conn.rollback();
@@ -222,6 +237,12 @@ router.delete('/:id', async (req, res) => {
         if (rows[0].applicant_id !== u.user_id) return fail(res, '仅申请人可删除', 403);
         if (rows[0].status !== 'DRAFT') return fail(res, '仅草稿可删除', 400);
         await pool.execute('DELETE FROM pr_request WHERE id=?', [req.params.id]);
+        audit.log(req, {
+            module: 'prRequest', action: 'DELETE', businessType: 'PR',
+            businessId: String(req.params.id),
+            summary: `删除采购申请 id=${req.params.id} ${rows[0].pr_no} ${rows[0].supplier_name || ''} ¥${rows[0].total_amount}`,
+            before: rows[0]
+        });
         ok(res, null, '已删除');
     } catch (err) { fail500(res, err); }
 });
@@ -270,6 +291,14 @@ router.post('/:id/submit', async (req, res) => {
         const approverNames = (wf.approvers || []).map(a => a.user_name || a.user_id).join('、');
         const msg = wf.status === 'APPROVED' ? '已自动通过'
             : approverNames ? `已提交给 ${approverNames} 审批` : '已提交审批';
+
+        audit.log(req, {
+            module: 'prRequest', action: 'SUBMIT', businessType: 'PR',
+            businessId: row.pr_no,
+            summary: `提交采购申请 ${row.pr_no} 状态=${wf.status} 金额¥${total} 审批人=${approverNames || '(无)'}`,
+            detail: { pr_no: row.pr_no, total_amount: total, instance_id: wf.instanceId, approver_count: wf.approvers?.length || 0 }
+        });
+
         ok(res, { status: wf.status, instance_id: wf.instanceId, approvers: wf.approvers || [] }, msg);
     } catch (err) {
         await conn.rollback();
@@ -324,6 +353,12 @@ router.post('/:id/generate-po', async (req, res) => {
             );
         }
         await conn.commit();
+        audit.log(req, {
+            module: 'prRequest', action: 'CREATE', businessType: 'PR-PO',
+            businessId: String(row.id),
+            summary: `采购申请 ${row.pr_no} 生成PO ${genPoNo()} 共${items.length}笔 ¥${row.total_amount}`,
+            detail: { pr_id: row.id, pr_no: row.pr_no, po_count: items.length, total_amount: row.total_amount }
+        });
         ok(res, { po_uid: firstUid, po_id: `${genPoNo()}${String(Number(poCnt.c) + 1).padStart(4,'0')}` }, `已生成 ${items.length} 笔 PO`);
     } catch (err) {
         await conn.rollback();

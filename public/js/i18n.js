@@ -10,6 +10,7 @@ const I18N = {
             // 系統
             'app.title': 'ERMM 財務模組管理系統',
             'app.subtitle': '財務模組管理系統',
+            'app.logo_title': '點擊查看系統架構圖',
             'loading': '載入中...',
             'load_failed': '載入失敗',
             'no_data': '暫無資料',
@@ -52,6 +53,7 @@ const I18N = {
             'nav.docManualCto': 'CTO 操作手冊',
             'nav.docManualCoo': 'COO 操作手冊',
             'docs.noPermission': '你的權限不能使用這個模組功能',
+            'sysmap.noPermission': '【你的權限不足！！】',
 
             // 頁面標題
             'page.dashboard': '財務儀表板',
@@ -85,6 +87,13 @@ const I18N = {
             'page.budget': '預算編制',
             'page.rollingBudget': '滾動預算',
             'page.consolidation': '合併報表',
+            'page.fxExposure': '匯率敞口/對沖',
+            'page.taxPlanning': '稅務籌劃/風險',
+            'page.taxCompliance': '稅務與合規管理',
+            'page.strategy': '戰略目標/平衡計分卡',
+            'page.investment': '投資與資本配置',
+            'page.cashLiquidity': '資金與流動性管理',
+            'page.contracts': '合同主檔',
             'page.aiqa': 'AI 財務問答',
             'page.scenario': '財務情景模擬',
             'page.dn': 'SO 交貨單',
@@ -103,6 +112,8 @@ const I18N = {
             'page.warRoom': '戰情聯動看板',
             'page.boardPack': '董事會報告包',
             'page.projectProfit': '專案損益',
+            'page.hrEfficiency': '組織人效分析',
+            'nav.hrEfficiency': '組織人效分析',
             'page.codeTable': '系統碼表管理',
             'nav.codeTable': '系統碼表管理',
 
@@ -275,6 +286,7 @@ const I18N = {
             'codeTable.empty': '該類型下暫無碼值，點右上「＋新增碼值」添加',
             'codeTable.code_value': '碼值',
             'codeTable.desc': '描述',
+            'codeTable.currency_code': '幣別代碼',
             'codeTable.alpha': '附加',
             'codeTable.action': '操作',
             'codeTable.type': '類型',
@@ -392,10 +404,17 @@ const I18N = {
             'nav.yg002': 'YG002 KPI 指標管理',
             'nav.yg003': 'YG003 報表異常甄別',
             'nav.yg004': 'YG004 預測模型分析',
+            'page.yg001': 'YG001 KPI 預警指標',
+            'page.yg002': 'YG002 KPI 指標管理',
+            'page.yg003': 'YG003 報表異常甄別',
+            'page.yg004': 'YG004 預測模型分析',
             'nav.kpi': 'KPI 門檻',
             'nav.master': '主檔管理',
             'nav.branch': '分公司',
             'nav.relation': '往來對象',
+            'nav.llmAudit': 'AI 治理',
+            'nav.contracts': '合同主檔',
+            'nav.audit': '操作審計',
 
             // kpiQuery UI
             'kpiQuery.toolbar.bu': '公司別',
@@ -1529,6 +1548,12 @@ const I18N = {
             'nav.budget': '預算編制',
             'nav.rollingBudget': '滾動預算',
             'nav.consolidation': '合併報表',
+            'nav.fxExposure': '匯率敞口/對沖',
+            'nav.taxPlanning': '稅務籌劃/風險',
+            'nav.taxCompliance': '稅務與合規',
+            'nav.strategy': '戰略目標/平衡計分卡',
+            'nav.investment': '投資與資本配置',
+            'nav.cashLiquidity': '資金與流動性管理',
             'nav.aiqa': 'AI 問答',
             'nav.scenario': '情景模擬',
             'nav.warRoom': '戰情看板',
@@ -1602,6 +1627,8 @@ const I18N = {
             'llm.mode_rule': '目前使用規則引擎查詢 ermm_db',
             'llm.configured': '已設定 API Key',
             'llm.not_configured': '尚未設定 API Key',
+            'llm.default_tag': '預設',
+            'llm.no_provider': '尚未設定 LLM 服務商，請至系統設定 → LLM 服務商管理新增',
             'llm.thinking': 'LLM 思考中，請稍候…',
             'llm.title': 'LLM API Key 管理',
             'llm.hint': '管理員可設定各 LLM 服務商的 API Key；未勾選 LLM 時，系統使用規則引擎查詢 ermm_db。API Key 儲存於資料庫 llm_config 表，查詢時僅顯示脫敏字串。',
@@ -2026,6 +2053,7 @@ const I18N = {
             'alert.mark_all': '全部已讀',
             'alert.tab_logs': '通知列表',
             'alert.tab_dr_rules': '日報告警規則',
+            'alert.tab_fin_rules': '財務 KPI 預警',
             'alert.domain_label': '網域',
             'alert.domain_all': '全部',
             'alert.domain_finance': '財務',
@@ -2074,13 +2102,35 @@ const I18N = {
             'alert.dr.scan_no_target': '無目標跳過',
             'alert.dr.scan_no_hist': '歷史不足',
             'alert.dr.scan_emailed': '彙總郵件',
-            'alert.dr.scan_email_fail': '郵件失敗'
+            'alert.dr.scan_email_fail': '郵件失敗',
+            // 財務 KPI 自動預警
+            'alert.fin.title': '財務 KPI 自動預警規則（依 KPI 燈號自動觸發）',
+            'alert.fin.tip': 'KPI 由財務匯總即時計算，達紅/黃燈或條件成立即自動產生預警。',
+            'alert.fin.rules_empty': '尚無財務 KPI 預警規則',
+            'alert.fin.rule': '規則',
+            'alert.fin.kpi': 'KPI',
+            'alert.fin.current': '當前值',
+            'alert.fin.cond': '觸發條件',
+            'alert.fin.threshold': '閾值',
+            'alert.fin.no_kpi': '無資料',
+            'alert.fin.out_range': '區間外',
+            'alert.fin.scan_btn': '立即掃描 KPI',
+            'alert.fin.scanning': '掃描中，請稍候…',
+            'alert.fin.scan_done': '掃描完成',
+            'alert.fin.scanned': '掃描規則',
+            'alert.fin.triggered': '觸發',
+            'alert.fin.suppressed': '冷卻跳過',
+            'alert.fin.created': '新增告警',
+            'alert.fin.edit_title': '編輯財務 KPI 規則',
+            'alert.fin.f_threshold': '閾值',
+            'alert.fin.f_cooldown': '冷卻時數（小時）'
         },
 
         'zh-CN': {
             // 系统
             'app.title': 'ERMM 财务模块管理系统',
             'app.subtitle': '财务模块管理系统',
+            'app.logo_title': '点击查看系统架构图',
             'loading': '加载中...',
             'load_failed': '加载失败',
             'no_data': '暂无数据',
@@ -2122,6 +2172,7 @@ const I18N = {
             'nav.docManualCto': 'CTO 操作手册',
             'nav.docManualCoo': 'COO 操作手册',
             'docs.noPermission': '你的权限不能使用这个模块功能',
+            'sysmap.noPermission': '【你的权限不足！！】',
             'nav.system': '系统',
 
             // 页面标题
@@ -2156,6 +2207,13 @@ const I18N = {
             'page.budget': '预算编制',
             'page.rollingBudget': '滚动预算',
             'page.consolidation': '合并报表',
+            'page.fxExposure': '汇率敞口/对冲',
+            'page.taxPlanning': '税务筹划/风险',
+            'page.taxCompliance': '税务与合规管理',
+            'page.strategy': '战略目标/平衡计分卡',
+            'page.investment': '投资与资本配置',
+            'page.cashLiquidity': '资金与流动性管理',
+            'page.contracts': '合同主档',
             'page.aiqa': 'AI 财务问答',
             'page.scenario': '财务情景模拟',
             'page.dn': 'SO 交货单',
@@ -2174,6 +2232,8 @@ const I18N = {
             'page.warRoom': '战情联动看板',
             'page.boardPack': '董事会报告包',
             'page.projectProfit': '项目损益',
+            'page.hrEfficiency': '组织人效分析',
+            'nav.hrEfficiency': '组织人效分析',
             'page.codeTable': '系统码表管理',
             'nav.codeTable': '系统码表管理',
 
@@ -2346,6 +2406,7 @@ const I18N = {
             'codeTable.empty': '该类型下暂无码值，点右上「＋新增码值」添加',
             'codeTable.code_value': '码值',
             'codeTable.desc': '描述',
+            'codeTable.currency_code': '幣別代碼',
             'codeTable.alpha': '附加',
             'codeTable.action': '操作',
             'codeTable.type': '类型',
@@ -2463,10 +2524,17 @@ const I18N = {
             'nav.yg002': 'YG002 KPI 指标管理',
             'nav.yg003': 'YG003 报表异常甄别',
             'nav.yg004': 'YG004 预测模型分析',
+            'page.yg001': 'YG001 KPI 预警指标',
+            'page.yg002': 'YG002 KPI 指标管理',
+            'page.yg003': 'YG003 报表异常甄别',
+            'page.yg004': 'YG004 预测模型分析',
             'nav.kpi': 'KPI 门槛',
             'nav.master': '主档管理',
             'nav.branch': '分公司',
             'nav.relation': '往来对象',
+            'nav.llmAudit': 'AI 治理',
+            'nav.contracts': '合同主档',
+            'nav.audit': '操作审计',
 
             // kpiQuery UI
             'kpiQuery.toolbar.bu': '公司别',
@@ -3595,6 +3663,12 @@ const I18N = {
             'nav.budget': '预算编制',
             'nav.rollingBudget': '滚动预算',
             'nav.consolidation': '合并报表',
+            'nav.fxExposure': '汇率敞口/对冲',
+            'nav.taxPlanning': '税务筹划/风险',
+            'nav.taxCompliance': '税务与合规',
+            'nav.strategy': '战略目标/平衡计分卡',
+            'nav.investment': '投资与资本配置',
+            'nav.cashLiquidity': '资金与流动性管理',
             'nav.aiqa': 'AI 问答',
             'nav.scenario': '情景模拟',
             'nav.warRoom': '战情看板',
@@ -3668,6 +3742,8 @@ const I18N = {
             'llm.mode_rule': '当前使用规则引擎查询 ermm_db',
             'llm.configured': '已设定 API Key',
             'llm.not_configured': '尚未设定 API Key',
+            'llm.default_tag': '默认',
+            'llm.no_provider': '尚未设定 LLM 服务商，请至系统设定 → LLM 服务商管理新增',
             'llm.thinking': 'LLM 思考中，请稍候…',
             'llm.title': 'LLM API Key 管理',
             'llm.hint': '管理员可设定各 LLM 服务商的 API Key；未勾选 LLM 时，系统使用规则引擎查询 ermm_db。API Key 保存于数据库 llm_config 表，查询时仅显示脱敏字符串。',
@@ -4092,6 +4168,7 @@ const I18N = {
             'alert.mark_all': '全部已读',
             'alert.tab_logs': '通知列表',
             'alert.tab_dr_rules': '日报告警规则',
+            'alert.tab_fin_rules': '财务 KPI 预警',
             'alert.domain_label': '网域',
             'alert.domain_all': '全部',
             'alert.domain_finance': '财务',
@@ -4140,13 +4217,35 @@ const I18N = {
             'alert.dr.scan_no_target': '无目标跳过',
             'alert.dr.scan_no_hist': '历史不足',
             'alert.dr.scan_emailed': '汇总邮件',
-            'alert.dr.scan_email_fail': '邮件失败'
+            'alert.dr.scan_email_fail': '邮件失败',
+            // 财务 KPI 自动预警
+            'alert.fin.title': '财务 KPI 自动预警规则（依 KPI 灯号自动触发）',
+            'alert.fin.tip': 'KPI 由财务汇总即时计算，达红/黄灯或条件成立即自动产生预警。',
+            'alert.fin.rules_empty': '尚无财务 KPI 预警规则',
+            'alert.fin.rule': '规则',
+            'alert.fin.kpi': 'KPI',
+            'alert.fin.current': '当前值',
+            'alert.fin.cond': '触发条件',
+            'alert.fin.threshold': '阈值',
+            'alert.fin.no_kpi': '无数据',
+            'alert.fin.out_range': '区间外',
+            'alert.fin.scan_btn': '立即扫描 KPI',
+            'alert.fin.scanning': '扫描中，请稍候…',
+            'alert.fin.scan_done': '扫描完成',
+            'alert.fin.scanned': '扫描规则',
+            'alert.fin.triggered': '触发',
+            'alert.fin.suppressed': '冷却跳过',
+            'alert.fin.created': '新增告警',
+            'alert.fin.edit_title': '编辑财务 KPI 规则',
+            'alert.fin.f_threshold': '阈值',
+            'alert.fin.f_cooldown': '冷却时数（小时）'
         },
 
         'en': {
             // System
             'app.title': 'ERMM Finance Module System',
             'app.subtitle': 'Finance Module Management System',
+            'app.logo_title': 'Click to view system architecture map',
             'loading': 'Loading...',
             'load_failed': 'Load failed',
             'no_data': 'No data',
@@ -4188,6 +4287,7 @@ const I18N = {
             'nav.docManualCto': 'CTO Manual',
             'nav.docManualCoo': 'COO Manual',
             'docs.noPermission': 'Your permission level cannot access this module',
+            'sysmap.noPermission': '【Permission denied!!】',
             'nav.system': 'System',
 
             // Page titles
@@ -4222,6 +4322,13 @@ const I18N = {
             'page.budget': 'Budget Management',
             'page.rollingBudget': 'Rolling Budget',
             'page.consolidation': 'Consolidated Reports',
+            'page.fxExposure': 'FX Exposure & Hedging',
+            'page.taxPlanning': 'Tax Planning & Risk',
+            'page.taxCompliance': 'Tax & Compliance Management',
+            'page.strategy': 'Strategic Goals & BSC',
+            'page.investment': 'Investment & Capital Allocation',
+            'page.cashLiquidity': 'Cash & Liquidity Management',
+            'page.contracts': 'Contract Master',
             'page.aiqa': 'AI Financial Q&A',
             'page.scenario': 'Scenario Simulation',
             'page.dn': 'SO Delivery',
@@ -4240,6 +4347,8 @@ const I18N = {
             'page.warRoom': 'War Room Dashboard',
             'page.boardPack': 'Board Pack',
             'page.projectProfit': 'Project P&L',
+            'page.hrEfficiency': 'Workforce Efficiency',
+            'nav.hrEfficiency': 'Workforce Efficiency',
             'page.codeTable': 'System Code Table',
             'nav.codeTable': 'System Code Table',
 
@@ -4412,6 +4521,7 @@ const I18N = {
             'codeTable.empty': 'No values under this type. Click "+ New Code Value" in the top right corner to add.',
             'codeTable.code_value': 'Code Value',
             'codeTable.desc': 'Description',
+            'codeTable.currency_code': 'Currency Code',
             'codeTable.alpha': 'Extra',
             'codeTable.action': 'Actions',
             'codeTable.type': 'Type',
@@ -4529,10 +4639,17 @@ const I18N = {
             'nav.yg002': 'YG002 KPI Management',
             'nav.yg003': 'YG003 Report Anomaly Scan',
             'nav.yg004': 'YG004 Prediction Models',
+            'page.yg001': 'YG001 KPI Warning',
+            'page.yg002': 'YG002 KPI Management',
+            'page.yg003': 'YG003 Report Anomaly Scan',
+            'page.yg004': 'YG004 Prediction Models',
             'nav.kpi': 'KPI Thresholds',
             'nav.master': 'Master Data',
             'nav.branch': 'Branches',
             'nav.relation': 'Parties',
+            'nav.llmAudit': 'AI Governance',
+            'nav.contracts': 'Contract Master',
+            'nav.audit': 'Operation Audit',
 
             // kpiQuery UI
             'kpiQuery.toolbar.bu': 'Business Unit',
@@ -5661,6 +5778,12 @@ const I18N = {
             'nav.budget': 'Budget',
             'nav.rollingBudget': 'Rolling Budget',
             'nav.consolidation': 'Consolidation',
+            'nav.fxExposure': 'FX Exposure & Hedging',
+            'nav.taxPlanning': 'Tax Planning & Risk',
+            'nav.taxCompliance': 'Tax & Compliance',
+            'nav.strategy': 'Strategic Goals & BSC',
+            'nav.investment': 'Investment & Capital',
+            'nav.cashLiquidity': 'Cash & Liquidity',
             'nav.aiqa': 'AI Q&A',
             'nav.scenario': 'Scenario',
             'nav.warRoom': 'War Room',
@@ -5734,6 +5857,8 @@ const I18N = {
             'llm.mode_rule': 'Rule engine is querying ermm_db',
             'llm.configured': 'API key configured',
             'llm.not_configured': 'API key not configured',
+            'llm.default_tag': 'default',
+            'llm.no_provider': 'No LLM provider configured. Please add one in System Settings → LLM Providers',
             'llm.thinking': 'LLM is thinking, please wait…',
             'llm.title': 'LLM API Key Manager',
             'llm.hint': 'Admins can configure API keys for each LLM provider. When LLM is unchecked, the system queries ermm_db via the rule engine. Keys are stored in the llm_config table and shown masked in the UI.',
@@ -6158,6 +6283,7 @@ const I18N = {
             'alert.mark_all': 'Mark all read',
             'alert.tab_logs': 'Alerts',
             'alert.tab_dr_rules': 'Daily report rules',
+            'alert.tab_fin_rules': 'Financial KPI alerts',
             'alert.domain_label': 'Domain',
             'alert.domain_all': 'All',
             'alert.domain_finance': 'Finance',
@@ -6206,7 +6332,28 @@ const I18N = {
             'alert.dr.scan_no_target': 'No target skip',
             'alert.dr.scan_no_hist': 'Insufficient history',
             'alert.dr.scan_emailed': 'Digest emails',
-            'alert.dr.scan_email_fail': 'Email failed'
+            'alert.dr.scan_email_fail': 'Email failed',
+            // Financial KPI alerts
+            'alert.fin.title': 'Financial KPI auto-alert rules (triggered by KPI light)',
+            'alert.fin.tip': 'KPIs are computed live from finance summary; a red/yellow light or breached condition creates an alert.',
+            'alert.fin.rules_empty': 'No financial KPI rules',
+            'alert.fin.rule': 'Rule',
+            'alert.fin.kpi': 'KPI',
+            'alert.fin.current': 'Current',
+            'alert.fin.cond': 'Condition',
+            'alert.fin.threshold': 'Threshold',
+            'alert.fin.no_kpi': 'No data',
+            'alert.fin.out_range': 'out of range',
+            'alert.fin.scan_btn': 'Scan KPI now',
+            'alert.fin.scanning': 'Scanning, please wait…',
+            'alert.fin.scan_done': 'Scan complete',
+            'alert.fin.scanned': 'Rules scanned',
+            'alert.fin.triggered': 'Triggered',
+            'alert.fin.suppressed': 'Cooldown skip',
+            'alert.fin.created': 'New alerts',
+            'alert.fin.edit_title': 'Edit financial KPI rule',
+            'alert.fin.f_threshold': 'Threshold',
+            'alert.fin.f_cooldown': 'Cooldown hours'
         }
     },
 
@@ -6218,11 +6365,18 @@ const I18N = {
         xi_aging_map: { 'A 正常': 'xi.aging_A', 'B 31-90天': 'xi.aging_B', 'C 91-180天': 'xi.aging_C', 'D 超過180天': 'xi.aging_D' }
     },
 
+    /** 簡體狀態值 → 繁體對照鍵（DB 存量簡繁混雜，對照表以繁體為準） */
+    _normStatus(s) {
+        return String(s)
+            .replace(/审核/g, '審核').replace(/过/g, '過')
+            .replace(/单/g, '單').replace(/货/g, '貨');
+    },
+
     /** 把 DB 存的中文狀態值轉成當前語言顯示 */
     statusLabel(kind, chs) {
         const m = this._statusMaps[kind];
         if (!m || !chs) return chs || '-';
-        const key = m[chs];
+        const key = m[chs] || m[this._normStatus(chs)];
         return key ? this.t(key) : chs;
     },
 
@@ -6231,6 +6385,231 @@ const I18N = {
         const m = this._statusMaps[kind];
         if (!m) return [];
         return Object.keys(m).map(chs => ({ value: chs, label: this.t(m[chs]) }));
+    },
+
+    /** EN 模式下把後端返回的中文告警片段翻成英文（保留數字/BU/幣別插值） */
+    fixAlert(s) {
+        if (this.lang !== 'en' || s == null) return s;
+        let t = String(s);
+        t = t.replace(/人民币/g, 'RMB').replace(/新台幣/g, 'TWD').replace(/港幣/g, 'HKD')
+             .replace(/美元/g, 'USD').replace(/欧元/g, 'EUR').replace(/日元/g, 'JPY');
+        const kpiMap = {'净利润':'Net Profit','淨利':'Net Profit','净利':'Net Profit','营收':'Revenue','營收':'Revenue','毛利率':'Gross Margin','存货周转':'Inventory Turnover','存貨週轉':'Inventory Turnover','应收天数':'AR Days','應收天數':'AR Days'};
+        t = t.replace(/(净利润|淨利|净利|营收|營收|毛利率|存货周转|存貨週轉|应收天数|應收天數)目标滞后/g, (m, k) => (kpiMap[k] || k) + ' target behind');
+        const re = [
+            [/已连续 (\d+) 個(?:應交)?工作日未繳交/g, 'consecutive $1 required workdays not submitted'],
+            [/已连续 (\d+) 个(?:应交)?工作日未缴交/g, 'consecutive $1 required workdays not submitted'],
+            [/逾期应收超 90 天/g, 'overdue AR > 90 days'],
+            [/庫齡超 90 天庫存/g, 'inventory aged > 90 days'],
+            [/库龄超 90 天库存/g, 'inventory aged > 90 days'],
+            [/(\d+) 天/g, '$1 days'],
+            [/(\S+) 无 (\d{4}-\d{2}) 财务数据[，,]头寸取最近一期 (\d{4}-\d{2})/g, '$1 has no $2 financial data; position uses latest period $3'],
+            [/无 (\d{4}-\d{2}) 汇率[，,]使用 (\d{4}-\d{2}) 汇率/g, 'has no $1 rate, using $2 rate'],
+            [/有 (\d+) 项法规政策待评估或待落实/g, '$1 regulation(s) pending evaluation or implementation'],
+            [/共 (\d+) 笔/g, '$1 records'],
+            [/(\d+) 笔/g, '$1 records'],
+            [/(\d+) 项/g, '$1 items'],
+            [/(\d) 元/g, '$1'],
+            [/低于时间进度 (\d+)%/g, 'below time progress $1%'],
+            [/汇率表缺少 (\S+) 汇率[，,]暂按 1:1 折算/g, 'Rate table missing $1 rate, using 1:1 fallback'],
+            [/汇率表缺少 RMB 基准汇率[，,]按 1:1 折算/g, 'Rate table missing RMB base rate, using 1:1 fallback'],
+            [/净敞口 (-?[\d.]+) RMB 超过上限 (\d+) RMB/g, 'Net exposure $1 RMB exceeds limit $2 RMB'],
+            [/对冲覆盖率 ([\d.]+)% 低于下限 (\d+)%/g, 'Hedge coverage $1% below minimum $2%']
+        ];
+        re.forEach(([a, b]) => { t = t.replace(a, b); });
+        const lit = [
+            // —— arSmart 催收行動閉集 ——
+            ['律師函/訴訟', 'Ltr/Litigation'],
+            ['律师函/诉讼', 'Ltr/Litigation'],
+            ['出納部門每日電話追討', 'daily phone collection by cashier'],
+            ['出纳部门每日电话追讨', 'daily phone collection by cashier'],
+            ['高優先電話催收', 'high-priority phone collection'],
+            ['高优先电话催收', 'high-priority phone collection'],
+            ['例行催收函', 'routine collection letter'],
+            ['溫和提醒', 'gentle reminder'],
+            ['温和提醒', 'gentle reminder'],
+            ['正常管理', 'normal management'],
+            ['已逾期', 'overdue by'],
+            ['逾期', 'overdue by'],
+            ['立即啟動法律程序', 'initiate legal proceedings immediately'],
+            ['立即启动法律程序', 'initiate legal proceedings immediately'],
+            ['今日撥打', 'call today'],
+            ['今日拨打', 'call today'],
+            ['發送正式催收函', 'send formal collection letter'],
+            ['发送正式催收函', 'send formal collection letter'],
+            ['寄出對帳單', 'send statement'],
+            ['寄出对账单', 'send statement'],
+            ['付款提醒', 'payment reminder'],
+            ['在正常信用期內', 'within normal credit terms'],
+            ['在正常信用期内', 'within normal credit terms'],
+            ['帳齡', 'aging'],
+            ['账龄', 'aging'],
+            // —— profitAnalysis 成本來源閉集 ——
+            ['默认 70%', 'Default 70%'],
+            ['无财务汇总', 'no financial summary'],
+            ['年财务汇总缺失成本', ' finance summary missing cost'],
+            ['财务汇总缺失成本', 'finance summary missing cost'],
+            ['成本率异常', 'abnormal cost ratio'],
+            ['销售成本率', 'cost-of-sales ratio'],
+            // —— 告警引擎常見句 ——
+            ['净利率触发预警', 'net margin alert triggered'],
+            ['毛利率跌破门槛', 'gross margin below threshold'],
+            ['毛利率跌破門檻', 'gross margin below threshold'],
+            ['流动比率偏低', 'current ratio low'],
+            ['流動比率偏低', 'current ratio low'],
+            ['应收账款周转率触发预警', 'AR turnover alert triggered'],
+            ['應收帳款週轉率觸發預警', 'AR turnover alert triggered'],
+            ['税务合规预警', 'tax compliance alert'],
+            ['稅務合規預警', 'tax compliance alert'],
+            ['增值税负率风险', 'VAT burden risk'],
+            ['增值稅負率風險', 'VAT burden risk'],
+            ['申报销售额差异风险', 'filed sales variance risk'],
+            ['申報銷售額差異風險', 'filed sales variance risk'],
+            ['增值税申报完整性风险', 'VAT filing completeness risk'],
+            ['增值稅申報完整性風險', 'VAT filing completeness risk'],
+            ['汇率敞口预警', 'FX exposure alert'],
+            ['匯率敞口預警', 'FX exposure alert'],
+            ['已连续', 'consecutive'],
+            ['已連續', 'consecutive'],
+            ['連續', 'consecutive'],
+            ['连续', 'consecutive'],
+            ['個工作日', ' workdays'],
+            ['个工作日', ' workdays'],
+            ['工作日', ' workdays'],
+            ['未交日報', ' daily reports not submitted'],
+            ['未交日报', ' daily reports not submitted'],
+            ['應交工作日', ' required workdays'],
+            ['应交工作日', ' required workdays'],
+            ['未繳交', 'not submitted'],
+            ['未缴交', 'not submitted'],
+            ['門檻', 'threshold'],
+            ['门槛', 'threshold'],
+            ['當月工時超載', 'monthly overtime overload'],
+            ['当月工时超载', 'monthly overtime overload'],
+            ['較前 6 個月均值', 'vs prior 6-month avg'],
+            ['较前 6 个月均值', 'vs prior 6-month avg'],
+            ['留意超載風險', 'watch overload risk'],
+            ['留意超载风险', 'watch overload risk'],
+            ['提前調配人力', 'reallocate headcount in advance'],
+            ['提前调配人力', 'reallocate headcount in advance'],
+            // —— taxCompliance 後端告警閉集 ——
+            ['點擊「生成申報日曆」按標準稅種與截止日批量建立任務。', 'Click "Generate Filing Calendar" to batch-create tasks by standard tax types and deadlines.'],
+            ['点击「生成申报日历」按标准税种与截止日批量建立任务。', 'Click "Generate Filing Calendar" to batch-create tasks by standard tax types and deadlines.'],
+            ['全部範圍', 'All Scopes'],
+            ['全部范围', 'All Scopes'],
+            // —— dataQuality 分類標籤閉集 ——
+            ['財務摘要', 'Financial Summary'],
+            ['财务摘要', 'Financial Summary'],
+            ['發票明細', 'Invoice Details'],
+            ['发票明细', 'Invoice Details'],
+            ['銀行貸款', 'Bank Loans'],
+            ['银行贷款', 'Bank Loans'],
+            ['現金日記帳', 'Cash Journal'],
+            ['现金日记账', 'Cash Journal'],
+            ['財務預測', 'Financial Forecast'],
+            ['财务预测', 'Financial Forecast'],
+            ['表結構健康', 'Table Health'],
+            ['表结构健康', 'Table Health'],
+            ['對帳', 'Reconciliation'],
+            ['对账', 'Reconciliation'],
+            ['年度申报日历', 'annual filing calendar'],
+            ['年度申報日曆', 'annual filing calendar'],
+            ['尚未生成', 'has not generated'],
+            ['批发零售业', 'Wholesale & Retail'],
+            ['制造业', 'Manufacturing'],
+            ['存货周转', 'Inventory Turnover'],
+            ['存貨週轉', 'Inventory Turnover'],
+            ['应收天数', 'AR Days'],
+            ['應收天數', 'AR Days'],
+            ['毛利率', 'Gross Margin'],
+            ['净利润', 'Net Profit'],
+            ['淨利', 'Net Profit'],
+            ['净利', 'Net Profit'],
+            ['营收', 'Revenue'],
+            ['營收', 'Revenue'],
+            ['或', ' or '],
+            ['现金低于安全水位', 'Cash below safety level'],
+            ['逾期应收超 90 天', 'Overdue AR > 90 days'],
+            ['呆滞库存待处理', 'Idle inventory pending'],
+            ['税务合规预警', 'Tax Compliance Alert'],
+            ['法规政策待评估或待落实', 'regulations pending evaluation or implementation'],
+            ['对冲覆盖率', 'hedge coverage'],
+            ['现金及存款', 'cash & deposits'],
+            ['资金计划期末余额', 'period-end fund plan balance'],
+            ['优先催收应收', 'prioritize AR collection'],
+            ['延后非必要支出', 'defer non-essential spending'],
+            ['由集团资金池调入资金补足安全水位', 'transfer from group cash pool to cover safety level'],
+            ['调整资金计划', 'adjust fund plan'],
+            ['加快回款', 'accelerate collections'],
+            ['压缩资本支出', 'reduce capex'],
+            ['安排短期融资', 'arrange short-term financing'],
+            ['低于时间进度', 'below time progress'],
+            ['低于安全水位', 'below safety level'],
+            ['低于下限', 'below minimum'],
+            ['安全水位', 'safety level'],
+            ['达成率', 'attainment'],
+            ['目标滞后', 'target behind'],
+            ['最新现金', 'latest cash'],
+            ['未收金額', 'uncollected amount'],
+            ['未收金额', 'uncollected amount'],
+            ['库龄超 90 天库存', 'inventory aged >90d'],
+            ['覆盖率', 'coverage'],
+            ['汇率', 'rate'],
+            ['财务数据', 'financial data'],
+            ['头寸', 'position'],
+            ['缺口', 'gap'],
+            ['低于', 'below'],
+            ['使用', 'using'],
+            // —— consolidation 後端 warning 閉集（簡繁都要覆蓋，長句在前） ——
+            ['自動生成的內部銷售沖銷取自關係人應收餘額（AR_affiliate_amt），並非實際內部銷售額，請核對後確認', 'Auto-generated internal sale offset uses AR_affiliate_amt, not actual internal sale; please verify'],
+            ['自动生成的内部销售冲销取自关系人应收余额（AR_affiliate_amt），并非实际内部销售额，请核对后确认', 'Auto-generated internal sale offset uses AR_affiliate_amt, not actual internal sale; please verify'],
+            ['本期同時存在 AR 與 AP 抵消分錄，為避免重複沖銷，資產負債表按 AR 金額沖銷', 'Both AR and AP elimination entries exist; balance sheet offsets by AR amount to avoid double-counting'],
+            ['本期同时存在 AR 与 AP 抵消分录，为避免重复冲销，资产负债表按 AR 金额冲销', 'Both AR and AP elimination entries exist; balance sheet offsets by AR amount to avoid double-counting'],
+            ['長期股權投資與子公司權益的抵消尚未納入（分錄類型未涵蓋），股東權益僅作股利層面調整', 'Parent equity vs. subsidiary equity elimination not yet covered; equity only adjusted at dividend level'],
+            ['长期股权投资与子公司权益的抵消尚未纳入（分录类型未涵盖），股东权益仅作股利层面调整', 'Parent equity vs. subsidiary equity elimination not yet covered; equity only adjusted at dividend level'],
+            ['內部銷售沖銷金額大於合併銷售成本，成本僅沖減至 0，請核對抵消分錄', 'Internal sale offset exceeds consolidated COGS; cost only reduced to 0, please verify entries'],
+            ['内部销售冲销金额大于合并销售成本，成本仅冲减至 0，请核对抵消分录', 'Internal sale offset exceeds consolidated COGS; cost only reduced to 0, please verify entries'],
+            ['財務匯總未提供現金流量拆分數據（現金流入/流出欄位為 0），現金流量表暫無有效數據', 'Financial summary missing cash flow breakdown (inflow/outflow = 0); cash flow statement temporarily empty'],
+            ['财务汇总未提供现金流量拆分数据（现金流入/流出字段为 0），现金流量表暂无有效数据', 'Financial summary missing cash flow breakdown (inflow/outflow = 0); cash flow statement temporarily empty'],
+            ['內部銷售/往來/借款的現金流未按項目抵消，現金流量表為各公司彙總數', 'Cash flows from internal sales / balances / loans not offset by item; CFS is company-summed'],
+            ['内部销售/往来/借款的现金流未按项目抵消，现金流量表为各公司汇总数', 'Cash flows from internal sales / balances / loans not offset by item; CFS is company-summed'],
+            ['本期有', ''],
+            ['條未確認抵消分錄，未計入合併結果', ' unconfirmed elimination entries, not included in consolidated result'],
+            ['条未确认抵消分录，未计入合并结果', ' unconfirmed elimination entries, not included in consolidated result'],
+            ['缺少以下公司/幣別匯率，未折算直接相加：', 'Missing FX rate for the following companies; summed without conversion: '],
+            ['缺少以下公司/币别汇率，未折算直接相加：', 'Missing FX rate for the following companies; summed without conversion: '],
+            ['已按平均匯率 折算以下公司到', 'Converted the following companies to'],
+            ['已按平均汇率 折算以下公司到', 'Converted the following companies to'],
+            ['已按期末匯率 折算以下公司到', 'Converted the following companies to'],
+            ['已按期末汇率 折算以下公司到', 'Converted the following companies to'],
+            ['平均匯率', 'average rate'],
+            ['平均汇率', 'average rate'],
+            ['期末匯率', 'closing rate'],
+            ['期末汇率', 'closing rate'],
+            ['現金流量淨變動與期末－期初現金差異', 'Net cash change vs. ending-beginning cash diff:'],
+            ['现金流量净变动与期末－期初现金差异', 'Net cash change vs. ending-beginning cash diff:'],
+            ['，請核對現金流量分類', '; please verify cash flow classification'],
+            ['，请核对现金流量分类', '; please verify cash flow classification'],
+            // —— FX Exposure 後端 warning 閉集（簡繁都要覆蓋，長句在前） ——
+            ['汇率表缺少', 'Rate table missing'],
+            ['匯率表缺少', 'Rate table missing'],
+            ['基准汇率', 'base rate'],
+            ['基準匯率', 'base rate'],
+            ['净敞口', 'Net exposure'],
+            ['淨敞口', 'Net exposure'],
+            ['超过上限', 'exceeds limit'],
+            ['超過上限', 'exceeds limit'],
+            ['对冲覆盖率', 'Hedge coverage'],
+            ['對沖覆蓋率', 'Hedge coverage'],
+            ['暂按 1:1 折算', 'using 1:1 fallback'],
+            ['暫按 1:1 折算', 'using 1:1 fallback'],
+            // —— 寬條目必須放在所有複合條目之後，否則會把「未收金額」等拆散 ——
+            ['金額', 'amount'],
+            ['金额', 'amount']
+        ];
+        lit.forEach(([a, b]) => { t = t.split(a).join(b); });
+        t = t.replace(/，/g, ', ').replace(/、/g, ', ').replace(/。/g, '.').replace(/；/g, '; ')
+             .replace(/（/g, '(').replace(/）/g, ')').replace(/：/g, ': ');
+        return t;
     },
 
     // 部門名稱多語言（DB 以簡體中文存值，此處僅做顯示轉換）
@@ -6252,7 +6631,11 @@ const I18N = {
         '资讯部': { 'zh-CN': '资讯部', 'zh-TW': '資訊部', en: 'IT Dept' },
         '資訊部': { 'zh-CN': '资讯部', 'zh-TW': '資訊部', en: 'IT Dept' },
         '未分类': { 'zh-CN': '未分类', 'zh-TW': '未分類', en: 'Unassigned' },
-        '未分類': { 'zh-CN': '未分类', 'zh-TW': '未分類', en: 'Unassigned' }
+        '未分類': { 'zh-CN': '未分类', 'zh-TW': '未分類', en: 'Unassigned' },
+        '总经理室': { 'zh-CN': '总经理室', 'zh-TW': '總經理室', en: 'CEO Office' },
+        '總經理室': { 'zh-CN': '总经理室', 'zh-TW': '總經理室', en: 'CEO Office' },
+        '仓管部': { 'zh-CN': '仓管部', 'zh-TW': '倉管部', en: 'Warehouse' },
+        '倉管部': { 'zh-CN': '仓管部', 'zh-TW': '倉管部', en: 'Warehouse' }
     },
 
     /** 部門名稱顯示轉換：查無對照時原樣返回 */
@@ -6309,6 +6692,10 @@ const I18N = {
             el.textContent = this.t(el.dataset.i18n);
         });
 
+        // 更新側邊欄 Logo tooltip
+        const logo = document.getElementById('appLogo');
+        if (logo) logo.title = this.t('app.logo_title');
+
         // 更新顶栏
         const titleEl = document.getElementById('pageTitle');
         if (titleEl && currentPage) {
@@ -6335,3 +6722,6 @@ function tDept(name) { return I18N.deptName(name); }
 
 // 狀態值顯示轉換（DB 存量中英文混雜 → 當前語言）
 function tStatus(name) { return I18N.statusName(name); }
+
+// 後端告警文案片段翻譯（EN 模式生效，保留數字/BU/幣別插值）
+function fixAlert(s) { return I18N.fixAlert(s); }

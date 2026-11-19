@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 系統設定 API 測試 — system.js route
  *
  * 涵蓋：
@@ -46,7 +46,7 @@ afterAll(async () => {
     afterAllRan = true;
     await pool.execute('DELETE FROM cams_system_codes WHERE code_value=?', [TEST_CODE.code_value]);
     await cleanupTestData();
-    await pool.end();
+    // 注意：不調 pool.end() — 全域共用 pool，關了會影響其他測試套件
 });
 
 describe('System Codes CRUD', () => {

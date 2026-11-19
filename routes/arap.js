@@ -2,6 +2,7 @@
  * AR/AP 彙總路由
  */
 const express = require('express');
+const { perms, readScope } = require('../middleware/perms');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, pagination } = require('../utils/response');
@@ -23,7 +24,7 @@ router.get('/raw', async (req, res) => {
 });
 
 // 查詢 ARAP —— 返回兩種行（AR 行 + AP 行）匹配前端 type1/amt 讀取
-router.get('/', async (req, res) => {
+router.get('/', readScope('arap'), async (req, res) => {
     try {
         const { bu_no, YYYY_MM } = req.query;
         let sql = `SELECT uid, bu_no, YYYY_MM,
@@ -65,7 +66,7 @@ router.get('/', async (req, res) => {
 });
 
 // 新增 / 修改 AR/AP（按 bu_no + YYYY_MM upsert）
-router.post('/', async (req, res) => {
+router.post('/', perms('arap','CREATE'), async (req, res) => {
     try {
         const d = req.body;
         const { bu_no, YYYY_MM } = d;
@@ -86,7 +87,7 @@ router.post('/', async (req, res) => {
 });
 
 // 修改單筆（按 uid）
-router.put('/:uid', async (req, res) => {
+router.put('/:uid', perms('arap','UPDATE'), async (req, res) => {
     try {
         const d = req.body;
         const updates = Object.keys(d).filter(k => k !== 'uid' && k !== 'create_time')
@@ -100,7 +101,7 @@ router.put('/:uid', async (req, res) => {
 });
 
 // 刪除
-router.delete('/:uid', async (req, res) => {
+router.delete('/:uid', perms('arap','DELETE'), async (req, res) => {
     try {
         await pool.execute('DELETE FROM ermm_arap_detail WHERE uid=?', [req.params.uid]);
         ok(res, null, '已刪除');

@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500 } = require('../utils/response');
+const { syncCashFlow } = require('../services/cashFlow');
 
 // 工具：把 undefined 轉 null（mysql2 不吃 undefined）
 function sanitizeParams(arr) {
@@ -419,8 +420,11 @@ router.post('/step7', async (req, res) => {
             updated++;
         }
 
+        // 同步现金日记账到现金流量字段（经营/投资/筹资拆分 + 期初/期末）
+        const cashSync = await syncCashFlow(conn, bu_no);
+
         await conn.commit();
-        ok(res, { updated_months: updated }, `Step7 財務摘要重算完成 (${updated} 月份)`);
+        ok(res, { updated_months: updated, cash_flow_months: cashSync.updated }, `Step7 財務摘要重算完成 (${updated} 月份，现金流量 ${cashSync.updated} 月份)`);
     } catch (err) {
         await conn.rollback();
         fail500(res, err);

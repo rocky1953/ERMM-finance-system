@@ -488,6 +488,11 @@ const SystemMap = (() => {
 
     return {
         open() {
+            // ERMM 標誌 → 系統架構圖：僅管理員可開啟
+            if (!Auth.isAdmin()) {
+                UI.toast(t('sysmap.noPermission'), 'error');
+                return;
+            }
             const T = dict();
             const lang = currentLang();
             const svg = buildSvg();
@@ -501,11 +506,9 @@ const SystemMap = (() => {
             ov.innerHTML = `
                 <div class="sysmap-panel">
                     <div class="sysmap-head">
-                        <div>
-                            <h3>🏢 ${esc(T.title)}</h3>
-                            <div class="sysmap-flow">
-                                ${T.flow.map((s, i) => `${i ? '<i>→</i>' : ''}<span>${esc(s)}</span>`).join('')}
-                            </div>
+                        <h3>🏢 ${esc(T.title)}</h3>
+                        <div class="sysmap-flow">
+                            ${T.flow.map((s, i) => `${i ? '<i>→</i>' : ''}<span>${esc(s)}</span>`).join('')}
                         </div>
                         <div class="sysmap-actions">
                             <label class="sysmap-lang-label" for="sysmapLang">${esc(T.langLabel)}</label>

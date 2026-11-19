@@ -5,7 +5,9 @@ const express = require('express');
 const router = express.Router();
 const { pool } = require('../config/db');
 const { ok, fail, fail500, n } = require('../utils/response');
+const audit = require('../services/audit');
 
+const { perms, readScope } = require('../middleware/perms');
 // ===== 列表 =====
 router.get('/', async (req, res) => {
     try {
@@ -52,7 +54,7 @@ router.get('/:uid', async (req, res) => {
 });
 
 // ===== 新建 =====
-router.post('/', async (req, res) => {
+router.post('/', perms('poGrn','CREATE'), async (req, res) => {
     try {
         const d = req.body;
         const po_uid = Number(d.po_uid) || null;
@@ -75,6 +77,12 @@ router.post('/', async (req, res) => {
             VALUES (?,?,?,?,?,?,?,?,?)`,
             [n(d.bu_no), po_uid, po_id, xitems, supplier_name, d.grn_date || null, grn_qty, unit_price, d.remark || null]
         );
+        audit.log(req, {
+            module: 'poGrn', action: 'CREATE', businessType: 'PO-GRN',
+            businessId: String(r.insertId),
+            summary: `PO收货 单${po_id || '(无)'} ${n(d.bu_no)} ${xitems || ''} qty=${grn_qty} @¥${unit_price}`,
+            after: { uid: r.insertId, bu_no: d.bu_no, po_uid, po_id, xitems, supplier_name, grn_qty, unit_price }
+        });
         ok(res, { uid: r.insertId }, '收货单已登记');
     } catch (err) { fail500(res, err); }
 });
@@ -83,6 +91,9 @@ router.post('/', async (req, res) => {
 router.put('/:uid', async (req, res) => {
     try {
         const d = req.body;
+        // 先查旧值
+        const [oldRows] = await pool.execute('SELECT * FROM po_grn WHERE uid=?', [req.params.uid]);
+        if (!oldRows.length) return fail(res, '不存在', 404);
         const updates = [];
         const values = [];
         for (const k of ['bu_no','po_uid','po_id','xitems','supplier_name','grn_date','grn_qty','unit_price','remark']) {
@@ -90,7 +101,14 @@ router.put('/:uid', async (req, res) => {
         }
         if (!updates.length) return fail(res, '无更新字段', 400);
         values.push(req.params.uid);
-        await pool.execute(`UPDATE po_grn SET ${updates.join(',')}, update_time=NOW() WHERE uid=?`, values);
+        await pool.execute(`UPDATE po_grn SET ${updates.join(',')} WHERE uid=?`, values);
+        audit.log(req, {
+            module: 'poGrn', action: 'UPDATE', businessType: 'PO-GRN',
+            businessId: String(req.params.uid),
+            summary: `修改PO收货 id=${req.params.uid} ${oldRows[0]?.po_id || ''} ${oldRows[0]?.xitems || ''} 原qty=${oldRows[0]?.grn_qty}`,
+            before: oldRows[0],
+            detail: { changed_fields: updates.map(u => u.split('=')[0]) }
+        });
         ok(res, null, '已更新');
     } catch (err) { fail500(res, err); }
 });
@@ -98,10 +116,18 @@ router.put('/:uid', async (req, res) => {
 // ===== 删除 =====
 router.delete('/:uid', async (req, res) => {
     try {
+        // 先查完整快照（用于审计）
+        const [oldRows] = await pool.execute('SELECT * FROM po_grn WHERE uid=?', [req.params.uid]);
         // 如已参与匹配，禁止删除
         const [[m]] = await pool.execute('SELECT COUNT(*) c FROM po_match_result WHERE grn_uid=?', [req.params.uid]);
         if (Number(m.c) > 0) return fail(res, '已参与匹配，无法删除', 400);
         await pool.execute('DELETE FROM po_grn WHERE uid=?', [req.params.uid]);
+        audit.log(req, {
+            module: 'poGrn', action: 'DELETE', businessType: 'PO-GRN',
+            businessId: String(req.params.uid),
+            summary: `删除PO收货 id=${req.params.uid} ${oldRows[0]?.po_id || ''} ${oldRows[0]?.xitems || ''} qty=${oldRows[0]?.grn_qty}`,
+            before: oldRows[0]
+        });
         ok(res, null, '已删除');
     } catch (err) { fail500(res, err); }
 });

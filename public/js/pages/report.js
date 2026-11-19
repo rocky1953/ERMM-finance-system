@@ -1,6 +1,8 @@
 /**
  * 三大财务报表页面
  */
+const RPT_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
+
 registerPage('report', async (c) => {
     c.innerHTML = `
         <div class="card">
@@ -120,7 +122,7 @@ async function loadReport() {
                 </table>
             `;
         }
-    } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
+    } catch(e) { el.innerHTML = `<p style="color:#e74c3c">${RPT_L('找不到该月资料', '找不到該月資料', 'No data for this month')}</p>`; }
 }
 
 async function exportReport() {
@@ -150,6 +152,6 @@ async function exportReport() {
         a.remove();
         URL.revokeObjectURL(objUrl);
     } catch (e) {
-        UI.toast((typeof t === 'function' ? t('export_fail') : '汇出失败') + ': ' + e.message, 'error');
+        UI.toast((typeof t === 'function' ? t('export_fail') : RPT_L('汇出失败', '匯出失敗', 'Export failed')) + ': ' + e.message, 'error');
     }
 }

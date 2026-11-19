@@ -27,7 +27,7 @@ describe('Forecast API', () => {
 
     afterAll(async () => {
         await cleanupTestData();
-        await closePool();
+        // 注意：不調 closePool() — 全域共用 pool，關了會影響其他測試套件
     });
 
     // 修復 1: GET / 支援 year 參數

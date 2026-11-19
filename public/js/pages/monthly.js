@@ -1,6 +1,15 @@
 /**
  * 月度项目 monthly_items CRUD
  */
+const MT_TYPES = ['租金', '水电', '薪资', '保险', '其他'];
+const MT_LABELS = {
+    '租金': { 'zh-CN': '租金', 'zh-TW': '租金', en: 'Rent' },
+    '水电': { 'zh-CN': '水电', 'zh-TW': '水電', en: 'Utilities' },
+    '薪资': { 'zh-CN': '薪资', 'zh-TW': '薪資', en: 'Payroll' },
+    '保险': { 'zh-CN': '保险', 'zh-TW': '保險', en: 'Insurance' },
+    '其他': { 'zh-CN': '其他', 'zh-TW': '其他', en: 'Other' }
+};
+const MT_L = (k) => (MT_LABELS[k] && MT_LABELS[k][I18N.lang]) || k;
 registerPage('monthly', async (c) => {
     const _mgr = Auth.isManager();
     const _buAll = await CodeHelper.buSel({includeAll:true});
@@ -10,7 +19,7 @@ registerPage('monthly', async (c) => {
                 <label>${t('sys.business')}：<select id="mBU" onchange="loadMonthly()">${_buAll}</select></label>
                 <label>${t('monthly.ym')}：<input type="month" id="mYM" onchange="loadMonthly()"></label>
                 <label>${t('relation.th.type')}：<select id="mType" onchange="loadMonthly()"><option value="">${t('sys.all')}</option>
-                    <option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></label>
+                    <option value="租金">${MT_L('租金')}</option><option value="水电">${MT_L('水电')}</option><option value="薪资">${MT_L('薪资')}</option><option value="保险">${MT_L('保险')}</option><option value="其他">${MT_L('其他')}</option></select></label>
                 ${_mgr ? `<button class="btn btn-primary" onclick="MonthlyForm.open()">➕ ${t('monthly.btn.add')}</button>` : ''}
                 <button class="btn btn-success" onclick="loadMonthly()">🔄 ${t('refresh')}</button>
             </div>
@@ -39,7 +48,7 @@ async function loadMonthly() {
             </tr></thead>
             <tbody>${rows.map(r => `
                 <tr>
-                    <td>${r.bu_no}</td><td>${r.YYYY_MM}</td><td>${r.item_type||'-'}</td>
+                    <td>${r.bu_no}</td><td>${r.YYYY_MM}</td><td>${r.item_type ? MT_L(r.item_type) : '-'}</td>
                     <td>${r.item_name||'-'}</td><td class="num">${UI.fmt(r.item_amt)}</td>
                     <td style="color:${r.DB_CR==='DR'?'#27ae60':r.DB_CR==='CR'?'#e74c3c':'#95a5a6'}">${r.DB_CR||'-'}</td>
                     <td>${r.pay_date||'-'}</td><td>${r.remark||'-'}</td>
@@ -66,7 +75,7 @@ const MonthlyForm = {
                     <select id="mf_bu">${this._buSel||''}</select></div>
                 <div class="form-group"><label>${t('monthly.ym')}</label><input type="month" id="mf_ym" value="${(d.YYYY_MM||'')}"></div>
                 <div class="form-group"><label>${t('relation.th.type')}</label>
-                    <select id="mf_type"><option>租金</option><option>水电</option><option>薪资</option><option>保险</option><option>其他</option></select></div>
+                    <select id="mf_type"><option value="租金">${MT_L('租金')}</option><option value="水电">${MT_L('水电')}</option><option value="薪资">${MT_L('薪资')}</option><option value="保险">${MT_L('保险')}</option><option value="其他">${MT_L('其他')}</option></select></div>
             </div>
             <div class="form-row">
                 <div class="form-group" style="flex:1"><label>${t('monthly.th.name')}</label><input id="mf_name" value="${d.item_name||''}" style="width:100%"></div>

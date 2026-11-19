@@ -4,7 +4,9 @@
  * tab 2: leader_user 权限编辑
  * tab 3: login_user_record 登入纪录（只读 + 清除）
  */
-const USR_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] || zh);
+const USR_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
+const USR_TYPE_EN = { '一般员工':'Staff','部门主管':'Dept Manager','部门经理':'Dept Manager','高阶主管':'Executive' };
+const usrTypeLabel = (v) => I18N.lang === 'en' ? (USR_TYPE_EN[v] || v) : v;
 registerPage('user', async (c) => {
     // 权限拦截：仅管理员可进入“使用者管理”
     if (!Auth.isAdmin()) {
@@ -84,8 +86,8 @@ async function loadUsers() {
         el.innerHTML = `<table class="data-table">
             <thead><tr><th>${t('user.col.id')}</th><th>${t('user.col.name')}</th><th>${t('user.col.dept')}</th><th>${t('user.col.xuser_type')}</th><th>${t('user.col.admin')}</th><th>${t('system.col.status')}</th><th>${t('user.col.create_time')}</th><th>${t('system.col.action')}</th></tr></thead>
             <tbody>${rows.map(r => `
-                <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${r.xuser_dept||'-'}</td>
-                    <td>${r.xuser_type||t('user.type.staff')}</td>
+                <tr><td>${r.xuser_id}</td><td>${r.xuser_name||'-'}</td><td>${tDept(r.xuser_dept)||'-'}</td>
+                    <td>${usrTypeLabel(r.xuser_type)||t('user.type.staff')}</td>
                     <td>${r.admin==='Yes'
                         ? '<span style="color:#2980b9;font-weight:600">👑 '+t('user.admin.manager')+'</span>'
                         : r.admin==='Operator'

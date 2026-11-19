@@ -2,17 +2,19 @@
  * 财务入账 / 报税 / 勾稽对账
  * 对应 docs/财务核心业务流程图.md
  */
+const FIN_L = (zh, tw, en) => ({ 'zh-CN': zh, 'zh-TW': tw, en }[I18N.lang] ?? zh);
+
 registerPage('finance', async (c) => {
     const _bu = await CodeHelper.buSel();
     Finance._bu = _bu;
     c.innerHTML = `
         <div class="card" style="padding:16px;">
             <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:2px solid #eee;">
-                <button class="tab-btn active" data-tab="voucher" onclick="Finance.switchTab('voucher')">📒 会计入账</button>
-                <button class="tab-btn" data-tab="tax" onclick="Finance.switchTab('tax')">🧾 报税申报</button>
-                <button class="tab-btn" data-tab="recon" onclick="Finance.switchTab('recon')">🔗 勾稽对账</button>
+                <button class="tab-btn active" data-tab="voucher" onclick="Finance.switchTab('voucher')">📒 ${FIN_L('会计入账', '會計入帳', 'Accounting Entries')}</button>
+                <button class="tab-btn" data-tab="tax" onclick="Finance.switchTab('tax')">🧾 ${FIN_L('报税申报', '報稅申報', 'Tax Filing')}</button>
+                <button class="tab-btn" data-tab="recon" onclick="Finance.switchTab('recon')">🔗 ${FIN_L('勾稽对账', '勾稽對帳', 'Reconciliation')}</button>
             </div>
-            <div id="financeBody">载入中…</div>
+            <div id="financeBody">${FIN_L('载入中…', '載入中…', 'Loading…')}</div>
         </div>
     `;
     Finance.tab = 'voucher';
@@ -41,14 +43,14 @@ window.Finance = {
     async renderVouchers(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="fvBU">${this._bu||''}</select></label>
-                <label>期间：<input type="month" id="fvYM"></label>
-                <label>状态：<select id="fvStatus"><option value="">全部</option>
+                <label>${FIN_L('BU：', 'BU：', 'BU: ')}<select id="fvBU">${this._bu||''}</select></label>
+                <label>${FIN_L('期间：', '期間：', 'Period: ')}<input type="month" id="fvYM"></label>
+                <label>${FIN_L('状态：', '狀態：', 'Status: ')}<select id="fvStatus"><option value="">${FIN_L('全部', '全部', 'All')}</option>
                     <option>DRAFT</option><option>SUBMITTED</option><option>APPROVED</option><option>REJECTED</option><option>POSTED</option></select></label>
-                <button class="btn btn-primary" onclick="Finance.openVoucherForm()">➕ 新增凭证</button>
+                <button class="btn btn-primary" onclick="Finance.openVoucherForm()">➕ ${FIN_L('新增凭证', '新增憑證', 'New Voucher')}</button>
                 <button class="btn btn-success" onclick="Finance.renderVouchers(document.getElementById('financeBody'))">🔄</button>
             </div>
-            <div id="fvList">载入中…</div>
+            <div id="fvList">${FIN_L('载入中…', '載入中…', 'Loading…')}</div>
         `;
         document.getElementById('fvBU').value = State.bu_no;
         const ym = State.YYYY_MM || new Date().toISOString().slice(0, 7);
@@ -65,10 +67,10 @@ window.Finance = {
         try {
             const res = await API.get(`/api/finance/vouchers?bu_no=${bu}&YYYY_MM=${ym}&status=${st}`);
             const rows = res.data || [];
-            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">📒 尚无凭证</p>`; return; }
+            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">📒 ${FIN_L('尚无凭证', '尚無憑證', 'No vouchers yet')}</p>`; return; }
             const statusBadge = s => ({DRAFT:'#95a5a6',SUBMITTED:'#f39c12',APPROVED:'#3498db',REJECTED:'#e74c3c',POSTED:'#27ae60'}[s]||'#999');
             el.innerHTML = `<table class="data-table">
-                <thead><tr><th>凭证号</th><th>RUID</th><th>日期</th><th>摘要</th><th>借方</th><th>贷方</th><th>状态</th><th>操作</th></tr></thead>
+                <thead><tr><th>${FIN_L('凭证号', '憑證號', 'Voucher No.')}</th><th>RUID</th><th>${FIN_L('日期', '日期', 'Date')}</th><th>${FIN_L('摘要', '摘要', 'Summary')}</th><th>${FIN_L('借方', '借方', 'Debit')}</th><th>${FIN_L('贷方', '貸方', 'Credit')}</th><th>${FIN_L('状态', '狀態', 'Status')}</th><th>${FIN_L('操作', '操作', 'Actions')}</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
                     <td>${esc(r.voucher_no)}</td>
                     <td style="font-size:12px;color:#888;">${esc(r.ruid)}</td>
@@ -83,15 +85,15 @@ window.Finance = {
     },
 
     voucherActions(r) {
-        const btns = [`<button class="btn btn-sm btn-outline" onclick="Finance.viewVoucher(${r.voucher_id})">检视</button>`];
+        const btns = [`<button class="btn btn-sm btn-outline" onclick="Finance.viewVoucher(${r.voucher_id})">${FIN_L('检视', '檢視', 'View')}</button>`];
         if (r.status === 'DRAFT' || r.status === 'REJECTED')
-            btns.push(`<button class="btn btn-sm btn-primary" onclick="Finance.actVoucher(${r.voucher_id},'submit')">提交</button>`);
+            btns.push(`<button class="btn btn-sm btn-primary" onclick="Finance.actVoucher(${r.voucher_id},'submit')">${FIN_L('提交', '提交', 'Submit')}</button>`);
         if (r.status === 'SUBMITTED') {
-            btns.push(`<button class="btn btn-sm btn-success" onclick="Finance.actVoucher(${r.voucher_id},'approve')">通过</button>`);
-            btns.push(`<button class="btn btn-sm btn-outline" onclick="Finance.rejectVoucher(${r.voucher_id})">驳回</button>`);
+            btns.push(`<button class="btn btn-sm btn-success" onclick="Finance.actVoucher(${r.voucher_id},'approve')">${FIN_L('通过', '通過', 'Approve')}</button>`);
+            btns.push(`<button class="btn btn-sm btn-outline" onclick="Finance.rejectVoucher(${r.voucher_id})">${FIN_L('驳回', '駁回', 'Reject')}</button>`);
         }
         if (r.status === 'APPROVED')
-            btns.push(`<button class="btn btn-sm btn-success" onclick="Finance.actVoucher(${r.voucher_id},'post')">过帐</button>`);
+            btns.push(`<button class="btn btn-sm btn-success" onclick="Finance.actVoucher(${r.voucher_id},'post')">${FIN_L('过帐', '過帳', 'Post')}</button>`);
         return btns.join(' ');
     },
 
@@ -99,15 +101,15 @@ window.Finance = {
         try {
             const r = (await API.get(`/api/finance/vouchers/${id}`)).data;
             const entries = r.entries || [];
-            UI.modal(`凭证 ${r.voucher_no}`,
+            UI.modal(`${FIN_L('凭证', '憑證', 'Voucher')} ${r.voucher_no}`,
                 `<div style="min-width:820px;">
-                    <div style="margin-bottom:8px;"><b>RUID：</b>${esc(r.ruid)} ｜ <b>期间：</b>${esc(r.YYYY_MM)} ｜ <b>状态：</b>${r.status}</div>
-                    <div style="margin-bottom:8px;"><b>摘要：</b>${esc(r.summary||'')}</div>
-                    <table class="data-table" style="width:100%;table-layout:auto;"><thead><tr><th style="width:30%;">科目</th><th style="width:18%;">借方</th><th style="width:18%;">贷方</th><th>摘要</th></tr></thead>
+                    <div style="margin-bottom:8px;"><b>${FIN_L('RUID：', 'RUID：', 'RUID: ')}</b>${esc(r.ruid)} ｜ <b>${FIN_L('期间：', '期間：', 'Period: ')}</b>${esc(r.YYYY_MM)} ｜ <b>${FIN_L('状态：', '狀態：', 'Status: ')}</b>${r.status}</div>
+                    <div style="margin-bottom:8px;"><b>${FIN_L('摘要：', '摘要：', 'Summary: ')}</b>${esc(r.summary||'')}</div>
+                    <table class="data-table" style="width:100%;table-layout:auto;"><thead><tr><th style="width:30%;">${FIN_L('科目', '科目', 'Subject')}</th><th style="width:18%;">${FIN_L('借方', '借方', 'Debit')}</th><th style="width:18%;">${FIN_L('贷方', '貸方', 'Credit')}</th><th>${FIN_L('摘要', '摘要', 'Summary')}</th></tr></thead>
                     <tbody>${entries.map(e => `<tr><td>${esc(e.subject_name||e.subject_code)}</td><td style="text-align:right;">${UI.fmt(e.debit,2)}</td><td style="text-align:right;">${UI.fmt(e.credit,2)}</td><td>${esc(e.summary||'')}</td></tr>`).join('')}</tbody></table>
-                    <div style="margin-top:8px;text-align:right;font-weight:600;">合计：借 ${UI.fmt(r.total_debit,2)} / 贷 ${UI.fmt(r.total_credit,2)}</div>
+                    <div style="margin-top:8px;text-align:right;font-weight:600;">${FIN_L('合计：借', '合計：借', 'Total: Dr')} ${UI.fmt(r.total_debit,2)} / ${FIN_L('贷', '貸', 'Cr')} ${UI.fmt(r.total_credit,2)}</div>
                 </div>`,
-                `<button class="btn btn-outline" onclick="UI.closeModal()">关闭</button>`);
+                `<button class="btn btn-outline" onclick="UI.closeModal()">${FIN_L('关闭', '關閉', 'Close')}</button>`);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
@@ -124,37 +126,37 @@ window.Finance = {
     renderVoucherForm() {
         const d = this._vDraft;
         const opts = this.subjects.map(s => `<option value="${s.subject_code}">${s.subject_code} ${s.subject_name}</option>`).join('');
-        UI.modal('新增会计凭证',
+        UI.modal(FIN_L('新增会计凭证', '新增會計憑證', 'New Accounting Voucher'),
             `<div style="min-width:680px;">
                 <div style="display:grid;grid-template-columns:1fr 1fr 2fr;gap:10px;margin-bottom:10px;">
                     <div><label style="font-size:12px;">BU</label><input id="vf_bu" class="form-control" value="${d.bu_no}" readonly></div>
-                    <div><label style="font-size:12px;">日期</label><input id="vf_date" type="date" class="form-control" value="${d.voucher_date}"></div>
-                    <div><label style="font-size:12px;">摘要</label><input id="vf_summary" class="form-control" value="${esc(d.summary)}" placeholder="业务摘要"></div>
+                    <div><label style="font-size:12px;">${FIN_L('日期', '日期', 'Date')}</label><input id="vf_date" type="date" class="form-control" value="${d.voucher_date}"></div>
+                    <div><label style="font-size:12px;">${FIN_L('摘要', '摘要', 'Summary')}</label><input id="vf_summary" class="form-control" value="${esc(d.summary)}" placeholder="${FIN_L('业务摘要', '業務摘要', 'Business summary')}"></div>
                 </div>
                 <table class="data-table" id="vfEntries">
-                    <thead><tr><th>科目</th><th>借方</th><th>贷方</th><th>摘要</th><th></th></tr></thead>
+                    <thead><tr><th>${FIN_L('科目', '科目', 'Subject')}</th><th>${FIN_L('借方', '借方', 'Debit')}</th><th>${FIN_L('贷方', '貸方', 'Credit')}</th><th>${FIN_L('摘要', '摘要', 'Summary')}</th><th></th></tr></thead>
                     <tbody>${d.entries.map((e, i) => `<tr>
                         <td><select class="form-control" onchange="Finance.setEntry(${i},'subject_code',this.value)">
-                            <option value="">请选择</option>${opts.replace(`value="${e.subject_code}"`,`value="${e.subject_code}" selected`)}</select></td>
+                            <option value="">${FIN_L('请选择', '請選擇', 'Select')}</option>${opts.replace(`value="${e.subject_code}"`,`value="${e.subject_code}" selected`)}</select></td>
                         <td><input type="number" step="0.01" class="form-control" value="${e.debit||''}" onchange="Finance.setEntry(${i},'debit',this.value)"></td>
                         <td><input type="number" step="0.01" class="form-control" value="${e.credit||''}" onchange="Finance.setEntry(${i},'credit',this.value)"></td>
                         <td><input class="form-control" value="${esc(e.summary||'')}" onchange="Finance.setEntry(${i},'summary',this.value)"></td>
-                        <td><button class="btn btn-sm btn-outline" onclick="Finance.delEntry(${i})">删</button></td>
+                        <td><button class="btn btn-sm btn-outline" onclick="Finance.delEntry(${i})">${FIN_L('删', '刪', 'Del')}</button></td>
                     </tr>`).join('')}</tbody>
                 </table>
                 <div style="margin-top:8px;display:flex;gap:10px;">
-                    <button class="btn btn-outline" onclick="Finance.addEntry()">➕ 增列</button>
-                    <span style="margin-left:auto;font-weight:600;">借贷差额：<span id="vfDiff" style="color:#e74c3c;">0.00</span></span>
+                    <button class="btn btn-outline" onclick="Finance.addEntry()">➕ ${FIN_L('增列', '增列', 'Add Row')}</button>
+                    <span style="margin-left:auto;font-weight:600;">${FIN_L('借贷差额：', '借貸差額：', 'Dr-Cr Difference: ')}<span id="vfDiff" style="color:#e74c3c;">0.00</span></span>
                 </div>
             </div>`,
-            `<button class="btn btn-outline" onclick="UI.closeModal()">取消</button>
-             <button class="btn btn-primary" onclick="Finance.saveVoucher()">储存草稿</button>`);
+            `<button class="btn btn-outline" onclick="UI.closeModal()">${FIN_L('取消', '取消', 'Cancel')}</button>
+             <button class="btn btn-primary" onclick="Finance.saveVoucher()">${FIN_L('储存草稿', '儲存草稿', 'Save Draft')}</button>`);
         this.calcDiff();
     },
 
     setEntry(i, k, v) { this._vDraft.entries[i][k] = k === 'summary' ? v : (k === 'subject_code' ? v : Number(v)); this.calcDiff(); },
     addEntry() { this._vDraft.entries.push({ subject_code: '', debit: 0, credit: 0, summary: '' }); this.renderVoucherForm(); },
-    delEntry(i) { if (this._vDraft.entries.length <= 2) { UI.toast('至少保留 2 条分录', 'error'); return; } this._vDraft.entries.splice(i, 1); this.renderVoucherForm(); },
+    delEntry(i) { if (this._vDraft.entries.length <= 2) { UI.toast(FIN_L('至少保留 2 条分录', '至少保留 2 條分錄', 'At least 2 entries required'), 'error'); return; } this._vDraft.entries.splice(i, 1); this.renderVoucherForm(); },
 
     calcDiff() {
         const d = this._vDraft.entries;
@@ -171,14 +173,14 @@ window.Finance = {
         d.summary = document.getElementById('vf_summary').value;
         d.YYYY_MM = d.voucher_date.slice(0, 7);
         const valid = d.entries.filter(e => e.subject_code && (Number(e.debit) || Number(e.credit)));
-        if (valid.length < 2) { UI.toast('至少 2 条有效分录', 'error'); return; }
+        if (valid.length < 2) { UI.toast(FIN_L('至少 2 条有效分录', '至少 2 條有效分錄', 'At least 2 valid entries required'), 'error'); return; }
         d.entries = valid;
         const td = d.entries.reduce((s, e) => s + Number(e.debit || 0), 0);
         const tc = d.entries.reduce((s, e) => s + Number(e.credit || 0), 0);
-        if (Math.abs(td - tc) > 0.01) { UI.toast(`借贷不平衡：差 ${(td-tc).toFixed(2)}`, 'error'); return; }
+        if (Math.abs(td - tc) > 0.01) { UI.toast(`${FIN_L('借贷不平衡：差', '借貸不平衡：差', 'Debit/Credit unbalanced, diff: ')} ${(td-tc).toFixed(2)}`, 'error'); return; }
         try {
             await API.post('/api/finance/vouchers', d);
-            UI.toast('凭证已建立', 'success');
+            UI.toast(FIN_L('凭证已建立', '憑證已建立', 'Voucher created'), 'success');
             UI.closeModal();
             this.loadVouchers();
         } catch (e) { UI.toast(e.message, 'error'); }
@@ -187,17 +189,17 @@ window.Finance = {
     async actVoucher(id, act) {
         try {
             await API.post(`/api/finance/vouchers/${id}/${act}`);
-            UI.toast('操作成功', 'success');
+            UI.toast(FIN_L('操作成功', '操作成功', 'Success'), 'success');
             this.loadVouchers();
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     async rejectVoucher(id) {
-        const reason = prompt('驳回原因：');
+        const reason = prompt(FIN_L('驳回原因：', '駁回原因：', 'Rejection reason: '));
         if (reason == null) return;
         try {
             await API.post(`/api/finance/vouchers/${id}/reject`, { reason });
-            UI.toast('已驳回', 'success');
+            UI.toast(FIN_L('已驳回', '已駁回', 'Rejected'), 'success');
             this.loadVouchers();
         } catch (e) { UI.toast(e.message, 'error'); }
     },
@@ -206,15 +208,15 @@ window.Finance = {
     async renderTax(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="ftBU">${this._bu||''}</select></label>
-                <label>期间：<input type="month" id="ftYM"></label>
-                <label>税种：<select id="ftType"><option value="">全部</option>
-                    <option value="VAT">增值税</option><option value="IT">企业所得税</option><option value="ST">印花税</option></select></label>
-                <button class="btn btn-primary" onclick="Finance.openTaxForm()">➕ 新增申报</button>
-                <button class="btn btn-warning" onclick="Finance.genTaxDetail()">📊 生成报税明细表</button>
+                <label>${FIN_L('BU：', 'BU：', 'BU: ')}<select id="ftBU">${this._bu||''}</select></label>
+                <label>${FIN_L('期间：', '期間：', 'Period: ')}<input type="month" id="ftYM"></label>
+                <label>${FIN_L('税种：', '稅種：', 'Tax Type: ')}<select id="ftType"><option value="">${FIN_L('全部', '全部', 'All')}</option>
+                    <option value="VAT">${FIN_L('增值税', '增值稅', 'VAT')}</option><option value="IT">${FIN_L('企业所得税', '企業所得稅', 'CIT')}</option><option value="ST">${FIN_L('印花税', '印花稅', 'Stamp Duty')}</option></select></label>
+                <button class="btn btn-primary" onclick="Finance.openTaxForm()">➕ ${FIN_L('新增申报', '新增申報', 'New Filing')}</button>
+                <button class="btn btn-warning" onclick="Finance.genTaxDetail()">📊 ${FIN_L('生成报税明细表', '生成報稅明細表', 'Generate Tax Detail')}</button>
                 <button class="btn btn-success" onclick="Finance.renderTax(document.getElementById('financeBody'))">🔄</button>
             </div>
-            <div id="ftList">载入中…</div>
+            <div id="ftList">${FIN_L('载入中…', '載入中…', 'Loading…')}</div>
         `;
         document.getElementById('ftBU').value = State.bu_no;
         document.getElementById('ftYM').value = State.YYYY_MM || new Date().toISOString().slice(0, 7);
@@ -230,11 +232,11 @@ window.Finance = {
         try {
             const res = await API.get(`/api/finance/tax-returns?bu_no=${bu}&tax_period=${ym}&tax_type=${tp}`);
             const rows = res.data || [];
-            const nameMap = { VAT: '增值税', IT: '企业所得税', ST: '印花税' };
+            const nameMap = { VAT: FIN_L('增值税', '增值稅', 'VAT'), IT: FIN_L('企业所得税', '企業所得稅', 'CIT'), ST: FIN_L('印花税', '印花稅', 'Stamp Duty') };
             const badge = s => ({DRAFT:'#95a5a6',CALCULATED:'#3498db',APPROVED:'#f39c12',FILED:'#27ae60',REJECTED:'#e74c3c'}[s]||'#999');
-            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">🧾 尚无申报表</p>`; return; }
+            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">🧾 ${FIN_L('尚无申报表', '尚無申報表', 'No tax returns yet')}</p>`; return; }
             el.innerHTML = `<table class="data-table">
-                <thead><tr><th>税种</th><th>期间</th><th>RUID</th><th>应税金额</th><th>税额</th><th>状态</th><th>回执号</th><th>操作</th></tr></thead>
+                <thead><tr><th>${FIN_L('税种', '稅種', 'Tax Type')}</th><th>${FIN_L('期间', '期間', 'Period')}</th><th>RUID</th><th>${FIN_L('应税金额', '應稅金額', 'Taxable Amount')}</th><th>${FIN_L('税额', '稅額', 'Tax')}</th><th>${FIN_L('状态', '狀態', 'Status')}</th><th>${FIN_L('回执号', '回執號', 'Receipt No.')}</th><th>${FIN_L('操作', '操作', 'Actions')}</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
                     <td>${nameMap[r.tax_type]||r.tax_type}</td>
                     <td>${r.tax_period}</td>
@@ -249,55 +251,55 @@ window.Finance = {
     },
 
     taxActions(r) {
-        const b = [`<button class="btn btn-sm btn-outline" onclick="Finance.viewTax(${r.return_id})">检视</button>`];
-        if (r.status === 'CALCULATED') b.push(`<button class="btn btn-sm btn-success" onclick="Finance.actTax(${r.return_id},'approve')">审核</button>`);
-        if (r.status === 'APPROVED') b.push(`<button class="btn btn-sm btn-primary" onclick="Finance.actTax(${r.return_id},'file')">申报</button>`);
+        const b = [`<button class="btn btn-sm btn-outline" onclick="Finance.viewTax(${r.return_id})">${FIN_L('检视', '檢視', 'View')}</button>`];
+        if (r.status === 'CALCULATED') b.push(`<button class="btn btn-sm btn-success" onclick="Finance.actTax(${r.return_id},'approve')">${FIN_L('审核', '審核', 'Approve')}</button>`);
+        if (r.status === 'APPROVED') b.push(`<button class="btn btn-sm btn-primary" onclick="Finance.actTax(${r.return_id},'file')">${FIN_L('申报', '申報', 'File')}</button>`);
         return b.join(' ');
     },
 
     async viewTax(id) {
         try {
             const r = (await API.get(`/api/finance/tax-returns/${id}`)).data;
-            UI.modal(`申报表 ${r.tax_name} ${r.tax_period}`,
+            UI.modal(`${FIN_L('申报表', '申報表', 'Tax Return')} ${r.tax_name} ${r.tax_period}`,
                 `<div style="min-width:500px;">
-                    <div style="margin-bottom:6px;"><b>RUID：</b>${esc(r.ruid)}</div>
-                    <div style="margin-bottom:6px;"><b>税种：</b>${r.tax_name} ｜ <b>期间：</b>${r.tax_period} ｜ <b>状态：</b>${r.status}</div>
-                    <table class="data-table"><thead><tr><th>项目</th><th>应税金额</th><th>税率</th><th>税额</th></tr></thead>
+                    <div style="margin-bottom:6px;"><b>${FIN_L('RUID：', 'RUID：', 'RUID: ')}</b>${esc(r.ruid)}</div>
+                    <div style="margin-bottom:6px;"><b>${FIN_L('税种：', '稅種：', 'Tax Type: ')}</b>${r.tax_name} ｜ <b>${FIN_L('期间：', '期間：', 'Period: ')}</b>${r.tax_period} ｜ <b>${FIN_L('状态：', '狀態：', 'Status: ')}</b>${r.status}</div>
+                    <table class="data-table"><thead><tr><th>${FIN_L('项目', '項目', 'Item')}</th><th>${FIN_L('应税金额', '應稅金額', 'Taxable Amount')}</th><th>${FIN_L('税率', '稅率', 'Tax Rate')}</th><th>${FIN_L('税额', '稅額', 'Tax')}</th></tr></thead>
                     <tbody>${(r.items||[]).map(i => `<tr><td>${esc(i.item_name||'')}</td><td style="text-align:right;">${UI.fmt(i.taxable_amount,2)}</td><td style="text-align:right;">${(Number(i.tax_rate)*100).toFixed(2)}%</td><td style="text-align:right;">${UI.fmt(i.tax_amount,2)}</td></tr>`).join('')}</tbody></table>
-                    <div style="margin-top:8px;text-align:right;font-weight:600;">合计税额：${UI.fmt(r.tax_amount,2)}</div>
-                    ${r.receipt_no ? `<div style="margin-top:6px;color:#27ae60;">✅ 税务回执：${esc(r.receipt_no)}</div>` : ''}
+                    <div style="margin-top:8px;text-align:right;font-weight:600;">${FIN_L('合计税额：', '合計稅額：', 'Total tax: ')}${UI.fmt(r.tax_amount,2)}</div>
+                    ${r.receipt_no ? `<div style="margin-top:6px;color:#27ae60;">✅ ${FIN_L('税务回执：', '稅務回執：', 'Tax receipt: ')}${esc(r.receipt_no)}</div>` : ''}
                 </div>`,
-                `<button class="btn btn-outline" onclick="UI.closeModal()">关闭</button>`);
+                `<button class="btn btn-outline" onclick="UI.closeModal()">${FIN_L('关闭', '關閉', 'Close')}</button>`);
         } catch (e) { UI.toast(e.message, 'error'); }
     },
 
     openTaxForm() {
         const bu = document.getElementById('ftBU')?.value || State.bu_no;
         const ym = document.getElementById('ftYM')?.value || State.YYYY_MM;
-        UI.modal('新增纳税申报',
+        UI.modal(FIN_L('新增纳税申报', '新增納稅申報', 'New Tax Filing'),
             `<div style="min-width:400px;">
                 <div style="margin-bottom:10px;"><label style="font-size:12px;">BU</label><input id="tf_bu" class="form-control" value="${bu}" readonly></div>
-                <div style="margin-bottom:10px;"><label style="font-size:12px;">期间</label><input id="tf_period" class="form-control" value="${ym}" readonly></div>
-                <div style="margin-bottom:10px;"><label style="font-size:12px;">税种</label>
+                <div style="margin-bottom:10px;"><label style="font-size:12px;">${FIN_L('期间', '期間', 'Period')}</label><input id="tf_period" class="form-control" value="${ym}" readonly></div>
+                <div style="margin-bottom:10px;"><label style="font-size:12px;">${FIN_L('税种', '稅種', 'Tax Type')}</label>
                     <select id="tf_type" class="form-control" onchange="Finance.showTaxHint()">
-                        <option value="VAT">增值税（13%）</option>
-                        <option value="IT">企业所得税（25%）</option>
-                        <option value="ST">印花税（0.03%）</option>
+                        <option value="VAT">${FIN_L('增值税（13%）', '增值稅（13%）', 'VAT (13%)')}</option>
+                        <option value="IT">${FIN_L('企业所得税（25%）', '企業所得稅（25%）', 'CIT (25%)')}</option>
+                        <option value="ST">${FIN_L('印花税（0.03%）', '印花稅（0.03%）', 'Stamp Duty (0.03%)')}</option>
                     </select>
                 </div>
-                <div style="margin-bottom:10px;"><label style="font-size:12px;">应税金额</label><input id="tf_amt" type="number" step="0.01" class="form-control" placeholder="请输入应税金额"></div>
-                <div id="tf_preview" style="background:#f8f9fa;padding:10px;border-radius:6px;font-size:13px;">预览税额：—</div>
-                <div style="margin-top:6px;font-size:12px;color:#888;">系统将自动产生 RUID 并关联该期间已过帐的入账记录。</div>
+                <div style="margin-bottom:10px;"><label style="font-size:12px;">${FIN_L('应税金额', '應稅金額', 'Taxable Amount')}</label><input id="tf_amt" type="number" step="0.01" class="form-control" placeholder="${FIN_L('请输入应税金额', '請輸入應稅金額', 'Enter taxable amount')}"></div>
+                <div id="tf_preview" style="background:#f8f9fa;padding:10px;border-radius:6px;font-size:13px;">${FIN_L('预览税额：—', '預覽稅額：—', 'Tax preview: —')}</div>
+                <div style="margin-top:6px;font-size:12px;color:#888;">${FIN_L('系统将自动产生 RUID 并关联该期间已过帐的入账记录。', '系統將自動產生 RUID 並關聯該期間已過帳的入帳記錄。', 'An RUID will be generated automatically and linked to posted vouchers of this period.')}</div>
             </div>`,
-            `<button class="btn btn-outline" onclick="UI.closeModal()">取消</button>
-             <button class="btn btn-primary" onclick="Finance.saveTax()">建立申报</button>`);
+            `<button class="btn btn-outline" onclick="UI.closeModal()">${FIN_L('取消', '取消', 'Cancel')}</button>
+             <button class="btn btn-primary" onclick="Finance.saveTax()">${FIN_L('建立申报', '建立申報', 'Create Filing')}</button>`);
         document.getElementById('tf_amt').oninput = () => this.showTaxHint();
     },
 
     showTaxHint() {
         const rate = { VAT: 0.13, IT: 0.25, ST: 0.0003 }[document.getElementById('tf_type').value];
         const amt = Number(document.getElementById('tf_amt').value || 0);
-        document.getElementById('tf_preview').textContent = `预览税额：${amt} × ${(rate*100).toFixed(2)}% = ${(amt*rate).toFixed(2)}`;
+        document.getElementById('tf_preview').textContent = `${FIN_L('预览税额：', '預覽稅額：', 'Tax preview: ')}${amt} × ${(rate*100).toFixed(2)}% = ${(amt*rate).toFixed(2)}`;
     },
 
     async saveTax() {
@@ -305,10 +307,10 @@ window.Finance = {
         const period = document.getElementById('tf_period').value;
         const tax_type = document.getElementById('tf_type').value;
         const amt = Number(document.getElementById('tf_amt').value);
-        if (!amt || amt <= 0) { UI.toast('请输入应税金额', 'error'); return; }
+        if (!amt || amt <= 0) { UI.toast(FIN_L('请输入应税金额', '請輸入應稅金額', 'Enter taxable amount'), 'error'); return; }
         try {
             const r = (await API.post('/api/finance/tax-returns', { bu_no: bu, tax_period: period, tax_type, items: [{ taxable_amount: amt }] })).data;
-            UI.toast(`申报表已建立，税额 ${UI.fmt(r.tax_amount,2)}，关联 ${r.linked_vouchers} 笔入账`, 'success');
+            UI.toast(`${FIN_L('申报表已建立，税额', '申報表已建立，稅額', 'Tax return created, tax ')} ${UI.fmt(r.tax_amount,2)}${FIN_L('，关联', '，關聯', ', linked to ')} ${r.linked_vouchers} ${FIN_L('笔入账', '筆入帳', 'entries')}`, 'success');
             UI.closeModal();
             this.loadTax();
         } catch (e) { UI.toast(e.message, 'error'); }
@@ -317,7 +319,7 @@ window.Finance = {
     async actTax(id, act) {
         try {
             const r = (await API.post(`/api/finance/tax-returns/${id}/${act}`)).data;
-            UI.toast(act === 'file' ? `申报成功，回执：${r.receipt_no}` : '审核通过', 'success');
+            UI.toast(act === 'file' ? `${FIN_L('申报成功，回执：', '申報成功，回執：', 'Filed successfully, receipt: ')}${r.receipt_no}` : FIN_L('审核通过', '審核通過', 'Approved'), 'success');
             this.loadTax();
         } catch (e) { UI.toast(e.message, 'error'); }
     },
@@ -328,7 +330,7 @@ window.Finance = {
         const ym = document.getElementById('ftYM').value;
         const year = (ym || new Date().toISOString().slice(0, 7)).slice(0, 4);
         try {
-            UI.modal('📊 报税明细表', '<div style="text-align:center;padding:30px;color:#888;">生成中…</div>', '');
+            UI.modal(`📊 ${FIN_L('报税明细表', '報稅明細表', 'Tax Filing Detail')}`, `<div style="text-align:center;padding:30px;color:#888;">${FIN_L('生成中…', '生成中…', 'Generating…')}</div>`, '');
             const res = (await API.get(`/api/finance/tax-detail?bu_no=${bu}&year=${year}`)).data;
             this._taxDetail = res;
             this.renderTaxDetail();
@@ -341,9 +343,9 @@ window.Finance = {
         const byType = d.summary.by_type || {};
         const typeCards = Object.values(byType).map(t => `
             <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">
-                <div style="font-size:12px;color:#64748b;">${esc(t.tax_name)}（${t.count} 笔）</div>
+                <div style="font-size:12px;color:#64748b;">${esc(t.tax_name)}${FIN_L('（', '（', ' (')}${t.count}${FIN_L(' 笔）', ' 筆）', ' items)')}</div>
                 <div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-top:2px;">${UI.fmt(t.tax,2)}</div>
-                <div style="font-size:11px;color:#94a3b8;">应税 ${UI.fmt(t.taxable,2)}</div>
+                <div style="font-size:11px;color:#94a3b8;">${FIN_L('应税', '應稅', 'Taxable')} ${UI.fmt(t.taxable,2)}</div>
             </div>`).join('');
         const badge = s => ({DRAFT:'#95a5a6',CALCULATED:'#3498db',APPROVED:'#f39c12',FILED:'#27ae60',REJECTED:'#e74c3c'}[s]||'#999');
         const rowsHtml = d.details.length
@@ -358,45 +360,45 @@ window.Finance = {
                 <td><span style="background:${badge(x.status)};color:#fff;padding:1px 7px;border-radius:10px;font-size:10px;">${x.status}</span></td>
                 <td style="font-size:11px;">${esc(x.receipt_no||'—')}</td>
             </tr>`).join('')
-            : `<tr><td colspan="9" style="text-align:center;color:#95a5a6;padding:20px;">该年度尚无报税资料</td></tr>`;
+            : `<tr><td colspan="9" style="text-align:center;color:#95a5a6;padding:20px;">${FIN_L('该年度尚无报税资料', '該年度尚無報稅資料', 'No tax filing data for this year')}</td></tr>`;
 
-        UI.modal(`📊 ${d.bu_no} ${d.year} 年度报税明细表`,
+        UI.modal(`📊 ${d.bu_no} ${d.year} ${FIN_L('年度报税明细表', '年度報稅明細表', 'Annual Tax Filing Detail')}`,
             `<div style="min-width:880px;">
                 <div style="display:flex;gap:10px;margin-bottom:12px;">
-                    ${typeCards || '<div style="color:#95a5a6;">无资料</div>'}
+                    ${typeCards || `<div style="color:#95a5a6;">${FIN_L('无资料', '無資料', 'No data')}</div>`}
                     <div style="flex:1;background:#1e3a5f;color:#fff;border-radius:8px;padding:10px 12px;">
-                        <div style="font-size:12px;opacity:.8;">全年税额合计（${d.return_count} 笔）</div>
+                        <div style="font-size:12px;opacity:.8;">${FIN_L('全年税额合计（', '全年稅額合計（', 'Annual tax total (')}${d.return_count}${FIN_L(' 笔）', ' 筆）', ' items)')}</div>
                         <div style="font-size:18px;font-weight:700;margin-top:2px;">${UI.fmt(d.summary.total_tax,2)}</div>
-                        <div style="font-size:11px;opacity:.7;">应税合计 ${UI.fmt(d.summary.total_taxable,2)}</div>
+                        <div style="font-size:11px;opacity:.7;">${FIN_L('应税合计', '應稅合計', 'Taxable total')} ${UI.fmt(d.summary.total_taxable,2)}</div>
                     </div>
                 </div>
                 <div style="max-height:46vh;overflow:auto;border:1px solid #e2e8f0;border-radius:6px;">
                     <table class="data-table" style="width:100%;">
                         <thead style="position:sticky;top:0;z-index:1;"><tr>
-                            <th>期间</th><th>税种</th><th>项目</th><th>RUID</th><th style="text-align:right;">应税金额</th>
-                            <th style="text-align:right;">税率</th><th style="text-align:right;">税额</th><th>状态</th><th>回执号</th>
+                            <th>${FIN_L('期间', '期間', 'Period')}</th><th>${FIN_L('税种', '稅種', 'Tax Type')}</th><th>${FIN_L('项目', '項目', 'Item')}</th><th>RUID</th><th style="text-align:right;">${FIN_L('应税金额', '應稅金額', 'Taxable Amount')}</th>
+                            <th style="text-align:right;">${FIN_L('税率', '稅率', 'Tax Rate')}</th><th style="text-align:right;">${FIN_L('税额', '稅額', 'Tax')}</th><th>${FIN_L('状态', '狀態', 'Status')}</th><th>${FIN_L('回执号', '回執號', 'Receipt No.')}</th>
                         </tr></thead>
                         <tbody>${rowsHtml}</tbody>
                     </table>
                 </div>
-                <div style="margin-top:6px;font-size:11px;color:#94a3b8;">生成时间：${d.generated_at.replace('T',' ').slice(0,19)}</div>
+                <div style="margin-top:6px;font-size:11px;color:#94a3b8;">${FIN_L('生成时间：', '生成時間：', 'Generated at: ')}${d.generated_at.replace('T',' ').slice(0,19)}</div>
             </div>`,
-            `<button class="btn btn-outline" onclick="UI.closeModal()">关闭</button>
-             <button class="btn btn-success" onclick="Finance.exportTaxDetailCsv()">📥 导出 CSV（Excel）</button>`);
+            `<button class="btn btn-outline" onclick="UI.closeModal()">${FIN_L('关闭', '關閉', 'Close')}</button>
+             <button class="btn btn-success" onclick="Finance.exportTaxDetailCsv()">📥 ${FIN_L('导出 CSV（Excel）', '匯出 CSV（Excel）', 'Export CSV (Excel)')}</button>`);
     },
 
     exportTaxDetailCsv() {
         const d = this._taxDetail;
-        if (!d || !d.details.length) { UI.toast('无资料可导出', 'error'); return; }
+        if (!d || !d.details.length) { UI.toast(FIN_L('无资料可导出', '無資料可匯出', 'No data to export'), 'error'); return; }
         const escCsv = v => {
             const s = String(v ?? '');
             return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
         };
         const lines = [
-            [`${d.bu_no} ${d.year} 年度报税明细表`],
-            ['生成时间', d.generated_at.replace('T',' ').slice(0,19)],
+            [`${d.bu_no} ${d.year} ${FIN_L('年度报税明细表', '年度報稅明細表', 'Annual Tax Filing Detail')}`],
+            [FIN_L('生成时间', '生成時間', 'Generated at'), d.generated_at.replace('T',' ').slice(0,19)],
             [],
-            ['期间','税种','项目','RUID','应税金额','税率','税额','状态','回执号'],
+            [FIN_L('期间', '期間', 'Period'), FIN_L('税种', '稅種', 'Tax Type'), FIN_L('项目', '項目', 'Item'), 'RUID', FIN_L('应税金额', '應稅金額', 'Taxable Amount'), FIN_L('税率', '稅率', 'Tax Rate'), FIN_L('税额', '稅額', 'Tax'), FIN_L('状态', '狀態', 'Status'), FIN_L('回执号', '回執號', 'Receipt No.')],
         ];
         for (const x of d.details) {
             lines.push([
@@ -407,32 +409,32 @@ window.Finance = {
         }
         lines.push([]);
         for (const t of Object.values(d.summary.by_type || {})) {
-            lines.push([`${t.tax_name} 小计（${t.count} 笔）`, '', '', '', t.taxable.toFixed(2), '', t.tax.toFixed(2)]);
+            lines.push([`${t.tax_name} ${FIN_L('小计（', '小計（', 'Subtotal (')}${t.count}${FIN_L(' 笔）', ' 筆）', ' items)')}`, '', '', '', t.taxable.toFixed(2), '', t.tax.toFixed(2)]);
         }
-        lines.push(['全年合计', '', '', '', d.summary.total_taxable.toFixed(2), '', d.summary.total_tax.toFixed(2)]);
+        lines.push([FIN_L('全年合计', '全年合計', 'Annual Total'), '', '', '', d.summary.total_taxable.toFixed(2), '', d.summary.total_tax.toFixed(2)]);
         const csv = '\uFEFF' + lines.map(r => r.map(escCsv).join(',')).join('\r\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `报税明细表_${d.bu_no}_${d.year}.csv`;
+        a.download = `${FIN_L('报税明细表', '報稅明細表', 'TaxDetail')}_${d.bu_no}_${d.year}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        UI.toast('已导出 CSV', 'success');
+        UI.toast(FIN_L('已导出 CSV', '已匯出 CSV', 'CSV exported'), 'success');
     },
 
     // ============ 勾稽对账 ============
     async renderRecon(el) {
         el.innerHTML = `
             <div class="toolbar" style="gap:8px;margin-bottom:10px;">
-                <label>BU：<select id="frBU">${this._bu||''}</select></label>
-                <label>期间：<input type="month" id="frYM"></label>
-                <button class="btn btn-warning" onclick="Finance.runRecon()">▶ 执行勾稽</button>
+                <label>${FIN_L('BU：', 'BU：', 'BU: ')}<select id="frBU">${this._bu||''}</select></label>
+                <label>${FIN_L('期间：', '期間：', 'Period: ')}<input type="month" id="frYM"></label>
+                <button class="btn btn-warning" onclick="Finance.runRecon()">▶ ${FIN_L('执行勾稽', '執行勾稽', 'Run Reconciliation')}</button>
                 <button class="btn btn-success" onclick="Finance.loadRecon()">🔄</button>
             </div>
-            <div id="frList">选择期间后点“执行勾稽”</div>
+            <div id="frList">${FIN_L('选择期间后点“执行勾稽”', '選擇期間後點「執行勾稽」', 'Select a period, then click "Run Reconciliation"')}</div>
         `;
         document.getElementById('frBU').value = State.bu_no;
         document.getElementById('frYM').value = State.YYYY_MM || new Date().toISOString().slice(0, 7);
@@ -443,7 +445,7 @@ window.Finance = {
         const period = document.getElementById('frYM').value;
         try {
             const r = (await API.post('/api/finance/reconciliation/run', { bu_no: bu, period })).data;
-            UI.toast(`勾稽完成：匹配 ${r.matched} / 金额差异 ${r.amount_diff} / 未匹配 ${r.unmatched}`, r.unmatched || r.amount_diff ? 'warning' : 'success');
+            UI.toast(`${FIN_L('勾稽完成：匹配', '勾稽完成：匹配', 'Reconciliation done: matched')} ${r.matched} / ${FIN_L('金额差异', '金額差異', 'amount diff')} ${r.amount_diff} / ${FIN_L('未匹配', '未匹配', 'unmatched')} ${r.unmatched}`, r.unmatched || r.amount_diff ? 'warning' : 'success');
             this.loadRecon();
         } catch (e) { UI.toast(e.message, 'error'); }
     },
@@ -456,9 +458,9 @@ window.Finance = {
             const res = await API.get(`/api/finance/reconciliation?bu_no=${bu}&period=${period}`);
             const rows = res.data || [];
             const badge = s => ({MATCHED:'#27ae60',AMOUNT_DIFF:'#f39c12',UNMATCHED:'#e74c3c',HANDLED:'#3498db'}[s]||'#999');
-            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">🔗 尚无勾稽记录，请先执行勾稽</p>`; return; }
+            if (!rows.length) { el.innerHTML = `<p style="color:#95a5a6;padding:30px;text-align:center;">🔗 ${FIN_L('尚无勾稽记录，请先执行勾稽', '尚無勾稽記錄，請先執行勾稽', 'No reconciliation records yet; run it first')}</p>`; return; }
             el.innerHTML = `<table class="data-table">
-                <thead><tr><th>入账 RUID</th><th>报税 RUID</th><th>入账金额</th><th>报税金额</th><th>差异</th><th>状态</th><th>操作</th></tr></thead>
+                <thead><tr><th>${FIN_L('入账 RUID', '入帳 RUID', 'Voucher RUID')}</th><th>${FIN_L('报税 RUID', '報稅 RUID', 'Tax RUID')}</th><th>${FIN_L('入账金额', '入帳金額', 'Voucher Amount')}</th><th>${FIN_L('报税金额', '報稅金額', 'Tax Amount')}</th><th>${FIN_L('差异', '差異', 'Diff')}</th><th>${FIN_L('状态', '狀態', 'Status')}</th><th>${FIN_L('操作', '操作', 'Actions')}</th></tr></thead>
                 <tbody>${rows.map(r => `<tr>
                     <td style="font-size:12px;">${esc(r.voucher_ruid||'—')}</td>
                     <td style="font-size:12px;">${esc(r.tax_ruid||'—')}</td>
@@ -466,17 +468,17 @@ window.Finance = {
                     <td style="text-align:right;">${UI.fmt(r.tax_amount,2)}</td>
                     <td style="text-align:right;color:${Math.abs(r.diff_amount)>0.01?'#e74c3c':'#27ae60'};">${UI.fmt(r.diff_amount,2)}</td>
                     <td><span style="background:${badge(r.match_status)};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;">${r.match_status}</span></td>
-                    <td>${r.match_status !== 'MATCHED' && r.match_status !== 'HANDLED' ? `<button class="btn btn-sm btn-outline" onclick="Finance.handleRecon(${r.recon_id})">处理</button>` : ''}</td>
+                    <td>${r.match_status !== 'MATCHED' && r.match_status !== 'HANDLED' ? `<button class="btn btn-sm btn-outline" onclick="Finance.handleRecon(${r.recon_id})">${FIN_L('处理', '處理', 'Handle')}</button>` : ''}</td>
                 </tr>`).join('')}</tbody></table>`;
         } catch (e) { el.innerHTML = `<p style="color:#e74c3c">${e.message}</p>`; }
     },
 
     async handleRecon(id) {
-        const remark = prompt('处理说明：');
+        const remark = prompt(FIN_L('处理说明：', '處理說明：', 'Handling note: '));
         if (remark == null) return;
         try {
             await API.post(`/api/finance/reconciliation/${id}/handle`, { remark });
-            UI.toast('已标记处理', 'success');
+            UI.toast(FIN_L('已标记处理', '已標記處理', 'Marked as handled'), 'success');
             this.loadRecon();
         } catch (e) { UI.toast(e.message, 'error'); }
     }

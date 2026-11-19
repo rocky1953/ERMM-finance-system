@@ -40,7 +40,7 @@ describe('Risk API', () => {
 
     afterAll(async () => {
         await cleanupTestData();
-        await closePool();
+        // 注意：不調 closePool() — 全域共用 pool，關了會影響其他測試套件
     });
 
     describe('POST /api/risk/calc — 風險模型計算', () => {
