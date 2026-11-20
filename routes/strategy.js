@@ -9,6 +9,7 @@
  * GET    /api/strategy/objectives/:id/progress   目标进度历史
  * POST   /api/strategy/objectives/:id/progress   录入月度实际值（同期间覆盖）
  * POST   /api/strategy/sync               从指标中心同步实际值
+ * POST   /api/strategy/alerts/scan        扫描目标偏差并生成预警（CEO-01）
  */
 const express = require('express');
 const router = express.Router();
@@ -21,6 +22,7 @@ const {
     achievementOf, statusOf, buildOverview, buildRows,
     latestYear, loadObjectives, loadLatestProgress, saveProgress, syncKpis
 } = require('../services/bsc');
+const { scanTargets } = require('../services/bscAlertScanner');
 
 const n = (v) => Number(v || 0);
 const r2 = (v) => {
@@ -378,6 +380,28 @@ router.post('/sync', perms('strategy','SYNC'), async (req, res) => {
         ok(res, r, r.synced
             ? `已从指标中心同步 ${r.synced} 个目标实际值`
             : '没有可同步的目标（需挂接指标中心 KPI 且公司有财务数据）');
+    } catch (err) { fail500(res, err); }
+});
+
+// 目标偏差预警扫描（CEO-01）
+router.post('/alerts/scan', perms('strategy','SYNC'), async (req, res) => {
+    try {
+        const year = parseYear(req.body.YYYY, await latestYear());
+        const r = await scanTargets({
+            YYYY: year,
+            threshold: req.body.threshold,
+            cooldownHours: req.body.cooldown_hours,
+            bu_no: req.body.bu_no
+        });
+        audit.log(req, {
+            module: 'strategy', action: 'CREATE', businessType: 'BSC-ALERT',
+            businessId: `scan/${year}`,
+            summary: `扫描BSC目标偏差 ${year}：扫描${r.scanned}项，新增预警${r.triggered}条，冷却抑制${r.suppressed}条`,
+            detail: { YYYY: year, threshold: r.threshold, triggered: r.triggered, suppressed: r.suppressed }
+        });
+        ok(res, r, r.triggered
+            ? `已生成 ${r.triggered} 条目标偏差预警`
+            : '未发现新的目标偏差（可能均在阈值内或处于冷却期）');
     } catch (err) { fail500(res, err); }
 });
 

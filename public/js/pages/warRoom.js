@@ -184,7 +184,41 @@ const WarRoom = {
     },
 
     renderGroup(g) {
-        return this.renderTargets(g) + this.renderRankings(g) + this.renderBenchmark(g) + this.renderEvents(g);
+        return this.renderComposite(g) + this.renderTargets(g) + this.renderRankings(g)
+            + this.renderBenchmark(g) + this.renderEvents(g);
+    },
+
+    // 目标达成看板 · BU 综合排名（CEO-04）
+    renderComposite(g) {
+        const rows = g.composite || [];
+        if (!rows.length) return '';
+        const medal = ['🥇', '🥈', '🥉'];
+        const list = rows.map(r => {
+            const color = r.score >= 100 ? '#27ae60' : (r.score >= 80 ? '#f39c12' : '#e74c3c');
+            const lagging = r.lagging
+                ? WRL(`落后 ${r.lagging} 项`, `落後 ${r.lagging} 項`, `${r.lagging} behind`)
+                : WRL('全部达标', '全部達標', 'All on track');
+            return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed #eef2f7;">
+                <span style="width:26px;text-align:center;font-size:15px;">${medal[r.rank - 1] || (r.rank + '.')}</span>
+                <b style="width:52px;">${r.bu_no === 'GROUP' ? WRL('集团', '集團', 'Group') : r.bu_no}</b>
+                <div style="flex:1;background:#eef2f7;border-radius:4px;height:8px;overflow:hidden;">
+                    <div style="width:${Math.min(100, Math.max(0, r.score))}%;height:8px;background:${color};border-radius:4px;"></div>
+                </div>
+                <span style="width:62px;text-align:right;font-weight:700;color:${color};">${Number(r.score).toFixed(1)}%</span>
+                <span style="width:96px;text-align:right;font-size:11px;color:${r.lagging ? '#e74c3c' : '#27ae60'};">${lagging}</span>
+            </div>`;
+        }).join('');
+        return `
+            <div class="card" style="margin-top:16px;">
+                <div class="card-title">🏅 ${WRL('目标达成看板', '目標達成看板', 'Target Dashboard')} · ${WRL('BU 综合排名', 'BU 綜合排名', 'BU Composite Ranking')}
+                    <small style="color:#7f8c8d;font-weight:normal;">FY${g.year} · ${g.YYYY_MM} · ${WRL('时间进度', '時間進度', 'time progress')} ${g.time_progress}%</small>
+                </div>
+                ${list}
+                <div style="font-size:11px;color:#94a3b8;margin-top:8px;">${WRL(
+                    '综合达成率按权重汇总：营收 30%、净利 30%、毛利率 20%、存货周转 10%、应收天数 10%；单项达成率封顶 120%。',
+                    '綜合達成率按權重彙總：營收 30%、淨利 30%、毛利率 20%、存貨週轉 10%、應收天數 10%；單項達成率封頂 120%。',
+                    'Composite attainment is weighted: revenue 30%, net profit 30%, gross margin 20%, inventory turns 10%, AR days 10%; each KPI is capped at 120%.')}</div>
+            </div>`;
     },
 
     renderTargets(g) {

@@ -42,6 +42,7 @@ registerPage('strategy', async (c) => {
                 </select>
                 <input id="bscYear" type="number" min="2000" max="2100" class="form-control" style="width:110px;" onchange="Strategy.reload()">
                 <button class="btn btn-outline" onclick="Strategy.sync()">${BSC_L('🔄 同步 KPI', '🔄 同步 KPI', '🔄 Sync KPI')}</button>
+                <button class="btn btn-outline" onclick="Strategy.scanAlerts()">${BSC_L('🔔 扫描预警', '🔔 掃描預警', '🔔 Scan Alerts')}</button>
                 <button class="btn btn-primary" onclick="Strategy.editObjective()">${BSC_L('+ 新增目标', '+ 新增目標', '+ New Objective')}</button>
                 <button class="btn btn-success" onclick="Strategy.load()">${BSC_L('刷新', '重新整理', 'Refresh')}</button>
             </div>
@@ -478,6 +479,24 @@ const Strategy = {
             UI.toast(`${BSC_L('同步完成：成功', '同步完成：成功', 'Sync completed: ')} ${d.synced || 0} ${BSC_L('项，跳过', '項，跳過', 'synced,')} ${d.skipped || 0} ${BSC_L('项', '項', 'skipped')}`, d.synced ? 'success' : 'info');
             if ((d.warnings || []).length) UI.toast(d.warnings.slice(0, 3).join(BSC_L('；', '；', '; ')), 'info');
             await this.load();
+        } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    async scanAlerts() {
+        try {
+            const res = await API.post('/api/strategy/alerts/scan', {
+                YYYY: this.year,
+                bu_no: this.bu === 'ALL' ? '' : this.bu
+            });
+            const d = res.data || {};
+            const msg = d.triggered
+                ? BSC_L(`已生成 ${d.triggered} 条目标偏差预警`, `已產生 ${d.triggered} 條目標偏差預警`, `${d.triggered} deviation alert(s) created`)
+                : BSC_L('未发现新的目标偏差', '未發現新的目標偏差', 'No new target deviations');
+            UI.toast(msg, d.triggered ? 'success' : 'info');
+            if (d.suppressed) {
+                UI.toast(BSC_L(`${d.suppressed} 条处于冷却期，已跳过`, `${d.suppressed} 條處於冷卻期，已跳過`, `${d.suppressed} suppressed by cooldown`), 'info');
+            }
+            if (d.triggered) await this.load();
         } catch (e) { UI.toast(e.message, 'error'); }
     }
 };

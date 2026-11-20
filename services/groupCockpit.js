@@ -26,6 +26,11 @@ const KPIS = [
     { code: 'ar_days',        label: '应收天数',     unit: '天',     kind: 'ratio',  higher: false, growth: 0.95 }
 ];
 
+// 综合达成率权重（合计 100），用于 BU 排名
+const COMPOSITE_WEIGHTS = {
+    revenue: 30, net_profit: 30, gross_margin: 20, inventory_turn: 10, ar_days: 10
+};
+
 function num(v) { return (v === null || v === undefined || isNaN(v)) ? 0 : Number(v); }
 function round2(v) { return Math.round(num(v) * 100) / 100; }
 function round4(v) { return Math.round(num(v) * 10000) / 10000; }
@@ -121,6 +126,37 @@ function statusOf(kpi, att, progress) {
     if (att >= 103) return 'ahead';
     if (att < 97) return 'behind';
     return 'ontrack';
+}
+
+/**
+ * BU 综合达成率：按权重汇总各 KPI 达成率（单项封顶 120%），并统计落后项数。
+ * 权重覆盖不到的指标（无目标或无实际）不参与计算，coverage 记录实际权重合计。
+ */
+function compositeOf(block) {
+    let weighted = 0;
+    let weight = 0;
+    let lagging = 0;
+    for (const r of block.rows || []) {
+        const w = COMPOSITE_WEIGHTS[r.kpi_code] || 0;
+        if (!w || r.attainment === null) continue;
+        weighted += Math.min(120, Math.max(0, r.attainment)) * w;
+        weight += w;
+        if (r.status === 'behind') lagging++;
+    }
+    return {
+        bu_no: block.bu_no,
+        score: weight ? round2(weighted / weight) : null,
+        coverage: weight,
+        lagging
+    };
+}
+
+function buildComposite(targetBlocks) {
+    return targetBlocks
+        .map(compositeOf)
+        .filter(x => x.score !== null)
+        .sort((a, b) => b.score - a.score)
+        .map((x, i) => ({ ...x, rank: i + 1 }));
 }
 
 function isBetter(kpi, actual, median) {
@@ -430,6 +466,7 @@ async function getGroupCockpit(ymInput) {
         time_progress: progressOfYear(ym),
         group_metrics: groupMetrics,
         targets: targetBlocks,
+        composite: buildComposite(targetBlocks),
         rankings,
         benchmark: { year: benchYear, industry: BENCH_INDUSTRY, rows: benchmark },
         events
