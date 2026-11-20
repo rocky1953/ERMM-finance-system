@@ -28,6 +28,65 @@ const BSC_KPI_IDS = [
     'cash_ratio', 'cash_conv_days', 'sale_growth', 'profit_growth'
 ];
 
+/** 操作说明弹窗内容（跟随当前语言） */
+function bscHelpHtml() {
+    const L = BSC_L;
+    const step = (s) => `<li style="margin:5px 0;">${s}</li>`;
+    const sec = (title, desc, steps) => `
+        <div style="margin-bottom:18px;">
+            <div style="font-size:15px;font-weight:700;color:#1f2d3d;margin-bottom:6px;">${title}</div>
+            <div style="color:#52606d;font-size:13px;">${desc}</div>
+            <ol style="margin:8px 0 0 18px;padding:0;color:#334e68;font-size:13px;">${steps.map(step).join('')}</ol>
+        </div>`;
+    const code = (s) => `<code style="display:inline-block;background:#f1f5f9;border-radius:4px;padding:1px 6px;font-size:12px;">${bscEsc(s)}</code>`;
+
+    return `
+        <div style="max-height:64vh;overflow:auto;padding-right:6px;line-height:1.7;">
+            <p style="margin-top:0;color:#7f8c8d;font-size:12px;">${L(
+                '本页提供平衡计分卡（BSC）目标的维护、偏差预警与达成分析。以下为新增功能的使用方式。',
+                '本頁提供平衡計分卡（BSC）目標的維護、偏差預警與達成分析。以下為新增功能的使用方式。',
+                'This page maintains BSC objectives, deviation alerts and attainment analysis. Below is how to use the new features.')}</p>
+
+            ${sec(`🔔 ${L('目标偏差自动预警', '目標偏差自動預警', 'Target Deviation Alerts')}`,
+                L('系统以「年度目标 vs 最新一期实际值」计算达成率（基线→目标线性折算，单项封顶 120%）；低于阈值（默认 80%）即判定为偏差。同一目标同一期间 72 小时内只告警一次，避免重复。',
+                  '系統以「年度目標 vs 最新一期實際值」計算達成率（基線→目標線性折算，單項封頂 120%）；低於閾值（預設 80%）即判定為偏差。同一目標同一期間 72 小時內只告警一次，避免重複。',
+                  'Attainment is computed from the annual target vs the latest actual (linear from baseline to target, capped at 120%). A deviation is raised when attainment is below the threshold (default 80%). The same objective and period alerts at most once every 72 hours.'),
+                [
+                    L('在右上角选择公司别与年度。', '在右上角選擇公司別與年度。', 'Choose scope and fiscal year at the top right.'),
+                    L('点「🔔 扫描预警」，系统立即比对全部启用目标。', '點「🔔 掃描預警」，系統立即比對全部啟用目標。', 'Click “Scan Alerts” to compare all active objectives immediately.'),
+                    L('查看提示：新增 N 条、冷却抑制 N 条。', '查看提示：新增 N 條、冷卻抑制 N 條。', 'Check the toast: N created, N suppressed by cooldown.'),
+                    L('在下方「偏差分析」核对目标值、实际值、缺口与达成率。', '在下方「偏差分析」核對目標值、實際值、缺口與達成率。', 'Review the deviation table for target, actual, gap and attainment.'),
+                    L('打开「经营决策 → 战情看板」，在「⚠️ 重大事项」查看预警明细。', '打開「經營決策 → 戰情看板」，在「⚠️ 重大事項」查看預警明細。', 'Open War Room → Key Issues to see the alert details.'),
+                    L('若已配置飞书/企微/Email 订阅，预警会同步外发；未配置时仅站内记录。', '若已配置飛書/企微/Email 訂閱，預警會同步外發；未配置時僅站內記錄。', 'If Lark/WeCom/Email subscriptions are configured, alerts are also sent out; otherwise they stay in-app.'),
+                    L('自动扫描由调度器每日 08:00 执行（服务器需安装 node-cron 或配置系统 cron）。', '自動掃描由排程器每日 08:00 執行（伺服器需安裝 node-cron 或設定系統 cron）。', 'Automatic scanning runs daily at 08:00 (requires node-cron or a system cron entry on the server).')
+                ])}
+
+            ${sec(`🏅 ${L('目标达成看板 / BU 综合排名', '目標達成看板 / BU 綜合排名', 'Target Dashboard / BU Ranking')}`,
+                L('战情看板下半部展示集团与各 BU 的年度目标达成、综合排名、分项排名与外部对标。综合达成率按权重汇总，用于横向比较经营质量。',
+                  '戰情看板下半部展示集團與各 BU 的年度目標達成、綜合排名、分項排名與外部對標。綜合達成率按權重彙總，用於橫向比較經營質量。',
+                  'The lower part of the War Room shows target attainment, composite ranking, per-KPI ranking and peer benchmarks. Composite attainment is weighted for cross-BU comparison.'),
+                [
+                    L('打开「经营决策 → 战情看板」。', '打開「經營決策 → 戰情看板」。', 'Open War Room.'),
+                    L('选择月份（默认取最新一期财务汇总）。', '選擇月份（預設取最新一期財務彙總）。', 'Pick a month (defaults to the latest financial summary).'),
+                    L('查看「🏅 目标达成看板 · BU 综合排名」，含排名、进度条与落后项数。', '查看「🏅 目標達成看板 · BU 綜合排名」，含排名、進度條與落後項數。', 'Review the Target Dashboard · BU Composite Ranking with rank, progress bar and lagging count.'),
+                    L('综合达成率 = Σ(min(达成率,120%) × 权重) / Σ权重；权重为营收 30、净利 30、毛利率 20、存货周转 10、应收天数 10。',
+                      '綜合達成率 = Σ(min(達成率,120%) × 權重) / Σ權重；權重為營收 30、淨利 30、毛利率 20、存貨週轉 10、應收天數 10。',
+                      'Composite = Σ(min(attainment,120%) × weight) / Σweight; weights: revenue 30, net profit 30, gross margin 20, inventory turns 10, AR days 10.'),
+                    L('在「🎯 目标达成」表点「调整」可维护年度目标，保存后达成率与排名即时更新。', '在「🎯 目標達成」表點「調整」可維護年度目標，儲存後達成率與排名即時更新。', 'Click Edit in the Target Attainment table to maintain annual targets; attainment and ranking update immediately.'),
+                    L('结合「🏆 BU 排名」与「📊 外部对标」判断优势与短板。', '結合「🏆 BU 排名」與「📊 外部對標」判斷優勢與短板。', 'Combine BU Ranking and Peer Benchmark to judge strengths and gaps.')
+                ])}
+
+            <div style="margin-bottom:6px;font-size:15px;font-weight:700;color:#1f2d3d;">⚙ ${L('参数与常见问题', '參數與常見問題', 'Parameters & FAQ')}</div>
+            <ul style="margin:8px 0 0 18px;padding:0;color:#334e68;font-size:13px;">
+                <li style="margin:5px 0;">${L('阈值与冷却可调用接口调整：', '閾值與冷卻可呼叫介面調整：', 'Threshold and cooldown can be adjusted via API: ')}
+                    ${code('POST /api/strategy/alerts/scan')} ${code('{ "YYYY":"2026", "threshold":80, "cooldown_hours":72 }')}</li>
+                <li style="margin:5px 0;">${L('扫描后没有预警：可能全部达标、处于冷却期，或该年度没有启用目标。', '掃描後沒有預警：可能全部達標、處於冷卻期，或該年度沒有啟用目標。', 'No alerts after scanning: all on track, in cooldown, or no active objectives for the year.')}</li>
+                <li style="margin:5px 0;">${L('排名卡片不显示：该月份没有财务汇总数据，或没有可计算的目标。', '排名卡片不顯示：該月份沒有財務彙總資料，或沒有可計算的目標。', 'Ranking card missing: no financial summary for that month, or no computable targets.')}</li>
+                <li style="margin:5px 0;">${L('看不到外发消息：检查「通知订阅」是否启用，以及渠道 SMTP / webhook 是否配置。', '看不到外發訊息：檢查「通知訂閱」是否啟用，以及渠道 SMTP / webhook 是否設定。', 'No external message: check notification subscriptions and channel SMTP/webhook settings.')}</li>
+            </ul>
+        </div>`;
+}
+
 registerPage('strategy', async (c) => {
     Strategy.bu = 'GROUP';
     Strategy.year = String(State.year());
@@ -43,6 +102,7 @@ registerPage('strategy', async (c) => {
                 <input id="bscYear" type="number" min="2000" max="2100" class="form-control" style="width:110px;" onchange="Strategy.reload()">
                 <button class="btn btn-outline" onclick="Strategy.sync()">${BSC_L('🔄 同步 KPI', '🔄 同步 KPI', '🔄 Sync KPI')}</button>
                 <button class="btn btn-outline" onclick="Strategy.scanAlerts()">${BSC_L('🔔 扫描预警', '🔔 掃描預警', '🔔 Scan Alerts')}</button>
+                <button class="btn btn-outline" onclick="Strategy.showHelp()">${BSC_L('📖 操作说明', '📖 操作說明', '📖 How to Use')}</button>
                 <button class="btn btn-primary" onclick="Strategy.editObjective()">${BSC_L('+ 新增目标', '+ 新增目標', '+ New Objective')}</button>
                 <button class="btn btn-success" onclick="Strategy.load()">${BSC_L('刷新', '重新整理', 'Refresh')}</button>
             </div>
@@ -498,5 +558,13 @@ const Strategy = {
             }
             if (d.triggered) await this.load();
         } catch (e) { UI.toast(e.message, 'error'); }
+    },
+
+    showHelp() {
+        UI.modal(
+            `📖 ${BSC_L('操作说明', '操作說明', 'How to Use')} · ${BSC_L('CEO 经营决策', 'CEO 經營決策', 'CEO Decision Support')}`,
+            bscHelpHtml(),
+            `<button class="btn" onclick="UI.closeModal()">${BSC_L('关闭', '關閉', 'Close')}</button>`
+        );
     }
 };
