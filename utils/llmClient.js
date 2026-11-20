@@ -35,7 +35,8 @@ function sanitizeKey(key) {
  * @param {Object} cfg { base_url, api_key, model }
  * @param {Array} messages [{role:'system'|'user'|'assistant', content}]
  * @param {Object} opts { temperature, timeout }
- * @returns {Promise<string>} 模型回覆文字
+ * @returns {Promise<string>} 模型回覆文字（向後兼容）
+ *   或 { content, prompt_tokens, completion_tokens, total_tokens, latency_ms } 若 opts.returnMeta=true
  */
 async function chatCompletion(cfg, messages, opts = {}) {
     const cleanKey = sanitizeKey(cfg.api_key);
@@ -70,6 +71,7 @@ async function doRequest(cfg, messages, cleanKey, temperature, opts = {}) {
     const base = String(cfg.base_url || '').replace(/\/+$/, '');
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeout);
+    const startTs = Date.now();
     let resp;
     try {
         resp = await fetch(`${base}/chat/completions`, {
@@ -92,6 +94,7 @@ async function doRequest(cfg, messages, cleanKey, temperature, opts = {}) {
     } finally {
         clearTimeout(timer);
     }
+    const latency = Date.now() - startTs;
 
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) {
@@ -103,7 +106,26 @@ async function doRequest(cfg, messages, cleanKey, temperature, opts = {}) {
     // 思考型模型可能只回 reasoning_content，兜底取用
     if (!content && choice && choice.reasoning_content) content = choice.reasoning_content;
     if (!content) throw new Error('LLM 未回傳有效內容');
-    return String(content).trim();
+
+    const usage = data.usage || {};
+    const prompt_tokens = usage.prompt_tokens || 0;
+    const completion_tokens = usage.completion_tokens || 0;
+    const total_tokens = usage.total_tokens || (prompt_tokens + completion_tokens);
+
+    const clean = String(content).trim();
+
+    // returnMeta 模式：回傳完整結構給 audit 層
+    if (opts.returnMeta) {
+        return {
+            content: clean,
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+            latency_ms: latency,
+        };
+    }
+    // 向後兼容：只回字串
+    return clean;
 }
 
 // API Key 脫敏：sk-abc...wxyz → sk-****wxyz
